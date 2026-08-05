@@ -42,7 +42,7 @@ server:
 # ============================================================
 database:
   # SQLite 文件路径，相对于 backend/ 目录
-  path: "data/scratch.db"
+  path: "data/larry.db"
 
 # ============================================================
 # Qdrant 向量库配置
@@ -51,7 +51,7 @@ qdrant:
   host: "localhost"
   port: 6333
   # 集合名称，用于存储长期记忆和文档向量
-  collection_name: "scratch_memories"
+  collection_name: "larry_memories"
 
 # ============================================================
 # Embedding 配置

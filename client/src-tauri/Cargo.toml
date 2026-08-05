@@ -1,5 +1,5 @@
 ﻿[package]
-name = "scratch-agent"
+name = "larry-agent"
 version = "0.1.0"
 edition = "2021"
 description = "LarryAgent PC 客户端 — Tauri 壳"

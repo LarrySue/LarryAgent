@@ -55,7 +55,7 @@ server {
     server_name agent.example.com;
 
     # 静态文件
-    root /var/www/scratch-agent/mobile;
+    root /var/www/larry-agent/mobile;
     index index.html;
 
     # API 反向代理

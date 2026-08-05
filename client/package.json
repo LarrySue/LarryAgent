@@ -1,5 +1,5 @@
 ﻿{
-  "name": "scratch-agent-client",
+  "name": "larry-agent-client",
   "version": "0.1.0",
   "private": true,
   "description": "LarryAgent PC 客户端 — Tauri 壳",

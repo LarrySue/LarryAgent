@@ -1,4 +1,4 @@
-# ScratchAgent Makefile
+# LarryAgent Makefile
 
 .PHONY: install run dev clean
 

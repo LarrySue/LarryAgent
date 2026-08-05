@@ -30,14 +30,14 @@ class ServerConfig:
 
 @dataclass
 class DatabaseConfig:
-    path: str = "data/scratch.db"
+    path: str = "data/larry.db"
 
 
 @dataclass
 class QdrantConfig:
     host: str = "localhost"
     port: int = 6333
-    collection_name: str = "scratch_memories"
+    collection_name: str = "larry_memories"
 
 
 @dataclass
@@ -72,7 +72,7 @@ _config: Config | None = None
 def load_config(config_path: str | None = None) -> Config:
     """
     加载配置文件并返回 Config 对象。
-    默认从 backend/config.yaml 读取，也可通过环境变量 SCRATCH_CONFIG 指定路径。
+    默认从 backend/config.yaml 读取，也可通过环境变量 LARRY_CONFIG 指定路径。
 
     Args:
         config_path: 配置文件路径，为 None 时自动查找
@@ -83,7 +83,7 @@ def load_config(config_path: str | None = None) -> Config:
     global _config
 
     if config_path is None:
-        config_path = os.environ.get("SCRATCH_CONFIG")
+        config_path = os.environ.get("LARRY_CONFIG")
     if config_path is None:
         # 默认相对于本文件所在目录的 config.yaml
         config_path = Path(__file__).parent / "config.yaml"

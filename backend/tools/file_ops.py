@@ -50,7 +50,7 @@ class FileOpsTool(BaseTool):
     }
 
     # TODO: 从配置文件读取工作目录范围
-    _workspace_root = Path.home() / "scratch_workspace"
+    _workspace_root = Path.home() / "larry_workspace"
 
     async def execute(self, **kwargs) -> ToolResult:
         action = kwargs.get("action")
