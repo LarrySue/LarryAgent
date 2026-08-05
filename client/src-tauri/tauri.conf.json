@@ -1,0 +1,41 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/nicehash/tauri/dev/crates/tauri-cli/schema.json",
+  "productName": "LarryAgent",
+  "version": "0.1.0",
+  "identifier": "com.LarryAgent.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "LarryAgent",
+        "width": 900,
+        "height": 700,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true,
+      "scope": [
+        {
+          "name": "start-agent",
+          "cmd": "uvicorn",
+          "args": [
+            { "validator": ".*" }
+          ]
+        }
+      ]
+    }
+  }
+}

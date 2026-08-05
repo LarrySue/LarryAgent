@@ -1,0 +1,14 @@
+﻿[package]
+name = "scratch-agent"
+version = "0.1.0"
+edition = "2021"
+description = "LarryAgent PC 客户端 — Tauri 壳"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

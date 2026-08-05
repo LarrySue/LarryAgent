@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 环境变量
+.env
+*.env.local
+
+# 含敏感 key 的配置文件（模板见 config.example.yaml）
+backend/config.yaml
+
+# 数据库
+backend/data/*.db
+backend/data/*.db-journal
+backend/data/*.db-wal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+client/dist/
+client/target/
+
+# Tauri
+client/src-tauri/target/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qdrant
+qdrant_storage/
