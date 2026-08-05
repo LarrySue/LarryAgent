@@ -101,8 +101,71 @@ make dev    # 启动后端开发模式（热重载）
 - **简单直接**：不过度抽象，代码直白可读
 - **多 AI 协作**：每个模块职责清晰，便于不同 AI 独立开发
 
+## 开发路线图
+
+按依赖顺序分 6 个阶段，每个阶段形成可运行的闭环。
+
+### P0 - 最小聊天闭环 ✅
+
+> 能发消息、收回复、存历史
+
+- [x] 修复启动时序：DB 目录创建移到 `get_db()` 之前
+- [x] Qdrant 加 `enabled` 开关 + try/except 容错，P0 不依赖
+- [x] 新增 `db/conversations.py`：会话与消息 CRUD
+- [x] 实现 `/api/chat` 非流式（短期记忆 + LLM 调用，跳过长期记忆和工具）
+- [x] 修复 LLM 客户端缓存 key：按 provider 而非 model name
+- [x] 新增 `logging_config.py`：统一日志格式 + 第三方库降噪
+- [x] config.yaml 补 `qdrant.enabled` / `logging` 段，统一 larry 命名
+- [x] chat.py 加默认 system prompt
+- [ ] 申请 API Key 填入 `config.yaml`，端到端测试
+
+### P1 - 记忆系统可用
+
+> 能检索上下文，多轮对话有记忆
+
+- [ ] 实现 Embedding（先做 OpenAI 兼容版）
+- [ ] 实现 Qdrant 的 insert / search / delete
+- [ ] 实现长期记忆检索 + 注入 system prompt
+- [ ] 打通归档流程：生成摘要 → 用户确认 → 存储（SQLite + Qdrant 双写）
+- [ ] 开启 `qdrant.enabled`，端到端测试记忆检索
+
+### P2 - 工具调用闭环
+
+> Agent 能调用文件和 Shell
+
+- [ ] 完成 FileOpsTool：路径沙箱校验 + 读/写/列目录
+- [ ] 完成 ShellTool：实际执行命令 + IP 白名单注入
+- [ ] `/api/chat` 加入 function calling 循环（LLM → tool → LLM）
+- [ ] 实现 `/api/tools` 列表和手动执行接口
+
+### P3 - 流式 + 体验优化
+
+> 打字机效果、Token 统计、错误处理
+
+- [ ] `/api/chat/stream` SSE 流式实现
+- [ ] LLM 调用加重试（tenacity 或自写重试逻辑）
+- [ ] 加 token 用量统计
+- [ ] 默认 host 改 `127.0.0.1`，增加可选 API Key 校验
+- [ ] 自定义业务异常类
+
+### P4 - PC 客户端可用
+
+> 双击图标直接用
+
+- [ ] 选前端框架（推荐 Vue 3 + Vite，轻量）
+- [ ] 聊天界面：会话列表 + 消息区 + 输入框
+- [ ] Tauri Rust 端：拉起 uvicorn → health check → 显示窗口
+- [ ] 窗口关闭时 kill Agent 进程
+
+### P5 - 移动端 + 部署
+
+> 手机浏览器可访问
+
+- [ ] 响应式 UI 或独立 `mobile/index.html`
+- [ ] Nginx 部署脚本示例（静态文件 + API 反代）
+- [ ] PWA manifest + Service Worker（可选）
+- [ ] 部署文档 + 安全加固
+
 ## License
 
 MIT
-*（内容由AI生成，仅供参考）*
-*（内容由AI生成，仅供参考）*
