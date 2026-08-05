@@ -11,34 +11,48 @@ LLM 多模型路由模块
 - 依赖 config.py 获取各模型的 api_key 和 base_url
 """
 
+import logging
+import time
 from typing import AsyncGenerator
 
 from openai import AsyncOpenAI
 
 from config import get_config
 
+logger = logging.getLogger(__name__)
 
-# 客户端缓存，避免每次请求都创建新实例
+# 按 provider 缓存客户端（api_key/base_url 按 provider 配置）
 _clients: dict[str, AsyncOpenAI] = {}
+
+
+def _resolve_provider_key(model_name: str) -> str:
+    """从模型名解析 provider 配置键，如 deepseek-chat → deepseek。"""
+    return model_name.split("-")[0] if "-" in model_name else model_name
 
 
 def _get_client(model_name: str) -> AsyncOpenAI:
     """根据模型名获取或创建对应的 AsyncOpenAI 客户端。"""
-    if model_name in _clients:
-        return _clients[model_name]
+    provider_key = _resolve_provider_key(model_name)
+    if provider_key in _clients:
+        return _clients[provider_key]
 
     config = get_config()
-    # 按模型名匹配配置：deepseek / qwen / gpt 等
-    provider_key = model_name.split("-")[0] if "-" in model_name else model_name
     model_cfg = config.models.get(provider_key)
     if model_cfg is None:
-        raise ValueError(f"Unknown model provider: {model_name}")
+        raise ValueError(f"Unknown model provider: {provider_key} (model={model_name})")
+    if not model_cfg.api_key:
+        raise ValueError(f"API key not configured for provider: {provider_key}")
 
+    logger.debug(
+        "Creating LLM client provider=%s base_url=%s",
+        provider_key,
+        model_cfg.base_url,
+    )
     client = AsyncOpenAI(
         api_key=model_cfg.api_key,
         base_url=model_cfg.base_url,
     )
-    _clients[model_name] = client
+    _clients[provider_key] = client
     return client
 
 
@@ -60,16 +74,33 @@ async def chat_completion(
     Returns:
         模型生成的完整文本
     """
-    # TODO: 添加重试逻辑（网络抖动、速率限制）
-    # TODO: 添加 token 用量统计，写入日志或数据库
     client = _get_client(model)
-    response = await client.chat.completions.create(
-        model=model,
-        messages=messages,
-        temperature=temperature,
-        max_tokens=max_tokens,
+    logger.info(
+        "LLM request model=%s messages=%d temperature=%s",
+        model,
+        len(messages),
+        temperature,
     )
-    return response.choices[0].message.content or ""
+    start = time.perf_counter()
+    try:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        content = response.choices[0].message.content or ""
+        elapsed = time.perf_counter() - start
+        logger.info(
+            "LLM response model=%s chars=%d elapsed=%.2fs",
+            model,
+            len(content),
+            elapsed,
+        )
+        return content
+    except Exception:
+        logger.exception("LLM request failed model=%s", model)
+        raise
 
 
 async def chat_completion_stream(
@@ -90,7 +121,6 @@ async def chat_completion_stream(
     Yields:
         每次返回一个增量文本片段
     """
-    # TODO: 添加中断处理，客户端断开时取消上游请求
     client = _get_client(model)
     stream = await client.chat.completions.create(
         model=model,

@@ -13,12 +13,16 @@ LarryAgent 后端入口
     或使用根目录 Makefile: make run
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import load_config, get_config
+from logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 # === 应用生命周期 ===
@@ -27,30 +31,36 @@ from config import load_config, get_config
 async def lifespan(app: FastAPI):
     """应用启动和关闭时的生命周期管理。"""
     # === 启动阶段 ===
-    # 1. 加载配置
-    load_config()
-    config = get_config()
+    config = load_config()
+    setup_logging(config.logging.level)
+    logger.info("LarryAgent starting up")
 
-    # 2. 初始化数据库（自动执行迁移）
+    # 初始化数据库（get_db 内部会创建目录并执行迁移）
     from db.database import get_db
-    db = await get_db()
-    # 确保数据目录存在
-    import os
-    os.makedirs(os.path.dirname(config.database.path) or "data", exist_ok=True)
+    await get_db()
 
-    # 3. 确保 Qdrant 集合存在
-    from rag.vector_store import ensure_collection
-    await ensure_collection()
+    # Qdrant（可选，MVP 阶段可关闭）
+    if config.qdrant.enabled:
+        try:
+            from rag.vector_store import ensure_collection
+            await ensure_collection()
+            logger.info("Qdrant collection ready")
+        except Exception as e:
+            logger.warning("Qdrant unavailable, skipping: %s", e)
+    else:
+        logger.info("Qdrant disabled (qdrant.enabled=false)")
 
-    # 4. 扫描并注册工具
+    # 扫描并注册工具
     from tools.registry import scan_and_register
     await scan_and_register()
+    logger.info("Tools registered")
 
     yield  # 应用运行中
 
     # === 关闭阶段 ===
     from db.database import close_db
     await close_db()
+    logger.info("LarryAgent shut down")
 
 
 # === FastAPI 应用实例 ===
@@ -66,7 +76,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

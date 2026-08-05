@@ -35,9 +35,15 @@ class DatabaseConfig:
 
 @dataclass
 class QdrantConfig:
+    enabled: bool = False
     host: str = "localhost"
     port: int = 6333
     collection_name: str = "larry_memories"
+
+
+@dataclass
+class LoggingConfig:
+    level: str = "DEBUG"
 
 
 @dataclass
@@ -62,6 +68,7 @@ class Config:
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
 
 
 # === 全局单例 ===
@@ -107,6 +114,7 @@ def load_config(config_path: str | None = None) -> Config:
         qdrant=QdrantConfig(**raw.get("qdrant", {})),
         embedding=EmbeddingConfig(**raw.get("embedding", {})),
         tools=ToolsConfig(**raw.get("tools", {})),
+        logging=LoggingConfig(**raw.get("logging", {})),
     )
     return _config
 
