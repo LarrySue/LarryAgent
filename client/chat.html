@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!--
+  ============================================
+  LarryAgent 测试用对话页面
+  用途：开发调试阶段快速验证后端 /api/chat 接口
+  方式：浏览器直接打开此文件即可，无需部署
+  依赖：后端 uvicorn 必须在 127.0.0.1:8000 运行
+  注意：本页面仅为临时测试工具，非正式客户端
+  ============================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LarryAgent - Test Chat</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Microsoft YaHei", sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    padding: 12px 20px;
+    background: #16213e;
+    border-bottom: 1px solid #0f3460;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .header .dot { color: #00ff88; }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: #0f3460;
+  }
+  .msg.agent {
+    align-self: flex-start;
+    background: #16213e;
+    border: 1px solid #0f3460;
+  }
+  .msg.error {
+    align-self: flex-start;
+    background: #3a1a1a;
+    border: 1px solid #8b0000;
+    color: #ff6b6b;
+  }
+  .input-area {
+    display: flex;
+    padding: 12px 20px;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    gap: 10px;
+  }
+  #input {
+    flex: 1;
+    padding: 10px 14px;
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+  }
+  #input:focus { border-color: #00ff88; }
+  #send {
+    padding: 10px 20px;
+    background: #00ff88;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #send:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status {
+    padding: 6px 20px;
+    font-size: 12px;
+    color: #888;
+    text-align: right;
+  }
+  .model-select {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #888;
+    padding: 0 20px 4px;
+  }
+  .model-select select {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="header">LarryAgent <span class="dot">●</span></div>
+  <div class="model-select">
+    模型：
+    <select id="modelSelect">
+      <option value="deepseek-chat">DeepSeek V4 Flash</option>
+      <option value="qwen-plus">Qwen Plus</option>
+      <option value="gpt-4o">GPT-4o</option>
+    </select>
+  </div>
+  <div id="messages"></div>
+  <div class="status" id="status"></div>
+  <div class="input-area">
+    <textarea id="input" rows="2" placeholder="输入消息，Enter 发送，Shift+Enter 换行" onkeydown="handleKey(event)"></textarea>
+    <button id="send" onclick="send()">发送</button>
+  </div>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+
+async function send() {
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  addMessage(msg, 'user');
+  input.value = '';
+  sendBtn.disabled = true;
+  setStatus('思考中...');
+
+  const model = document.getElementById('modelSelect').value;
+
+  try {
+    const res = await fetch(API + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, model: model })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      addMessage(data.reply, 'agent');
+      setStatus(`conversation #${data.conversation_id} | model: ${data.model || model}`);
+    } else {
+      addMessage(`Error: ${data.detail || JSON.stringify(data)}`, 'error');
+      setStatus('');
+    }
+  } catch (e) {
+    addMessage(`网络错误: ${e.message}`, 'error');
+    setStatus('离线');
+  }
+  sendBtn.disabled = false;
+}
+
+function addMessage(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls;
+  div.textContent = text;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+}
+
+function setStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+}
+
+// 启动时聚焦输入框
+document.getElementById('input').focus();
+</script>
+</body>
+</html>

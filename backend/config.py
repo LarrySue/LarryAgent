@@ -62,6 +62,7 @@ class ToolsConfig:
 @dataclass
 class Config:
     machine_id: str = ""
+    system_prompt: str = ""
     models: dict[str, ModelConfig] = field(default_factory=dict)
     server: ServerConfig = field(default_factory=ServerConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
@@ -108,6 +109,7 @@ def load_config(config_path: str | None = None) -> Config:
 
     _config = Config(
         machine_id=raw.get("machine_id", ""),
+        system_prompt=raw.get("system_prompt", ""),
         models=models,
         server=ServerConfig(**raw.get("server", {})),
         database=DatabaseConfig(**raw.get("database", {})),

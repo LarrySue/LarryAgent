@@ -19,14 +19,12 @@ from fastapi import APIRouter, HTTPException
 from openai import APIError
 from pydantic import BaseModel, Field
 
+from config import get_config
 from db import conversations as conv_db
 from memory.engine import build_memory_context, get_short_term_memory
 from models.llm import chat_completion
 
 logger = logging.getLogger(__name__)
-
-# 默认系统提示，让 LLM 知道自己的角色
-DEFAULT_SYSTEM_PROMPT = "你是 LarryAgent，一个个人 AI 助手。简洁、直接地回答问题。"
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -82,7 +80,7 @@ async def chat(req: ChatRequest):
 
     # 3. 短期记忆（含刚写入的用户消息）
     short_term = await get_short_term_memory(conversation_id)
-    messages = build_memory_context(short_term, long_term=[], system_prompt=DEFAULT_SYSTEM_PROMPT)
+    messages = build_memory_context(short_term, long_term=[], system_prompt=get_config().system_prompt)
 
     # 4. 调用 LLM
     try:
