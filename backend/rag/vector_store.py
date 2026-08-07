@@ -16,7 +16,7 @@ Qdrant 向量库操作模块
 import logging
 
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, PointIdsList, PointStruct, VectorParams
 
 from config import get_config
 
@@ -59,13 +59,33 @@ async def ensure_collection(vector_size: int):
         )
         logger.info("Qdrant collection '%s' created", collection_name)
     else:
-        logger.info("Qdrant collection '%s' already exists", collection_name)
+        # 验证已有 collection 的维度是否匹配当前 embedding 模型
+        collection_info = await client.get_collection(collection_name)
+        existing_size = collection_info.config.params.vectors.size
+        if existing_size != vector_size:
+            raise RuntimeError(
+                f"Qdrant collection '{collection_name}' exists with vector_size={existing_size}, "
+                f"but current embedding model requires vector_size={vector_size}. "
+                f"Either delete the collection manually or switch back to the original embedding model."
+            )
+        logger.info(
+            "Qdrant collection '%s' exists (vector_size=%d, matches)",
+            collection_name,
+            vector_size,
+        )
+
+
+def _resolve_collection(collection_name: str | None = None) -> str:
+    """解析集合名，未指定则使用配置中的默认集合。"""
+    if collection_name:
+        return collection_name
+    return get_config().qdrant.collection_name
 
 
 async def insert(
     points: list[dict],
     collection_name: str | None = None,
-):
+) -> None:
     """
     批量插入向量点到 Qdrant。
 
@@ -74,7 +94,15 @@ async def insert(
                 例: [{"id": 1, "vector": [...], "payload": {"text": "..."}}]
         collection_name: 集合名，默认使用配置中的
     """
-    raise NotImplementedError("Vector store insert not yet implemented")
+    client = get_qdrant_client()
+    coll = _resolve_collection(collection_name)
+
+    point_structs = [
+        PointStruct(id=p["id"], vector=p["vector"], payload=p.get("payload", {}))
+        for p in points
+    ]
+    await client.upsert(collection_name=coll, points=point_structs)
+    logger.info("Inserted %d points into '%s'", len(point_structs), coll)
 
 
 async def search(
@@ -93,12 +121,25 @@ async def search(
         collection_name: 集合名
 
     Returns:
-        匹配的 payload 列表，按相似度降序
+        匹配的 payload 列表，每条包含 payload 和 score，按相似度降序
     """
-    raise NotImplementedError("Vector store search not yet implemented")
+    client = get_qdrant_client()
+    coll = _resolve_collection(collection_name)
+
+    results = await client.search(
+        collection_name=coll,
+        query_vector=query_vector,
+        limit=limit,
+        score_threshold=score_threshold,
+    )
+    logger.info("Search '%s': %d results (threshold=%.2f)", coll, len(results), score_threshold)
+    return [
+        {"payload": hit.payload, "score": hit.score, "id": hit.id}
+        for hit in results
+    ]
 
 
-async def delete(point_ids: list[int], collection_name: str | None = None):
+async def delete(point_ids: list[int], collection_name: str | None = None) -> None:
     """
     删除指定 ID 的向量。
 
@@ -106,4 +147,11 @@ async def delete(point_ids: list[int], collection_name: str | None = None):
         point_ids: 要删除的点 ID 列表
         collection_name: 集合名
     """
-    raise NotImplementedError("Vector store delete not yet implemented")
+    client = get_qdrant_client()
+    coll = _resolve_collection(collection_name)
+
+    await client.delete(
+        collection_name=coll,
+        points_selector=PointIdsList(points=point_ids),
+    )
+    logger.info("Deleted %d points from '%s'", len(point_ids), coll)

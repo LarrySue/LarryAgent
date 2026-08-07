@@ -135,11 +135,13 @@ make dev    # 启动后端开发模式（热重载）
 
 - [x] `vector_store.py` 同步客户端改 `AsyncQdrantClient`，避免阻塞事件循环
 - [x] `ensure_collection` 的 `vector_size` 改为从 embedding provider 动态获取（不再硬编码 1536）
+- [x] `ensure_collection` 新增维度一致性校验：已有 collection 维度与当前模型不匹配时抛 RuntimeError
 - [x] `main.py` 启动流程调整：embedding provider 初始化 → `ensure_collection(dim)`
-- [ ] 实现 `insert(points)`：构造 PointStruct → `client.upsert()`
-- [ ] 实现 `search(query_vector, limit, score_threshold)`：`client.search()` + 阈值过滤
-- [ ] 实现 `delete(point_ids)`：`client.delete()`
-- [ ] 验证 `chunker.py` 分块结果与 Qdrant insert 对接
+- [x] 实现 `insert(points)`：PointStruct → `client.upsert()`，支持批量
+- [x] 实现 `search(query_vector, limit, score_threshold)`：`client.search()` + 阈值过滤 + 结果格式化
+- [x] 实现 `delete(point_ids)`：`client.delete(PointIdsList)`
+- [x] 新增 `_resolve_collection()` 工具函数，统一默认集合名解析
+- [x] 验证 `chunker.py` 分块结果与 Qdrant insert 数据格式对接
 
 **P1.3 - DB 层补全**
 
