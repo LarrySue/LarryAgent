@@ -136,7 +136,7 @@ async def search(
             if similarity >= score_threshold:
                 metadata = results["metadatas"][0][i] if results["metadatas"] else {}
                 outputs.append({
-                    "id": int(point_id),
+                    "id": point_id,
                     "payload": metadata,
                     "score": round(similarity, 4),
                 })
@@ -152,12 +152,12 @@ async def search(
     return outputs
 
 
-async def delete(point_ids: list[int], collection_name: str | None = None) -> None:
+async def delete(point_ids: list, collection_name: str | None = None) -> None:
     """
     删除指定 ID 的向量。
 
     Args:
-        point_ids: 要删除的点 ID 列表
+        point_ids: 要删除的点 ID 列表（支持 int 或 str）
         collection_name: 集合名
     """
     coll = await asyncio.to_thread(_get_collection, collection_name)

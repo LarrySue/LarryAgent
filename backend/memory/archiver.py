@@ -23,6 +23,7 @@
 """
 
 import logging
+import uuid
 
 from db.conversations import get_messages, get_conversation
 from db.memories import create_memory
@@ -144,11 +145,11 @@ async def confirm_and_store(
     # 3. 批量向量化
     vectors = await embed_batch(chunks)
 
-    # 4. 写入 ChromaDB（point id = memory_id，便于双删）
+    # 4. 写入 ChromaDB（ID 格式: {memory_id}_{uuid8}，保证全局唯一且可读）
     points = []
     for i, (chunk, vector) in enumerate(zip(chunks, vectors)):
         points.append({
-            "id": memory_id + i,  # 同一记忆的分块用递增 ID
+            "id": f"{memory_id}_{uuid.uuid4().hex[:8]}",
             "vector": vector,
             "payload": {
                 "text": chunk,
