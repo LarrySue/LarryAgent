@@ -34,10 +34,9 @@ class DatabaseConfig:
 
 
 @dataclass
-class QdrantConfig:
+class VectorStoreConfig:
     enabled: bool = False
-    host: str = "localhost"
-    port: int = 6333
+    path: str = "data/chroma"
     collection_name: str = "larry_memories"
 
 
@@ -65,14 +64,19 @@ class ToolsConfig:
 @dataclass
 class Config:
     machine_id: str = ""
-    system_prompt: str = ""
+    roles: dict[str, dict] = field(default_factory=dict)
     models: dict[str, ModelConfig] = field(default_factory=dict)
     server: ServerConfig = field(default_factory=ServerConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
-    qdrant: QdrantConfig = field(default_factory=QdrantConfig)
+    vector_store: VectorStoreConfig = field(default_factory=VectorStoreConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+
+    def get_system_prompt(self, role: str = "default") -> str:
+        """获取指定角色的 system prompt，不存在则回退到 default。"""
+        role_config = self.roles.get(role, self.roles.get("default", {}))
+        return role_config.get("system_prompt", "")
 
 
 # === 全局单例 ===
@@ -112,11 +116,11 @@ def load_config(config_path: str | None = None) -> Config:
 
     _config = Config(
         machine_id=raw.get("machine_id", ""),
-        system_prompt=raw.get("system_prompt", ""),
+        roles=raw.get("roles", {}),
         models=models,
         server=ServerConfig(**raw.get("server", {})),
         database=DatabaseConfig(**raw.get("database", {})),
-        qdrant=QdrantConfig(**raw.get("qdrant", {})),
+        vector_store=VectorStoreConfig(**raw.get("vector_store", {})),
         embedding=EmbeddingConfig(**raw.get("embedding", {})),
         tools=ToolsConfig(**raw.get("tools", {})),
         logging=LoggingConfig(**raw.get("logging", {})),

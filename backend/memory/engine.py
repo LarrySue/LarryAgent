@@ -13,7 +13,11 @@
 - 依赖 models/embedding.py 生成查询向量
 """
 
+import logging
+
 from db.conversations import get_messages
+
+logger = logging.getLogger(__name__)
 
 
 async def get_short_term_memory(
@@ -36,6 +40,7 @@ async def get_short_term_memory(
 async def get_long_term_memory(
     query: str,
     top_k: int = 5,
+    score_threshold: float = 0.5,
 ) -> list[str]:
     """
     根据用户查询检索相关的长期记忆。
@@ -43,15 +48,31 @@ async def get_long_term_memory(
     Args:
         query: 用户当前消息文本
         top_k: 返回最相关的记忆条数
+        score_threshold: 相似度阈值，低于此值的结果被过滤
 
     Returns:
-        相关记忆文本列表
+        相关记忆文本列表（从 payload.text 字段提取）
     """
-    # TODO: 将 query 向量化 → 在 Qdrant 中检索 → 返回匹配的记忆
-    #   - 调用 models/embedding.py 的 embed_text(query)
-    #   - 调用 rag/vector_store.py 的 search()
-    #   - 返回 payload 中的记忆内容
-    raise NotImplementedError("Long-term memory retrieval not yet implemented")
+    try:
+        from models.embedding import get_embedding_provider
+        from rag.vector_store import search
+
+        provider = get_embedding_provider()
+        query_vector = await provider.embed_text(query)
+
+        results = await search(
+            query_vector=query_vector,
+            limit=top_k,
+            score_threshold=score_threshold,
+        )
+
+        # 从 payload 中提取 text 字段作为记忆内容
+        memories = [r["payload"]["text"] for r in results if "text" in r.get("payload", {})]
+        logger.info("Long-term memory search: %d results for query=%r", len(memories), query[:30])
+        return memories
+    except Exception as e:
+        logger.warning("Long-term memory search failed: %s", e)
+        return []
 
 
 def build_memory_context(
@@ -70,9 +91,6 @@ def build_memory_context(
     Returns:
         完整的 messages 列表，可直接传给 LLM
     """
-    # TODO: 构造系统消息，将长期记忆注入 system prompt
-    #   格式示例：
-    #   system_prompt + "\n\n相关历史记忆：\n- " + "\n- ".join(long_term)
     memory_section = ""
     if long_term:
         memory_section = "\n\n## 相关历史记忆\n" + "\n".join(f"- {m}" for m in long_term)

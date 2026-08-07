@@ -1,85 +1,76 @@
 """
-Qdrant 向量库操作模块
+向量库操作模块（ChromaDB 本地持久化）
 
 职责：
-- 封装 Qdrant 客户端的插入、检索、删除操作
+- 封装 ChromaDB 的插入、检索、删除操作
 - 在应用启动时确保集合存在
 - 统一向量维度（由 embedding 模型决定）
+- 所有公开函数为 async，内部用 asyncio.to_thread 包装同步 ChromaDB 调用
 
 与其他模块的关系：
 - 被 memory/archiver.py 调用，写入长期记忆
 - 被 memory/engine.py 调用，检索相关记忆
 - 依赖 models/embedding.py 生成向量
-- 依赖 config.py 获取 Qdrant 连接信息
+- 依赖 config.py 获取向量库配置
 """
 
+import asyncio
 import logging
 
-from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, PointIdsList, PointStruct, VectorParams
+import chromadb
+from chromadb.config import Settings
 
 from config import get_config
 
 logger = logging.getLogger(__name__)
 
-_client: AsyncQdrantClient | None = None
+_client: chromadb.PersistentClient | None = None
+_collection: chromadb.Collection | None = None
 
 
-def get_qdrant_client() -> AsyncQdrantClient:
-    """获取 Qdrant 异步客户端单例。"""
+def _get_client() -> chromadb.PersistentClient:
+    """获取 ChromaDB 持久化客户端单例（同步）。"""
     global _client
     if _client is None:
         config = get_config()
-        _client = AsyncQdrantClient(host=config.qdrant.host, port=config.qdrant.port)
-        logger.info("Qdrant async client created: %s:%s", config.qdrant.host, config.qdrant.port)
+        _client = chromadb.PersistentClient(
+            path=config.vector_store.path,
+            settings=Settings(anonymized_telemetry=False),
+        )
+        logger.info("ChromaDB client created: path=%s", config.vector_store.path)
     return _client
+
+
+def _get_collection(collection_name: str | None = None) -> chromadb.Collection:
+    """获取或创建集合（同步）。"""
+    global _collection
+    if _collection is None or _collection.name != collection_name:
+        config = get_config()
+        coll_name = collection_name or config.vector_store.collection_name
+        _collection = _get_client().get_or_create_collection(
+            name=coll_name,
+            metadata={"hnsw:space": "cosine"},
+        )
+        logger.info("ChromaDB collection ready: '%s'", coll_name)
+    return _collection
 
 
 async def ensure_collection(vector_size: int):
     """
-    确保 Qdrant 集合存在，不存在则创建。
+    确保向量集合存在，不存在则创建。
+    ChromaDB 的集合是 schema-free 的，不需要预先指定维度。
 
     Args:
-        vector_size: 向量维度，由 embedding 模型决定
+        vector_size: 向量维度，由 embedding 模型决定（仅用于日志记录）
     """
-    client = get_qdrant_client()
-    config = get_config()
-    collection_name = config.qdrant.collection_name
-
-    exists = await client.collection_exists(collection_name)
-    if not exists:
-        logger.info(
-            "Creating Qdrant collection '%s' (vector_size=%d, distance=cosine)",
-            collection_name,
-            vector_size,
-        )
-        await client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
-        )
-        logger.info("Qdrant collection '%s' created", collection_name)
-    else:
-        # 验证已有 collection 的维度是否匹配当前 embedding 模型
-        collection_info = await client.get_collection(collection_name)
-        existing_size = collection_info.config.params.vectors.size
-        if existing_size != vector_size:
-            raise RuntimeError(
-                f"Qdrant collection '{collection_name}' exists with vector_size={existing_size}, "
-                f"but current embedding model requires vector_size={vector_size}. "
-                f"Either delete the collection manually or switch back to the original embedding model."
-            )
-        logger.info(
-            "Qdrant collection '%s' exists (vector_size=%d, matches)",
-            collection_name,
-            vector_size,
-        )
-
-
-def _resolve_collection(collection_name: str | None = None) -> str:
-    """解析集合名，未指定则使用配置中的默认集合。"""
-    if collection_name:
-        return collection_name
-    return get_config().qdrant.collection_name
+    coll = await asyncio.to_thread(_get_collection)
+    count = await asyncio.to_thread(coll.count)
+    logger.info(
+        "ChromaDB collection '%s' ready (vector_size=%d, existing=%d)",
+        coll.name,
+        vector_size,
+        count,
+    )
 
 
 async def insert(
@@ -87,22 +78,26 @@ async def insert(
     collection_name: str | None = None,
 ) -> None:
     """
-    批量插入向量点到 Qdrant。
+    批量插入向量点到 ChromaDB。
 
     Args:
         points: 点列表，每个点包含 id、vector、payload
                 例: [{"id": 1, "vector": [...], "payload": {"text": "..."}}]
         collection_name: 集合名，默认使用配置中的
     """
-    client = get_qdrant_client()
-    coll = _resolve_collection(collection_name)
+    coll = await asyncio.to_thread(_get_collection, collection_name)
 
-    point_structs = [
-        PointStruct(id=p["id"], vector=p["vector"], payload=p.get("payload", {}))
-        for p in points
-    ]
-    await client.upsert(collection_name=coll, points=point_structs)
-    logger.info("Inserted %d points into '%s'", len(point_structs), coll)
+    ids = [str(p["id"]) for p in points]
+    embeddings = [p["vector"] for p in points]
+    metadatas = [p.get("payload", {}) for p in points]
+
+    await asyncio.to_thread(
+        coll.upsert,
+        ids=ids,
+        embeddings=embeddings,
+        metadatas=metadatas,
+    )
+    logger.info("Inserted %d points into '%s'", len(points), coll.name)
 
 
 async def search(
@@ -117,26 +112,43 @@ async def search(
     Args:
         query_vector: 查询向量
         limit: 返回结果数上限
-        score_threshold: 相似度阈值，低于此值的结果被过滤
+        score_threshold: 相似度阈值（余弦相似度），低于此值的结果被过滤
         collection_name: 集合名
 
     Returns:
-        匹配的 payload 列表，每条包含 payload 和 score，按相似度降序
+        匹配的 payload 列表，每条包含 payload、score 和 id，按相似度降序
     """
-    client = get_qdrant_client()
-    coll = _resolve_collection(collection_name)
+    coll = await asyncio.to_thread(_get_collection, collection_name)
 
-    results = await client.search(
-        collection_name=coll,
-        query_vector=query_vector,
-        limit=limit,
-        score_threshold=score_threshold,
+    results = await asyncio.to_thread(
+        coll.query,
+        query_embeddings=[query_vector],
+        n_results=limit,
     )
-    logger.info("Search '%s': %d results (threshold=%.2f)", coll, len(results), score_threshold)
-    return [
-        {"payload": hit.payload, "score": hit.score, "id": hit.id}
-        for hit in results
-    ]
+
+    # ChromaDB 返回 distances（余弦距离 = 1 - 相似度），转换为相似度
+    outputs = []
+    if results["ids"] and results["ids"][0]:
+        for i, point_id in enumerate(results["ids"][0]):
+            distance = results["distances"][0][i] if results["distances"] else 1.0
+            similarity = 1.0 - distance  # cosine distance → cosine similarity
+            if similarity >= score_threshold:
+                metadata = results["metadatas"][0][i] if results["metadatas"] else {}
+                outputs.append({
+                    "id": int(point_id),
+                    "payload": metadata,
+                    "score": round(similarity, 4),
+                })
+
+    # 按相似度降序
+    outputs.sort(key=lambda x: x["score"], reverse=True)
+    logger.info(
+        "Search '%s': %d results (threshold=%.2f)",
+        coll.name,
+        len(outputs),
+        score_threshold,
+    )
+    return outputs
 
 
 async def delete(point_ids: list[int], collection_name: str | None = None) -> None:
@@ -147,11 +159,7 @@ async def delete(point_ids: list[int], collection_name: str | None = None) -> No
         point_ids: 要删除的点 ID 列表
         collection_name: 集合名
     """
-    client = get_qdrant_client()
-    coll = _resolve_collection(collection_name)
-
-    await client.delete(
-        collection_name=coll,
-        points_selector=PointIdsList(points=point_ids),
-    )
-    logger.info("Deleted %d points from '%s'", len(point_ids), coll)
+    coll = await asyncio.to_thread(_get_collection, collection_name)
+    str_ids = [str(pid) for pid in point_ids]
+    await asyncio.to_thread(coll.delete, ids=str_ids)
+    logger.info("Deleted %d points from '%s'", len(point_ids), coll.name)

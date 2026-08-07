@@ -22,13 +22,13 @@ AIGC:
 
 # LarryAgent
 
-个人 AI Agent，技术栈：**Python FastAPI + SQLite + Qdrant + Tauri + HTML5**。
+个人 AI Agent，技术栈：**Python FastAPI + SQLite + ChromaDB + Tauri + HTML5**。
 
 ## 项目结构
 
 ```
 LarryAgent/
-├── backend/           # Python 后端（FastAPI + SQLite + Qdrant）
+├── backend/           # Python 后端（FastAPI + SQLite + ChromaDB）
 │   ├── main.py        # 入口文件
 │   ├── config.yaml    # 配置文件
 │   ├── models/        # LLM 路由 + Embedding
@@ -59,7 +59,7 @@ LarryAgent/
 │  └── /api/tools    工具管理           │
 │                                      │
 │  ┌─────────┐  ┌──────────┐           │
-│  │ SQLite   │  │ Qdrant   │           │
+│  │ SQLite   │  │ ChromaDB  │           │
 │  │(对话/记忆)│  │(向量检索) │           │
 │  └─────────┘  └──────────┘           │
 └──────────────────────────────────────┘
@@ -70,7 +70,6 @@ LarryAgent/
 ### 环境要求
 
 - Python 3.11+
-- Qdrant（本地运行或 Docker）
 - Node.js 20+（PC 客户端开发）
 
 ### 安装
@@ -80,12 +79,9 @@ LarryAgent/
 make install
 
 # 2. 编辑配置文件
-#    修改 backend/config.yaml，填入 API Key
+#    修改 backend/config.yaml，填入 API Key，开启 vector_store.enabled: true
 
-# 3. 启动 Qdrant（Docker）
-docker run -p 6333:6333 qdrant/qdrant
-
-# 4. 启动后端
+# 3. 启动后端
 make run
 ```
 
@@ -111,11 +107,12 @@ make dev    # 启动后端开发模式（热重载）
 
 - [x] 修复启动时序：DB 目录创建移到 `get_db()` 之前
 - [x] Qdrant 加 `enabled` 开关 + try/except 容错，P0 不依赖
+- [x] VectorStore 改为 ChromaDB 内嵌方案，无需独立进程
 - [x] 新增 `db/conversations.py`：会话与消息 CRUD
 - [x] 实现 `/api/chat` 非流式（短期记忆 + LLM 调用，跳过长期记忆和工具）
 - [x] 修复 LLM 客户端缓存 key：按 provider 而非 model name
 - [x] 新增 `logging_config.py`：统一日志格式 + 第三方库降噪
-- [x] config.yaml 补 `qdrant.enabled` / `logging` 段，统一 larry 命名
+- [x] config.yaml 补 `vector_store.enabled` / `logging` 段，统一 larry 命名
 - [x] chat.py 加默认 system prompt
 - [x] 申请 API Key 填入 `config.yaml`，端到端测试通过（2026-08-07）
 
@@ -131,17 +128,16 @@ make dev    # 启动后端开发模式（热重载）
 - [x] `config.yaml` / `config.py` 中 embedding 段补 `local_model_name`、`base_url`、`hf_endpoint` 字段
 - [x] 安装依赖 `sentence-transformers`，验证模型可加载、可生成向量、余弦相似度正确（2026-08-07）
 
-**P1.2 - Qdrant 向量库 CRUD**
+**P1.2 - ChromaDB 向量库 CRUD**
 
-- [x] `vector_store.py` 同步客户端改 `AsyncQdrantClient`，避免阻塞事件循环
-- [x] `ensure_collection` 的 `vector_size` 改为从 embedding provider 动态获取（不再硬编码 1536）
-- [x] `ensure_collection` 新增维度一致性校验：已有 collection 维度与当前模型不匹配时抛 RuntimeError
-- [x] `main.py` 启动流程调整：embedding provider 初始化 → `ensure_collection(dim)`
-- [x] 实现 `insert(points)`：PointStruct → `client.upsert()`，支持批量
-- [x] 实现 `search(query_vector, limit, score_threshold)`：`client.search()` + 阈值过滤 + 结果格式化
-- [x] 实现 `delete(point_ids)`：`client.delete(PointIdsList)`
-- [x] 新增 `_resolve_collection()` 工具函数，统一默认集合名解析
-- [x] 验证 `chunker.py` 分块结果与 Qdrant insert 数据格式对接
+- [x] 从 Qdrant 切换到 ChromaDB 内嵌方案：无需独立进程，零外部依赖
+- [x] `vector_store.py` 全量重写：`asyncio.to_thread` 包装同步 ChromaDB 调用
+- [x] `config.py` / `config.yaml`：`QdrantConfig` → `VectorStoreConfig`（path + collection_name）
+- [x] 实现 `insert(points)`：`coll.upsert(ids, embeddings, metadatas)` 批量插入
+- [x] 实现 `search(query_vector, limit, score_threshold)`：`coll.query()` + 余弦距离→相似度转换 + 阈值过滤
+- [x] 实现 `delete(point_ids)`：`coll.delete(ids)`
+- [x] `ensure_collection`：`get_or_create_collection(schema-free)`，ChromaDB 无需预先指定维度
+- [x] 验证 `chunker.py` 分块结果与向量库 insert 数据格式对接
 
 **P1.3 - DB 层补全**
 
@@ -151,28 +147,28 @@ make dev    # 启动后端开发模式（热重载）
 
 **P1.4 - 长期记忆检索**
 
-- [ ] 实现 `memory/engine.py` 的 `get_long_term_memory(query)`：query → embed → Qdrant search → 返回文本列表
-- [ ] Qdrant 不可用时降级返回空列表，不影响 P0 聊天功能
-- [ ] `score_threshold` 初始设为 0.5（后续根据效果调参）
-- [ ] `api/chat.py` 接入：`long_term=await get_long_term_memory(req.message)` 注入 system prompt
-- [ ] `main.py` lifespan 调整：embedding provider 初始化 → `ensure_collection(dim)` → 后续
+- [x] 实现 `memory/engine.py` 的 `get_long_term_memory(query)`：query → embed → ChromaDB search → 返回文本列表
+- [x] ChromaDB 不可用时降级返回空列表（try/except），不影响 P0 聊天功能
+- [x] `score_threshold` 初始设为 0.5（后续根据效果调参）
+- [x] `api/chat.py` 接入：`long_term=await get_long_term_memory(req.message)` 注入 system prompt
+- [x] `main.py` lifespan 已调整：embedding provider 初始化 → `ensure_collection(dim)`
 
 **P1.5 - 归档流程**
 
 - [ ] 新建 `memory/archiver.py`：对话全文 → LLM 摘要 → 分块 → 向量化 → 双写存储
 - [ ] 新建 `api/memory.py` 路由：
   - `POST /api/memory/archive`：提交归档请求，返回 LLM 生成的摘要草稿
-  - `PUT /api/memory/archive/{conv_id}`：用户确认/修改摘要后提交，执行双写，归档流程的确认操作后面在前端实现，现在先把用户确认这一步写成代码模拟用户已确认就行
+  - `PUT /api/memory/archive/{conv_id}`：用户确认/修改摘要后提交，执行双写
   - `GET /api/memory`：列出所有记忆
-  - `DELETE /api/memory/{id}`：删除记忆（Qdrant + SQLite 双删）
+  - `DELETE /api/memory/{id}`：删除记忆（ChromaDB + SQLite 双删）
 - [ ] 设计摘要生成 prompt（保留需求/偏好/决策/事实信息，丢弃闲聊）
 
 **P1.6 - 端到端测试**
 
-- [ ] `config.yaml` 开启 `qdrant.enabled: true`
+- [ ] `config.yaml` 开启 `vector_store.enabled: true`
 - [ ] 测试长期记忆检索：多轮对话后归档 → 新会话中验证记忆召回
 - [ ] 测试归档流程完整闭环
-- [ ] 测试 Qdrant 不可用时的降级行为
+- [ ] 测试 ChromaDB 不可用时的降级行为
 
 ### P2 - 工具调用闭环
 

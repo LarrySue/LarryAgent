@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 
 from config import get_config
 from db import conversations as conv_db
-from memory.engine import build_memory_context, get_short_term_memory
+from memory.engine import build_memory_context, get_short_term_memory, get_long_term_memory
 from models.llm import chat_completion
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ class ChatRequest(BaseModel):
     """聊天请求体"""
     conversation_id: int | None = None  # None 表示新建会话
     message: str = Field(..., min_length=1)
+    role: str = "default"         # 角色名，对应 config.yaml 中 roles 的 key
     model: str = "deepseek-chat"
     stream: bool = False
     temperature: float = 0.7
@@ -80,7 +81,11 @@ async def chat(req: ChatRequest):
 
     # 3. 短期记忆（含刚写入的用户消息）
     short_term = await get_short_term_memory(conversation_id)
-    messages = build_memory_context(short_term, long_term=[], system_prompt=get_config().system_prompt)
+
+    # 3b. 长期记忆（ChromaDB 检索，失败时降级为空列表）
+    long_term = await get_long_term_memory(req.message)
+
+    messages = build_memory_context(short_term, long_term=long_term, system_prompt=get_config().get_system_prompt(req.role))
 
     # 4. 调用 LLM
     try:

@@ -39,8 +39,8 @@ async def lifespan(app: FastAPI):
     from db.database import get_db
     await get_db()
 
-    # Qdrant（可选，P1 阶段开启）
-    if config.qdrant.enabled:
+    # 向量库（ChromaDB，可选，P1.4 阶段开启）
+    if config.vector_store.enabled:
         try:
             from models.embedding import get_embedding_provider
             from rag.vector_store import ensure_collection
@@ -52,11 +52,11 @@ async def lifespan(app: FastAPI):
                 vector_size,
             )
             await ensure_collection(vector_size)
-            logger.info("Qdrant collection ready")
+            logger.info("Vector store collection ready")
         except Exception as e:
-            logger.warning("Qdrant unavailable, skipping: %s", e)
+            logger.warning("Vector store unavailable, skipping: %s", e)
     else:
-        logger.info("Qdrant disabled (qdrant.enabled=false)")
+        logger.info("Vector store disabled (vector_store.enabled=false)")
 
     # 扫描并注册工具
     from tools.registry import scan_and_register

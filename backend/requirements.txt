@@ -1,4 +1,4 @@
-﻿# LarryAgent 后端依赖
+# LarryAgent 后端依赖
 # 安装方式：pip install -r requirements.txt
 
 # Web 框架
@@ -12,7 +12,7 @@ pyyaml>=6.0
 aiosqlite>=0.20.0
 
 # 向量库
-qdrant-client>=1.9.0
+chromadb>=0.5.0
 
 # LLM 调用（兼容 OpenAI 接口）
 openai>=1.30.0
