@@ -77,25 +77,32 @@ async def insert_message(
 
 async def get_messages(
     conversation_id: int,
-    limit: int = 20,
+    limit: int | None = 20,
 ) -> list[dict]:
     """
-    获取会话的最近 N 条消息，按时间正序返回。
+    获取会话的消息，按时间正序返回。
 
     Args:
         conversation_id: 会话 ID
-        limit: 最多取多少条
+        limit: 最多取多少条，None 表示加载全部
 
     Returns:
         消息列表，每条包含 role 和 content
     """
     db = await get_db()
-    cursor = await db.execute(
-        "SELECT role, content FROM messages "
-        "WHERE conversation_id = ? ORDER BY id DESC LIMIT ?",
-        (conversation_id, limit),
-    )
+    if limit is None:
+        cursor = await db.execute(
+            "SELECT role, content FROM messages "
+            "WHERE conversation_id = ? ORDER BY id ASC",
+            (conversation_id,),
+        )
+    else:
+        cursor = await db.execute(
+            "SELECT role, content FROM messages "
+            "WHERE conversation_id = ? ORDER BY id DESC LIMIT ?",
+            (conversation_id, limit),
+        )
     rows = await cursor.fetchall()
-    # 反转回时间正序
-    rows = list(reversed(rows))
+    if limit is not None:
+        rows = list(reversed(rows))
     return [{"role": row["role"], "content": row["content"]} for row in rows]

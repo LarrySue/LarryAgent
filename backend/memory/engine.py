@@ -54,11 +54,10 @@ async def get_long_term_memory(
         相关记忆文本列表（从 payload.text 字段提取）
     """
     try:
-        from models.embedding import get_embedding_provider
+        from models.embedding import embed_text
         from rag.vector_store import search
 
-        provider = get_embedding_provider()
-        query_vector = await provider.embed_text(query)
+        query_vector = await embed_text(query)
 
         results = await search(
             query_vector=query_vector,

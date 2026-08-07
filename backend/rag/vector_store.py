@@ -16,6 +16,7 @@
 
 import asyncio
 import logging
+from typing import Any, Optional
 
 import chromadb
 from chromadb.config import Settings
@@ -24,11 +25,11 @@ from config import get_config
 
 logger = logging.getLogger(__name__)
 
-_client: chromadb.PersistentClient | None = None
-_collection: chromadb.Collection | None = None
+_client: Optional[Any] = None
+_collection: Optional[Any] = None
 
 
-def _get_client() -> chromadb.PersistentClient:
+def _get_client() -> Any:
     """获取 ChromaDB 持久化客户端单例（同步）。"""
     global _client
     if _client is None:
@@ -41,7 +42,7 @@ def _get_client() -> chromadb.PersistentClient:
     return _client
 
 
-def _get_collection(collection_name: str | None = None) -> chromadb.Collection:
+def _get_collection(collection_name: str | None = None) -> Any:
     """获取或创建集合（同步）。"""
     global _collection
     if _collection is None or _collection.name != collection_name:
@@ -163,3 +164,16 @@ async def delete(point_ids: list[int], collection_name: str | None = None) -> No
     str_ids = [str(pid) for pid in point_ids]
     await asyncio.to_thread(coll.delete, ids=str_ids)
     logger.info("Deleted %d points from '%s'", len(point_ids), coll.name)
+
+
+async def delete_by_memory_id(memory_id: int, collection_name: str | None = None) -> None:
+    """
+    按 memory_id 删除关联的所有向量分块。
+
+    Args:
+        memory_id: 记忆 ID（metadata 中的 memory_id 字段）
+        collection_name: 集合名
+    """
+    coll = await asyncio.to_thread(_get_collection, collection_name)
+    await asyncio.to_thread(coll.delete, where={"memory_id": memory_id})
+    logger.info("Deleted vectors for memory_id=%d from '%s'", memory_id, coll.name)

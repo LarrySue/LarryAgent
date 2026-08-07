@@ -155,20 +155,21 @@ make dev    # 启动后端开发模式（热重载）
 
 **P1.5 - 归档流程**
 
-- [ ] 新建 `memory/archiver.py`：对话全文 → LLM 摘要 → 分块 → 向量化 → 双写存储
-- [ ] 新建 `api/memory.py` 路由：
+- [x] 新建 `memory/archiver.py`：对话全文 → LLM 摘要 → 分块 → 向量化 → 双写存储
+- [x] 新建 `api/memory.py` 路由：
   - `POST /api/memory/archive`：提交归档请求，返回 LLM 生成的摘要草稿
-  - `PUT /api/memory/archive/{conv_id}`：用户确认/修改摘要后提交，执行双写
+  - `POST /api/memory/archive/confirm`：用户确认摘要后提交，执行双写
   - `GET /api/memory`：列出所有记忆
   - `DELETE /api/memory/{id}`：删除记忆（ChromaDB + SQLite 双删）
-- [ ] 设计摘要生成 prompt（保留需求/偏好/决策/事实信息，丢弃闲聊）
-- [ ] 记忆软标记：归档时在 ChromaDB metadata 中记录 `source_role`（产生记忆时的角色），检索时不硬过滤，仅用于排序加权
+- [x] 设计摘要生成 prompt（保留需求/偏好/决策/事实信息，丢弃闲聊）
+- [x] 记忆软标记：归档时在 ChromaDB metadata 中记录 `source_role`（产生记忆时的角色），检索时不硬过滤，仅用于排序加权
+- [x] 端到端验证：归档 → 新会话记忆召回 → 双删（2026-08-07）
 
 **P1.6 - 端到端测试**
 
-- [ ] `config.yaml` 开启 `vector_store.enabled: true`
-- [ ] 测试长期记忆检索：多轮对话后归档 → 新会话中验证记忆召回
-- [ ] 测试归档流程完整闭环
+- [x] `config.yaml` 开启 `vector_store.enabled: true`
+- [x] 测试长期记忆检索：多轮对话后归档 → 新会话中验证记忆召回 ✅
+- [x] 测试归档流程完整闭环 ✅
 - [ ] 测试 ChromaDB 不可用时的降级行为
 
 ### P2 - 工具调用闭环
