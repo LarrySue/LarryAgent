@@ -2,18 +2,18 @@
 记忆引擎模块
 
 职责：
-- 短期记忆：直接从数据库加载当前会话的最近 N 条消息
+- 短期记忆：调用 db/conversations.py 加载当前会话的最近 N 条消息
 - 长期记忆：对用户查询做向量检索，召回相关历史记忆
 - 合并后注入到 LLM 的系统提示中
 
 与其他模块的关系：
 - 被 api/chat.py 调用，在模型调用前检索记忆
-- 依赖 db/database.py 读取消息历史
+- 依赖 db/conversations.py 读取消息历史
 - 依赖 rag/vector_store.py 检索长期记忆
 - 依赖 models/embedding.py 生成查询向量
 """
 
-from db.database import get_db
+from db.conversations import get_messages
 
 
 async def get_short_term_memory(
@@ -30,19 +30,7 @@ async def get_short_term_memory(
     Returns:
         消息列表，每条包含 role 和 content
     """
-    # TODO: 从 messages 表查询最近 N 条消息
-    #   SELECT role, content FROM messages
-    #   WHERE conversation_id = ? ORDER BY id DESC LIMIT ?
-    db = await get_db()
-    cursor = await db.execute(
-        "SELECT role, content FROM messages "
-        "WHERE conversation_id = ? ORDER BY id DESC LIMIT ?",
-        (conversation_id, max_messages),
-    )
-    rows = await cursor.fetchall()
-    # 反转回时间正序
-    rows = list(reversed(rows))
-    return [{"role": row["role"], "content": row["content"]} for row in rows]
+    return await get_messages(conversation_id, limit=max_messages)
 
 
 async def get_long_term_memory(

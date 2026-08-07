@@ -145,9 +145,9 @@ make dev    # 启动后端开发模式（热重载）
 
 **P1.3 - DB 层补全**
 
-- [ ] `db/conversations.py` 补 `get_messages(conversation_id, limit)` 方法
-- [ ] `memory/engine.py` 的 `get_short_term_memory` 改为调用 `conversations.get_messages()`，消除直接 SQL
-- [ ] 新建 `db/memories.py`：`create_memory` / `get_memory` / `list_memories` / `update_memory` / `deactivate_memory` / `delete_memory`
+- [x] `db/conversations.py` 补 `get_messages(conversation_id, limit)` 方法：最近 N 条消息，时间正序
+- [x] `memory/engine.py` 的 `get_short_term_memory` 改为调用 `conversations.get_messages()`，消除直接 SQL
+- [x] 新建 `db/memories.py`：`create_memory` / `get_memory` / `list_memories` / `update_memory` / `deactivate_memory` / `delete_memory`
 
 **P1.4 - 长期记忆检索**
 
