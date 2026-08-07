@@ -70,15 +70,15 @@ async def search_memories(query: str, limit: int = 10):
     Returns:
         匹配的记忆列表
     """
-    # TODO: 对 query 向量化 → Qdrant 检索 → 返回匹配的记忆
+    # TODO: 对 query 向量化 → ChromaDB 检索 → 返回匹配的记忆
     raise HTTPException(status_code=501, detail="Memory search not yet implemented")
 
 
 @router.delete("/{memory_id}")
 async def delete_memory(memory_id: int):
     """
-    删除指定记忆（同时从 SQLite 和 Qdrant 中删除）。
+    删除指定记忆（同时从 SQLite 和 ChromaDB 中删除）。
     """
     # TODO: 1) 从 SQLite 标记删除或物理删除
-    #       2) 从 Qdrant 删除对应向量
+    #       2) 从 ChromaDB 删除对应向量
     raise HTTPException(status_code=501, detail="Memory delete not yet implemented")

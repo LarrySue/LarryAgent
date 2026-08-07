@@ -37,5 +37,5 @@ client/src-tauri/target/
 .DS_Store
 Thumbs.db
 
-# Qdrant
-qdrant_storage/
+# ChromaDB
+backend/data/chroma/

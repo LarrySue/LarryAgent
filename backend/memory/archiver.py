@@ -10,7 +10,7 @@
 1. 加载完整会话消息
 2. 调用 LLM 生成摘要（提取关键事实、决策、偏好）
 3. 展示摘要给用户确认
-4. 用户确认后 → 分块 → 向量化 → 写入 Qdrant + SQLite
+4. 用户确认后 → 分块 → 向量化 → 写入 ChromaDB + SQLite
 
 与其他模块的关系：
 - 被 api/memory.py 调用
@@ -60,6 +60,6 @@ async def confirm_and_store(
     #   1. 将 summary 写入 SQLite memories 表
     #   2. 调用 chunker 对摘要分块
     #   3. 对每个块调用 embedding 生成向量
-    #   4. 将向量写入 Qdrant
+    #   4. 将向量写入 ChromaDB
     #   5. 标记 conversation 的 is_archived = 1
     raise NotImplementedError("Archive storage not yet implemented")

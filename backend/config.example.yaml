@@ -45,13 +45,11 @@ database:
   path: "data/larry.db"
 
 # ============================================================
-# Qdrant 向量库配置
+# 向量库配置（ChromaDB 本地持久化）
 # ============================================================
-qdrant:
-  enabled: false       # MVP 阶段可关闭，无需启动 Qdrant
-  host: "localhost"
-  port: 6333
-  # 集合名称，用于存储长期记忆和文档向量
+vector_store:
+  enabled: false        # P1.4 接通长期记忆时改为 true
+  path: "data/chroma"   # ChromaDB 数据存储路径，相对于 backend/ 目录
   collection_name: "larry_memories"
 
 # ============================================================

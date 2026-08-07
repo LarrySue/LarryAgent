@@ -126,7 +126,7 @@ async def deactivate_memory(memory_id: int) -> None:
 async def delete_memory(memory_id: int) -> None:
     """
     硬删除记忆（从 SQLite 中彻底移除）。
-    注意：调用此函数时需同时删除 Qdrant 中的向量。
+    注意：调用此函数时需同时删除 ChromaDB 中的向量。
 
     Args:
         memory_id: 记忆 ID
