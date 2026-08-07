@@ -162,6 +162,7 @@ make dev    # 启动后端开发模式（热重载）
   - `GET /api/memory`：列出所有记忆
   - `DELETE /api/memory/{id}`：删除记忆（ChromaDB + SQLite 双删）
 - [ ] 设计摘要生成 prompt（保留需求/偏好/决策/事实信息，丢弃闲聊）
+- [ ] 记忆软标记：归档时在 ChromaDB metadata 中记录 `source_role`（产生记忆时的角色），检索时不硬过滤，仅用于排序加权
 
 **P1.6 - 端到端测试**
 
@@ -206,6 +207,19 @@ make dev    # 启动后端开发模式（热重载）
 - [ ] Nginx 部署脚本示例（静态文件 + API 反代）
 - [ ] PWA manifest + Service Worker（可选）
 - [ ] 部署文档 + 安全加固
+
+## 架构演进：多场景 AI 设计
+
+> 让 AI 支持多场景切换（代码、健康、财务等），按需加载工具组
+
+- [x] 角色配置：`config.yaml` 支持 `roles` 多 system prompt 模板（default / code / health / finance）
+- [x] 手动角色切换：`/api/chat` 接收 `role` 字段，按角色加载 system prompt（已验证）
+- [x] 工具分组：`tools` 表新增 `group_name` 字段（core / 领域工具），支持按需加载
+- [ ] 自动意图识别：对话开头快速分类用户意图，自动切换角色（P2 阶段）
+- [ ] 工具动态注入：按角色过滤可用工具组，避免 prompt 膨胀
+- [ ] 记忆软标记：ChromaDB metadata 记录 `source_role`，检索时排序加权（P1.5）
+- [ ] 跨域关联：允许 AI 发现跨场景因果链
+- [ ] 用户画像沉淀：从记忆中提炼结构化用户画像
 
 ## License
 

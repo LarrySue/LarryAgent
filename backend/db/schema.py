@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS tools (
     name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     parameters_schema TEXT NOT NULL DEFAULT '{}',
-    is_enabled INTEGER NOT NULL DEFAULT 1
+    is_enabled INTEGER NOT NULL DEFAULT 1,
+    group_name TEXT NOT NULL DEFAULT 'core'
 );
 """
 
