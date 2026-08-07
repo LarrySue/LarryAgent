@@ -117,7 +117,7 @@ make dev    # 启动后端开发模式（热重载）
 - [x] 新增 `logging_config.py`：统一日志格式 + 第三方库降噪
 - [x] config.yaml 补 `qdrant.enabled` / `logging` 段，统一 larry 命名
 - [x] chat.py 加默认 system prompt
-- [ ] 申请 API Key 填入 `config.yaml`，端到端测试
+- [x] 申请 API Key 填入 `config.yaml`，端到端测试通过（2026-08-07）
 
 ### P1 - 记忆系统可用
 
