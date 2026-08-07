@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # LarryAgent 配置文件
 # 所有配置项均从此文件读取，启动时由 config.py 加载
 # ============================================================
@@ -64,11 +64,14 @@ logging:
 # Embedding 配置
 # ============================================================
 embedding:
-  # 提供商：openai 使用云端 API，local 使用本地模型
-  provider: "openai"
+  # 提供商：local 使用本地模型，openai 使用云端 API
+  provider: "local"
   model: "text-embedding-3-small"
-  api_key: ""          # 如果 provider 为 openai，这里填 API Key
+  api_key: ""          # provider 为 openai 时填入
+  base_url: ""         # provider 为 openai 时填入，留空则复用 deepseek 配置
   # 本地模型配置（provider 为 local 时生效）
+  local_model_name: "BAAI/bge-small-zh-v1.5"
+  hf_endpoint: "https://hf-mirror.com"  # 国内 HuggingFace 镜像，海外留空
   # local_model_path: "models/bge-small-zh"
 
 # ============================================================

@@ -48,10 +48,13 @@ class LoggingConfig:
 
 @dataclass
 class EmbeddingConfig:
-    provider: str = "openai"
+    provider: str = "local"
     model: str = "text-embedding-3-small"
     api_key: str = ""
+    base_url: str = ""
+    local_model_name: str = "BAAI/bge-small-zh-v1.5"
     local_model_path: str = ""
+    hf_endpoint: str = ""
 
 
 @dataclass

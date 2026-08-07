@@ -121,13 +121,55 @@ make dev    # 启动后端开发模式（热重载）
 
 ### P1 - 记忆系统可用
 
-> 能检索上下文，多轮对话有记忆
+> 能检索上下文，多轮对话有记忆，跨会话归档
 
-- [ ] 实现 Embedding（先做 OpenAI 兼容版）
-- [ ] 实现 Qdrant 的 insert / search / delete
-- [ ] 实现长期记忆检索 + 注入 system prompt
-- [ ] 打通归档流程：生成摘要 → 用户确认 → 存储（SQLite + Qdrant 双写）
-- [ ] 开启 `qdrant.enabled`，端到端测试记忆检索
+**P1.1 - Embedding 模块**
+
+- [x] 重写 `models/embedding.py`，抽象基类 `EmbeddingProvider` + 工厂函数 `get_embedding_provider()`
+- [x] 实现 `LocalEmbedding`：基于 `sentence-transformers` 加载 `BAAI/bge-small-zh-v1.5`（512 维，~95MB）
+- [x] 实现 `OpenAIEmbedding`：兼容 OpenAI embedding API（备用方案）
+- [x] `config.yaml` / `config.py` 中 embedding 段补 `local_model_name`、`base_url`、`hf_endpoint` 字段
+- [x] 安装依赖 `sentence-transformers`，验证模型可加载、可生成向量、余弦相似度正确（2026-08-07）
+
+**P1.2 - Qdrant 向量库 CRUD**
+
+- [ ] `vector_store.py` 同步客户端改 `AsyncQdrantClient`，避免阻塞事件循环
+- [ ] `ensure_collection` 的 `vector_size` 改为从 embedding provider 动态获取（不再硬编码 1536）
+- [ ] 实现 `insert(points)`：构造 PointStruct → `client.upsert()`
+- [ ] 实现 `search(query_vector, limit, score_threshold)`：`client.search()` + 阈值过滤
+- [ ] 实现 `delete(point_ids)`：`client.delete()`
+- [ ] 验证 `chunker.py` 分块结果与 Qdrant insert 对接
+
+**P1.3 - DB 层补全**
+
+- [ ] `db/conversations.py` 补 `get_messages(conversation_id, limit)` 方法
+- [ ] `memory/engine.py` 的 `get_short_term_memory` 改为调用 `conversations.get_messages()`，消除直接 SQL
+- [ ] 新建 `db/memories.py`：`create_memory` / `get_memory` / `list_memories` / `update_memory` / `deactivate_memory` / `delete_memory`
+
+**P1.4 - 长期记忆检索**
+
+- [ ] 实现 `memory/engine.py` 的 `get_long_term_memory(query)`：query → embed → Qdrant search → 返回文本列表
+- [ ] Qdrant 不可用时降级返回空列表，不影响 P0 聊天功能
+- [ ] `score_threshold` 初始设为 0.5（后续根据效果调参）
+- [ ] `api/chat.py` 接入：`long_term=await get_long_term_memory(req.message)` 注入 system prompt
+- [ ] `main.py` lifespan 调整：embedding provider 初始化 → `ensure_collection(dim)` → 后续
+
+**P1.5 - 归档流程**
+
+- [ ] 新建 `memory/archiver.py`：对话全文 → LLM 摘要 → 分块 → 向量化 → 双写存储
+- [ ] 新建 `api/memory.py` 路由：
+  - `POST /api/memory/archive`：提交归档请求，返回 LLM 生成的摘要草稿
+  - `PUT /api/memory/archive/{conv_id}`：用户确认/修改摘要后提交，执行双写，归档流程的确认操作后面在前端实现，现在先把用户确认这一步写成代码模拟用户已确认就行
+  - `GET /api/memory`：列出所有记忆
+  - `DELETE /api/memory/{id}`：删除记忆（Qdrant + SQLite 双删）
+- [ ] 设计摘要生成 prompt（保留需求/偏好/决策/事实信息，丢弃闲聊）
+
+**P1.6 - 端到端测试**
+
+- [ ] `config.yaml` 开启 `qdrant.enabled: true`
+- [ ] 测试长期记忆检索：多轮对话后归档 → 新会话中验证记忆召回
+- [ ] 测试归档流程完整闭环
+- [ ] 测试 Qdrant 不可用时的降级行为
 
 ### P2 - 工具调用闭环
 
