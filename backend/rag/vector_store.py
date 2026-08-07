@@ -13,42 +13,53 @@ Qdrant 向量库操作模块
 - 依赖 config.py 获取 Qdrant 连接信息
 """
 
-from qdrant_client import QdrantClient
+import logging
+
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
 from config import get_config
 
-_client: QdrantClient | None = None
+logger = logging.getLogger(__name__)
+
+_client: AsyncQdrantClient | None = None
 
 
-def get_qdrant_client() -> QdrantClient:
-    """获取 Qdrant 客户端单例。"""
+def get_qdrant_client() -> AsyncQdrantClient:
+    """获取 Qdrant 异步客户端单例。"""
     global _client
     if _client is None:
         config = get_config()
-        _client = QdrantClient(host=config.qdrant.host, port=config.qdrant.port)
+        _client = AsyncQdrantClient(host=config.qdrant.host, port=config.qdrant.port)
+        logger.info("Qdrant async client created: %s:%s", config.qdrant.host, config.qdrant.port)
     return _client
 
 
-async def ensure_collection(vector_size: int = 1536):
+async def ensure_collection(vector_size: int):
     """
     确保 Qdrant 集合存在，不存在则创建。
-    vector_size 默认 1536（text-embedding-3-small）。
 
     Args:
-        vector_size: 向量维度，与 embedding 模型匹配
+        vector_size: 向量维度，由 embedding 模型决定
     """
     client = get_qdrant_client()
     config = get_config()
     collection_name = config.qdrant.collection_name
 
-    # TODO: 检查集合是否存在，不存在则创建
-    #   如果已存在但维度不匹配，需要删旧建新
-    if not client.collection_exists(collection_name):
-        client.create_collection(
+    exists = await client.collection_exists(collection_name)
+    if not exists:
+        logger.info(
+            "Creating Qdrant collection '%s' (vector_size=%d, distance=cosine)",
+            collection_name,
+            vector_size,
+        )
+        await client.create_collection(
             collection_name=collection_name,
             vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
         )
+        logger.info("Qdrant collection '%s' created", collection_name)
+    else:
+        logger.info("Qdrant collection '%s' already exists", collection_name)
 
 
 async def insert(
@@ -63,17 +74,13 @@ async def insert(
                 例: [{"id": 1, "vector": [...], "payload": {"text": "..."}}]
         collection_name: 集合名，默认使用配置中的
     """
-    # TODO: 实现批量插入逻辑
-    #   - 构造 PointStruct 列表
-    #   - 调用 client.upsert()
-    #   - 处理插入失败的点
     raise NotImplementedError("Vector store insert not yet implemented")
 
 
 async def search(
     query_vector: list[float],
     limit: int = 5,
-    score_threshold: float = 0.7,
+    score_threshold: float = 0.5,
     collection_name: str | None = None,
 ) -> list[dict]:
     """
@@ -88,10 +95,6 @@ async def search(
     Returns:
         匹配的 payload 列表，按相似度降序
     """
-    # TODO: 实现向量检索逻辑
-    #   - 调用 client.search()
-    #   - 按 score_threshold 过滤
-    #   - 返回 payload 中的文本内容
     raise NotImplementedError("Vector store search not yet implemented")
 
 
@@ -103,5 +106,4 @@ async def delete(point_ids: list[int], collection_name: str | None = None):
         point_ids: 要删除的点 ID 列表
         collection_name: 集合名
     """
-    # TODO: 实现删除逻辑
     raise NotImplementedError("Vector store delete not yet implemented")

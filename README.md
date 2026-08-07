@@ -133,8 +133,9 @@ make dev    # 启动后端开发模式（热重载）
 
 **P1.2 - Qdrant 向量库 CRUD**
 
-- [ ] `vector_store.py` 同步客户端改 `AsyncQdrantClient`，避免阻塞事件循环
-- [ ] `ensure_collection` 的 `vector_size` 改为从 embedding provider 动态获取（不再硬编码 1536）
+- [x] `vector_store.py` 同步客户端改 `AsyncQdrantClient`，避免阻塞事件循环
+- [x] `ensure_collection` 的 `vector_size` 改为从 embedding provider 动态获取（不再硬编码 1536）
+- [x] `main.py` 启动流程调整：embedding provider 初始化 → `ensure_collection(dim)`
 - [ ] 实现 `insert(points)`：构造 PointStruct → `client.upsert()`
 - [ ] 实现 `search(query_vector, limit, score_threshold)`：`client.search()` + 阈值过滤
 - [ ] 实现 `delete(point_ids)`：`client.delete()`

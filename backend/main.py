@@ -1,4 +1,4 @@
-﻿"""
+"""
 LarryAgent 后端入口
 
 职责：
@@ -39,11 +39,19 @@ async def lifespan(app: FastAPI):
     from db.database import get_db
     await get_db()
 
-    # Qdrant（可选，MVP 阶段可关闭）
+    # Qdrant（可选，P1 阶段开启）
     if config.qdrant.enabled:
         try:
+            from models.embedding import get_embedding_provider
             from rag.vector_store import ensure_collection
-            await ensure_collection()
+            provider = get_embedding_provider()
+            vector_size = provider.dim()
+            logger.info(
+                "Embedding provider ready: %s (dim=%d)",
+                type(provider).__name__,
+                vector_size,
+            )
+            await ensure_collection(vector_size)
             logger.info("Qdrant collection ready")
         except Exception as e:
             logger.warning("Qdrant unavailable, skipping: %s", e)
