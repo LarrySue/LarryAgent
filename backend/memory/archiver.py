@@ -159,16 +159,23 @@ async def confirm_and_store(
             },
         })
 
-    await insert(points)
-    logger.info(
-        "Archived conv=%d memory_id=%d chunks=%d source_role=%s",
-        conversation_id,
-        memory_id,
-        len(chunks),
-        source_role,
-    )
+    try:
+        await insert(points)
+        logger.info(
+            "Archived conv=%d memory_id=%d chunks=%d source_role=%s",
+            conversation_id,
+            memory_id,
+            len(chunks),
+            source_role,
+        )
+    except Exception as e:
+        logger.warning(
+            "ChromaDB insert failed for memory_id=%d (SQLite record kept): %s",
+            memory_id,
+            e,
+        )
 
-    # 5. 标记会话为已归档
+    # 5. 标记会话为已归档（无论 ChromaDB 是否成功，SQLite 记录已写入）
     db = await get_db()
     await db.execute(
         "UPDATE conversations SET is_archived = 1, updated_at = datetime('now') WHERE id = ?",

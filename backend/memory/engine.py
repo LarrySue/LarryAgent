@@ -40,7 +40,7 @@ async def get_short_term_memory(
 async def get_long_term_memory(
     query: str,
     top_k: int = 5,
-    score_threshold: float = 0.5,
+    score_threshold: float = 0.3,
 ) -> list[str]:
     """
     根据用户查询检索相关的长期记忆。
