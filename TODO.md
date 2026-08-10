@@ -11,7 +11,6 @@
 
 ### 多场景 AI 架构
 
-- [ ] 工具动态注入：按角色过滤可用工具组，避免 prompt 膨胀和选择困难 — P2（依赖 function calling）
 - [ ] 意图识别机制：对话开头快速分类用户意图（关键词匹配或轻量 LLM 调用），自动切换角色 — P2
 - [ ] 跨域关联能力：记忆检索不限制单一领域，允许 AI 发现跨场景因果链（如工作压力 → 睡眠差 → 健康下降）— P3
 - [ ] 用户画像沉淀：从记忆中提炼结构化用户画像，注入所有场景 system prompt — P3
@@ -92,12 +91,68 @@
 
 ### P2 - 工具调用闭环
 
-> Agent 能调用文件和 Shell
+> Agent 能调用文件和 Shell。tools/ 骨架已存在（base.py / registry.py 完整，file_ops.py / shell.py / api/tools.py 仅 501 占位），各子阶段填充血肉。
 
-- [ ] 完成 FileOpsTool：路径沙箱校验 + 读/写/列目录
-- [ ] 完成 ShellTool：实际执行命令 + IP 白名单注入
-- [ ] `/api/chat` 加入 function calling 循环（LLM → tool → LLM）
-- [ ] 实现 `/api/tools` 列表和手动执行接口
+**P2.1 - FileOpsTool 实现** ✅
+
+路径沙箱用 pathlib：resolve 绝对路径 → 确认在 workspace 子树内 → 拒绝 `../` 逃逸。三动作：
+
+- [x] `_read(path)`：`Path.read_text(encoding="utf-8")`，文件不存在返回 error
+- [x] `_write(path, content)`：先检查路径在 workspace 内，同路径已存在则自动追加后缀 `_1` / `_2`（不覆盖），`Path.write_text`
+- [x] `_list(path)`：目录存在返回文件和子目录名列表，不存在返回 error
+
+配置化：`_workspace_root` 从 `config.yaml` 的 `tools.file_ops_workspace` 读取，默认 `~/larry_workspace`。9 项端到端测试通过（2026-08-10）。
+
+**P2.2 - ShellTool 实现**
+
+- [ ] `asyncio.create_subprocess_shell` 执行，`communicate()` 读 stdout/stderr
+- [ ] 30s `asyncio.wait_for` 超时；`except asyncio.TimeoutError` 中显式 `proc.kill()` + `await proc.wait()`，防止僵尸进程（`wait_for` 只取消协程不杀子进程）
+- [ ] `working_dir` 参数生效
+- [ ] 高危命令黑名单检测（已有 `_blocked_patterns`）
+- [ ] IP 白名单：从 `config.yaml` 的 `tools.shell.allowed_ips` 读取，默认 `["127.0.0.1", "::1"]`。校验逻辑下沉到 `ShellTool.execute()` 内部，从 `kwargs` 接收 `caller_ip` 比对。function calling 循环和 `/api/tools/execute` 调用时各自从 `request.client.host` 取 IP 传入，防止 LLM 诱导绕过路由直接调 `tool.execute()` 的路径
+
+**P2.3 - Function Calling 循环（/api/chat）**
+
+> P2 核心。改造 `/api/chat` 的 LLM 调用段。
+
+- [ ] 把 `get_openai_tools()` 返回的 schema 注入 LLM 请求的 `tools` 参数
+- [ ] LLM 返回后检测 `finish_reason == "tool_calls"`
+- [ ] 解析 `tool_calls` → 从 registry 取工具 → `await tool.execute(**args)`，记录每个 tool_call 的 `id`
+- [ ] 把 tool result 作为 `role: "tool"` 消息追加到 messages，**必须带 `tool_call_id`**（来自原 tool_call 的 `id` 字段），否则 OpenAI API 返回 400
+- [ ] 循环直到 LLM 返回 `finish_reason == "stop"`（纯文本）
+- [ ] 最大轮次限制（默认 10），防止死循环
+- [ ] 工具按角色过滤（「当前待办」中"工具动态注入"项）：在 function calling 循环里按 role 过滤 `get_openai_tools()` 返回结果，避免无关工具的 schema 膨胀 prompt。role→tools 映射写入 `config.yaml`
+- [ ] 每轮 tool call 记录日志
+- [ ] 注：后续可加 token 累计上限（单次对话 tool call 总 token 阈值），防止单轮读大文件等场景暴增。当前仅轮次限制
+
+**P2.4 - /api/tools 接口实现**
+
+- [ ] `GET /api/tools`：调用 `list_tools()`，返回 `[{name, description, parameters, enabled}, ...]`
+- [ ] `POST /api/tools/execute`：从 registry 取工具 → `tool.execute(**req.params)`
+
+**P2.5 - config.yaml 扩展**
+
+- [ ] 新增 `tools` 配置段：
+  ```yaml
+  tools:
+    file_ops:
+      workspace: "~/larry_workspace"
+    shell:
+      allowed_ips: ["127.0.0.1", "::1"]
+      timeout: 30
+    function_calling:
+      max_iterations: 10
+  ```
+
+**P2.6 - 端到端测试**
+
+- [ ] 单工具调用：让 LLM 读一个已知文件，验证返回内容
+- [ ] 多工具串行：先 `list` 目录再 `read` 其中某个文件
+- [ ] Shell 工具：执行 `echo hello`，验证 stdout
+- [ ] 沙箱拒绝：尝试 `../` 路径，验证返回 error
+- [ ] 黑名单拒绝：尝试 `rm -rf /`，验证被拦截
+- [ ] 循环上限：构造一个永远要调工具的场景，验证在第 N 轮截断
+- [ ] API 层：`GET /api/tools` 返回列表；`POST /api/tools/execute` 手动调工具
 
 ### P3 - 流式 + 体验优化
 

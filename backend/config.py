@@ -59,6 +59,7 @@ class EmbeddingConfig:
 @dataclass
 class ToolsConfig:
     shell_allowed_ips: list = field(default_factory=lambda: ["127.0.0.1", "::1"])
+    file_ops_workspace: str = "~/larry_workspace"
 
 
 @dataclass
