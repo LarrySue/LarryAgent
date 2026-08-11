@@ -29,7 +29,10 @@ from tools.registry import get_openai_tools, get_tool, list_tools
 
 logger = logging.getLogger(__name__)
 
-MAX_TOOL_ROUNDS = 10
+
+def _get_max_rounds() -> int:
+    """从配置获取最大工具调用轮次。"""
+    return get_config().tools.function_calling_max_iterations
 
 
 class ChatRequest(BaseModel):
@@ -120,7 +123,8 @@ async def _run_tool_loop(
     每轮的 assistant 消息（含 tool_calls）和 tool 结果消息都会持久化到 DB，
     确保会话恢复时不丢失工具调用上下文。
     """
-    for round_num in range(1, MAX_TOOL_ROUNDS + 1):
+    max_rounds = _get_max_rounds()
+    for round_num in range(1, max_rounds + 1):
         response = await chat_completion(
             model=model,
             messages=messages,
@@ -204,7 +208,7 @@ async def _run_tool_loop(
             )
 
     # 达到最大轮次
-    logger.warning("Tool loop reached max rounds (%d)", MAX_TOOL_ROUNDS)
+    logger.warning("Tool loop reached max rounds (%d)", max_rounds)
     return "（达到工具调用最大轮次限制，已停止）"
 
 

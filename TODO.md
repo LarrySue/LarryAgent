@@ -145,14 +145,14 @@
 - [x] 端到端测试 8 项全通过（`tests/test_chat_service.py`，2026-08-11）：无工具调用、单工具调用、多工具调用、最大轮次限制、工具不存在处理、消息持久化（tool_calls + tool_call_id）、角色过滤。
 - [ ] 注：后续可加 token 累计上限（单次对话 tool call 总 token 阈值），防止单轮读大文件等场景暴增。当前仅轮次限制。本条目优先级很低，不做主动处理，后续若出现与此条目相关的问题，再考虑是否需要完善，完善前先进行充分讨论，任何情况下不静默自动处理。
 
-**P2.4 - /api/tools 接口实现**
+**P2.4 - /api/tools 接口实现** ✅
 
-- [ ] `GET /api/tools`：调用 `list_tools()`，返回 `[{name, description, parameters, enabled}, ...]`
-- [ ] `POST /api/tools/execute`：从 registry 取工具 → `tool.execute(**req.params)`
+- [x] `GET /api/tools`：调用 `list_tools()`，返回 `[{name, description, parameters, enabled}, ...]`
+- [x] `POST /api/tools/execute`：从 registry 取工具 → `tool.execute(**params)`，ShellTool 自动注入 caller_ip
 
-**P2.5 - config.yaml 扩展**
+**P2.5 - config.yaml 扩展** ✅
 
-- [x] 新增 `tools` 配置段（已实现扁平结构，shell 相关字段已合并到 ToolsConfig）：
+- [x] 新增 `tools` 配置段（扁平结构，含 `file_ops_workspace`、`shell_allowed_ips`、`shell_timeout`、`function_calling_max_iterations`），`chat_service.py` 从 config 读取最大轮次
   ```yaml
   tools:
     file_ops_workspace: "~/larry_workspace"

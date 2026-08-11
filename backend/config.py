@@ -61,6 +61,7 @@ class ToolsConfig:
     shell_allowed_ips: list = field(default_factory=lambda: ["127.0.0.1", "::1"])
     shell_timeout: int = 30
     file_ops_workspace: str = "~/larry_workspace"
+    function_calling_max_iterations: int = 10
 
 
 @dataclass
