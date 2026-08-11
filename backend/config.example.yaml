@@ -73,6 +73,20 @@ embedding:
   # local_model_path: "models/bge-small-zh"
 
 # ============================================================
+# 角色配置
+# 每个角色可定义 system_prompt 和可用工具列表
+# 未配置 tools 则该角色可使用所有已注册工具
+# ============================================================
+roles:
+  default:
+    system_prompt: "你是 LarryAgent，一个个人 AI 助手。你可以调用工具来读写文件和执行命令。"
+    # tools: ["file_ops", "shell"]  # 省略则允许所有工具
+
+  # coder:
+  #   system_prompt: "你是一个编程助手，擅长解决技术问题。"
+  #   tools: ["file_ops", "shell"]
+
+# ============================================================
 # 工具安全配置
 # ============================================================
 tools:
@@ -81,3 +95,12 @@ tools:
   shell_allowed_ips:
     - "127.0.0.1"
     - "::1"
+
+  # Shell 命令执行超时（秒），超时后自动杀进程树
+  shell_timeout: 30
+
+  # FileOps 工具的工作目录（文件读写限制在此目录内）
+  file_ops_workspace: "~/larry_workspace"
+
+  # Function calling 最大轮次（防死循环）
+  function_calling_max_iterations: 10

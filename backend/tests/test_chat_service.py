@@ -346,6 +346,208 @@ class TestRoleFilter(unittest.TestCase):
             config.roles = original_roles
 
 
+class TestRoleFilterEndToEnd(unittest.IsolatedAsyncioTestCase):
+    """角色过滤端到端：验证传给 LLM 的 tools 参数确实不含被过滤的工具"""
+
+    async def asyncSetUp(self):
+        os.environ["LARRY_CONFIG"] = os.path.join(
+            os.path.dirname(__file__), "..", "config.yaml"
+        )
+        await get_db()
+        await scan_and_register()
+
+    async def asyncTearDown(self):
+        await close_db()
+
+    async def test_role_filter_excludes_shell(self):
+        """role 只配 file_ops 时，传给 chat_completion 的 tools 不含 shell"""
+        from config import get_config
+        from services import chat_service
+
+        config = get_config()
+        original_roles = config.roles
+        config.roles = {
+            "default": {
+                "system_prompt": "test",
+                "tools": ["file_ops"],
+            }
+        }
+
+        captured_tools = []
+
+        async def mock_completion(**kwargs):
+            captured_tools.append(kwargs.get("tools"))
+            return LLMResponse(content="done", finish_reason="stop")
+
+        chat_service.chat_completion = mock_completion
+        try:
+            messages = [{"role": "user", "content": "test"}]
+            await _run_tool_loop(
+                model="test",
+                messages=messages,
+                tools=_get_tools_for_role("default"),
+                temperature=0.7,
+                conversation_id=1,
+                caller_ip="127.0.0.1",
+            )
+            self.assertEqual(len(captured_tools), 1)
+            tool_names = [t["function"]["name"] for t in captured_tools[0]]
+            self.assertIn("file_ops", tool_names)
+            self.assertNotIn("shell", tool_names)
+        finally:
+            config.roles = original_roles
+
+
+class TestToolErrorRecovery(unittest.IsolatedAsyncioTestCase):
+    """工具执行失败恢复：error 内容回到 messages 且对话不中断"""
+
+    async def asyncSetUp(self):
+        os.environ["LARRY_CONFIG"] = os.path.join(
+            os.path.dirname(__file__), "..", "config.yaml"
+        )
+        await get_db()
+        await scan_and_register()
+
+    async def asyncTearDown(self):
+        await close_db()
+
+    async def test_tool_error_flows_back(self):
+        """LLM 调 read 读不存在的文件 → error 回到 messages → LLM 收到后继续"""
+
+        class FailTool(BaseTool):
+            name = "fail_tool"
+            description = "总是失败的测试工具"
+            parameters = {"type": "object", "properties": {}}
+
+            async def execute(self, **kwargs):
+                return ToolResult(success=False, error="文件不存在: ghost.txt")
+
+        register(FailTool())
+
+        from services import chat_service
+
+        original = chat_service.chat_completion
+        call_count = [0]
+        captured_messages = []
+
+        async def mock_completion(**kwargs):
+            call_count[0] += 1
+            captured_messages.append(list(kwargs.get("messages", [])))
+            if call_count[0] == 1:
+                return LLMResponse(
+                    content="",
+                    tool_calls=[{
+                        "id": "call_err_1",
+                        "name": "fail_tool",
+                        "arguments": "{}",
+                    }],
+                    finish_reason="tool_calls",
+                )
+            else:
+                return LLMResponse(content="文件不存在，换一个吧", finish_reason="stop")
+
+        chat_service.chat_completion = mock_completion
+        try:
+            messages = [{"role": "user", "content": "读 ghost.txt"}]
+            reply = await _run_tool_loop(
+                model="test",
+                messages=messages,
+                tools=[],
+                temperature=0.7,
+                conversation_id=1,
+                caller_ip="127.0.0.1",
+            )
+
+            # 循环正常结束
+            self.assertEqual(call_count[0], 2)
+            self.assertEqual(reply, "文件不存在，换一个吧")
+
+            # 第二轮调 LLM 时，messages 中应包含 tool 消息且 content 是 error 内容
+            round2_msgs = captured_messages[1]
+            tool_msgs = [m for m in round2_msgs if m["role"] == "tool"]
+            self.assertEqual(len(tool_msgs), 1)
+            self.assertIn("文件不存在", tool_msgs[0]["content"])
+            self.assertEqual(tool_msgs[0]["tool_call_id"], "call_err_1")
+        finally:
+            chat_service.chat_completion = original
+
+
+class TestCallerIpInjection(unittest.IsolatedAsyncioTestCase):
+    """caller_ip 注入验证：_run_tool_loop 调 shell 时 caller_ip 正确传入 kwargs"""
+
+    async def asyncSetUp(self):
+        os.environ["LARRY_CONFIG"] = os.path.join(
+            os.path.dirname(__file__), "..", "config.yaml"
+        )
+        await get_db()
+        await scan_and_register()
+
+    async def asyncTearDown(self):
+        await close_db()
+
+    async def test_caller_ip_passed_to_shell(self):
+        """ShellTool 通过 _run_tool_loop 调用时，caller_ip 应注入 kwargs"""
+
+        class MockShellTool(BaseTool):
+            name = "shell"
+            description = "Mock shell"
+            parameters = {
+                "type": "object",
+                "properties": {"command": {"type": "string"}},
+                "required": ["command"],
+            }
+
+            def __init__(self):
+                self.received_caller_ip = None
+
+            async def execute(self, **kwargs):
+                self.received_caller_ip = kwargs.get("caller_ip")
+                return ToolResult(success=True, content="ok")
+
+        mock_shell = MockShellTool()
+        register(mock_shell)
+
+        from services import chat_service
+
+        original = chat_service.chat_completion
+
+        async def mock_completion(**kwargs):
+            return LLMResponse(
+                content="",
+                tool_calls=[{
+                    "id": "call_ip_1",
+                    "name": "shell",
+                    "arguments": json.dumps({"command": "echo hi"}),
+                }],
+                finish_reason="tool_calls",
+            )
+
+        original_get_tool = chat_service.get_tool
+
+        def mock_get_tool(name):
+            if name == "shell":
+                return mock_shell
+            return original_get_tool(name)
+
+        chat_service.chat_completion = mock_completion
+        chat_service.get_tool = mock_get_tool
+        try:
+            test_ip = "192.168.1.50"
+            messages = [{"role": "user", "content": "echo hi"}]
+            await _run_tool_loop(
+                model="test",
+                messages=messages,
+                tools=[],
+                temperature=0.7,
+                conversation_id=1,
+                caller_ip=test_ip,
+            )
+            self.assertEqual(mock_shell.received_caller_ip, test_ip)
+        finally:
+            chat_service.chat_completion = original
+            chat_service.get_tool = original_get_tool
+
+
 def run_tests():
     print("=" * 60)
     print("P2.3 Function Calling 循环测试")
@@ -369,6 +571,9 @@ def run_tests():
     print("  [PASS] 工具不存在：返回 error 不崩溃")
     print("  [PASS] 消息持久化：tool_calls + tool_call_id 写入 DB")
     print("  [PASS] 角色过滤：按 role→tools 映射过滤工具")
+    print("  [PASS] 角色过滤端到端：传给 LLM 的 tools 不含被过滤工具")
+    print("  [PASS] 工具失败恢复：error 内容回到 messages 且对话不中断")
+    print("  [PASS] caller_ip 注入：shell 工具通过 tool loop 调用时 caller_ip 正确传入")
     print()
     return result.wasSuccessful()
 
