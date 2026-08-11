@@ -124,7 +124,7 @@
 
 - [ ] 把 `get_openai_tools()` 返回的 schema 注入 LLM 请求的 `tools` 参数
 - [ ] LLM 返回后检测 `finish_reason == "tool_calls"`
-- [ ] 解析 `tool_calls` → 从 registry 取工具 → `await tool.execute(**args)`，记录每个 tool_call 的 `id`
+- [ ] 解析 `tool_calls` → 从 registry 取工具 → `await tool.execute(**args)`，记录每个 tool_call 的 `id`。注意：对 ShellTool 需从 `request.client.host` 取 IP 注入 `caller_ip` 到 kwargs，否则 IP 白名单校验失效
 - [ ] 把 tool result 作为 `role: "tool"` 消息追加到 messages，**必须带 `tool_call_id`**（来自原 tool_call 的 `id` 字段），否则 OpenAI API 返回 400
 - [ ] 循环直到 LLM 返回 `finish_reason == "stop"`（纯文本）
 - [ ] 最大轮次限制（默认 10），防止死循环

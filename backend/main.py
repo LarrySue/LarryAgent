@@ -3,21 +3,23 @@ LarryAgent 后端入口
 
 职责：
 - 创建 FastAPI 应用实例
-- 配置 CORS 中间件
 - 挂载所有 API 路由
+- 同源托管测试页面（/chat.html）
 - 管理应用生命周期（启动时初始化数据库、ChromaDB、加载工具；
   关闭时清理连接）
 
 启动方式：
-    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    uvicorn main:app --port 8000 --reload
     或使用根目录 Makefile: make run
+    测试页：http://127.0.0.1:8000/chat.html
 """
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from config import load_config, get_config
 from logging_config import setup_logging
@@ -80,14 +82,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS：允许所有来源（单人使用 + 本地网络）
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 注：不再配置 CORS 中间件。服务仅监听本机回环地址，前端与 API 同源部署
+# （测试页通过下方 /chat.html 路由托管），无需跨域支持。
 
 
 # === 挂载路由 ===
@@ -107,3 +103,16 @@ app.include_router(tools_router)
 async def health_check():
     """健康检查接口，用于确认服务是否正常运行。"""
     return {"status": "ok", "version": "0.1.0"}
+
+
+# === 测试页面托管 ===
+
+_CHAT_HTML = Path(__file__).parent.parent / "client" / "chat.html"
+
+
+@app.get("/chat.html", include_in_schema=False)
+async def chat_page():
+    """同源托管测试对话页面，访问 http://127.0.0.1:8000/chat.html"""
+    if not _CHAT_HTML.exists():
+        return {"detail": "chat.html not found"}
+    return FileResponse(_CHAT_HTML, media_type="text/html")
