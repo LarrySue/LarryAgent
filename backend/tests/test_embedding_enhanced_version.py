@@ -5,7 +5,7 @@ import sys
 import os
 import math
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from models.embedding import get_embedding_provider, embed_text, embed_batch
 

@@ -48,6 +48,7 @@
 - [x] 实现 `OpenAIEmbedding`：兼容 OpenAI embedding API（备用方案）
 - [x] `config.yaml` / `config.py` 中 embedding 段补 `local_model_name`、`base_url`、`hf_endpoint` 字段
 - [x] 安装依赖 `sentence-transformers`，验证模型可加载、可生成向量、余弦相似度正确（2026-08-07）
+- [x] 测试文件归档：`tests/test_embedding.py`（基础验证）、`tests/test_embedding_enhanced_version.py`（增强版：多维度语义、多语言、长文本、边界测试）
 
 **P1.2 - ChromaDB 向量库 CRUD** ✅
 
@@ -101,15 +102,21 @@
 - [x] `_write(path, content)`：先检查路径在 workspace 内，同路径已存在则自动追加后缀 `_1` / `_2`（不覆盖），`Path.write_text`
 - [x] `_list(path)`：目录存在返回文件和子目录名列表，不存在返回 error
 
-配置化：`_workspace_root` 从 `config.yaml` 的 `tools.file_ops_workspace` 读取，默认 `~/larry_workspace`。9 项端到端测试通过（2026-08-10）。
+配置化：`_workspace_root` 从 `config.yaml` 的 `tools.file_ops_workspace` 读取，默认 `~/larry_workspace`。
+端到端测试 18 项全通过（`tests/test_file_ops_tool.py`，2026-08-11）：读/写/列表三动作、路径沙箱（`../` 逃逸、绝对路径逃逸）、不覆盖写入、嵌套目录、工具注册与 schema。
 
-**P2.2 - ShellTool 实现**
+**P2.2 - ShellTool 实现** ✅
 
-- [ ] `asyncio.create_subprocess_shell` 执行，`communicate()` 读 stdout/stderr
-- [ ] 30s `asyncio.wait_for` 超时；`except asyncio.TimeoutError` 中显式 `proc.kill()` + `await proc.wait()`，防止僵尸进程（`wait_for` 只取消协程不杀子进程）
-- [ ] `working_dir` 参数生效
-- [ ] 高危命令黑名单检测（已有 `_blocked_patterns`）
-- [ ] IP 白名单：从 `config.yaml` 的 `tools.shell.allowed_ips` 读取，默认 `["127.0.0.1", "::1"]`。校验逻辑下沉到 `ShellTool.execute()` 内部，从 `kwargs` 接收 `caller_ip` 比对。function calling 循环和 `/api/tools/execute` 调用时各自从 `request.client.host` 取 IP 传入，防止 LLM 诱导绕过路由直接调 `tool.execute()` 的路径
+- [x] `asyncio.create_subprocess_shell` 执行，`communicate()` 读 stdout/stderr
+- [x] 30s `asyncio.wait_for` 超时；`except asyncio.TimeoutError` 中显式 `proc.kill()` + `await proc.wait()`，防止僵尸进程
+- [x] `working_dir` 参数生效
+- [x] 高危命令黑名单检测（`_blocked_patterns`：`rm -rf /`, `del /f /s C:\`, `format`, `shutdown`）
+- [x] IP 白名单：从 `config.yaml` 的 `tools.shell_allowed_ips` 读取，默认 `["127.0.0.1", "::1"]`。校验逻辑下沉到 `ShellTool.execute()` 内部，从 `kwargs` 接收 `caller_ip` 比对
+- [x] `config.py` `ToolsConfig` 新增 `shell_timeout` 字段（默认 30），配置驱动超时
+- [x] 工具注册：`scan_and_register()` 自动发现 ShellTool，`get_openai_schema()` 生成 function calling schema
+- [x] 端到端测试 15 项全通过（`tests/test_shell_tool.py`，2026-08-11）
+
+注意：config 采用扁平结构 `tools.shell_allowed_ips` + `tools.shell_timeout`，而非嵌套 `tools.shell.xxx`，简化读取逻辑。
 
 **P2.3 - Function Calling 循环（/api/chat）**
 
@@ -135,25 +142,22 @@
 
 **P2.5 - config.yaml 扩展**
 
-- [ ] 新增 `tools` 配置段：
+- [x] 新增 `tools` 配置段（已实现扁平结构，shell 相关字段已合并到 ToolsConfig）：
   ```yaml
   tools:
-    file_ops:
-      workspace: "~/larry_workspace"
-    shell:
-      allowed_ips: ["127.0.0.1", "::1"]
-      timeout: 30
-    function_calling:
-      max_iterations: 10
+    file_ops_workspace: "~/larry_workspace"
+    shell_allowed_ips: ["127.0.0.1", "::1"]
+    shell_timeout: 30
+    function_calling_max_iterations: 10  # P2.3 实现时补充
   ```
 
 **P2.6 - 端到端测试**
 
 - [ ] 单工具调用：让 LLM 读一个已知文件，验证返回内容
 - [ ] 多工具串行：先 `list` 目录再 `read` 其中某个文件
-- [ ] Shell 工具：执行 `echo hello`，验证 stdout
-- [ ] 沙箱拒绝：尝试 `../` 路径，验证返回 error
-- [ ] 黑名单拒绝：尝试 `rm -rf /`，验证被拦截
+- [x] Shell 工具：执行 `echo hello`，验证 stdout（`test_shell_tool.py` 已覆盖）
+- [x] 沙箱拒绝：尝试 `../` 路径，验证返回 error（`test_file_ops_tool.py` 已覆盖）
+- [x] 黑名单拒绝：尝试 `rm -rf /`，验证被拦截（`test_shell_tool.py` 已覆盖）
 - [ ] 循环上限：构造一个永远要调工具的场景，验证在第 N 轮截断
 - [ ] API 层：`GET /api/tools` 返回列表；`POST /api/tools/execute` 手动调工具
 
