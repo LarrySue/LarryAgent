@@ -25,13 +25,12 @@
 import logging
 import uuid
 
-from db.conversations import get_messages, get_conversation
+from db.conversations import get_messages, get_conversation, mark_archived
 from db.memories import create_memory
 from models.embedding import embed_batch
 from models.llm import chat_completion
 from rag.chunker import chunk_text
 from rag.vector_store import insert
-from db.database import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -176,11 +175,6 @@ async def confirm_and_store(
         )
 
     # 5. 标记会话为已归档（无论 ChromaDB 是否成功，SQLite 记录已写入）
-    db = await get_db()
-    await db.execute(
-        "UPDATE conversations SET is_archived = 1, updated_at = datetime('now') WHERE id = ?",
-        (conversation_id,),
-    )
-    await db.commit()
+    await mark_archived(conversation_id)
 
     return memory_id

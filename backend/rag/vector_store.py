@@ -131,10 +131,18 @@ async def search(
     outputs = []
     if results["ids"] and results["ids"][0]:
         for i, point_id in enumerate(results["ids"][0]):
-            distance = results["distances"][0][i] if results["distances"] else 1.0
-            similarity = 1.0 - distance  # cosine distance → cosine similarity
+            distance = (
+                results["distances"][0][i]
+                if results["distances"] and results["distances"][0] and i < len(results["distances"][0])
+                else 1.0
+            )
+            similarity = 1.0 - distance
             if similarity >= score_threshold:
-                metadata = results["metadatas"][0][i] if results["metadatas"] else {}
+                metadata = (
+                    results["metadatas"][0][i]
+                    if results["metadatas"] and results["metadatas"][0] and i < len(results["metadatas"][0])
+                    else {}
+                )
                 outputs.append({
                     "id": point_id,
                     "payload": metadata,

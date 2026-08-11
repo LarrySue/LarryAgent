@@ -121,9 +121,12 @@
 - [ ] 把 tool result 作为 `role: "tool"` 消息追加到 messages，**必须带 `tool_call_id`**（来自原 tool_call 的 `id` 字段），否则 OpenAI API 返回 400
 - [ ] 循环直到 LLM 返回 `finish_reason == "stop"`（纯文本）
 - [ ] 最大轮次限制（默认 10），防止死循环
-- [ ] 工具按角色过滤（「当前待办」中"工具动态注入"项）：在 function calling 循环里按 role 过滤 `get_openai_tools()` 返回结果，避免无关工具的 schema 膨胀 prompt。role→tools 映射写入 `config.yaml`
+- [ ] 工具按角色过滤（工具动态注入）：在 function calling 循环里按 role 过滤 `get_openai_tools()` 返回结果，避免无关工具的 schema 膨胀 prompt。role→tools 映射写入 `config.yaml`
 - [ ] 每轮 tool call 记录日志
 - [ ] 注：后续可加 token 累计上限（单次对话 tool call 总 token 阈值），防止单轮读大文件等场景暴增。当前仅轮次限制
+- [ ] 前置依赖：`llm.py::chat_completion` 目前返回 `str`，需要改为接受 `tools` 参数并返回 `(content, tool_calls)` 或更丰富的结构，否则 function calling 循环无从判断 LLM 是否要调工具
+- [ ] 前置依赖：`messages` 表虽有 `tool_calls` 列，但 `insert_message` 不写入、`get_messages` 不返回；需补 `tool_call_id` 列（tool 消息匹配用），并更新 CRUD。否则会话恢复时丢失工具调用上下文
+- [ ] 重构 chat.py：当前路由函数包含完整的业务流程（会话创建→存消息→检索记忆→调 LLM→存回复），加入 function calling 循环后会更膨胀。抽 service 层（如 `services/chat_service.py`），API 层只做参数校验和调用
 
 **P2.4 - /api/tools 接口实现**
 

@@ -106,3 +106,14 @@ async def get_messages(
     if limit is not None:
         rows = list(reversed(rows))
     return [{"role": row["role"], "content": row["content"]} for row in rows]
+
+
+async def mark_archived(conversation_id: int) -> None:
+    """标记会话为已归档。"""
+    db = await get_db()
+    await db.execute(
+        "UPDATE conversations SET is_archived = 1, updated_at = datetime('now') WHERE id = ?",
+        (conversation_id,),
+    )
+    await db.commit()
+    logger.info("Marked conversation id=%s as archived", conversation_id)
