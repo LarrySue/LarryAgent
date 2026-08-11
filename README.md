@@ -9,17 +9,6 @@ AIGC:
     ReservedCode2: x+PpQkJYUPhRuNBhtKYcT/JoQtDbH+WDpP3heoM3Fk1J0OX/OMTVFwPSTzMwtM5ZvoQaMvzaVWt3v0599pUjCn6/3RwJ/+3PR1BeE0GY84PLvHp1e+sHVwaffimbelgHmWwpLU6UEFebzw2kd6LgtJ5+g5t3+GGv3/dApKyN6Q3a+ySrxFRqdD7ujdA=
 ---
 
-﻿---
-AIGC:
-    Label: "1"
-    ContentProducer: 001191440300708461136T1XGW3
-    ProduceID: 44c052101e5e236a5489b447016cb8fe_51c91de390db11f1bcfc525400e6dd8f
-    ReservedCode1: X7/FGzx9TfkkyK14QM5qPcKGezMpnBD8uLb+IxEpdb2o0gvcnz4VNkk44ASth8Of03ebb86jXT3iGu3+1cTA8oJfr0MLF+gPnCpPq7a9QL9N/ePgBVIZjjtd9hIVhsDlN70x27xxDxyYYmb3l12GKPl+qYRIOwJNaQQa59QNGe78eEzsTOtXkEWMDOE=
-    ContentPropagator: 001191440300708461136T1XGW3
-    PropagateID: 44c052101e5e236a5489b447016cb8fe_51c91de390db11f1bcfc525400e6dd8f
-    ReservedCode2: X7/FGzx9TfkkyK14QM5qPcKGezMpnBD8uLb+IxEpdb2o0gvcnz4VNkk44ASth8Of03ebb86jXT3iGu3+1cTA8oJfr0MLF+gPnCpPq7a9QL9N/ePgBVIZjjtd9hIVhsDlN70x27xxDxyYYmb3l12GKPl+qYRIOwJNaQQa59QNGe78eEzsTOtXkEWMDOE=
----
-
 # LarryAgent
 
 个人 AI Agent，技术栈：**Python FastAPI + SQLite + ChromaDB + Tauri + HTML5**。

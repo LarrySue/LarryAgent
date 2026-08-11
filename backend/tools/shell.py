@@ -4,7 +4,7 @@ Shell 命令执行工具
 职责：
 - 允许 Agent 执行 Shell 命令
 - IP 白名单限制：仅允许来自配置中 shell_allowed_ips 的请求执行
-- 超时控制：命令执行超过 30 秒自动终止
+- 超时控制：命令执行超过 30 秒自动终止并清理子进程
 
 安全约束（单人使用，但仍然保留基础防护）：
 - 仅允许本地回环地址调用（127.0.0.1 / ::1）
@@ -14,12 +14,16 @@ Shell 命令执行工具
 与其他模块的关系：
 - 被 tools/registry.py 注册
 - 被 api/chat.py 通过 function calling 机制调用
-- 依赖 config.py 获取 IP 白名单
+- 依赖 config.py 获取 IP 白名单和超时配置
 """
 
 import asyncio
+import logging
 
+from config import get_config
 from tools.base import BaseTool, ToolResult
+
+logger = logging.getLogger(__name__)
 
 
 class ShellTool(BaseTool):
@@ -43,13 +47,32 @@ class ShellTool(BaseTool):
         "required": ["command"],
     }
 
-    # 高危命令黑名单
     _blocked_patterns = [
         "rm -rf /",
         "del /f /s C:\\",
         "format",
         "shutdown",
     ]
+
+    def __init__(self):
+        config = get_config()
+        self._allowed_ips = config.tools.shell_allowed_ips
+        self._timeout = getattr(config.tools, "shell_timeout", 30)
+
+    def _check_ip(self, caller_ip: str | None) -> bool:
+        """检查请求来源 IP 是否在白名单内。"""
+        if not caller_ip:
+            logger.warning("ShellTool: no caller_ip provided, denied")
+            return False
+        return caller_ip in self._allowed_ips
+
+    def _check_blocked(self, command: str) -> str | None:
+        """检查命令是否包含高危模式，返回被阻止的模式名或 None。"""
+        lower = command.lower()
+        for pattern in self._blocked_patterns:
+            if pattern.lower() in lower:
+                return pattern
+        return None
 
     async def execute(
         self,
@@ -63,26 +86,32 @@ class ShellTool(BaseTool):
         Args:
             command: Shell 命令字符串
             working_dir: 可选的工作目录
-            request_ip: 请求来源 IP（由 API 层注入）
+            caller_ip: 请求来源 IP（由 API 层注入，用于白名单校验）
 
         Returns:
             ToolResult，包含 stdout/stderr
         """
-        # TODO: 实现完整的命令执行逻辑
-        #   1. IP 白名单校验（从 kwargs 或上下文获取 request_ip）
-        #   2. 高危命令检测
-        #   3. 使用 asyncio.create_subprocess_shell 执行
-        #   4. 30 秒超时控制
-        #   5. 捕获 stdout 和 stderr
-        #   6. 返回结果
+        # 1. IP 白名单校验
+        caller_ip = kwargs.get("caller_ip")
+        if not self._check_ip(caller_ip):
+            logger.warning("Shell blocked: IP %s not in allowlist", caller_ip)
+            return ToolResult(
+                success=False,
+                error=f"IP {caller_ip} not allowed to execute shell commands",
+            )
 
-        for pattern in self._blocked_patterns:
-            if pattern.lower() in command.lower():
-                return ToolResult(
-                    success=False,
-                    error=f"Blocked command pattern: {pattern}",
-                )
+        # 2. 高危命令检测
+        blocked = self._check_blocked(command)
+        if blocked:
+            logger.warning("Shell blocked: pattern '%s' in command", blocked)
+            return ToolResult(
+                success=False,
+                error=f"Blocked command pattern: {blocked}",
+            )
 
+        # 3. 执行命令
+        logger.info("Shell exec: %s (cwd=%s, timeout=%ds)", command, working_dir, self._timeout)
+        proc = None
         try:
             proc = await asyncio.wait_for(
                 asyncio.create_subprocess_shell(
@@ -91,9 +120,43 @@ class ShellTool(BaseTool):
                     stderr=asyncio.subprocess.PIPE,
                     cwd=working_dir,
                 ),
-                timeout=30,
+                timeout=self._timeout,
             )
-            # TODO: 实际执行 -- 当前骨架不执行真实命令
-            raise NotImplementedError("Shell execution not yet implemented")
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=self._timeout,
+            )
+            stdout_text = stdout.decode("utf-8", errors="replace")
+            stderr_text = stderr.decode("utf-8", errors="replace")
+
+            if proc.returncode == 0:
+                return ToolResult(
+                    success=True,
+                    content=stdout_text or "(no output)",
+                )
+            else:
+                msg = f"exit code {proc.returncode}"
+                if stderr_text:
+                    msg += f": {stderr_text}"
+                return ToolResult(
+                    success=False,
+                    error=msg,
+                    content=stdout_text,
+                )
+
         except asyncio.TimeoutError:
-            return ToolResult(success=False, error="Command timed out (30s)")
+            # 超时：杀进程防止僵尸
+            if proc and proc.returncode is None:
+                proc.kill()
+                await proc.wait()
+            logger.warning("Shell timed out: %s", command)
+            return ToolResult(
+                success=False,
+                error=f"Command timed out ({self._timeout}s)",
+            )
+        except Exception as e:
+            logger.error("Shell error: %s", e)
+            return ToolResult(
+                success=False,
+                error=f"Execution failed: {e}",
+            )
