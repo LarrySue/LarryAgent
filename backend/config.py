@@ -65,6 +65,14 @@ class ToolsConfig:
 
 
 @dataclass
+class LLMConfig:
+    max_retries: int = 3
+    retry_backoff_base: float = 1.0
+    max_input_tokens: int = 128000
+    debug_log: bool = False
+
+
+@dataclass
 class Config:
     machine_id: str = ""
     roles: dict[str, dict] = field(default_factory=dict)
@@ -74,6 +82,7 @@ class Config:
     vector_store: VectorStoreConfig = field(default_factory=VectorStoreConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
+    llm: LLMConfig = field(default_factory=LLMConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
     def get_system_prompt(self, role: str = "default") -> str:
@@ -126,6 +135,7 @@ def load_config(config_path: str | None = None) -> Config:
         vector_store=VectorStoreConfig(**raw.get("vector_store", {})),
         embedding=EmbeddingConfig(**raw.get("embedding", {})),
         tools=ToolsConfig(**raw.get("tools", {})),
+        llm=LLMConfig(**raw.get("llm", {})),
         logging=LoggingConfig(**raw.get("logging", {})),
     )
     return _config

@@ -34,15 +34,34 @@ class LLMResponse:
     content: str = ""
     tool_calls: list[dict] = field(default_factory=list)  # [{id, name, arguments(JSON string)}]
     finish_reason: str = "stop"  # "stop" | "tool_calls" | "length"
+    usage: dict = field(default_factory=dict)  # {prompt_tokens, completion_tokens, total_tokens}
 
     @property
     def has_tool_calls(self) -> bool:
         return bool(self.tool_calls)
 
 
+# 模型名 → provider 配置键的显式映射
+# 新增模型时在此处添加一行即可，无需修改解析逻辑
+_MODEL_PROVIDER_MAP: dict[str, str] = {
+    "deepseek-chat": "deepseek",
+    "deepseek-reasoner": "deepseek",
+    "qwen-turbo": "qwen",
+    "qwen-plus": "qwen",
+    "qwen-max": "qwen",
+    "gpt-4o": "gpt",
+    "gpt-4o-mini": "gpt",
+}
+
+
 def _resolve_provider_key(model_name: str) -> str:
-    """从模型名解析 provider 配置键，如 deepseek-chat → deepseek。"""
-    return model_name.split("-")[0] if "-" in model_name else model_name
+    """从模型名解析 provider 配置键，使用显式映射。"""
+    if model_name in _MODEL_PROVIDER_MAP:
+        return _MODEL_PROVIDER_MAP[model_name]
+    raise ValueError(
+        f"Unknown model: {model_name}. "
+        f"Add it to _MODEL_PROVIDER_MAP in models/llm.py or check config.yaml."
+    )
 
 
 def _get_client(model_name: str) -> AsyncOpenAI:
@@ -124,19 +143,29 @@ async def chat_completion(
                     "arguments": tc.function.arguments,
                 })
 
+        usage = {}
+        if response.usage:
+            usage = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+            }
+
         elapsed = time.perf_counter() - start
         logger.info(
-            "LLM response model=%s finish=%s chars=%d tool_calls=%d elapsed=%.2fs",
+            "LLM response model=%s finish=%s chars=%d tool_calls=%d tokens=%s elapsed=%.2fs",
             model,
             choice.finish_reason,
             len(content),
             len(tool_calls),
+            usage.get("total_tokens", "N/A"),
             elapsed,
         )
         return LLMResponse(
             content=content,
             tool_calls=tool_calls,
             finish_reason=choice.finish_reason or "stop",
+            usage=usage,
         )
     except Exception:
         logger.exception("LLM request failed model=%s", model)
@@ -148,6 +177,7 @@ async def chat_completion_stream(
     messages: list[dict],
     temperature: float = 0.7,
     max_tokens: int = 4096,
+    tools: list[dict] | None = None,
 ) -> AsyncGenerator[str, None]:
     """
     流式聊天补全。
@@ -157,18 +187,39 @@ async def chat_completion_stream(
         messages: 标准 OpenAI 消息列表
         temperature: 温度参数
         max_tokens: 最大输出 token 数
+        tools: 工具 schema 列表（可选，传入时 LLM 可能返回 tool_calls）
 
     Yields:
         每次返回一个增量文本片段
     """
     client = _get_client(model)
-    stream = await client.chat.completions.create(
+    kwargs = dict(
         model=model,
         messages=messages,
         temperature=temperature,
         max_tokens=max_tokens,
         stream=True,
+        stream_options={"include_usage": True},
     )
+    if tools:
+        kwargs["tools"] = tools
+    stream = await client.chat.completions.create(**kwargs)
+
+    usage_data = {}
     async for chunk in stream:
+        # 捕获 final chunk 的 usage
+        if hasattr(chunk, "usage") and chunk.usage:
+            usage_data = {
+                "prompt_tokens": chunk.usage.prompt_tokens,
+                "completion_tokens": chunk.usage.completion_tokens,
+                "total_tokens": chunk.usage.total_tokens,
+            }
         if chunk.choices and chunk.choices[0].delta.content:
             yield chunk.choices[0].delta.content
+
+    if usage_data:
+        logger.info(
+            "LLM stream usage model=%s tokens=%s",
+            model,
+            usage_data.get("total_tokens", "N/A"),
+        )

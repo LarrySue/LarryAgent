@@ -4,19 +4,21 @@
 
 ### 记忆系统调优
 
-- [ ] 检索参数调优（`memory/engine.py::get_long_term_memory`）：score_threshold 当前基线 0.3（从 0.5 下调，因短查询 vs 结构化摘要相似度仅约 0.36），top_k=5；后续根据实际使用中的召回质量进一步调整，必要时可按 source_role 分级设阈值
-- [ ] 记忆保鲜机制：memories 表预留 last_hit_at / priority 字段，需实现降权与淘汰策略
-- [ ] 向量同步补偿：ChromaDB 恢复后，自动检测 SQLite 中有但 ChromaDB 中缺失的记忆，补写向量数据（`memories` 表可加 `vector_synced` 标记）
-- [ ] 更换 Embedding 模型时需配套迁移脚本（重建 ChromaDB collection + 全量重索引）
-- [ ] `vector_store.py::search()` 去掉 `score_threshold` 默认值，强制调用方显式传参（当前 engine.py 传 0.3、search 默认 0.5，两处不一致容易踩坑；且 TODO 已规划按 source_role 分级阈值，将来必然进 config）
-- [ ] `llm.py::_resolve_provider_key` 靠模型名前缀解析 provider，命名约定脆弱；改为显式映射。触发条件：一旦第二个 provider 实际启用，本条自动升级为阻塞项
+- [ ] 检索参数调优（`memory/engine.py::get_long_term_memory`）：长期 — 根据实际使用中召回质量持续调整 score_threshold / top_k / 分级阈值
+- [ ] 向量检索上下文扩展 → **已归入 P3 记忆系统调优**
+- [ ] 记忆保鲜机制 → **已归入 P3 记忆系统调优**
+- [ ] 向量同步补偿：长期 — ChromaDB 异常恢复后自动校验 SQLite ↔ ChromaDB 一致性并补写缺失向量
+- [ ] Embedding 模型迁移脚本：长期 / 待触发 — 更换模型时重建 collection + 全量重索引
+- [ ] `llm.py::_resolve_provider_key` → **已归入 P3.0 前置修补**
 
 ### 多场景 AI 架构
 
-- [ ] 意图识别机制：对话开头快速分类用户意图（关键词匹配或轻量 LLM 调用），自动切换角色 — P2
-- [ ] 跨域关联能力：记忆检索不限制单一领域，允许 AI 发现跨场景因果链（如工作压力 → 睡眠差 → 健康下降）— P3
-- [ ] 用户画像沉淀：从记忆中提炼结构化用户画像，注入所有场景 system prompt — P3
-- [ ] 场景间信息同步策略：明确哪些记忆全局共享、哪些领域私有 — P3
+> 以下为长期架构愿景，当前 P0-P3 仅支持手动切换角色，自动意图识别和跨域关联留待后续迭代。
+
+- [ ] 意图识别机制：长期 — 对话开头快速分类用户意图，自动切换角色
+- [ ] 跨域关联能力：长期 — 记忆检索不限单一领域，允许 AI 发现跨场景因果链
+- [ ] 用户画像沉淀：长期 — 从记忆中提炼结构化用户画像，注入 system prompt
+- [ ] 场景间信息同步策略：长期 — 定义全局共享 vs 领域私有的记忆边界
 
 ---
 
@@ -121,6 +123,8 @@
 - [x] Windows 超时杀进程树：`taskkill /T /F /PID` 杀孙进程，非 Windows 用 `proc.kill()`
 - [x] 端到端测试 15 项全通过（`tests/test_shell_tool.py`，2026-08-11）
 
+- [ ] ShellTool 黑名单已知可绕过（字符串包含匹配，`rm -rf  /`、`rm --recursive --force /`、`find / -delete` 等变体均可穿透）。当前安全依赖 IP 白名单（仅 `127.0.0.1`/`::1`）兜底，单人本机使用场景下攻击面极小。不做主动修复，后续若放开 IP 白名单（如 P5 局域网部署），须先将黑名单升级为正则/词法解析或换用沙箱方案。
+
 注意：config 采用扁平结构 `tools.shell_allowed_ips` + `tools.shell_timeout`，而非嵌套 `tools.shell.xxx`，简化读取逻辑。
 
 **P2.3 - Function Calling 循环（/api/chat）** ✅
@@ -176,13 +180,69 @@
 
 ### P3 - 流式 + 体验优化
 
-> 打字机效果、Token 统计、错误处理
+> 打字机效果、Token 统计、错误处理、记忆调优
 
-- [ ] `/api/chat/stream` SSE 流式实现
-- [ ] LLM 调用加重试（tenacity 或自写重试逻辑）
-- [ ] 加 token 用量统计
-- [ ] 默认 host 改 `127.0.0.1`，增加可选 API Key 校验
-- [ ] 自定义业务异常类
+**P3.0 - 前置修补（流式实现前必须完成）** ✅
+
+- [x] `llm.py:_resolve_provider_key` 前缀解析改显式 dict 映射（如 `{"deepseek-chat": "deepseek", "qwen-max": "qwen"}`），防止接第二个 provider 时解析断裂
+- [x] `LLMResponse` 补 `usage` 字段（prompt_tokens / completion_tokens / total_tokens），`chat_completion` 解析 `response.usage` 写入返回
+- [x] `config.py` 新增 `LLMConfig` dataclass（`max_retries` / `retry_backoff_base` / `max_input_tokens` / `debug_log`），`config.yaml` 和 `config.example.yaml` 同步新增 `llm` 配置段。P3.2/P3.3 的配置项统一挂在此段下
+
+**P3.1 - SSE 流式聊天** ✅
+
+> 通信协议保持现有 `/api/chat`，通过 Header 区分：`Accept: text/event-stream` 走流式，否则走非流式。
+
+- [x] `llm.py` `chat_completion_stream` 补 `stream_options={"include_usage": True}`，流结束时记录 final chunk 的 usage；支持 `tools` 参数
+- [x] `chat_service.py`：`_run_tool_loop` 重构为 `_chat_flow` async generator。FC 循环非流式检测 tool_calls，最终文本用 `chat_completion_stream` 真实流式输出。`handle_chat` 消费 generator 收集 delta，`handle_chat_stream` 包装为 SSE 字符串
+- [x] 工具调用事件：`event: tool_call`（执行前推送，含工具名/轮次/参数）、`event: tool_result`（执行后推送，含成功/失败/结果摘要）、`event: delta`（文本流）、`event: done`、`event: error`
+- [x] `chat.py`：端点复用 `/api/chat`，根据 `Accept: text/event-stream` 分支 → `StreamingResponse`
+- [x] 移除 `/api/chat/stream` 501 占位端点
+- [x] `client/chat.html`：SSE 流解析 + delta 文本实时追加 + 工具调用卡片（spinner→✅/❌ + 结果展示）
+- [x] 测试验证：11 项 mock 测试全通过 + 3 项真实 DeepSeek API 集成测试全通过
+
+**P3.2 - LLM 重试**
+
+- [ ] 引入 `tenacity`，`chat_completion` 外层加 `@retry`
+- [ ] 触发条件：网络错误、429（尊重 Retry-After header）、5xx
+- [ ] 不在重试策略内：4xx 参数错误（代码 bug 重试没用）
+- [ ] `config.yaml` 新增 `llm.max_retries`（默认 3）、`llm.retry_backoff_base`（默认 1.0，指数退避 1s/2s/4s）
+- [ ] 日志：每次重试记录 `batch_llm_call retry attempt=2/3 error=xxx wait=2s`
+
+**P3.3 - Token 用量统计**
+
+- [ ] 每次 LLM 调用后记日志：`batch_llm_call token_usage model=deepseek-chat total=1234 prompt=1000 completion=234`
+- [ ] `config.yaml` 新增 `llm.max_input_tokens`（默认 128000），请求前估算 messages token 数，超出时截断并记日志
+- [ ] `chat_service.py` 单次请求累计 token（FC 循环每轮叠加），超过阈值告警日志
+- [ ] raw 请求/响应正文日志默认关闭，`config.yaml` 新增 `llm.debug_log` 开关控制
+
+> ⚠️ **tiktoken 精度问题：** DeepSeek 的 tokenizer 与 OpenAI 不同（尤其是中文），tiktoken 估算值会偏。估算仅用于**截断触发**（超了就截），不做精确计费——精确用量以 API 返回的 `response.usage` 为准。
+>
+> **截断策略：** 保留 system prompt + 最后 N 条消息，从中间删除旧消息，不从头部截（防止丢失 system prompt 上下文）。
+
+P3 只做记录告警，DB 表和 API 留给 P4。
+
+**P3.4 - API Key 校验**
+
+- [ ] middleware 拦截所有 `/api/*` 路径：`Authorization: Bearer <key>` 校验
+- [ ] `config.yaml` 新增 `server.api_key`，为空则不启用
+- [ ] 放行路径：`/chat.html`、`/health`、OPTIONS preflight
+- [ ] 401 返回 `{"error": "AUTH_ERROR", "detail": "Invalid or missing API key"}`
+
+P5 局域网访问时必须启用，当前本机使用可空。
+
+**P3.5 - 自定义异常类**
+
+- [ ] `exceptions.py`：`LarryException` 基类 → `ConfigError` / `LLMError` / `ToolError` / `AuthError`
+- [ ] 替换 `chat.py` 中通用 `ValueError`、`Exception` 为具体类型
+- [ ] 全局异常 handler：`larry_exception_handler` 注册到 FastAPI，统一响应 `{"error": "TYPE", "detail": "msg"}` + 对应 HTTP 状态码
+
+---
+
+#### 记忆系统调优（P3 中后期）
+
+- [ ] `engine.py` 向量检索上下文扩展：archive 中同一 memory_id 的相邻 chunk 在命中时一并拉出合并，避免 LLM 看到被截断的片段
+- [ ] `search()` score_threshold 分级：不同来源检索用不同阈值
+- [ ] 记忆保鲜机制：`last_hit_at` / `priority`，被频繁检索的记忆提升保留权重
 
 ### P4 - PC 客户端可用
 

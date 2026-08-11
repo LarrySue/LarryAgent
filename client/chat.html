@@ -62,6 +62,47 @@
     border: 1px solid #8b0000;
     color: #ff6b6b;
   }
+  .tool-card {
+    align-self: flex-start;
+    max-width: 85%;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: #1e2a3a;
+    border: 1px solid #2a4060;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .tool-card .tool-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: #5fa9d4;
+  }
+  .tool-card .tool-header .icon { font-size: 14px; }
+  .tool-card .tool-result {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #2a4060;
+    color: #aaa;
+    font-size: 12px;
+    max-height: 100px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tool-card .tool-result.error { color: #ff6b6b; }
+  .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #5fa9d4;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .input-area {
     display: flex;
     padding: 12px 20px;
@@ -153,16 +194,30 @@ async function send() {
   try {
     const res = await fetch(API + '/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
       body: JSON.stringify({ message: msg, model: model })
     });
-    const data = await res.json();
-    if (res.ok) {
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      addMessage(`Error: ${err.detail || JSON.stringify(err)}`, 'error');
+      setStatus('');
+      sendBtn.disabled = false;
+      return;
+    }
+
+    // 检查是否是 SSE 流
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('text/event-stream')) {
+      await consumeSSEStream(res);
+    } else {
+      // 非流式 JSON 响应
+      const data = await res.json();
       addMessage(data.reply, 'agent');
       setStatus(`conversation #${data.conversation_id} | model: ${data.model || model}`);
-    } else {
-      addMessage(`Error: ${data.detail || JSON.stringify(data)}`, 'error');
-      setStatus('');
     }
   } catch (e) {
     addMessage(`网络错误: ${e.message}`, 'error');
@@ -171,12 +226,151 @@ async function send() {
   sendBtn.disabled = false;
 }
 
+async function consumeSSEStream(res) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let agentMsg = null;
+  let agentText = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // 解析 SSE 事件（以 \n\n 分隔）
+    const events = buffer.split('\n\n');
+    buffer = events.pop(); // 最后一段可能不完整
+
+    for (const raw of events) {
+      if (!raw.trim()) continue;
+      const event = parseSSE(raw);
+      if (!event) continue;
+
+      switch (event.type) {
+        case 'tool_call':
+          if (agentMsg) {
+            // 如果已有 agent 消息，先完成它
+            agentMsg = null;
+            agentText = '';
+          }
+          addToolCard(event.name, event.round, event.arguments);
+          setStatus(`执行工具: ${event.name} (轮次 ${event.round})`);
+          break;
+
+        case 'tool_result':
+          updateToolCard(event.name, event.round, event.success, event.content);
+          setStatus('思考中...');
+          break;
+
+        case 'delta':
+          if (!agentMsg) {
+            agentMsg = addMessage('', 'agent');
+          }
+          agentText += event.content;
+          agentMsg.textContent = agentText;
+          scrollBottom();
+          setStatus('生成中...');
+          break;
+
+        case 'done':
+          setStatus(`conversation #${event.conversation_id}`);
+          break;
+
+        case 'error':
+          addMessage(`Error: ${event.message}`, 'error');
+          setStatus('');
+          break;
+      }
+    }
+  }
+}
+
+function parseSSE(raw) {
+  const lines = raw.split('\n');
+  let eventType = 'message';
+  let data = '';
+  for (const line of lines) {
+    if (line.startsWith('event: ')) {
+      eventType = line.slice(7).trim();
+    } else if (line.startsWith('data: ')) {
+      data = line.slice(6);
+    }
+  }
+  if (!data) return null;
+  try {
+    const obj = JSON.parse(data);
+    obj.type = eventType;
+    return obj;
+  } catch {
+    return { type: eventType, content: data };
+  }
+}
+
 function addMessage(text, cls) {
   const div = document.createElement('div');
   div.className = 'msg ' + cls;
   div.textContent = text;
   document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  scrollBottom();
+  return div;
+}
+
+function addToolCard(name, round, args) {
+  const card = document.createElement('div');
+  card.className = 'tool-card';
+  card.dataset.toolName = name;
+  card.dataset.round = round;
+
+  const header = document.createElement('div');
+  header.className = 'tool-header';
+  header.innerHTML = `<span class="spinner"></span><span class="icon">🔧</span> ${name} (轮次 ${round})`;
+  card.appendChild(header);
+
+  if (args && Object.keys(args).length > 0) {
+    const argStr = document.createElement('div');
+    argStr.style.cssText = 'color: #888; font-size: 12px; margin-top: 2px;';
+    argStr.textContent = '参数: ' + JSON.stringify(args).slice(0, 200);
+    card.appendChild(argStr);
+  }
+
+  document.getElementById('messages').appendChild(card);
+  scrollBottom();
+  return card;
+}
+
+function updateToolCard(name, round, success, content) {
+  const cards = document.querySelectorAll('.tool-card');
+  // 找最后一个匹配的卡片
+  let target = null;
+  for (const c of cards) {
+    if (c.dataset.toolName === name && c.dataset.round == round) {
+      target = c;
+    }
+  }
+  if (!target) return;
+
+  // 移除 spinner
+  const spinner = target.querySelector('.spinner');
+  if (spinner) spinner.remove();
+
+  // 更新 header 图标
+  const icon = target.querySelector('.tool-header .icon');
+  if (icon) {
+    icon.textContent = success ? '✅' : '❌';
+  }
+
+  // 添加结果
+  const result = document.createElement('div');
+  result.className = 'tool-result' + (success ? '' : ' error');
+  result.textContent = content || '(无输出)';
+  target.appendChild(result);
+  scrollBottom();
+}
+
+function scrollBottom() {
+  const el = document.getElementById('messages');
+  el.scrollTop = el.scrollHeight;
 }
 
 function setStatus(text) {

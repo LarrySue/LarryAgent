@@ -6,7 +6,7 @@
 - 记忆检索 → 构建 messages
 - Function calling 循环（LLM ↔ 工具，含 caller_ip 注入）
 - 消息持久化（含 tool_calls / tool_call_id）
-- 最大轮次限制（默认 10）
+- 流式 / 非流式统一入口（_chat_flow async generator）
 
 与其他模块的关系：
 - 被 api/chat.py 调用，是聊天业务的唯一入口
@@ -18,13 +18,14 @@
 
 import json
 import logging
+from typing import AsyncGenerator
 
 from pydantic import BaseModel, Field
 
 from config import get_config
 from db import conversations as conv_db
 from memory.engine import build_memory_context, get_long_term_memory, get_short_term_memory
-from models.llm import chat_completion
+from models.llm import chat_completion, chat_completion_stream
 from tools.registry import get_openai_tools, get_tool, list_tools
 
 logger = logging.getLogger(__name__)
@@ -54,20 +55,46 @@ class ChatResponse(BaseModel):
 
 async def handle_chat(req: ChatRequest, caller_ip: str) -> ChatResponse:
     """
-    完整聊天流程：
-    1. 创建/恢复会话
-    2. 保存用户消息
-    3. 检索记忆 → 构建 messages
-    4. Function calling 循环
-    5. 保存最终回复
-    6. 返回响应
+    非流式聊天：消费 _chat_flow generator，收集 delta 文本。
+    """
+    reply_parts: list[str] = []
+    conversation_id: int | None = None
+
+    async for event in _chat_flow(req, caller_ip):
+        etype = event["type"]
+        if etype == "delta":
+            reply_parts.append(event["content"])
+        elif etype == "done":
+            conversation_id = event["conversation_id"]
+        elif etype == "error":
+            raise ValueError(event["message"])
+
+    reply = "".join(reply_parts)
+    return ChatResponse(conversation_id=conversation_id, reply=reply, model=req.model)
+
+
+async def handle_chat_stream(req: ChatRequest, caller_ip: str) -> AsyncGenerator[str, None]:
+    """
+    流式聊天：将 _chat_flow 事件格式化为 SSE 字符串 yield。
+    """
+    async for event in _chat_flow(req, caller_ip):
+        yield _format_sse(event)
+
+
+async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, None]:
+    """
+    统一聊天流程（async generator）。
+
+    事件类型：
+    - tool_call: 工具即将执行
+    - tool_result: 工具执行完成
+    - delta: 文本片段（最终回复）
+    - done: 流结束
+    - error: 错误
     """
     logger.info(
         "Chat request conv=%s model=%s msg_len=%d caller_ip=%s",
-        req.conversation_id,
-        req.model,
-        len(req.message),
-        caller_ip,
+        req.conversation_id, req.model, len(req.message), caller_ip,
     )
 
     # 1. 解析/创建会话
@@ -76,7 +103,8 @@ async def handle_chat(req: ChatRequest, caller_ip: str) -> ChatResponse:
     else:
         existing = await conv_db.get_conversation(req.conversation_id)
         if existing is None:
-            raise ValueError(f"Conversation not found: {req.conversation_id}")
+            yield {"type": "error", "message": f"Conversation not found: {req.conversation_id}"}
+            return
         conversation_id = req.conversation_id
 
     # 2. 保存用户消息
@@ -92,59 +120,41 @@ async def handle_chat(req: ChatRequest, caller_ip: str) -> ChatResponse:
     tools = _get_tools_for_role(req.role)
 
     # 5. Function calling 循环
-    reply = await _run_tool_loop(
-        model=req.model,
-        messages=messages,
-        tools=tools,
-        temperature=req.temperature,
-        conversation_id=conversation_id,
-        caller_ip=caller_ip,
-    )
-
-    # 6. 保存最终回复
-    await conv_db.insert_message(conversation_id, "assistant", reply)
-    await conv_db.touch_conversation(conversation_id)
-
-    logger.info("Chat completed conv=%s reply_len=%d", conversation_id, len(reply))
-    return ChatResponse(conversation_id=conversation_id, reply=reply, model=req.model)
-
-
-async def _run_tool_loop(
-    model: str,
-    messages: list[dict],
-    tools: list[dict] | None,
-    temperature: float,
-    conversation_id: int,
-    caller_ip: str,
-) -> str:
-    """
-    Function calling 循环：LLM 调工具 → 追加结果 → 再调 LLM，直到返回纯文本。
-
-    每轮的 assistant 消息（含 tool_calls）和 tool 结果消息都会持久化到 DB，
-    确保会话恢复时不丢失工具调用上下文。
-    """
     max_rounds = _get_max_rounds()
     for round_num in range(1, max_rounds + 1):
         response = await chat_completion(
-            model=model,
+            model=req.model,
             messages=messages,
-            temperature=temperature,
+            temperature=req.temperature,
             tools=tools,
         )
 
         if not response.has_tool_calls:
-            # LLM 返回纯文本，循环结束
+            # 最终回复 — 真实流式输出
             logger.info("Tool loop completed at round %d (stop)", round_num)
-            return response.content
+            full_reply = ""
+            async for chunk in chat_completion_stream(
+                model=req.model,
+                messages=messages,
+                temperature=req.temperature,
+            ):
+                full_reply += chunk
+                yield {"type": "delta", "content": chunk}
+
+            # 保存最终回复
+            await conv_db.insert_message(conversation_id, "assistant", full_reply)
+            await conv_db.touch_conversation(conversation_id)
+            logger.info("Chat completed conv=%s reply_len=%d", conversation_id, len(full_reply))
+            yield {"type": "done", "conversation_id": conversation_id}
+            return
 
         logger.info(
             "Round %d: %d tool calls [%s]",
-            round_num,
-            len(response.tool_calls),
+            round_num, len(response.tool_calls),
             ", ".join(tc["name"] for tc in response.tool_calls),
         )
 
-        # 1. 追加 assistant 消息（含 tool_calls）到 messages
+        # 追加 assistant 消息（含 tool_calls）
         assistant_msg = {
             "role": "assistant",
             "content": response.content,
@@ -158,22 +168,21 @@ async def _run_tool_loop(
             ],
         }
         messages.append(assistant_msg)
-
-        # 持久化 assistant 消息
         await conv_db.insert_message(
-            conversation_id,
-            "assistant",
-            response.content,
+            conversation_id, "assistant", response.content,
             tool_calls=response.tool_calls,
         )
 
-        # 2. 逐个执行 tool_call
+        # 逐个执行 tool_call
         for tc in response.tool_calls:
             tool_name = tc["name"]
             try:
                 args = json.loads(tc["arguments"])
             except json.JSONDecodeError:
                 args = {}
+
+            # 推送 tool_call 事件（执行前）
+            yield {"type": "tool_call", "name": tool_name, "round": round_num, "arguments": args}
 
             # ShellTool 需注入 caller_ip
             if tool_name == "shell":
@@ -182,47 +191,53 @@ async def _run_tool_loop(
             tool = get_tool(tool_name)
             if tool is None:
                 tool_result = f"Error: tool '{tool_name}' not found"
+                tool_success = False
             else:
                 result = await tool.execute(**args)
                 tool_result = result.content if result.success else f"Error: {result.error}"
+                tool_success = result.success
 
-            logger.info(
-                "  Tool %s → %s",
-                tool_name,
-                tool_result[:200] if tool_result else "(empty)",
-            )
+            logger.info("  Tool %s → %s", tool_name, tool_result[:200] if tool_result else "(empty)")
 
-            # 追加 tool 消息到 messages（必须带 tool_call_id）
+            # 推送 tool_result 事件（执行后）
+            yield {
+                "type": "tool_result",
+                "name": tool_name,
+                "round": round_num,
+                "success": tool_success,
+                "content": tool_result[:500],  # 截断防止过大
+            }
+
+            # 追加 tool 消息到 messages
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],
                 "content": tool_result,
             })
-
-            # 持久化 tool 消息
             await conv_db.insert_message(
-                conversation_id,
-                "tool",
-                tool_result,
+                conversation_id, "tool", tool_result,
                 tool_call_id=tc["id"],
             )
 
     # 达到最大轮次
     logger.warning("Tool loop reached max rounds (%d)", max_rounds)
-    return "（达到工具调用最大轮次限制，已停止）"
+    fallback = "（达到工具调用最大轮次限制，已停止）"
+    yield {"type": "delta", "content": fallback}
+    await conv_db.insert_message(conversation_id, "assistant", fallback)
+    await conv_db.touch_conversation(conversation_id)
+    yield {"type": "done", "conversation_id": conversation_id}
+
+
+def _format_sse(event: dict) -> str:
+    """将事件 dict 格式化为 SSE 字符串。"""
+    etype = event.get("type", "message")
+    data = json.dumps(event, ensure_ascii=False)
+    return f"event: {etype}\ndata: {data}\n\n"
 
 
 def _get_tools_for_role(role: str) -> list[dict] | None:
     """
     按角色过滤可用工具，返回 OpenAI schema 列表。
-
-    config.yaml 中 role 下可选配置 tools 列表：
-      roles:
-        default:
-          system_prompt: "..."
-          tools: ["file_ops", "shell"]
-
-    未配置 tools 则返回所有工具（None 表示不启用 function calling 的空列表也转为 None）。
     """
     config = get_config()
     role_config = config.roles.get(role, config.roles.get("default", {}))
@@ -231,7 +246,6 @@ def _get_tools_for_role(role: str) -> list[dict] | None:
     if role_tools is None:
         return get_openai_tools()
 
-    # 按角色配置过滤
     all_tools = {t.name: t for t in list_tools()}
     schemas = []
     for name in role_tools:

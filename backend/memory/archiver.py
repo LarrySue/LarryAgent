@@ -99,16 +99,18 @@ async def generate_summary(
         len(messages),
         model,
     )
-    summary = await chat_completion(
+    response = await chat_completion(
         model=model,
         messages=llm_messages,
         temperature=0.3,
         max_tokens=2048,
     )
+    summary = response.content
     logger.info(
-        "Summary generated conv=%d len=%d",
+        "Summary generated conv=%d len=%d tokens=%s",
         conversation_id,
         len(summary),
+        response.usage.get("total_tokens", "N/A"),
     )
     return summary
 

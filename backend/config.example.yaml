@@ -104,3 +104,19 @@ tools:
 
   # Function calling 最大轮次（防死循环）
   function_calling_max_iterations: 10
+
+# ============================================================
+# LLM 调用配置
+# ============================================================
+llm:
+  # 失败重试次数（网络错误 / 429 / 5xx），4xx 不重试
+  max_retries: 3
+
+  # 重试指数退避基数（秒），实际等待 = base * 2^(attempt-1)
+  retry_backoff_base: 1.0
+
+  # 单次请求最大输入 token 数，超出截断旧消息
+  max_input_tokens: 128000
+
+  # 是否在日志中输出 raw 请求/响应正文（调试用，默认关闭）
+  debug_log: false
