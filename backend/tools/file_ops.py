@@ -10,6 +10,8 @@
 - 所有路径操作限制在配置的工作目录内
 - 不允许通过 ../ 跳出工作目录
 - 写操作不覆盖已有文件（自动重命名）
+- 读取文件限制 100KB，防止大文件撑爆 LLM 上下文
+- 列目录限制 1000 条，超出截断
 
 与其他模块的关系：
 - 被 tools/registry.py 注册
@@ -29,8 +31,8 @@ class FileOpsTool(BaseTool):
     name = "file_ops"
     description = (
         "文件读写操作工具。支持三种操作："
-        "read（读取文件内容）、write（写入新文件）、"
-        "list（列出目录内容）。"
+        "read（读取文件内容，限制 100KB）、write（写入新文件）、"
+        "list（列出目录内容，限制 1000 条）。"
     )
     parameters = {
         "type": "object",
@@ -51,6 +53,9 @@ class FileOpsTool(BaseTool):
         },
         "required": ["action", "path"],
     }
+
+    _MAX_READ_BYTES = 100 * 1024  # 100KB
+    _MAX_LIST_ENTRIES = 1000
 
     def __init__(self):
         workspace = get_config().tools.file_ops_workspace
@@ -86,7 +91,7 @@ class FileOpsTool(BaseTool):
             return ToolResult(success=False, error=f"Unknown action: {action}")
 
     async def _read(self, path: str) -> ToolResult:
-        """读取文件内容。"""
+        """读取文件内容，限制 100KB。"""
         safe_path = self._resolve_safe_path(path)
         if safe_path is None:
             return ToolResult(success=False, error=f"路径越权: {path}")
@@ -95,6 +100,13 @@ class FileOpsTool(BaseTool):
             return ToolResult(success=False, error=f"文件不存在: {path}")
         if safe_path.is_dir():
             return ToolResult(success=False, error=f"路径是目录而非文件: {path}")
+
+        file_size = safe_path.stat().st_size
+        if file_size > self._MAX_READ_BYTES:
+            return ToolResult(
+                success=False,
+                error=f"文件过大: {file_size} bytes (上限 {self._MAX_READ_BYTES} bytes)",
+            )
 
         try:
             content = safe_path.read_text(encoding="utf-8")
@@ -144,11 +156,17 @@ class FileOpsTool(BaseTool):
 
         try:
             entries = sorted(safe_path.iterdir(), key=lambda p: (not p.is_dir(), p.name))
+            total = len(entries)
+            truncated = total > self._MAX_LIST_ENTRIES
+            if truncated:
+                entries = entries[: self._MAX_LIST_ENTRIES]
             lines = []
             for entry in entries:
                 prefix = "[D] " if entry.is_dir() else "[F] "
                 lines.append(f"{prefix}{entry.name}")
             result = "\n".join(lines) if lines else "(空目录)"
+            if truncated:
+                result += f"\n(共 {total} 条，仅显示前 {self._MAX_LIST_ENTRIES} 条)"
             return ToolResult(success=True, content=result)
         except Exception as e:
             return ToolResult(success=False, error=f"列目录失败: {e}")

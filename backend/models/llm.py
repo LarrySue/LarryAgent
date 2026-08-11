@@ -5,14 +5,17 @@ LLM 多模型路由模块
 - 接收 chat 请求，根据 model_name 选择对应的 API 提供商
 - 统一封装 OpenAI 兼容的 chat completions 调用
 - 支持流式和非流式两种响应模式
+- 支持 function calling（tools 参数 + 结构化返回）
 
 与其他模块的关系：
-- 被 api/chat.py 调用，作为模型调用的统一入口
+- 被 services/chat_service.py 调用，作为模型调用的统一入口
 - 依赖 config.py 获取各模型的 api_key 和 base_url
 """
 
+import json
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import AsyncGenerator
 
 from openai import AsyncOpenAI
@@ -23,6 +26,18 @@ logger = logging.getLogger(__name__)
 
 # 按 provider 缓存客户端（api_key/base_url 按 provider 配置）
 _clients: dict[str, AsyncOpenAI] = {}
+
+
+@dataclass
+class LLMResponse:
+    """LLM 调用结果，支持 function calling。"""
+    content: str = ""
+    tool_calls: list[dict] = field(default_factory=list)  # [{id, name, arguments(JSON string)}]
+    finish_reason: str = "stop"  # "stop" | "tool_calls" | "length"
+
+    @property
+    def has_tool_calls(self) -> bool:
+        return bool(self.tool_calls)
 
 
 def _resolve_provider_key(model_name: str) -> str:
@@ -61,43 +76,68 @@ async def chat_completion(
     messages: list[dict],
     temperature: float = 0.7,
     max_tokens: int = 4096,
-) -> str:
+    tools: list[dict] | None = None,
+) -> LLMResponse:
     """
-    非流式聊天补全。
+    非流式聊天补全，支持 function calling。
 
     Args:
         model: 模型名称，如 "deepseek-chat"、"gpt-4o"
         messages: 标准 OpenAI 消息列表
         temperature: 温度参数
         max_tokens: 最大输出 token 数
+        tools: OpenAI function calling schema 列表，None 表示不启用工具
 
     Returns:
-        模型生成的完整文本
+        LLMResponse，包含 content、tool_calls、finish_reason
     """
     client = _get_client(model)
     logger.info(
-        "LLM request model=%s messages=%d temperature=%s",
+        "LLM request model=%s messages=%d tools=%s temperature=%s",
         model,
         len(messages),
+        len(tools) if tools else 0,
         temperature,
     )
     start = time.perf_counter()
     try:
-        response = await client.chat.completions.create(
+        kwargs = dict(
             model=model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        content = response.choices[0].message.content or ""
+        if tools:
+            kwargs["tools"] = tools
+
+        response = await client.chat.completions.create(**kwargs)
+        choice = response.choices[0]
+        msg = choice.message
+        content = msg.content or ""
+
+        tool_calls = []
+        if msg.tool_calls:
+            for tc in msg.tool_calls:
+                tool_calls.append({
+                    "id": tc.id,
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                })
+
         elapsed = time.perf_counter() - start
         logger.info(
-            "LLM response model=%s chars=%d elapsed=%.2fs",
+            "LLM response model=%s finish=%s chars=%d tool_calls=%d elapsed=%.2fs",
             model,
+            choice.finish_reason,
             len(content),
+            len(tool_calls),
             elapsed,
         )
-        return content
+        return LLMResponse(
+            content=content,
+            tool_calls=tool_calls,
+            finish_reason=choice.finish_reason or "stop",
+        )
     except Exception:
         logger.exception("LLM request failed model=%s", model)
         raise

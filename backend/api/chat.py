@@ -2,100 +2,40 @@
 聊天 API 路由
 
 职责：
-- POST /api/chat：接收用户消息，完成记忆检索 → LLM 调用 → 返回响应的完整流程
-- 支持流式（SSE）和非流式两种响应模式
-- 自动保存对话到数据库
+- POST /api/chat：接收用户消息，调用 chat_service 完成完整流程
+- POST /api/chat/stream：流式聊天（P3 实现）
+- 从 request.client.host 提取 caller_ip 传入服务层，供 ShellTool IP 白名单校验
 
 与其他模块的关系：
-- 依赖 memory/engine.py 检索短期和长期记忆
-- 依赖 models/llm.py 调用 LLM
+- 依赖 services/chat_service.py 处理业务逻辑
 - 依赖 tools/registry.py 获取工具列表
-- 依赖 db/database.py 保存消息
 """
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from openai import APIError
-from pydantic import BaseModel, Field
 
-from config import get_config
-from db import conversations as conv_db
-from memory.engine import build_memory_context, get_short_term_memory, get_long_term_memory
-from models.llm import chat_completion
+from services.chat_service import ChatRequest, ChatResponse, handle_chat
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
 
-class ChatRequest(BaseModel):
-    """聊天请求体"""
-    conversation_id: int | None = None  # None 表示新建会话
-    message: str = Field(..., min_length=1)
-    role: str = "default"         # 角色名，对应 config.yaml 中 roles 的 key
-    model: str = "deepseek-chat"
-    stream: bool = False
-    temperature: float = 0.7
-
-
-class ChatResponse(BaseModel):
-    """非流式聊天响应体"""
-    conversation_id: int
-    reply: str
-    model: str
-
-
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, request: Request):
     """
-    聊天接口 - 非流式。
+    聊天接口 - 非流式，支持 function calling。
 
-    处理流程：
-    1. 如果无 conversation_id，创建新会话
-    2. 保存用户消息到数据库
-    3. 检索短期记忆（最近消息）
-    4. 调用 LLM
-    5. 保存助手回复到数据库
-    6. 返回响应
+    处理流程由 services/chat_service.py::handle_chat 完成：
+    会话管理 → 记忆检索 → LLM + 工具循环 → 持久化 → 返回
     """
-    logger.info(
-        "Chat request conv=%s model=%s msg_len=%d",
-        req.conversation_id,
-        req.model,
-        len(req.message),
-    )
-
-    # 1. 解析/创建会话
-    if req.conversation_id is None:
-        conversation_id = await conv_db.create_conversation()
-    else:
-        existing = await conv_db.get_conversation(req.conversation_id)
-        if existing is None:
-            logger.warning("Conversation not found: id=%s", req.conversation_id)
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        conversation_id = req.conversation_id
-
-    # 2. 保存用户消息
-    await conv_db.insert_message(conversation_id, "user", req.message)
-
-    # 3. 短期记忆（含刚写入的用户消息）
-    short_term = await get_short_term_memory(conversation_id)
-
-    # 3b. 长期记忆（ChromaDB 检索，失败时降级为空列表）
-    long_term = await get_long_term_memory(req.message)
-
-    messages = build_memory_context(short_term, long_term=long_term, system_prompt=get_config().get_system_prompt(req.role))
-
-    # 4. 调用 LLM
+    caller_ip = request.client.host if request.client else "unknown"
     try:
-        reply = await chat_completion(
-            model=req.model,
-            messages=messages,
-            temperature=req.temperature,
-        )
+        return await handle_chat(req, caller_ip)
     except ValueError as e:
-        logger.warning("Chat config error: %s", e)
+        logger.warning("Chat error: %s", e)
         raise HTTPException(status_code=400, detail=str(e)) from e
     except APIError as e:
         logger.error("LLM API error: %s", e)
@@ -103,21 +43,6 @@ async def chat(req: ChatRequest):
     except Exception as e:
         logger.exception("Unexpected error during chat")
         raise HTTPException(status_code=502, detail=f"LLM request failed: {e}") from e
-
-    # 5. 保存助手回复
-    await conv_db.insert_message(conversation_id, "assistant", reply)
-    await conv_db.touch_conversation(conversation_id)
-
-    logger.info(
-        "Chat completed conv=%s reply_len=%d",
-        conversation_id,
-        len(reply),
-    )
-    return ChatResponse(
-        conversation_id=conversation_id,
-        reply=reply,
-        model=req.model,
-    )
 
 
 @router.post("/chat/stream")

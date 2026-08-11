@@ -19,6 +19,7 @@ Shell 命令执行工具
 
 import asyncio
 import logging
+import sys
 
 from config import get_config
 from tools.base import BaseTool, ToolResult
@@ -74,6 +75,24 @@ class ShellTool(BaseTool):
                 return pattern
         return None
 
+    async def _kill_process(self, proc: asyncio.subprocess.Process):
+        """杀进程：Windows 用 taskkill /T 杀进程树，其他平台用 proc.kill()。"""
+        if proc.returncode is not None:
+            return
+        if sys.platform == "win32":
+            try:
+                proc_killer = await asyncio.create_subprocess_exec(
+                    "taskkill", "/T", "/F", "/PID", str(proc.pid),
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await proc_killer.wait()
+            except Exception:
+                proc.kill()
+        else:
+            proc.kill()
+        await proc.wait()
+
     async def execute(
         self,
         command: str,
@@ -113,14 +132,11 @@ class ShellTool(BaseTool):
         logger.info("Shell exec: %s (cwd=%s, timeout=%ds)", command, working_dir, self._timeout)
         proc = None
         try:
-            proc = await asyncio.wait_for(
-                asyncio.create_subprocess_shell(
-                    command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                    cwd=working_dir,
-                ),
-                timeout=self._timeout,
+            proc = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=working_dir,
             )
             stdout, stderr = await asyncio.wait_for(
                 proc.communicate(),
@@ -145,10 +161,9 @@ class ShellTool(BaseTool):
                 )
 
         except asyncio.TimeoutError:
-            # 超时：杀进程防止僵尸
-            if proc and proc.returncode is None:
-                proc.kill()
-                await proc.wait()
+            # 超时：杀进程树防止僵尸/孙进程残留
+            if proc:
+                await self._kill_process(proc)
             logger.warning("Shell timed out: %s", command)
             return ToolResult(
                 success=False,

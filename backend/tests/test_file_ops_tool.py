@@ -85,6 +85,17 @@ class TestFileOpsTool(unittest.TestCase):
         self.assertIn("目录", result.error)
         print(f"[PASS] Test 1c: 读取目录 → {result.error}")
 
+    def test_read_file_too_large(self):
+        """超过大小限制的文件应返回 error"""
+        tool = self._get_tool()
+        # 临时设小上限方便测试
+        tool._MAX_READ_BYTES = 10
+        self._run(tool.execute(action="write", path="big.txt", content="x" * 100))
+        result = self._run(tool.execute(action="read", path="big.txt"))
+        self.assertFalse(result.success)
+        self.assertIn("文件过大", result.error)
+        print(f"[PASS] Test 1d: 文件过大 → {result.error}")
+
     # ================================================================
     # Test 2: 写文件
     # ================================================================
@@ -182,6 +193,19 @@ class TestFileOpsTool(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertIn("目录", result.error)
         print(f"[PASS] Test 3d: 文件路径 list → {result.error}")
+
+    def test_list_truncate(self):
+        """超过上限的目录应截断并提示"""
+        tool = self._get_tool()
+        # 临时设小上限方便测试
+        tool._MAX_LIST_ENTRIES = 3
+        for i in range(5):
+            self._run(tool.execute(action="write", path=f"trunc_dir/f{i}.txt", content="x"))
+        result = self._run(tool.execute(action="list", path="trunc_dir"))
+        self.assertTrue(result.success)
+        self.assertIn("仅显示前 3 条", result.content)
+        self.assertIn("共 5 条", result.content)
+        print(f"[PASS] Test 3e: 列表截断 → {result.content.split(chr(10))[-1]}")
 
     # ================================================================
     # Test 4: 路径沙箱
@@ -286,9 +310,9 @@ def run_tests():
     print("=" * 60)
     print()
     print("已验证功能：")
-    print("  [PASS] 读文件：正常读取、文件不存在、读取目录")
+    print("  [PASS] 读文件：正常读取、文件不存在、读取目录、文件大小限制")
     print("  [PASS] 写文件：正常写入、不覆盖（自动重命名）、后缀递增、嵌套目录")
-    print("  [PASS] 列目录：正常列表、空目录、目录不存在、文件路径")
+    print("  [PASS] 列目录：正常列表、空目录、目录不存在、文件路径、条目上限截断")
     print("  [PASS] 路径沙箱：../ 逃逸、绝对路径逃逸、读写列均拦截")
     print("  [PASS] 未知 action：返回 error")
     print("  [PASS] 工具注册：registry 可获取，OpenAI schema 有效")

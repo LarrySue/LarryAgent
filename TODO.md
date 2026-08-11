@@ -8,6 +8,8 @@
 - [ ] 记忆保鲜机制：memories 表预留 last_hit_at / priority 字段，需实现降权与淘汰策略
 - [ ] 向量同步补偿：ChromaDB 恢复后，自动检测 SQLite 中有但 ChromaDB 中缺失的记忆，补写向量数据（`memories` 表可加 `vector_synced` 标记）
 - [ ] 更换 Embedding 模型时需配套迁移脚本（重建 ChromaDB collection + 全量重索引）
+- [ ] `vector_store.py::search()` 去掉 `score_threshold` 默认值，强制调用方显式传参（当前 engine.py 传 0.3、search 默认 0.5，两处不一致容易踩坑；且 TODO 已规划按 source_role 分级阈值，将来必然进 config）
+- [ ] `llm.py::_resolve_provider_key` 靠模型名前缀解析 provider，命名约定脆弱；改为显式映射。触发条件：一旦第二个 provider 实际启用，本条自动升级为阻塞项
 
 ### 多场景 AI 架构
 
@@ -101,39 +103,47 @@
 - [x] `_read(path)`：`Path.read_text(encoding="utf-8")`，文件不存在返回 error
 - [x] `_write(path, content)`：先检查路径在 workspace 内，同路径已存在则自动追加后缀 `_1` / `_2`（不覆盖），`Path.write_text`
 - [x] `_list(path)`：目录存在返回文件和子目录名列表，不存在返回 error
+- [x] `_read` 文件大小限制 100KB（`_MAX_READ_BYTES`），防止 LLM 读大文件撑爆上下文
+- [x] `_list` 条目上限 1000（`_MAX_LIST_ENTRIES`），超出截断并提示总数
 
 配置化：`_workspace_root` 从 `config.yaml` 的 `tools.file_ops_workspace` 读取，默认 `~/larry_workspace`。
-端到端测试 18 项全通过（`tests/test_file_ops_tool.py`，2026-08-11）：读/写/列表三动作、路径沙箱（`../` 逃逸、绝对路径逃逸）、不覆盖写入、嵌套目录、工具注册与 schema。
+端到端测试 20 项全通过（`tests/test_file_ops_tool.py`，2026-08-11）：读/写/列表三动作、路径沙箱（`../` 逃逸、绝对路径逃逸）、不覆盖写入、嵌套目录、文件大小限制、条目截断、工具注册与 schema。
 
 **P2.2 - ShellTool 实现** ✅
 
 - [x] `asyncio.create_subprocess_shell` 执行，`communicate()` 读 stdout/stderr
-- [x] 30s `asyncio.wait_for` 超时；`except asyncio.TimeoutError` 中显式 `proc.kill()` + `await proc.wait()`，防止僵尸进程
+- [x] 30s `asyncio.wait_for` 超时（仅包裹 `communicate()`，不包裹进程创建）；超时后 `_kill_process()` 清理
 - [x] `working_dir` 参数生效
 - [x] 高危命令黑名单检测（`_blocked_patterns`：`rm -rf /`, `del /f /s C:\`, `format`, `shutdown`）
 - [x] IP 白名单：从 `config.yaml` 的 `tools.shell_allowed_ips` 读取，默认 `["127.0.0.1", "::1"]`。校验逻辑下沉到 `ShellTool.execute()` 内部，从 `kwargs` 接收 `caller_ip` 比对
 - [x] `config.py` `ToolsConfig` 新增 `shell_timeout` 字段（默认 30），配置驱动超时
 - [x] 工具注册：`scan_and_register()` 自动发现 ShellTool，`get_openai_schema()` 生成 function calling schema
+- [x] Windows 超时杀进程树：`taskkill /T /F /PID` 杀孙进程，非 Windows 用 `proc.kill()`
 - [x] 端到端测试 15 项全通过（`tests/test_shell_tool.py`，2026-08-11）
 
 注意：config 采用扁平结构 `tools.shell_allowed_ips` + `tools.shell_timeout`，而非嵌套 `tools.shell.xxx`，简化读取逻辑。
 
-**P2.3 - Function Calling 循环（/api/chat）**
+**P2.3 - Function Calling 循环（/api/chat）** ✅
 
 > P2 核心。改造 `/api/chat` 的 LLM 调用段。
 
-- [ ] 把 `get_openai_tools()` 返回的 schema 注入 LLM 请求的 `tools` 参数
-- [ ] LLM 返回后检测 `finish_reason == "tool_calls"`
-- [ ] 解析 `tool_calls` → 从 registry 取工具 → `await tool.execute(**args)`，记录每个 tool_call 的 `id`。注意：对 ShellTool 需从 `request.client.host` 取 IP 注入 `caller_ip` 到 kwargs，否则 IP 白名单校验失效
-- [ ] 把 tool result 作为 `role: "tool"` 消息追加到 messages，**必须带 `tool_call_id`**（来自原 tool_call 的 `id` 字段），否则 OpenAI API 返回 400
-- [ ] 循环直到 LLM 返回 `finish_reason == "stop"`（纯文本）
-- [ ] 最大轮次限制（默认 10），防止死循环
-- [ ] 工具按角色过滤（工具动态注入）：在 function calling 循环里按 role 过滤 `get_openai_tools()` 返回结果，避免无关工具的 schema 膨胀 prompt。role→tools 映射写入 `config.yaml`
-- [ ] 每轮 tool call 记录日志
-- [ ] 注：后续可加 token 累计上限（单次对话 tool call 总 token 阈值），防止单轮读大文件等场景暴增。当前仅轮次限制
-- [ ] 前置依赖：`llm.py::chat_completion` 目前返回 `str`，需要改为接受 `tools` 参数并返回 `(content, tool_calls)` 或更丰富的结构，否则 function calling 循环无从判断 LLM 是否要调工具
-- [ ] 前置依赖：`messages` 表虽有 `tool_calls` 列，但 `insert_message` 不写入、`get_messages` 不返回；需补 `tool_call_id` 列（tool 消息匹配用），并更新 CRUD。否则会话恢复时丢失工具调用上下文
-- [ ] 重构 chat.py：当前路由函数包含完整的业务流程（会话创建→存消息→检索记忆→调 LLM→存回复），加入 function calling 循环后会更膨胀。抽 service 层（如 `services/chat_service.py`），API 层只做参数校验和调用
+**前置依赖（已完成）：**
+- [x] `llm.py::chat_completion` 改为接受 `tools` 参数，返回 `LLMResponse(content, tool_calls, finish_reason)` 结构
+- [x] `messages` 表新增 `tool_call_id` 列（增量迁移），`insert_message` / `get_messages` 支持 tool_calls 序列化存储 + OpenAI 格式转换
+- [x] 重构 chat.py：业务逻辑下沉到 `services/chat_service.py`，API 层只做参数校验 + caller_ip 提取 + 错误转换
+
+**功能实现：**
+- [x] `get_openai_tools()` 返回的 schema 注入 LLM 请求的 `tools` 参数
+- [x] LLM 返回后检测 `finish_reason == "tool_calls"`，解析 `tool_calls`
+- [x] 从 registry 取工具 → `await tool.execute(**args)`，ShellTool 自动注入 `caller_ip`（从 `request.client.host` 获取）
+- [x] tool result 作为 `role: "tool"` 消息追加到 messages，带 `tool_call_id`（来自原 tool_call 的 `id`）
+- [x] 循环直到 `finish_reason == "stop"`（纯文本）
+- [x] 最大轮次限制（`MAX_TOOL_ROUNDS = 10`），防止死循环
+- [x] 工具按角色过滤：`_get_tools_for_role(role)` 按 config.yaml 中 role 的 `tools` 列表过滤，未配置则返回全部
+- [x] 每轮 tool call 记录日志（工具名、结果摘要 200 字符）
+- [x] 持久化设计：每轮的 assistant 消息（含 tool_calls）和 tool 结果消息（含 tool_call_id）实时写入 DB，会话恢复时 `get_messages` 反序列化并转为 OpenAI 格式，不丢失工具调用上下文。
+- [x] 端到端测试 8 项全通过（`tests/test_chat_service.py`，2026-08-11）：无工具调用、单工具调用、多工具调用、最大轮次限制、工具不存在处理、消息持久化（tool_calls + tool_call_id）、角色过滤。
+- [ ] 注：后续可加 token 累计上限（单次对话 tool call 总 token 阈值），防止单轮读大文件等场景暴增。当前仅轮次限制。本条目优先级很低，不做主动处理，后续若出现与此条目相关的问题，再考虑是否需要完善，完善前先进行充分讨论，任何情况下不静默自动处理。
 
 **P2.4 - /api/tools 接口实现**
 

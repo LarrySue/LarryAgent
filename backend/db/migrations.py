@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 _INCREMENTAL_ALTERS = [
     # tools 表：添加 group_name 字段（用于工具分组与按需加载）
     ("tools", "group_name", "TEXT NOT NULL DEFAULT 'core'"),
+    # messages 表：添加 tool_call_id 字段（tool 消息匹配 assistant tool_calls 用）
+    ("messages", "tool_call_id", "TEXT DEFAULT NULL"),
 ]
 
 
