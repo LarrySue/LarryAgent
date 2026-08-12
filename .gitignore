@@ -25,6 +25,9 @@ backend/data/*.db-shm
 *.swp
 *.swo
 
+# AI 工具工作区数据（本机记忆/技能，不入库）
+.workbuddy/
+
 # Node
 node_modules/
 client/dist/
