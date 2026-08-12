@@ -33,3 +33,8 @@
 
 **分配：** Trae CN 实现（规格已写入 `exchange/trae.md`）→ Claude Code 测试（`test_auth_middleware.py`）→ WorkBuddy 确认 → 老大确认 → 勾选 TODO。
 **状态：** 派发完成，待 Trae 开工。
+
+**补充（2026-08-12 追加）：Claude 测试任务也已派发**（写入 `exchange/claude.md`）。
+- 暴露的 sequencing 依赖：Claude 测试依赖 Trae 的 `feat(P3.4)` 已提交（`middleware/auth.py` 存在），否则 import 失败。规格已写明"等 Trae 提交后再执行"。
+- 4 个强制用例：空 key 透传 / 无 header→401 / 正确 Bearer→200 / 错误 Bearer→401；明确已知存量测试债务（chromadb_degradation mock、integration pytest-asyncio、shell windows_dir 编码）非 P3.4 回归，勿误判。
+- 提交约定：`test(P3.4): ...`。

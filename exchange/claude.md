@@ -29,3 +29,22 @@ P3.3 全部 6 项交付物完成，16/16 测试通过。逐项评估：
 `_debug_log_request` / `_debug_log_response` 从 `config.llm.debug_log` 读取，默认关闭。
 
 **未发现问题。** 旧 `chat_completion_stream`（纯文本流式）保留在 llm.py 中但 `_chat_flow` 已不再调用，无副作用。
+
+---
+
+**P3.4 测试任务派发（WorkBuddy 组长，2026-08-12）**
+
+**前置依赖（重要）：** 等 Trae 的 `feat(P3.4)` 提交、`backend/middleware/auth.py` 存在且 `main.py` 已 `add_middleware` 后，再执行。提前跑会因 import 失败。
+
+**任务：新增 `tests/test_auth_middleware.py`（FastAPI TestClient），强制覆盖 4 个用例：**
+1. **空 api_key 透传**：`config.server.api_key = ""` 时，请求 `/api/chat`（下游用 mock 短路）→ 不被 401，正常返回。验证"本机不校验"。
+2. **无 header → 401**：设 key 后请求 `/api/chat` 不带 `Authorization` → 401，body 严格等于 `{"error": "AUTH_ERROR", "detail": "Invalid or missing API key"}`。
+3. **正确 Bearer → 200**：`Authorization: Bearer <config.api_key>` → 200。
+4. **错误 Bearer → 401**：`Authorization: Bearer wrong` → 401，body 同上。
+
+**验证范围：**
+- 用 `app.dependency_overrides` 或 mock 短路 `/api/chat` 下游（不要真调 DeepSeek）。可临时把 chat_router 的 handler 替换为返回 200 的 stub，或用 TestClient + monkeypatch。
+- 跑 P3.4 这 4 个用例必须全绿。
+- **关于全套回归**：跑全套时，以下为已知存量债务，非 P3.4 引入，勿判为回归：`test_chromadb_degradation.py`（mock 了已删除的 `archiver.get_db`）、`test_integration_llm.py`（缺 pytest-asyncio）、`test_shell_tool.py::test_windows_dir`（中文 Windows 下 `dir` 输出断言英文）。P3.4 只对本任务 4 用例负责。
+
+**提交：** 完成后 `git commit -m "test(P3.4): API Key 鉴权中间件测试"`。在交流区写测试总结（覆盖情况 + 是否发现 P3.4 回归），交 WorkBuddy 确认。
