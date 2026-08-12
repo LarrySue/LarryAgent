@@ -1,28 +1,26 @@
 """
-P2.3 Function Calling 循环端到端测试
+P2.3 / P3.3 Function Calling 循环端到端测试
 
 测试 chat_service 的工具调用循环、caller_ip 注入、
 消息持久化（tool_calls / tool_call_id）、最大轮次限制。
 
-注：chat_service 重构后，工具循环由 _chat_flow（async generator）
-统一驱动，事件类型：tool_call / tool_result / delta / done / error。
-最终回复文本通过 chat_completion_stream 流式产出，故测试需同时
-mock chat_completion 与 chat_completion_stream。
+P3.3 改造后：工具循环由 _chat_flow（async generator）统一驱动，
+每轮使用 chat_completion_stream_events 全程流式（delta + finish +
+tool_calls + usage），不再有"非流式探测 + 流式重生成"的双调用。
+测试统一 mock chat_service.chat_completion_stream_events。
 """
 
 import asyncio
 import json
 import os
 import sys
-import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from db import conversations as conv_db
 from db.database import close_db, get_db
-from models.llm import LLMResponse
-from services.chat_service import ChatRequest, _chat_flow, _get_tools_for_role, handle_chat
+from services.chat_service import ChatRequest, _chat_flow, _get_tools_for_role
 from tools.base import BaseTool, ToolResult
 from tools.registry import register, scan_and_register
 
@@ -37,11 +35,42 @@ def _deltas(events: list[dict]) -> str:
     return "".join(e["content"] for e in events if e["type"] == "delta")
 
 
+def _make_stream_events_mock(round_responses: list[dict]):
+    """
+    构造一个 chat_completion_stream_events 的 mock 工厂。
+
+    每次调用按 round_responses 的顺序返回，每 round_response 形如：
+    {
+        "deltas": ["a", "b"],           # 可选，文本增量
+        "finish_reason": "stop",          # "stop" | "tool_calls"
+        "tool_calls": [...],              # 可选
+        "usage": {total, prompt, completion},  # 可选
+    }
+
+    返回值：(async_mock_fn, call_count_list)
+    """
+    call_count = [0]
+
+    async def mock(**kwargs):
+        idx = call_count[0]
+        call_count[0] += 1
+        spec = round_responses[idx % len(round_responses)]
+        for d in spec.get("deltas", []):
+            yield {"type": "delta", "content": d}
+        yield {
+            "type": "finish",
+            "finish_reason": spec.get("finish_reason", "stop"),
+            "tool_calls": spec.get("tool_calls", []),
+            "usage": spec.get("usage", {}),
+        }
+
+    return mock, call_count
+
+
 class TestToolLoop(unittest.IsolatedAsyncioTestCase):
-    """测试 function calling 循环"""
+    """测试 function calling 循环（P3.3 全程流式版本）"""
 
     async def asyncSetUp(self):
-        """每个测试前初始化 DB 和工具注册"""
         os.environ["LARRY_CONFIG"] = os.path.join(
             os.path.dirname(__file__), "..", "config.yaml"
         )
@@ -52,58 +81,53 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
         await close_db()
 
     async def test_no_tool_calls(self):
-        """LLM 直接返回文本（无工具调用）应立即结束"""
-        # mock chat_completion 返回纯文本
+        """LLM 直接返回文本（无工具调用），只调用 1 次流式 LLM"""
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
+        original = chat_service.chat_completion_stream_events
 
-        async def mock_completion(**kwargs):
-            return LLMResponse(content="你好！有什么可以帮你的？", finish_reason="stop")
-
-        async def mock_stream(**kwargs):
-            yield "你好！有什么可以帮你的？"
-
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        mock_fn, call_count = _make_stream_events_mock([
+            {
+                "deltas": ["你好！有什么可以帮你的？"],
+                "finish_reason": "stop",
+                "usage": {"total_tokens": 20, "prompt_tokens": 10, "completion_tokens": 10},
+            },
+        ])
+        chat_service.chat_completion_stream_events = mock_fn
         try:
             req = ChatRequest(message="你好", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
             reply = _deltas(events)
             self.assertEqual(reply, "你好！有什么可以帮你的？")
             self.assertEqual(events[-1]["type"], "done")
+            self.assertEqual(call_count[0], 1, "无工具调用场景应只调用 1 次流式（P3.3-5 消除双调用）")
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
     async def test_single_tool_call(self):
-        """LLM 调用一次工具后返回结果"""
+        """LLM 调用一次工具后返回结果 — 共 2 次流式调用"""
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
-        call_count = [0]
+        original = chat_service.chat_completion_stream_events
 
-        async def mock_completion(**kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return LLMResponse(
-                    content="",
-                    tool_calls=[{
-                        "id": "call_001",
-                        "name": "echo_tool",
-                        "arguments": json.dumps({"text": "hello"}),
-                    }],
-                    finish_reason="tool_calls",
-                )
-            else:
-                return LLMResponse(content="echo 返回: hello", finish_reason="stop")
+        mock_fn, call_count = _make_stream_events_mock([
+            {
+                "deltas": ["好的，"],
+                "finish_reason": "tool_calls",
+                "tool_calls": [{
+                    "id": "call_001",
+                    "name": "echo_tool",
+                    "arguments": json.dumps({"text": "hello"}),
+                }],
+                "usage": {"total_tokens": 30, "prompt_tokens": 20, "completion_tokens": 10},
+            },
+            {
+                "deltas": ["echo 返回: hello"],
+                "finish_reason": "stop",
+                "usage": {"total_tokens": 25, "prompt_tokens": 15, "completion_tokens": 10},
+            },
+        ])
 
-        async def mock_stream(**kwargs):
-            yield "echo 返回: hello"
-
-        # 注册一个测试工具
         class EchoTool(BaseTool):
             name = "echo_tool"
             description = "回显输入文本"
@@ -118,54 +142,46 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
 
         register(EchoTool())
 
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_fn
         try:
             req = ChatRequest(message="echo hello", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
             reply = _deltas(events)
-            self.assertEqual(reply, "echo 返回: hello")
+            self.assertIn("echo 返回: hello", reply)
             self.assertEqual(call_count[0], 2)  # 1 次 tool_call + 1 次 stop
 
-            # tool_call 事件（执行前）
             tool_call_events = [e for e in events if e["type"] == "tool_call"]
             self.assertEqual(len(tool_call_events), 1)
             self.assertEqual(tool_call_events[0]["name"], "echo_tool")
             self.assertEqual(tool_call_events[0]["arguments"], {"text": "hello"})
 
-            # tool_result 事件（执行后）
             tool_result_events = [e for e in events if e["type"] == "tool_result"]
             self.assertEqual(len(tool_result_events), 1)
             self.assertTrue(tool_result_events[0]["success"])
             self.assertEqual(tool_result_events[0]["content"], "hello")
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
     async def test_multiple_tool_calls(self):
         """LLM 一次返回多个 tool_calls 应全部执行"""
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
-        call_count = [0]
+        original = chat_service.chat_completion_stream_events
 
-        async def mock_completion(**kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return LLMResponse(
-                    content="",
-                    tool_calls=[
-                        {"id": "call_1", "name": "echo_tool", "arguments": json.dumps({"text": "A"})},
-                        {"id": "call_2", "name": "echo_tool", "arguments": json.dumps({"text": "B"})},
-                    ],
-                    finish_reason="tool_calls",
-                )
-            else:
-                return LLMResponse(content="A 和 B", finish_reason="stop")
-
-        async def mock_stream(**kwargs):
-            yield "A 和 B"
+        mock_fn, _ = _make_stream_events_mock([
+            {
+                "deltas": [],
+                "finish_reason": "tool_calls",
+                "tool_calls": [
+                    {"id": "call_1", "name": "echo_tool", "arguments": json.dumps({"text": "A"})},
+                    {"id": "call_2", "name": "echo_tool", "arguments": json.dumps({"text": "B"})},
+                ],
+            },
+            {
+                "deltas": ["A 和 B"],
+                "finish_reason": "stop",
+            },
+        ])
 
         class EchoTool(BaseTool):
             name = "echo_tool"
@@ -177,12 +193,10 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
 
         register(EchoTool())
 
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_fn
         try:
             req = ChatRequest(message="echo A and B", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
-
             tool_call_events = [e for e in events if e["type"] == "tool_call"]
             tool_result_events = [e for e in events if e["type"] == "tool_result"]
             self.assertEqual(len(tool_call_events), 2)
@@ -192,29 +206,30 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(tool_result_events[0]["success"])
             self.assertTrue(tool_result_events[1]["success"])
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
     async def test_max_rounds(self):
         """达到最大轮次应停止并返回提示"""
         from services import chat_service
 
-        original_completion = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
+        original = chat_service.chat_completion_stream_events
 
-        async def mock_completion(**kwargs):
-            return LLMResponse(
-                content="",
-                tool_calls=[{
-                    "id": f"call_{kwargs.get('messages', [{}])[-1].get('content', 'x')}",
+        call_count_track = [0]
+
+        async def mock_loop(**kwargs):
+            call_count_track[0] += 1
+            idx = call_count_track[0]
+            yield {"type": "delta", "content": f"r{idx}"}
+            yield {
+                "type": "finish",
+                "finish_reason": "tool_calls",
+                "tool_calls": [{
+                    "id": f"call_{idx}",
                     "name": "echo_tool",
                     "arguments": "{}",
                 }],
-                finish_reason="tool_calls",
-            )
-
-        async def mock_stream(**kwargs):
-            yield "should not be called"
+                "usage": {},
+            }
 
         class EchoTool(BaseTool):
             name = "echo_tool"
@@ -226,8 +241,7 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
 
         register(EchoTool())
 
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_loop
         try:
             req = ChatRequest(message="loop forever", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
@@ -235,37 +249,31 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
             self.assertIn("最大轮次", reply)
             self.assertEqual(events[-1]["type"], "done")
         finally:
-            chat_service.chat_completion = original_completion
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
     async def test_tool_not_found(self):
         """LLM 调用不存在的工具应返回 error 但不崩溃"""
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
-        call_count = [0]
+        original = chat_service.chat_completion_stream_events
 
-        async def mock_completion(**kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return LLMResponse(
-                    content="",
-                    tool_calls=[{
-                        "id": "call_x",
-                        "name": "nonexistent_tool",
-                        "arguments": "{}",
-                    }],
-                    finish_reason="tool_calls",
-                )
-            else:
-                return LLMResponse(content="工具不存在", finish_reason="stop")
+        mock_fn, _ = _make_stream_events_mock([
+            {
+                "deltas": [],
+                "finish_reason": "tool_calls",
+                "tool_calls": [{
+                    "id": "call_x",
+                    "name": "nonexistent_tool",
+                    "arguments": "{}",
+                }],
+            },
+            {
+                "deltas": ["工具不存在"],
+                "finish_reason": "stop",
+            },
+        ])
 
-        async def mock_stream(**kwargs):
-            yield "工具不存在"
-
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_fn
         try:
             req = ChatRequest(message="call ghost", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
@@ -274,34 +282,29 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(tool_result_events[0]["success"])
             self.assertIn("not found", tool_result_events[0]["content"])
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
     async def test_message_persistence(self):
         """工具调用消息应持久化到 DB"""
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
-        call_count = [0]
+        original = chat_service.chat_completion_stream_events
 
-        async def mock_completion(**kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return LLMResponse(
-                    content="",
-                    tool_calls=[{
-                        "id": "call_db_1",
-                        "name": "echo_tool",
-                        "arguments": json.dumps({"text": "persist"}),
-                    }],
-                    finish_reason="tool_calls",
-                )
-            else:
-                return LLMResponse(content="done", finish_reason="stop")
-
-        async def mock_stream(**kwargs):
-            yield "done"
+        mock_fn, _ = _make_stream_events_mock([
+            {
+                "deltas": ["准备查询"],
+                "finish_reason": "tool_calls",
+                "tool_calls": [{
+                    "id": "call_db_1",
+                    "name": "echo_tool",
+                    "arguments": json.dumps({"text": "persist"}),
+                }],
+            },
+            {
+                "deltas": ["done"],
+                "finish_reason": "stop",
+            },
+        ])
 
         class EchoTool(BaseTool):
             name = "echo_tool"
@@ -313,8 +316,7 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
 
         register(EchoTool())
 
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_fn
         try:
             req = ChatRequest(message="test persist", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
@@ -329,13 +331,13 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
 
             assistant_msg = [m for m in db_msgs if m["role"] == "assistant" and m.get("tool_calls")][0]
             self.assertEqual(assistant_msg["tool_calls"][0]["id"], "call_db_1")
+            self.assertIn("准备查询", assistant_msg["content"])
 
             tool_msg = [m for m in db_msgs if m["role"] == "tool"][0]
             self.assertEqual(tool_msg["tool_call_id"], "call_db_1")
             self.assertEqual(tool_msg["content"], "persist")
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
 
 class TestRoleFilter(unittest.TestCase):
@@ -377,7 +379,7 @@ class TestRoleFilter(unittest.TestCase):
 
 
 class TestRoleFilterEndToEnd(unittest.IsolatedAsyncioTestCase):
-    """角色过滤端到端：验证传给 LLM 的 tools 参数确实不含被过滤的工具"""
+    """角色过滤端到端：验证传给 LLM 的 tools 参数确实不含被过滤工具"""
 
     async def asyncSetUp(self):
         os.environ["LARRY_CONFIG"] = os.path.join(
@@ -390,7 +392,7 @@ class TestRoleFilterEndToEnd(unittest.IsolatedAsyncioTestCase):
         await close_db()
 
     async def test_role_filter_excludes_shell(self):
-        """role 只配 file_ops 时，传给 chat_completion 的 tools 不含 shell"""
+        """role 只配 file_ops 时，传给 stream_events 的 tools 不含 shell"""
         from config import get_config
         from services import chat_service
 
@@ -405,17 +407,13 @@ class TestRoleFilterEndToEnd(unittest.IsolatedAsyncioTestCase):
 
         captured_tools = []
 
-        async def mock_completion(**kwargs):
+        async def mock_stream_events(**kwargs):
             captured_tools.append(kwargs.get("tools"))
-            return LLMResponse(content="done", finish_reason="stop")
+            yield {"type": "delta", "content": "done"}
+            yield {"type": "finish", "finish_reason": "stop", "tool_calls": [], "usage": {}}
 
-        async def mock_stream(**kwargs):
-            yield "done"
-
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        original = chat_service.chat_completion_stream_events
+        chat_service.chat_completion_stream_events = mock_stream_events
         try:
             req = ChatRequest(
                 message="test", model="test", temperature=0.7, role="default"
@@ -427,8 +425,7 @@ class TestRoleFilterEndToEnd(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("shell", tool_names)
         finally:
             config.roles = original_roles
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
 
 class TestToolErrorRecovery(unittest.IsolatedAsyncioTestCase):
@@ -459,50 +456,50 @@ class TestToolErrorRecovery(unittest.IsolatedAsyncioTestCase):
 
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
+        original = chat_service.chat_completion_stream_events
         call_count = [0]
         captured_messages = []
 
-        async def mock_completion(**kwargs):
+        async def mock_stream_events(**kwargs):
             call_count[0] += 1
             captured_messages.append(list(kwargs.get("messages", [])))
             if call_count[0] == 1:
-                return LLMResponse(
-                    content="",
-                    tool_calls=[{
+                yield {"type": "delta", "content": ""}
+                yield {
+                    "type": "finish",
+                    "finish_reason": "tool_calls",
+                    "tool_calls": [{
                         "id": "call_err_1",
                         "name": "fail_tool",
                         "arguments": "{}",
                     }],
-                    finish_reason="tool_calls",
-                )
+                    "usage": {},
+                }
             else:
-                return LLMResponse(content="文件不存在，换一个吧", finish_reason="stop")
+                yield {"type": "delta", "content": "文件不存在，换一个吧"}
+                yield {
+                    "type": "finish",
+                    "finish_reason": "stop",
+                    "tool_calls": [],
+                    "usage": {},
+                }
 
-        async def mock_stream(**kwargs):
-            yield "文件不存在，换一个吧"
-
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_stream_events
         try:
             req = ChatRequest(message="读 ghost.txt", model="test", temperature=0.7)
             events = await _collect_events(req, "127.0.0.1")
             reply = _deltas(events)
 
-            # 循环正常结束
             self.assertEqual(call_count[0], 2)
-            self.assertEqual(reply, "文件不存在，换一个吧")
+            self.assertIn("文件不存在，换一个吧", reply)
 
-            # 第二轮调 LLM 时，messages 中应包含 tool 消息且 content 是 error 内容
             round2_msgs = captured_messages[1]
             tool_msgs = [m for m in round2_msgs if m["role"] == "tool"]
             self.assertEqual(len(tool_msgs), 1)
             self.assertIn("文件不存在", tool_msgs[0]["content"])
             self.assertEqual(tool_msgs[0]["tool_call_id"], "call_err_1")
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
 
 
 class TestCallerIpInjection(unittest.IsolatedAsyncioTestCase):
@@ -542,32 +539,28 @@ class TestCallerIpInjection(unittest.IsolatedAsyncioTestCase):
 
         from services import chat_service
 
-        original = chat_service.chat_completion
-        original_stream = chat_service.chat_completion_stream
+        original = chat_service.chat_completion_stream_events
+        original_get_tool = chat_service.get_tool
 
-        async def mock_completion(**kwargs):
-            return LLMResponse(
-                content="",
-                tool_calls=[{
+        async def mock_stream_events(**kwargs):
+            yield {"type": "delta", "content": ""}
+            yield {
+                "type": "finish",
+                "finish_reason": "tool_calls",
+                "tool_calls": [{
                     "id": "call_ip_1",
                     "name": "shell",
                     "arguments": json.dumps({"command": "echo hi"}),
                 }],
-                finish_reason="tool_calls",
-            )
-
-        async def mock_stream(**kwargs):
-            yield "should not be called"
-
-        original_get_tool = chat_service.get_tool
+                "usage": {},
+            }
 
         def mock_get_tool(name):
             if name == "shell":
                 return mock_shell
             return original_get_tool(name)
 
-        chat_service.chat_completion = mock_completion
-        chat_service.chat_completion_stream = mock_stream
+        chat_service.chat_completion_stream_events = mock_stream_events
         chat_service.get_tool = mock_get_tool
         try:
             test_ip = "192.168.1.50"
@@ -575,14 +568,132 @@ class TestCallerIpInjection(unittest.IsolatedAsyncioTestCase):
             await _collect_events(req, test_ip)
             self.assertEqual(mock_shell.received_caller_ip, test_ip)
         finally:
-            chat_service.chat_completion = original
-            chat_service.chat_completion_stream = original_stream
+            chat_service.chat_completion_stream_events = original
             chat_service.get_tool = original_get_tool
+
+
+class TestTokenCounter(unittest.TestCase):
+    """P3.3-2: token 估算与截断基本验证"""
+
+    def test_estimate_tokens_messages_basic(self):
+        from models.token_counter import estimate_tokens_messages
+        msgs = [
+            {"role": "system", "content": "你是助手"},
+            {"role": "user", "content": "你好，请问今天天气怎么样？"},
+        ]
+        n = estimate_tokens_messages(msgs, "deepseek-chat")
+        self.assertGreater(n, 0)
+
+    def test_truncate_messages_keeps_system(self):
+        from models.token_counter import truncate_messages
+        msgs = [
+            {"role": "system", "content": "系统提示"},
+            {"role": "user", "content": "旧消息" + "啊" * 200},
+            {"role": "user", "content": "新消息" + "哦" * 200},
+        ]
+        result = truncate_messages(msgs, "deepseek-chat", max_input_tokens=50)
+        self.assertEqual(result[0]["role"], "system")
+        last = result[-1]
+        self.assertEqual(last["role"], "user")
+        self.assertIn("新消息", last["content"])
+
+
+class TestLLMStreamEventsStateMachine(unittest.TestCase):
+    """
+    P3.3-5 风险控制：流式 tool_calls 跨 chunk 拼接状态机验证。
+
+    直接对纯函数 stream_tool_call_accumulator() 喂纯 dict 形式的增量序列，
+    验证最终输出正确。覆盖：单工具 arguments 分段、多工具并行、
+    id/name/arguments 分散到不同 chunk。
+    """
+
+    def test_single_tool_arguments_split_into_multi_chunks(self):
+        """单 tool_call，arguments JSON 拆 3 段"""
+        from models.llm import stream_tool_call_accumulator
+        ingest, finalize = stream_tool_call_accumulator()
+
+        # chunk 1: id + name + 部分 arguments
+        ingest([{
+            "index": 0,
+            "id": "call_abc",
+            "function": {"name": "file_ops", "arguments": '{"action":"read","path":' },
+        }])
+        # chunk 2: arguments 中段
+        ingest([{
+            "index": 0,
+            "function": {"arguments": '"/tmp/test.txt","encod'},
+        }])
+        # chunk 3: arguments 尾段
+        ingest([{
+            "index": 0,
+            "function": {"arguments": 'ing":"utf-8"}'},
+        }])
+
+        result = finalize()
+        self.assertEqual(len(result), 1)
+        tc = result[0]
+        self.assertEqual(tc["id"], "call_abc")
+        self.assertEqual(tc["name"], "file_ops")
+        self.assertEqual(tc["arguments"], '{"action":"read","path":"/tmp/test.txt","encoding":"utf-8"}')
+        # 验证 JSON 合法
+        import json
+        parsed = json.loads(tc["arguments"])
+        self.assertEqual(parsed["path"], "/tmp/test.txt")
+
+    def test_multiple_tools_parallel(self):
+        """两个 tool_call 并行，按 index 交错到达"""
+        from models.llm import stream_tool_call_accumulator
+        ingest, finalize = stream_tool_call_accumulator()
+
+        # chunk 1: index=0 首段 + index=1 首段
+        ingest([
+            {"index": 0, "id": "call_a", "function": {"name": "shell", "arguments": '{"command":"ech'}},
+            {"index": 1, "id": "call_b", "function": {"name": "file_ops", "arguments": '{"action":"write","pat'}},
+        ])
+        # chunk 2: index=0 尾段 + index=1 尾段
+        ingest([
+            {"index": 0, "function": {"arguments": 'o hello"}'}},
+            {"index": 1, "function": {"arguments": 'h":"a.txt"}'}},
+        ])
+
+        result = finalize()
+        self.assertEqual(len(result), 2)
+        # 按 index 排序
+        self.assertEqual(result[0]["id"], "call_a")
+        self.assertEqual(result[0]["name"], "shell")
+        self.assertEqual(result[0]["arguments"], '{"command":"echo hello"}')
+        self.assertEqual(result[1]["id"], "call_b")
+        self.assertEqual(result[1]["name"], "file_ops")
+        self.assertEqual(result[1]["arguments"], '{"action":"write","path":"a.txt"}')
+
+    def test_fields_scattered_across_chunks(self):
+        """id / name / arguments 分散到不同 chunk，且 arguments 中间有空函数块"""
+        from models.llm import stream_tool_call_accumulator
+        ingest, finalize = stream_tool_call_accumulator()
+
+        # chunk 1: 只有 id
+        ingest([{"index": 0, "id": "call_XYZ"}])
+        # chunk 2: 只有 name
+        ingest([{"index": 0, "function": {"name": "echo_tool"}}])
+        # chunk 3: 空增量（模拟某些 provider 在中间 chunk 传空 tool_calls）
+        ingest([])
+        ingest(None)
+        # chunk 4: arguments 多段 + 另有一段 function 为空（不应报错）
+        ingest([{"index": 0, "function": {"arguments": '{"text":"hel'}}])
+        ingest([{"index": 0, "function": {}}])  # function 字段存在但空
+        ingest([{"index": 0, "function": {"arguments": 'lo world"}'}}])
+
+        result = finalize()
+        self.assertEqual(len(result), 1)
+        tc = result[0]
+        self.assertEqual(tc["id"], "call_XYZ")
+        self.assertEqual(tc["name"], "echo_tool")
+        self.assertEqual(tc["arguments"], '{"text":"hello world"}')
 
 
 def run_tests():
     print("=" * 60)
-    print("P2.3 Function Calling 循环测试")
+    print("P3.3 Function Calling + Token 管理测试")
     print("=" * 60)
     print()
 
@@ -595,9 +706,9 @@ def run_tests():
     print("测试总结")
     print("=" * 60)
     print()
-    print("已验证功能（11 项测试）：")
-    print("  [PASS] 无工具调用：LLM 直接返回文本")
-    print("  [PASS] 单工具调用：执行 + 结果追加 + tool_call_id 匹配")
+    print("已验证功能：")
+    print("  [PASS] 无工具调用：仅 1 次流式 LLM 调用（P3.3-5 消除双调用）")
+    print("  [PASS] 单工具调用：2 次流式 + tool_call/tool_result 事件")
     print("  [PASS] 多工具调用：一次返回多个 tool_calls 全部执行")
     print("  [PASS] 最大轮次：达到上限停止")
     print("  [PASS] 工具不存在：返回 error 不崩溃")
@@ -605,7 +716,11 @@ def run_tests():
     print("  [PASS] 角色过滤：按 role→tools 映射过滤工具")
     print("  [PASS] 角色过滤端到端：传给 LLM 的 tools 不含被过滤工具")
     print("  [PASS] 工具失败恢复：error 内容回到 messages 且对话不中断")
-    print("  [PASS] caller_ip 注入：shell 工具通过 _chat_flow 调用时 caller_ip 正确传入")
+    print("  [PASS] caller_ip 注入：shell 工具 caller_ip 正确传入")
+    print("  [PASS] Token 估算 & 截断：基本功能正常")
+    print("  [PASS] 状态机-单TC参数分段：arguments JSON 拆 3 段后可正确拼合 & 解析")
+    print("  [PASS] 状态机-多TC并行交错：两个 tool_call 按 index 交错到达，结果按序输出")
+    print("  [PASS] 状态机-字段分散+空增量：id/name/arguments 分散到不同 chunk 均正确累积")
     print()
     return result.wasSuccessful()
 

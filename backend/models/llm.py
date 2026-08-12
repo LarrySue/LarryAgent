@@ -6,6 +6,8 @@ LLM 多模型路由模块
 - 统一封装 OpenAI 兼容的 chat completions 调用
 - 支持流式和非流式两种响应模式
 - 支持 function calling（tools 参数 + 结构化返回）
+- P3.3 全程流式：`chat_completion_stream_events` 返回结构化事件
+  (delta + finish + tool_calls + usage)，单次调用解决 FC 循环探测与打字机效果
 
 与其他模块的关系：
 - 被 services/chat_service.py 调用，作为模型调用的统一入口
@@ -30,7 +32,7 @@ _clients: dict[str, AsyncOpenAI] = {}
 
 @dataclass
 class LLMResponse:
-    """LLM 调用结果，支持 function calling。"""
+    """LLM 非流式调用结果，支持 function calling。"""
     content: str = ""
     tool_calls: list[dict] = field(default_factory=list)  # [{id, name, arguments(JSON string)}]
     finish_reason: str = "stop"  # "stop" | "tool_calls" | "length"
@@ -90,6 +92,147 @@ def _get_client(model_name: str) -> AsyncOpenAI:
     return client
 
 
+def _log_token_usage(model: str, usage: dict) -> None:
+    """统一格式输出 token 用量日志（P3.3-1）。"""
+    if not usage:
+        return
+    total = usage.get("total_tokens", "N/A")
+    prompt = usage.get("prompt_tokens", "N/A")
+    completion = usage.get("completion_tokens", "N/A")
+    logger.info(
+        "batch_llm_call token_usage model=%s total=%s prompt=%s completion=%s",
+        model, total, prompt, completion,
+    )
+
+
+def _debug_log_request(model: str, messages: list[dict], kwargs_extras: dict) -> None:
+    """debug_log 开启时输出 raw 请求正文（P3.3-4）。"""
+    cfg = get_config()
+    if not cfg.llm.debug_log:
+        return
+    try:
+        payload = {
+            "model": model,
+            "messages": messages,
+            **kwargs_extras,
+        }
+        logger.debug("LLM raw request:\n%s", json.dumps(payload, ensure_ascii=False, indent=2))
+    except Exception:
+        logger.debug("LLM raw request serialization failed")
+
+
+def _debug_log_response(obj: object) -> None:
+    """debug_log 开启时输出 raw 响应对象（P3.3-4）。"""
+    cfg = get_config()
+    if not cfg.llm.debug_log:
+        return
+    try:
+        # openai 响应对象通常支持 model_dump
+        if hasattr(obj, "model_dump"):
+            data = obj.model_dump()
+        else:
+            data = str(obj)
+        logger.debug("LLM raw response:\n%s", json.dumps(data, ensure_ascii=False, indent=2, default=str))
+    except Exception:
+        logger.debug("LLM raw response serialization failed")
+
+
+# ====================================================================
+# 流式 tool_calls 跨 chunk 拼接（纯函数，便于状态机单测）
+# ====================================================================
+
+def stream_tool_call_accumulator() -> tuple[callable, callable]:
+    """
+    构造一个 OpenAI 流式协议中 tool_calls 的增量累积器（纯函数，不依赖 SDK 类型）。
+
+    用法：
+        ingest, finalize = stream_tool_call_accumulator()
+        for raw_chunk in stream_chunks:
+            ingest(raw_chunk.delta.tool_calls)  # 每块增量喂入
+        tool_calls: list[dict] = finalize()  # 得到 [{id, name, arguments}, ...]
+
+    支持场景：
+    - 单 tool_call 跨 chunk：id → name → arguments（多段）
+    - 多 tool_calls 并行：按 index 分别累积
+    - 某字段空值：不拼接（避免 None/空字符串被意外追加）
+    - arguments 为 JSON 被拆 N 段，按到达顺序拼合
+    """
+    tc_accum: dict[int, dict] = {}
+
+    def ingest(tool_calls_deltas: list | None) -> None:
+        if not tool_calls_deltas:
+            return
+        for tc_delta in tool_calls_deltas:
+            # 兼容 SDK 对象或纯 dict
+            idx = None
+            if hasattr(tc_delta, "index"):
+                idx = tc_delta.index
+            elif isinstance(tc_delta, dict):
+                idx = tc_delta.get("index")
+            if idx is None:
+                idx = 0
+
+            if idx not in tc_accum:
+                tc_accum[idx] = {
+                    "id": "",
+                    "name": "",
+                    "arguments_buf": [],
+                }
+            entry = tc_accum[idx]
+
+            # id
+            tc_id = None
+            if hasattr(tc_delta, "id"):
+                tc_id = tc_delta.id
+            elif isinstance(tc_delta, dict):
+                tc_id = tc_delta.get("id")
+            if tc_id:
+                # id 通常只在第一块出现，后续出现按最后一次更新覆盖
+                entry["id"] = tc_id
+
+            # function
+            func = None
+            if hasattr(tc_delta, "function"):
+                func = tc_delta.function
+            elif isinstance(tc_delta, dict):
+                func = tc_delta.get("function")
+            if func is None:
+                continue
+
+            func_name = None
+            if hasattr(func, "name"):
+                func_name = func.name
+            elif isinstance(func, dict):
+                func_name = func.get("name")
+            if func_name:
+                entry["name"] = func_name
+
+            func_args = None
+            if hasattr(func, "arguments"):
+                func_args = func.arguments
+            elif isinstance(func, dict):
+                func_args = func.get("arguments")
+            if func_args:
+                entry["arguments_buf"].append(func_args)
+
+    def finalize() -> list[dict]:
+        result = []
+        for idx in sorted(tc_accum.keys()):
+            e = tc_accum[idx]
+            result.append({
+                "id": e["id"],
+                "name": e["name"],
+                "arguments": "".join(e["arguments_buf"]),
+            })
+        return result
+
+    return ingest, finalize
+
+
+# ====================================================================
+# 非流式主入口
+# ====================================================================
+
 async def chat_completion(
     model: str,
     messages: list[dict],
@@ -108,7 +251,7 @@ async def chat_completion(
         tools: OpenAI function calling schema 列表，None 表示不启用工具
 
     Returns:
-        LLMResponse，包含 content、tool_calls、finish_reason
+        LLMResponse，包含 content、tool_calls、finish_reason、usage
     """
     client = _get_client(model)
     logger.info(
@@ -128,6 +271,8 @@ async def chat_completion(
         )
         if tools:
             kwargs["tools"] = tools
+
+        _debug_log_request(model, messages, {k: v for k, v in kwargs.items() if k != "messages"})
 
         response = await client.chat.completions.create(**kwargs)
         choice = response.choices[0]
@@ -151,6 +296,9 @@ async def chat_completion(
                 "total_tokens": response.usage.total_tokens,
             }
 
+        _debug_log_response(response)
+        _log_token_usage(model, usage)
+
         elapsed = time.perf_counter() - start
         logger.info(
             "LLM response model=%s finish=%s chars=%d tool_calls=%d tokens=%s elapsed=%.2fs",
@@ -172,15 +320,40 @@ async def chat_completion(
         raise
 
 
-async def chat_completion_stream(
+# ====================================================================
+# 全程流式主入口（P3.3-5 新增）
+# ====================================================================
+
+async def chat_completion_stream_events(
     model: str,
     messages: list[dict],
     temperature: float = 0.7,
     max_tokens: int = 4096,
     tools: list[dict] | None = None,
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[dict, None]:
     """
-    流式聊天补全。
+    全程流式聊天补全，返回结构化事件，支持 function calling 状态解析。
+
+    单次调用即可同时获得：
+    - 打字机效果文本增量
+    - finish_reason（stop / tool_calls / length）
+    - tool_calls（跨 chunk 增量拼接完整 JSON）
+    - usage（final chunk，若 provider 返回）
+
+    事件类型：
+    - {"type": "delta", "content": str}：文本增量
+    - {"type": "finish", "finish_reason": str, "tool_calls": list[dict], "usage": dict}：流结束元数据
+
+    调用模式：
+        tool_calls_accum = {}  # {index: {id, name, arguments_buf}}
+        full_text = ""
+        final_meta = None
+        async for evt in chat_completion_stream_events(...):
+            if evt["type"] == "delta":
+                full_text += evt["content"]
+                yield evt  # 直接上推打字机
+            elif evt["type"] == "finish":
+                final_meta = evt
 
     Args:
         model: 模型名称
@@ -190,7 +363,7 @@ async def chat_completion_stream(
         tools: 工具 schema 列表（可选，传入时 LLM 可能返回 tool_calls）
 
     Yields:
-        每次返回一个增量文本片段
+        按顺序输出 delta 事件，最后输出一个 finish 事件
     """
     client = _get_client(model)
     kwargs = dict(
@@ -203,23 +376,107 @@ async def chat_completion_stream(
     )
     if tools:
         kwargs["tools"] = tools
+
+    logger.info(
+        "LLM stream request model=%s messages=%d tools=%s temperature=%s",
+        model,
+        len(messages),
+        len(tools) if tools else 0,
+        temperature,
+    )
+    start = time.perf_counter()
+    _debug_log_request(model, messages, {k: v for k, v in kwargs.items()
+                                         if k not in ("messages", "stream", "stream_options")})
+
     stream = await client.chat.completions.create(**kwargs)
 
-    usage_data = {}
+    usage_data: dict = {}
+    finish_reason: str | None = None
+    ingest_tc, finalize_tc = stream_tool_call_accumulator()
+
     async for chunk in stream:
-        # 捕获 final chunk 的 usage
+        # —— usage（final chunk 可能含 usage）
         if hasattr(chunk, "usage") and chunk.usage:
             usage_data = {
                 "prompt_tokens": chunk.usage.prompt_tokens,
                 "completion_tokens": chunk.usage.completion_tokens,
                 "total_tokens": chunk.usage.total_tokens,
             }
-        if chunk.choices and chunk.choices[0].delta.content:
-            yield chunk.choices[0].delta.content
+            _debug_log_response(chunk)
 
-    if usage_data:
-        logger.info(
-            "LLM stream usage model=%s tokens=%s",
-            model,
-            usage_data.get("total_tokens", "N/A"),
-        )
+        if not chunk.choices:
+            continue
+
+        delta = chunk.choices[0].delta
+
+        # —— 文本增量
+        if delta.content:
+            yield {"type": "delta", "content": delta.content}
+
+        # —— finish_reason
+        fr = chunk.choices[0].finish_reason
+        if fr:
+            finish_reason = fr
+
+        # —— tool_calls 跨 chunk 增量拼接（用纯函数累积器，便于独立单测）
+        if hasattr(delta, "tool_calls") and delta.tool_calls:
+            ingest_tc(delta.tool_calls)
+
+    # —— 汇总 tool_calls
+    final_tool_calls: list[dict] = finalize_tc()
+
+    _log_token_usage(model, usage_data)
+
+    elapsed = time.perf_counter() - start
+    logger.info(
+        "LLM stream finish model=%s finish=%s chars=stream tool_calls=%d tokens=%s elapsed=%.2fs",
+        model,
+        finish_reason or "unknown",
+        len(final_tool_calls),
+        usage_data.get("total_tokens", "N/A"),
+        elapsed,
+    )
+
+    yield {
+        "type": "finish",
+        "finish_reason": finish_reason or "stop",
+        "tool_calls": final_tool_calls,
+        "usage": usage_data,
+    }
+
+
+# ====================================================================
+# 兼容旧接口：文本片段流式
+# ====================================================================
+
+async def chat_completion_stream(
+    model: str,
+    messages: list[dict],
+    temperature: float = 0.7,
+    max_tokens: int = 4096,
+    tools: list[dict] | None = None,
+) -> AsyncGenerator[str, None]:
+    """
+    文本增量流式聊天补全（兼容旧接口）。
+    内部基于 chat_completion_stream_events，仅透传 delta 文本。
+
+    Args:
+        model: 模型名称
+        messages: 标准 OpenAI 消息列表
+        temperature: 温度参数
+        max_tokens: 最大输出 token 数
+        tools: 工具 schema 列表（可选）
+
+    Yields:
+        每次返回一个增量文本片段
+    """
+    async for evt in chat_completion_stream_events(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        tools=tools,
+    ):
+        if evt["type"] == "delta":
+            yield evt["content"]
+        # finish 事件静默丢弃（usage 已在内部记日志）

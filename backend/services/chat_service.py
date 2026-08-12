@@ -4,13 +4,16 @@
 职责：
 - 会话创建/恢复
 - 记忆检索 → 构建 messages
-- Function calling 循环（LLM ↔ 工具，含 caller_ip 注入）
+- P3.3-2: 请求前 messages token 估算 + 超阈值截断
+- Function calling 循环（全程流式 chat_completion_stream_events，P3.3-5 消除双调用）
+- P3.3-3: 单次请求累计 token（每轮叠加）+ 超阈值告警
 - 消息持久化（含 tool_calls / tool_call_id）
 - 流式 / 非流式统一入口（_chat_flow async generator）
 
 与其他模块的关系：
 - 被 api/chat.py 调用，是聊天业务的唯一入口
 - 依赖 models/llm.py 调用 LLM
+- 依赖 models/token_counter.py 估算 token / 截断 messages
 - 依赖 tools/registry.py 获取和执行工具
 - 依赖 memory/engine.py 检索记忆
 - 依赖 db/conversations.py 持久化消息
@@ -25,7 +28,8 @@ from pydantic import BaseModel, Field
 from config import get_config
 from db import conversations as conv_db
 from memory.engine import build_memory_context, get_long_term_memory, get_short_term_memory
-from models.llm import chat_completion, chat_completion_stream
+from models.llm import chat_completion, chat_completion_stream, chat_completion_stream_events
+from models.token_counter import estimate_tokens_messages, truncate_messages
 from tools.registry import get_openai_tools, get_tool, list_tools
 
 logger = logging.getLogger(__name__)
@@ -81,17 +85,36 @@ async def handle_chat_stream(req: ChatRequest, caller_ip: str) -> AsyncGenerator
         yield _format_sse(event)
 
 
+def _accumulate_usage(total: dict, part: dict) -> dict:
+    """将单次 LLM 调用的 usage 累加到总累计。"""
+    if not part:
+        return total
+    for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        if key in part:
+            total[key] = total.get(key, 0) + int(part[key])
+    return total
+
+
 async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, None]:
     """
     统一聊天流程（async generator）。
 
+    P3.3 关键变化：
+    - 请求前估算 messages tokens，超阈值按策略截断（中间删除旧消息，保留 system）
+    - FC 循环每轮都走 chat_completion_stream_events（全程流式），单次调用同时获得
+      打字机 delta + finish_reason + tool_calls + usage，消除最终回复"非流式探测 +
+      流式重生成"的双调用问题。
+    - 单次请求累计 tokens（prompt / completion 分维度），超阈值告警日志
+
     事件类型：
     - tool_call: 工具即将执行
     - tool_result: 工具执行完成
-    - delta: 文本片段（最终回复）
+    - delta: 文本片段（最终回复 + 工具调用前的过渡文字）
     - done: 流结束
     - error: 错误
     """
+    cfg = get_config()
+
     logger.info(
         "Chat request conv=%s model=%s msg_len=%d caller_ip=%s",
         req.conversation_id, req.model, len(req.message), caller_ip,
@@ -113,68 +136,134 @@ async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, N
     # 3. 记忆检索
     short_term = await get_short_term_memory(conversation_id)
     long_term = await get_long_term_memory(req.message)
-    system_prompt = get_config().get_system_prompt(req.role)
+    system_prompt = cfg.get_system_prompt(req.role)
     messages = build_memory_context(short_term, long_term=long_term, system_prompt=system_prompt)
+
+    # —— P3.3-2: 请求前估算 & 截断 messages ——
+    max_input = cfg.llm.max_input_tokens
+    est_tokens_before = estimate_tokens_messages(messages, req.model)
+    logger.info(
+        "Messages estimated tokens: %d (limit=%d)",
+        est_tokens_before, max_input,
+    )
+    if max_input > 0 and est_tokens_before > max_input:
+        messages = truncate_messages(messages, req.model, max_input)
+        est_tokens_after = estimate_tokens_messages(messages, req.model)
+        logger.warning(
+            "Messages truncated before LLM call: %d -> %d tokens (limit=%d)",
+            est_tokens_before, est_tokens_after, max_input,
+        )
 
     # 4. 获取角色可用工具
     tools = _get_tools_for_role(req.role)
 
-    # 5. Function calling 循环
+    # —— P3.3-3: 单次请求累计 token ——
+    accumulated_usage: dict = {}
+    warned_over_budget = False
+
+    # 5. Function calling 循环（全程流式）
     max_rounds = _get_max_rounds()
     for round_num in range(1, max_rounds + 1):
-        response = await chat_completion(
+        round_deltas: list[str] = []
+        round_tool_calls: list[dict] = []
+        finish_reason = "stop"
+        round_usage: dict = {}
+
+        # 每轮都走全程流式 — 单次调用同时拿到 delta + tool_calls + finish + usage
+        async for evt in chat_completion_stream_events(
             model=req.model,
             messages=messages,
             temperature=req.temperature,
             tools=tools,
-        )
+        ):
+            if evt["type"] == "delta":
+                # 实时透传到上层（打字机效果）
+                round_deltas.append(evt["content"])
+                yield {"type": "delta", "content": evt["content"]}
+            elif evt["type"] == "finish":
+                finish_reason = evt["finish_reason"]
+                round_tool_calls = evt.get("tool_calls") or []
+                round_usage = evt.get("usage") or {}
 
-        if not response.has_tool_calls:
-            # 最终回复 — 真实流式输出
-            logger.info("Tool loop completed at round %d (stop)", round_num)
-            full_reply = ""
-            async for chunk in chat_completion_stream(
-                model=req.model,
-                messages=messages,
-                temperature=req.temperature,
-            ):
-                full_reply += chunk
-                yield {"type": "delta", "content": chunk}
+        # 累计 usage（P3.3-3）
+        _accumulate_usage(accumulated_usage, round_usage)
+
+        # 超阈值告警（只 warn 一次，避免多轮重复刷屏）
+        if (not warned_over_budget
+                and max_input > 0
+                and accumulated_usage.get("total_tokens", 0) > max_input):
+            warned_over_budget = True
+            logger.warning(
+                "Accumulated tokens exceed llm.max_input_tokens: "
+                "total=%d prompt=%d completion=%d limit=%d. Continuing but cost is high.",
+                accumulated_usage.get("total_tokens", 0),
+                accumulated_usage.get("prompt_tokens", 0),
+                accumulated_usage.get("completion_tokens", 0),
+                max_input,
+            )
+
+        round_text = "".join(round_deltas)
+
+        # —— 判断本轮是否是最终回复 / 工具调用 / 截断
+        has_tool_calls = bool(round_tool_calls)
+
+        if not has_tool_calls:
+            # 最终回复（stop / length 且无 tool_calls）
+            # 因为是全程流式，文字已经 yield 过了，不需要再调 LLM
+            logger.info(
+                "Tool loop completed at round %d (finish=%s, accumulated_total=%d)",
+                round_num, finish_reason,
+                accumulated_usage.get("total_tokens", 0),
+            )
+
+            if finish_reason == "length":
+                # completion 被截断，附加提示
+                hint = "\n\n（回复被 max_tokens 截断，如需更多内容请继续提问）"
+                round_text += hint
+                yield {"type": "delta", "content": hint}
 
             # 保存最终回复
-            await conv_db.insert_message(conversation_id, "assistant", full_reply)
+            await conv_db.insert_message(conversation_id, "assistant", round_text)
             await conv_db.touch_conversation(conversation_id)
-            logger.info("Chat completed conv=%s reply_len=%d", conversation_id, len(full_reply))
+            logger.info(
+                "Chat completed conv=%s reply_len=%d tokens_total=%d prompt=%d completion=%d",
+                conversation_id, len(round_text),
+                accumulated_usage.get("total_tokens", 0),
+                accumulated_usage.get("prompt_tokens", 0),
+                accumulated_usage.get("completion_tokens", 0),
+            )
             yield {"type": "done", "conversation_id": conversation_id}
             return
 
+        # —— 有工具调用 ——
         logger.info(
-            "Round %d: %d tool calls [%s]",
-            round_num, len(response.tool_calls),
-            ", ".join(tc["name"] for tc in response.tool_calls),
+            "Round %d: %d tool calls [%s] (text_before=%d chars)",
+            round_num, len(round_tool_calls),
+            ", ".join(tc["name"] for tc in round_tool_calls),
+            len(round_text),
         )
 
-        # 追加 assistant 消息（含 tool_calls）
+        # 追加 assistant 消息（含过渡文本 + tool_calls）
         assistant_msg = {
             "role": "assistant",
-            "content": response.content,
+            "content": round_text,
             "tool_calls": [
                 {
                     "id": tc["id"],
                     "type": "function",
                     "function": {"name": tc["name"], "arguments": tc["arguments"]},
                 }
-                for tc in response.tool_calls
+                for tc in round_tool_calls
             ],
         }
         messages.append(assistant_msg)
         await conv_db.insert_message(
-            conversation_id, "assistant", response.content,
-            tool_calls=response.tool_calls,
+            conversation_id, "assistant", round_text,
+            tool_calls=round_tool_calls,
         )
 
         # 逐个执行 tool_call
-        for tc in response.tool_calls:
+        for tc in round_tool_calls:
             tool_name = tc["name"]
             try:
                 args = json.loads(tc["arguments"])
@@ -220,7 +309,10 @@ async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, N
             )
 
     # 达到最大轮次
-    logger.warning("Tool loop reached max rounds (%d)", max_rounds)
+    logger.warning(
+        "Tool loop reached max rounds (%d). accumulated_total=%d",
+        max_rounds, accumulated_usage.get("total_tokens", 0),
+    )
     fallback = "（达到工具调用最大轮次限制，已停止）"
     yield {"type": "delta", "content": fallback}
     await conv_db.insert_message(conversation_id, "assistant", fallback)
