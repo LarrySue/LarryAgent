@@ -86,6 +86,14 @@ app = FastAPI(
 # （测试页通过下方 /chat.html 路由托管），无需跨域支持。
 
 
+# === 挂载中间件 ===
+# 注意：FastAPI 中间件栈是倒序执行，add_middleware 顺序 = 外层→内层
+# 鉴权必须放在路由处理之前（写在 include_router 上方即可）
+
+from middleware.auth import AuthMiddleware
+app.add_middleware(AuthMiddleware)
+
+
 # === 挂载路由 ===
 
 from api.chat import router as chat_router

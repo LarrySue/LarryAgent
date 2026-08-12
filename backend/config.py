@@ -26,6 +26,7 @@ class ModelConfig:
 class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8000
+    api_key: str = ""
 
 
 @dataclass
