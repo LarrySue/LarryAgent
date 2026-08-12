@@ -21,3 +21,15 @@
 - 提交信息分类：`feat:` 新功能 / `fix:` 修复 / `test:` 测试 / `refactor:` 重构 / `docs:` 文档。
 - 验收链不变：实现 → 测试 → 组长确认 → 人类确认 → 阶段完成（TODO 勾选 + 可选 tag）。验收对象是已提交代码（可 diff 单 commit）。
 - 中间提交允许是不完整状态，但必须可回滚、可追溯。
+
+**P3.4 派发记录（2026-08-12，老大已批准）**
+
+计划已确认并拆解。关键决策：
+- 路由前缀已核实：全部 `/api/chat`、`/api/memory/*`、`/api/tools/*` 走 `/api` 前缀 → 中间件 `startswith("/api/")` 匹配正确，无需逐个白名单。
+- 暴露的计划缺口：原 TODO 只写 config.yaml，漏了 `config.py::ServerConfig` 缺 `api_key` 字段 + `config.example.yaml` 缺失 → 已补进子清单。
+- 放行路径（/chat.html、/health、OPTIONS）天然不被 `/api/` 命中 → 明确告知实现者勿画蛇添足写白名单。
+- 最高优先级陷阱：空 key 必须完全透传，已列为硬性验收点 + 单测强制覆盖。
+- 与 P5 硬耦合：P5 改 host 0.0.0.0 前须先 set api_key，已交叉引用。
+
+**分配：** Trae CN 实现（规格已写入 `exchange/trae.md`）→ Claude Code 测试（`test_auth_middleware.py`）→ WorkBuddy 确认 → 老大确认 → 勾选 TODO。
+**状态：** 派发完成，待 Trae 开工。
