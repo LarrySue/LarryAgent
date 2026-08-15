@@ -17,7 +17,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from openai import APIError
 
-from exceptions import LLMError
+from db import conversations as conv_db
+from exceptions import LLMError, ResourceNotFoundError
 from services.chat_service import ChatRequest, ChatResponse, handle_chat, handle_chat_stream
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,17 @@ async def chat(req: ChatRequest, request: Request):
     """
     caller_ip = request.client.host if request.client else "unknown"
     accept = request.headers.get("accept", "")
+
+    # P4.6 关键修复：在**返回 StreamingResponse 之前**预校验会话存在性。
+    # 原因：一旦 StreamingResponse(...) 被 return，HTTP 200 响应头就已经发出，
+    # 之后 handle_chat_stream → _chat_flow 再 raise ResourceNotFoundError
+    # 会触发 Starlette "Caught handled exception, but response already started"
+    # （全局 handler 无法改写 status_code），最终客户端收到空的 200 而非 404。
+    # 非流式路径 handle_chat 也会走此预检查，避免重复 DB 查询可以接受（轻量单条 SELECT）。
+    if req.conversation_id is not None:
+        existing = await conv_db.get_conversation(req.conversation_id)
+        if existing is None:
+            raise ResourceNotFoundError(f"Conversation not found: {req.conversation_id}")
 
     if "text/event-stream" in accept:
         # 流式 SSE

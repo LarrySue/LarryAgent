@@ -54,3 +54,17 @@ class AuthError(LarryException):
 
     error_type = "AUTH_ERROR"
     status_code = 401
+
+
+class ValidationError(LarryException):
+    """业务校验失败（请求体非法、参数越界等，客户端可修正）。"""
+
+    error_type = "VALIDATION_ERROR"
+    status_code = 400
+
+
+class ResourceNotFoundError(LarryException):
+    """请求的资源不存在（对话不存在、消息不存在等）。"""
+
+    error_type = "NOT_FOUND"
+    status_code = 404

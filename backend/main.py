@@ -15,6 +15,7 @@ LarryAgent 后端入口
 """
 
 import logging
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -99,6 +100,25 @@ async def larry_exception_handler(request: Request, exc: LarryException):
     )
 
 
+# P4.6：兜底 handler — 捕获所有非 LarryException 的未预期异常
+# - server 端：记完整 traceback（便于排查）
+# - 客户端：只返回通用 "INTERNAL_ERROR"，不泄漏堆栈 / 路径 / 依赖版本等内部信息
+# 注意：放在 LarryException handler 之后，不干扰已有 P3.5 异常子类的专属格式化出口
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.error(
+        "Unhandled exception on %s %s: %s\n%s",
+        request.method,
+        request.url.path,
+        str(exc),
+        traceback.format_exc(),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"error": "INTERNAL_ERROR", "detail": "Internal server error"},
+    )
+
+
 # === 挂载中间件 ===
 # 注意：FastAPI 中间件栈是倒序执行，add_middleware 顺序 = 外层→内层
 # 鉴权必须放在路由处理之前（写在 include_router 上方即可）
@@ -110,12 +130,23 @@ app.add_middleware(AuthMiddleware)
 # === 挂载路由 ===
 
 from api.chat import router as chat_router
+from api.conversations import router as conversations_router
 from api.memory import router as memory_router
 from api.tools import router as tools_router
+from models.llm import _MODEL_PROVIDER_MAP
 
 app.include_router(chat_router)
+app.include_router(conversations_router)
 app.include_router(memory_router)
 app.include_router(tools_router)
+
+
+# === 模型列表 ===
+
+@app.get("/api/models")
+async def list_models():
+    """返回 LLM 支持的模型名称列表（_MODEL_PROVIDER_MAP keys）。"""
+    return {"models": list(_MODEL_PROVIDER_MAP.keys())}
 
 
 # === 健康检查 ===

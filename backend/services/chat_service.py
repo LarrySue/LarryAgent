@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from config import get_config
 from db import conversations as conv_db
+from exceptions import ResourceNotFoundError
 from memory.engine import build_memory_context, get_long_term_memory, get_short_term_memory
 from models.llm import chat_completion, chat_completion_stream, chat_completion_stream_events
 from models.token_counter import estimate_tokens_messages, truncate_messages
@@ -122,12 +123,15 @@ async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, N
 
     # 1. 解析/创建会话
     if req.conversation_id is None:
-        conversation_id = await conv_db.create_conversation()
+        # 新建会话：标题用首条用户消息截取前 20 字符；空白行/换行符简单归一化
+        title = req.message.strip().replace("\n", " ")[:20]
+        conversation_id = await conv_db.create_conversation(title)
     else:
         existing = await conv_db.get_conversation(req.conversation_id)
         if existing is None:
-            yield {"type": "error", "message": f"Conversation not found: {req.conversation_id}"}
-            return
+            # 旧逻辑：yield error 后 return（仅流式会被 SSE 层吞，非流式 handle_chat 抛 ValueError）
+            # 新逻辑：统一抛 ResourceNotFoundError（404），由 FastAPI 全局 handler 格式化
+            raise ResourceNotFoundError(f"Conversation not found: {req.conversation_id}")
         conversation_id = req.conversation_id
 
     # 2. 保存用户消息

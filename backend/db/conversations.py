@@ -151,3 +151,97 @@ async def mark_archived(conversation_id: int) -> None:
     )
     await db.commit()
     logger.info("Marked conversation id=%s as archived", conversation_id)
+
+
+async def list_conversations(limit: int = 50) -> list[dict]:
+    """
+    列出所有会话（含归档），按 updated_at DESC, id DESC 排序。
+
+    二级排序 id DESC 的原因：SQLite datetime('now') 只有秒级精度，
+    同一秒内创建/修改的多个会话 updated_at 完全相同，此时按 id DESC
+    保证"后创建的（id 更大）排在前面"，符合前端预期的时间线顺序。
+
+    Args:
+        limit: 最多返回多少条（默认 50）
+    Returns:
+        [{id, title, updated_at, is_archived}]
+    """
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, title, updated_at, is_archived FROM conversations "
+        "ORDER BY updated_at DESC, id DESC LIMIT ?",
+        (limit,),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def rename_conversation(conversation_id: int, title: str) -> None:
+    """重命名会话。title 空字符串合法（前端显示"新会话"占位）。"""
+    db = await get_db()
+    await db.execute(
+        "UPDATE conversations SET title = ?, updated_at = datetime('now') WHERE id = ?",
+        (title, conversation_id),
+    )
+    await db.commit()
+    logger.info("Renamed conversation id=%s to %r", conversation_id, title)
+
+
+async def delete_conversation(conversation_id: int) -> None:
+    """
+    删除会话（级联删除 messages）。
+
+    注意：schema.py 中 messages 外键定义了 ON DELETE CASCADE，
+    database.py 已执行 PRAGMA foreign_keys=ON，删除会话会自动清理关联消息。
+    memories 外键定义了 ON DELETE SET NULL，会把 source_conversation_id 置空。
+    """
+    db = await get_db()
+    cursor = await db.execute(
+        "DELETE FROM conversations WHERE id = ?",
+        (conversation_id,),
+    )
+    await db.commit()
+    rows_affected = cursor.rowcount
+    logger.info(
+        "Deleted conversation id=%s (rows affected=%d, cascaded messages/memories via FK)",
+        conversation_id, rows_affected,
+    )
+
+
+async def get_conversation_messages(conversation_id: int) -> list[dict]:
+    """
+    获取会话完整历史消息（按时间正序）。
+    API 返回完整数据含 role="tool"，前端按需过滤展示。
+
+    Returns:
+        消息列表：每条 {id, role, content, tool_calls?(反序列化), tool_call_id?, created_at}
+    """
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, role, content, tool_calls, tool_call_id, created_at FROM messages "
+        "WHERE conversation_id = ? ORDER BY id ASC",
+        (conversation_id,),
+    )
+    rows = await cursor.fetchall()
+    result = []
+    for row in rows:
+        msg = {
+            "id": row["id"],
+            "role": row["role"],
+            "content": row["content"],
+            "created_at": row["created_at"],
+        }
+        if row["tool_calls"]:
+            raw_calls = json.loads(row["tool_calls"])
+            msg["tool_calls"] = [
+                {
+                    "id": tc["id"],
+                    "type": "function",
+                    "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                }
+                for tc in raw_calls
+            ]
+        if row["tool_call_id"]:
+            msg["tool_call_id"] = row["tool_call_id"]
+        result.append(msg)
+    return result

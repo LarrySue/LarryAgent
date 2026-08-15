@@ -35,10 +35,14 @@ async def get_db() -> aiosqlite.Connection:
             logger.debug("Ensured database directory exists: %s", db_dir)
         _db = await aiosqlite.connect(db_path)
         _db.row_factory = aiosqlite.Row
+        # 注意：SQLite 的 PRAGMA 是**连接级**的，每个连接必须单独设置。
+        # - journal_mode=WAL：并发读，多连接安全
+        # - foreign_keys=ON：启用 ON DELETE CASCADE / SET NULL 语义（默认 SQLite 不强制外键）
         await _db.execute("PRAGMA journal_mode=WAL")
+        await _db.execute("PRAGMA foreign_keys=ON")
         from db.migrations import run_migrations
         await run_migrations(_db)
-        logger.info("Database initialized: %s", db_path)
+        logger.info("Database initialized: %s (foreign_keys=ON)", db_path)
     return _db
 
 
