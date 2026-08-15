@@ -1,69 +1,31 @@
 # Claude 协作区
 
-## 当前任务
+## 当前状态（2026-08-15 更新）
 
-### P3.2 - LLM 重试测试（Claude 实现）
-
-**前置：** 等 Trae 完成实现并 commit 后再开始。
-
----
-
-#### 1. 测试文件
-
-新建 `backend/tests/test_llm_retry.py`
+- P3.4 / P3.5 测试已交付并复验通过。
+- 约束一致性改写已完成并复核。
+- P3.2 测试已交付（commit `5e646b7`），等待 WorkBuddy 复验。
 
 ---
 
-#### 2. 强制测试用例（5 项）
+## P3.2 测试执行结果（2026-08-15，已提交 `5e646b7`）
 
-**用例 1：可重试异常触发重试**
-- Mock `AsyncOpenAI.chat.completions.create`：前 2 次抛 `openai.RateLimitError`，第 3 次返回正常响应
-- `config.llm.max_retries=3`
-- 断言：`create` 被调用 3 次，最终返回正常 `LLMResponse`
+**5/5 强制用例全通过 + 回归 32/32 全通过（chat_service 16 + auth_middleware 7 + exceptions 9）。**
 
-**用例 2：不可重试异常不触发重试**
-- Mock `create`：直接抛 `openai.AuthenticationError`
-- 断言：`create` 只被调用 1 次，异常直接抛出
+| # | 强制用例 | 结果 |
+|---|----------|------|
+| 1 | RateLimitError 前 2 次失败第 3 次成功 → create 调用 3 次，正常返回 LLMResponse | ✅ |
+| 2 | AuthenticationError → create 只调用 1 次，异常直接抛出 | ✅ |
+| 3 | 始终 500，max_retries=2 → create 调用 3 次，抛原始 InternalServerError | ✅ |
+| 4 | max_retries=0 → 跳过 tenacity 直接调用，create 调用 1 次 | ✅ |
+| 5 | 流式 create 第 1 次超时第 2 次成功 → create 调用 2 次，正常 yield delta + finish + usage | ✅ |
 
-**用例 3：重试耗尽后抛原始异常**
-- Mock `create`：始终抛 `openai.InternalServerError`
-- `config.llm.max_retries=2`
-- 断言：`create` 被调用 3 次（首次 + 2 次重试），最终抛出 `InternalServerError`
+**实现验证要点：**
 
-**用例 4：max_retries=0 不重试**
-- `config.llm.max_retries=0`
-- Mock `create`：抛 `openai.APIConnectionError`
-- 断言：`create` 只被调用 1 次，异常直接抛出
+- `_call_with_retry` 的 max_retries=0 快速路径正确（不进 tenacity，与规格一致）
+- 重试间隔测试用 `config.llm.retry_backoff_base=0.0` 压零，5 用例总耗时 1.63s，无真实等待
+- 重试耗尽后 `reraise=True` 抛原始异常而非 RetryError，符合规格
+- 流式重试边界与实现一致：只包 `create`（create 抛异常才重试），流迭代中的异常不重试——测试按此边界构造，无歧义
+- mock 全部走 `_get_client` 替换，无真实网络请求
 
-**用例 5：流式调用重试覆盖 create 阶段**
-- Mock `create`（stream=True）：前 1 次抛 `openai.APITimeoutError`，第 2 次返回 mock stream
-- `config.llm.max_retries=3`
-- 断言：`create` 被调用 2 次，`chat_completion_stream_events` 正常 yield delta + finish 事件
-
----
-
-#### 3. Mock 注意事项
-
-- 用 `unittest.mock.AsyncMock` 或 `unittest.mock.patch` 替换 `_get_client` 返回的 client
-- `openai` 异常的构造方式：
-  - `openai.RateLimitError`：需要 `response` 参数，建议用 `openai.RateLimitError(message="test", response=httpx.Response(429), body=None)`
-  - `openai.InternalServerError`：`openai.InternalServerError(message="test", response=httpx.Response(500), body=None)`
-  - `openai.APIConnectionError`：`openai.APIConnectionError(request=httpx.Request("POST", "https://api.test.com"))`
-  - `openai.APITimeoutError`：`openai.APITimeoutError(request=httpx.Request("POST", "https://api.test.com"))`
-  - `openai.AuthenticationError`：`openai.AuthenticationError(message="test", response=httpx.Response(401), body=None)`
-- 如果某些异常构造过于复杂，用 `unittest.mock.patch` 直接 mock `create` 的 side_effect 更简单
-- **重试间隔**：测试中用 `tenacity` 的 `wait` 参数设为 0 或 mock 掉 `asyncio.sleep`，避免测试变慢
-
----
-
-#### 4. 回归测试
-
-- `test_chat_service.py`（16 项）全通过——确认重试机制不影响正常聊天流程
-- `test_auth_middleware.py`（7 项）全通过
-- `test_exceptions.py`（9 项）全通过
-
----
-
-#### 5. 提交
-
-完成后 commit，message: `test(P3.2): LLM 重试机制测试（5 项强制 + 回归）`
+**未发现 P3.2 回归。** 交 WorkBuddy 复验。
