@@ -1,36 +1,54 @@
 # Claude 协作区
 
-## 当前任务（2026-08-15 晚 WorkBuddy 派发：P4 第二波）
+## 当前任务（P4.3 测试 + P4.6 更新）
 
-### ⚠️ 冲突暴露：P4.3 测试职责重叠（@WorkBuddy @Trae，待裁定）
+### ⚠️ 事故报告：测试污染真实库（2026-08-15 晚，待老大处理）
 
-派发规格给我的任务是"新建 `tests/test_conversations.py`"。但工作区中 Trae 已创建 `backend/tests/test_conversations_api.py`（364 行，未提交），覆盖内容与我的派发任务高度重叠：conversations CRUD / 级联删除 / chat 404 / /api/models / 新异常子类。
+**发生了什么：**
 
-按"谁创建谁维护"规则和职责分工（Trae 实现 / Claude 测试），这个测试文件应归我编写维护。**Trae 写测试文件是越界还是自测脚本待交付说明澄清**——未收到交付说明前我停手 P4.3 测试部分，等裁定。
+我按方案 A 编写 P4.3 规范测试 `tests/test_conversations.py` 时，首版 fixture 有个 bug：
 
-两个可选方向（倾向 A）：
-- **A**：Trae 提交时把 `test_conversations_api.py` 移出（或明确移交给我改名 `test_conversations.py`），我接手后修复下述问题再作为 P4.3 测试交付
-- **B**：Trae 的文件作为自测保留，我按原派发另写 `test_conversations.py`（重复覆盖，不推荐）
+- fixture 只调用了 `load_config(临时路径)` 重载**内存单例**
+- 但 `main.py` 的 lifespan 启动时会**再次调用 `load_config()`**（不传路径 → 从 env `LARRY_CONFIG` / 默认 config.yaml 重新读取，忽略内存单例）
+- 结果：TestClient 内的 app 实际连的是**真实 `data/larry.db`**，测试数据写进了真实库
 
-### ⚠️ 数据安全风险：Trae 的测试文件会删除真实数据（必须修）
+**污染范围（已精确核对）：**
 
-`test_conversations_api.py::clean_conv_db` fixture 直接对**真实 `data/larry.db`**（无 mock、无临时库）执行"删除全部会话"的前后清理。全套测试跑一次，用户真实聊天历史全没。项目原则"安全边界明确"要求此问题必须处理：测试必须使用临时 DB（如 `LARRY_CONFIG` 指向 temp yaml + 临时 db path）或 mock 数据层，禁止对真实库做 DELETE 清理。
+- 13 条测试会话：**id 253-266**（中间缺 262），created_at 均为 `2026-08-15 15:40:57~59`
+- 全部为测试标题（测试会话A / 先创建 / 后创建 / 重命名 / limit测试0-2 / 新名 / 空会话 / cascade / 续接会话 / 标题测试会话），其中 2 条含测试消息（"接着聊" + "reply text"、长消息测试）
+- 与老大真实会话可凭时间窗口 + 标题精确区分
 
-### Trae 实现评审（P4.3 + P4.6，未提交状态，结论先行）
+**当前状态：**
 
-**实现本体质量好，未发现规格违背：**
-- `PRAGMA foreign_keys=ON` 连接级挂载 + WHY 注释正确
-- `api/chat.py` 在返回 StreamingResponse **之前**预校验会话存在性（避免"response already started"吞 404）——关键坑，处理正确
-- 标题生成（首条消息 20 字符）、404 走 LarryException 体系、`/api/models` 均符合规格
-- 我的基线 25/25 全绿（16 chat_service + 9 exceptions），**无需修改 test_chat_service.py 的 mock**（ChatRequest 的 conversation_id 字段 P0 就存在，派发里"需要补参数"的前提不成立）
+1. 清理 13 条的精确 DELETE（按 id + FK 级联）被我这边权限分类器拦截——真实库删除需老大明确同意后执行
+2. fixture 已修复（设置 `LARRY_CONFIG` env 变量 + 内存单例双保险，教训已写进 fixture docstring 的 WHY 注释），修复后的测试文件只碰临时 DB
+3. pytest 重跑命令也被权限分类器拦（与真实库 DELETE 关联判定），需老大手动执行或调整权限
 
-**Trae 测试文件中的质量问题（若方案 A 由我接手，我修）：**
-1. `TestChatConversationNotFound` 断言过弱：404 是确定性的（预校验在任何 LLM 调用之前），但测试写成"404 则断言，否则 401/500/502 也算过"——实现坏了也全绿
-2. `test_cascade_delete_messages` 结尾 `asyncio.run(close_db())` 在测试进程关闭全局 DB 单例，跨事件循环关闭 aiosqlite 连接有风险，且影响后续用例
-3. 该用例用裸 SQL 插入的测试会话，断言失败时无清理
-4. `test_list_order_updated_desc` 用 `time.sleep(1.1)` 两次，测试慢（次要）
+**技术教训（供全员参考）：**
 
-### 我的待办（等 Trae 提交后执行）
+> `config.py` 的内存单例不是可靠入口——任何模块里无参调 `load_config()` 都会从 env / 默认路径**重新读取**。测试环境隔离配置必须设 `LARRY_CONFIG` 环境变量，只改内存单例不够。这也解释了 WorkBuddy 硬性原则为什么写的是"用 LARRY_CONFIG 指向临时 yaml"——它就是为绕过 lifespan 重读而设计的正确路径，我首版没有严格遵守。
 
-- P4.6 更新 `test_exceptions.py::TestUnexpectedException`：body 从纯文本改为断言 `{"error": "INTERNAL_ERROR", "detail": "Internal server error"}` + detail 不含 traceback 内容（旧断言碰巧兼容新行为，但需显式化）——我的文件，无冲突，可先行
-- P4.3 测试：按上述裁定结果执行
+**待办（等老大指示后继续）：**
+
+1. 清理真实库 13 条测试残留（精确 id 253-266，FK 级联连带 messages）
+2. 跑 `tests/test_conversations.py` 验证 17/17 全绿且会话 id 从 1 开始（临时库生效证据）
+3. P4.6 更新 `test_exceptions.py`：TestUnexpectedException 改断言 JSON `{"error": "INTERNAL_ERROR", "detail": "Internal server error"}` + detail 不含 traceback + caplog 验证服务端记了完整 traceback
+4. 回归全套 + 提交 + 交付说明
+
+---
+
+## 历史状态
+
+- P4 评审 4 硬问题全部被采纳（字段错误 / SQLite 外键 / 健康检查假阳性 / restart 能力）
+- P3 全部完工，测试基线 37/37
+- P4.3/P4.6 职责重叠冲突已裁定方案 A（Trae 自测文件删除，我写规范版）；数据安全底线已成文（WorkBuddy 硬性原则）
+
+---
+
+## WorkBuddy 复验闭环（2026-08-15 23:52）
+
+- 修复版 `tests/test_conversations.py`（17 项）已独立复验：fixture 正确设 `LARRY_CONFIG` + 内存单例双保险，临时 DB 隔离生效。
+- 实测：跑测试后真实库仍为 40 会话（13 污染 + 27 真实），**无二次污染**；17/17 全过。
+- 回归全套 37/37 全过（exceptions 9 + auth 7 + retry 5 + chat_service 16），实现改动零回归。
+- 上方"待办 1-4"已由 WorkBuddy 代为完成（清理真实库除外，需老大授权）；P4.3/P4.6 验收点已在 TODO 勾选。
+- 真实库 13 条测试污染（id 253-266 缺 262，15:40 时段）待老大授权后清理。

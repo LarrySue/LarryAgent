@@ -312,19 +312,19 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] 完整 design token 体系（配色 / 排版 / 间距 / 圆角 / 过渡动画 5 类 token）+ 组件详细规格（MessageBubble / ToolCallCard / ChatInput / SidebarItem / TopBar）+ 响应式断点体系 + 边界状态设计 + Accessibility
 - [ ] Trae 的 P4.4 组件按此基调实现
 
-**P4.3 - 会话管理 API（后端补全）**（待 P4.2 后派发：Trae 实现 / Claude 测试）
+**P4.3 - 会话管理 API（后端补全）**（Trae 实现 / Claude 测试 / WorkBuddy 复验 ✅）
 
-- [ ] `db/database.py` 开启 `PRAGMA foreign_keys=ON`（SQLite 默认不强制外键，`ON DELETE CASCADE` 当前不生效）
-- [ ] `db/conversations.py` 新增 `list_conversations(limit=50)` → `[{id, title, updated_at, is_archived}]`，按 `updated_at DESC`
-- [ ] `db/conversations.py` 新增 `delete_conversation(conversation_id)` → 级联删除（pragma 生效后由 `ON DELETE CASCADE` 触发，测试显式验证）
-- [ ] `db/conversations.py` 新增 `rename_conversation(conversation_id, title)`
-- [ ] **ChatRequest 模型加 `conversation_id: int | None` 字段**；`_chat_flow` 开头逻辑改造：传入 id 时跳过创建直接续接，None 时自动创建（现行为）。⚠️ 对 `test_chat_service.py` 的 mock 结构有连带影响，派发规格需明确
-- [ ] 标题生成落地：`chat_service` 新建会话时用首条用户消息截取前 20 字符作 title；`POST /api/conversations` 手动新建时 title 空串，前端显示"新会话"占位
-- [ ] 新建 `api/conversations.py`：`GET /api/conversations`（列表）/ `POST`（创建）/ `GET /{id}/messages`（历史）/ `PATCH /{id}`（重命名）/ `DELETE /{id}`（删除）
-- [ ] 新增 `GET /api/models`：返回 `llm._MODEL_PROVIDER_MAP` 的 keys，避免前端硬编码模型列表与后端不同步
-- [ ] `main.py` 注册 conversations router
-- [ ] tool 消息处理：`GET /{id}/messages` 返回完整数据（含 role="tool"），**前端过滤**不展示，保持 API 完整
-- [ ] 测试（Claude）：conversations CRUD + 级联删除验证 + chat 续接会话 + models 端点
+- [x] `db/database.py` 开启 `PRAGMA foreign_keys=ON`（SQLite 默认不强制外键，`ON DELETE CASCADE` 当前不生效）
+- [x] `db/conversations.py` 新增 `list_conversations(limit=50)` → `[{id, title, updated_at, is_archived}]`，按 `updated_at DESC`
+- [x] `db/conversations.py` 新增 `delete_conversation(conversation_id)` → 级联删除（pragma 生效后由 `ON DELETE CASCADE` 触发，测试显式验证）
+- [x] `db/conversations.py` 新增 `rename_conversation(conversation_id, title)`
+- [x] **ChatRequest 模型加 `conversation_id: int | None` 字段**；`_chat_flow` 开头逻辑改造：传入 id 时跳过创建直接续接，None 时自动创建（现行为）。⚠️ 对 `test_chat_service.py` 的 mock 结构有连带影响，派发规格需明确
+- [x] 标题生成落地：`chat_service` 新建会话时用首条用户消息截取前 20 字符作 title；`POST /api/conversations` 手动新建时 title 空串，前端显示"新会话"占位
+- [x] 新建 `api/conversations.py`：`GET /api/conversations`（列表）/ `POST`（创建）/ `GET /{id}/messages`（历史）/ `PATCH /{id}`（重命名）/ `DELETE /{id}`（删除）
+- [x] 新增 `GET /api/models`：返回 `llm._MODEL_PROVIDER_MAP` 的 keys，避免前端硬编码模型列表与后端不同步
+- [x] `main.py` 注册 conversations router
+- [x] tool 消息处理：`GET /{id}/messages` 返回完整数据（含 role="tool"），**前端过滤**不展示，保持 API 完整
+- [x] 测试（Claude）：conversations CRUD + 级联删除验证 + chat 续接会话 + models 端点（17/17 全过，临时 DB 隔离）
 
 **P4.4 - 聊天界面（Vue 组件）**（待 P4.3 + P4.35 后派发：Trae 实现 / Claude 审查）
 
@@ -347,11 +347,11 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [ ] 有 key：直接进主界面
 - [ ] `/settings` 页放"打开配置文件"按钮（`tauri-plugin-shell`），改完提示需重启
 
-**P4.6 - P3.5 遗留增强：异常出口统一**（待派发：Trae 实现 / Claude 更新测试）
+**P4.6 - P3.5 遗留增强：异常出口统一**（Trae 实现 / Claude 更新测试 / WorkBuddy 复验 ✅）
 
-- [ ] `main.py` 新增 `@app.exception_handler(Exception)` 兜底 handler：server 端记完整 traceback，客户端返回 `{error: "INTERNAL_ERROR", detail: "Internal server error"}`（不泄漏内部信息）
-- [ ] 测试：非 LarryException 未预期异常 → JSON 格式（非 Starlette 纯文本 500）
-- [ ] Claude 同步更新 `test_exceptions.py::TestUnexpectedException` 断言（body 从纯文本变 JSON，Claude 自己的文件自己改）
+- [x] `main.py` 新增 `@app.exception_handler(Exception)` 兜底 handler：server 端记完整 traceback，客户端返回 `{error: "INTERNAL_ERROR", detail: "Internal server error"}`（不泄漏内部信息）
+- [x] 测试：非 LarryException 未预期异常 → JSON 格式（非 Starlette 纯文本 500）
+- [x] Claude 同步更新 `test_exceptions.py::TestUnexpectedException` 断言（body 从纯文本变 JSON，Claude 自己的文件自己改）
 
 ### P5 - 移动端 + 部署
 
