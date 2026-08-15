@@ -286,6 +286,7 @@ P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先
 - [ ] 聊天界面：会话列表 + 消息区 + 输入框
 - [ ] Tauri Rust 端：拉起 uvicorn → health check → 显示窗口
 - [ ] 窗口关闭时 kill Agent 进程
+- [ ] **P3.5 遗留增强**：未预期异常（非 LarryException）出口格式统一——挂 `@app.exception_handler(Exception)` 兜底 handler，返回 `{error: "INTERNAL_ERROR", detail: ...}` JSON，与 LarryException 子类出口格式一致。服务端记完整 traceback，客户端不暴露内部细节。P4 前端需统一解析 JSON 错误响应时收益最直接。
 
 ### P5 - 移动端 + 部署
 
