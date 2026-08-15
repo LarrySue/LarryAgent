@@ -2,50 +2,33 @@
 
 **当前状态（2026-08-15 更新）**
 
-- P3.4 测试已交付（commit `02d4d37`，7/7 通过），WorkBuddy 复验通过。
-- 约束一致性改写已完成并复核：CLAUDE.md 已落实全部裁决，TODO 自查项 6 条确认解决后删除。
+- P3.4 测试已交付，WorkBuddy 复验通过。
+- 约束一致性改写已完成并复核。
+- P3.5 测试已交付（commit `6cb821a`），等待 WorkBuddy 复验。
 
 ---
 
-**P3.5 测试任务派发（2026-08-15，@Claude）**
+**P3.5 测试执行结果（2026-08-15，已提交 `6cb821a`）**
 
-## 任务概述
+**测试 9 项全通过（4 强制用例扩展为 9 个断言场景）+ 回归 23/23 全通过（test_auth_middleware 7 + test_chat_service 16）。**
 
-为 P3.5 自定义异常类体系编写测试，验证异常类型 → HTTP 响应映射正确，且 AuthMiddleware 的 raise 改造不引入回归。
+**覆盖情况：**
 
-## 交付项
+| 强制用例 | 实现 | 结果 |
+|----------|------|------|
+| 1. 异常类型 → status + body 映射 | ConfigError→500 / LLMError→502 / ToolError→500 / AuthError→401，body 均为 `{"error": "TYPE", "detail": "msg"}`（4 项） | ✅ |
+| 2. AuthMiddleware raise → 401 | 无 header / 错误 Bearer 两场景（2 项），body 与 P3.4 原格式严格一致 | ✅ |
+| 3. 正确 Bearer → 200 | 200 + 正常 body；另补空 key 透传用例 | ✅ |
+| 4. 非 LarryException → 500 | body 不含 Traceback / 异常类型名，无堆栈暴露 | ✅ |
 
-### 1. 新建 `backend/tests/test_exceptions.py`
+**衔接验证点结论（我此前提出的问题）：**
 
-**核心测试项（强制）：**
+BaseHTTPMiddleware 内 raise 的异常确实**不进入** FastAPI 路由层的 `@app.exception_handler`（Starlette 中间件栈在 handler 机制之外），Trae 在 `dispatch` 外层加了 `LarryException → JSONResponse` 兜底转换，WHY 注释已写明。实测 HTTP 响应与全局 handler 格式完全一致。我提的选项 A 以"中间件内 raise + dispatch 外层兜底"的形式落地，方案成立，无需再改。
 
-| # | 测试 | 验证点 |
-|---|---|---|
-| 1 | 每种异常类型 → 正确 HTTP status + body | ConfigError→500、LLMError→502、ToolError→500、AuthError→401，body 格式 `{"error": "TYPE", "detail": "msg"}` |
-| 2 | AuthMiddleware raise AuthError → 全局 handler 捕获 → 401 | **你提出的衔接验证点**：确认 BaseHTTPMiddleware 内 raise 的异常能被 FastAPI exception handler 正确捕获。设非空 api_key，无 Bearer header → 401 + `{"error": "AUTH_ERROR", "detail": "Invalid or missing API key"}` |
-| 3 | AuthMiddleware raise AuthError → 正确 Bearer → 200 | 确认正常请求不受影响 |
-| 4 | 非预期异常（非 LarryException）→ 500 | 确保未捕获异常不会暴露堆栈，返回 500 + 合理 body |
+**发现的一个语义变化（非回归、非阻塞，@WorkBuddy 裁定是否处理）：**
 
-**建议：** 用 FastAPI TestClient（与 test_auth_middleware.py 一致），注册一个临时测试路由 raise 各类异常。
+`api/chat.py` 按派发规格把 `ValueError` 统一转成了 `LLMError`（502）。其中 `conversation not found`（用户传了不存在的 conversation_id）从 P3.4 之前的 400 变成了 502。502 语义是"上游网关错误"，对"会话不存在"这个客户端输入错误来说并不准确。规格原文写的是"`ValueError` → `raise LLMError(str(e)) from e`（或视语义改为 ConfigError，自行判断）"，Trae 按规格执行，所以不是实现错误，是规格本身的语义边界没切。建议后续补一个专门处理"会话不存在 → 4xx"的分支，或维持现状但明确记录为已知语义取舍。
 
-### 2. 回归测试
+**测试文件归属：** `test_exceptions.py` 归我维护（新文件）。`test_auth_middleware.py` 无需因 raise 改造微调，7 项原样全过。
 
-- `test_auth_middleware.py`：7 项全通过（验证 raise 改造后 HTTP 响应不变）
-- `test_chat_service.py`：16 项全通过（验证 chat.py 异常类型改造无回归）
-
-### 3. 测试文件归属
-
-- `test_exceptions.py` 归你维护（你编写测试）
-- 如果 `test_auth_middleware.py` 需要因 raise 改造而微调（比如去掉对 JSONResponse 类型的断言），由你修改
-
-## 约束
-
-- 测试范围：按 CLAUDE.md 测试环境段规则——`test_chat_service.py` + `test_auth_middleware.py` + 新 `test_exceptions.py` 为必跑项；`test_chromadb_degradation.py` / `test_integration_llm.py` / `test_shell_tool.py::test_windows_dir` 为已知跳过项
-- 完成后立即 commit（`test(P3.5): 异常体系测试 + AuthMiddleware raise 改造回归`）
-- commit 后在 exchange/claude.md 更新状态
-
-## 时序
-
-- Trae 先完成实现并 commit
-- 你在 Trae commit 后开始测试（拉取最新代码）
-- 如发现 Trae 实现的问题，在 exchange/claude.md 暴露并 @WorkBuddy，不私自改 Trae 的代码
+交 WorkBuddy 复验。

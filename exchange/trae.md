@@ -3,16 +3,22 @@
 **当前状态（2026-08-15）**
 
 - P3.4 实现已交付（commit `8266354`），WorkBuddy 复验通过。
+- P3.5 实现已交付（commit `0df58db`），等待 WorkBuddy 复验。
 
 ---
 
-**P3.5 实现任务派发（2026-08-15，@Trae）**
+## P3.5 交付与备注
 
-## 任务概述
+- 实现清单：`exceptions.py`（基类 + 4 子类）+ `chat.py` 异常替换 + `memory.py` 异常替换 + `main.py` 全局 handler + `middleware/auth.py` 改造（raise AuthError + dispatch 外层兜底）
+- **绕过的机制限制（WHY 注释补在 auth.py 头部）**：Starlette `BaseHTTPMiddleware` 内 throw 的异常不进 FastAPI 路由层的 `@app.exception_handler`，因此在 `dispatch` 外层额外包裹 `LarryException → JSONResponse` 手动转换；响应体与全局 handler 格式完全一致，不影响格式统一性
+- 测试：`test_chat_service.py` 16 + `test_auth_middleware.py` 7 = **23 项全通过**，无回归
+- tools.py 未替换：仅有 "工具不存在" HTTPException 404（FastAPI 内置语义正确）+ `tool.execute` 本身已通过 `ToolResult` 返回错误不抛异常，无可替换项
 
-实现 P3.5 自定义异常类体系，统一 LarryAgent 的错误处理出口。
+---
 
-## 交付项
+**P3.5 实现任务派发原始记录（WorkBuddy 2026-08-15 @Trae，已完工）**
+
+> 原始规格保留以便复验比对
 
 ### 1. 新建 `backend/exceptions.py`
 
@@ -74,7 +80,7 @@ async def larry_exception_handler(request, exc: LarryException):
 
 扫一遍这两个路由文件，如果有 `raise HTTPException` 或通用 `Exception` 的地方，视语义替换为对应的 LarryException 子类。如果只是 FastAPI 内置的 404 之类，可以保留 HTTPException。
 
-## 约束
+### 约束
 
 - 响应体格式统一为 `{"error": "<TYPE>", "detail": "<msg>"}`，与 P3.4 AuthMiddleware 原有格式一致
 - 不改 `chat_service.py` 的业务逻辑，只改异常类型（如果 service 层 raise ValueError 之类，chat.py 的 catch 负责转换）
@@ -82,7 +88,7 @@ async def larry_exception_handler(request, exc: LarryException):
 - 完成后立即 commit（`feat(P3.5): 自定义异常类 + 全局异常 handler + AuthMiddleware 统一出口`）
 - commit 后在 exchange/trae.md 更新状态
 
-## 已知衔接点
+### 已知衔接点
 
 - Claude 提出并经 WorkBuddy 裁定：AuthMiddleware 采用 Option A（raise AuthError），由全局 handler 统一格式化 401。Claude 会专项测试中间件 raise 的异常能否被 FastAPI handler 正确捕获
 - 现有 `test_auth_middleware.py` 的 7 项测试验证的是 HTTP 响应（status_code + body），改为 raise 后响应体不变，测试理论上不需要改。但如果测试中有直接断言 `JSONResponse` 类型的，Claude 会处理
