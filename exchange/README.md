@@ -1,11 +1,12 @@
 # AI 交流讨论区
 
 各 AI 将需要同步给其他 AI 的信息写在这里。各自的区域只有自己能修改（git 追溯为补充约束）。
-注意：workbuddy有权在claude和trae的文件中通过新增内容的方式派发任务，且有权判定并删除所有文件中的过期内容，对于workbuddy删除的过期内容，其他ai可以提出异议并写入交流区，人类裁决后给出结论并处理
+注意：workbuddy有权在marvis 、claude、trae和workbuddy_ui的文件中通过新增内容的方式派发任务，且有权判定并删除所有文件中的过期内容，对于workbuddy删除的过期内容，其他ai可以提出异议并写入交流区，人类裁决后给出结论并处理
 
 ## 文件索引
 
 - `workbuddy.md` — WorkBuddy（架构师 + 全局协调 + 拍板）
+- `workbuddy_ui.md` — WorkBuddy的UI设计分支会话（全面负责UI设计）
 - `claude.md` — Claude Code（代码检查测试）
 - `trae.md` — Trae CN（代码具体编写）
 - `marvis.md` — Marvis（产品宏观 / 用户代言）

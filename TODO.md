@@ -258,8 +258,6 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] 401 响应体严格为 `{"error": "AUTH_ERROR", "detail": "Invalid or missing API key"}`
 - [x] 测试 `tests/test_auth_middleware.py`（FastAPI TestClient）：空 key 透传 / 无 header→401 / 正确 Bearer→200 / 错误 Bearer→401 — 7 项全通过；回归 `test_chat_service.py` 16 项全通过，无回归
 
-P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先 set `server.api_key`），当前本机使用可空。
-
 **P3.5 - 自定义异常类** ✅（2026-08-15，Trae 实现 / Claude 测试 / WorkBuddy 复验通过）
 
 - [x] 新增 `backend/exceptions.py`：`LarryException` 基类（`error_type` + `status_code` + `detail`）→ `ConfigError`(500) / `LLMError`(502) / `ToolError`(500) / `AuthError`(401)
@@ -281,12 +279,79 @@ P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先
 ### P4 - PC 客户端可用
 
 > 双击图标直接用
+>
+> **技术路线裁决（2026-08-15）**：Tauri（骨架已备 `client/`、真 exe 双击即用、体积小），否决 pywebview（无独立 exe，依赖本机 Python 环境）与 Electron（过重）。
+> **P4 详细计划三方评审完成**（Trae/Claude/Marvis 意见已吸收，见 exchange/workbuddy.md），Q1–Q8 定案：Q1 裸 python+spawn 前探测（Windows Store stub 坑）/ Q2 首条消息截取前 20 字符 / Q3 角色切换 UI 做 / Q4 归档入口不做 / Q5 用 `CARGO_MANIFEST_DIR` 编译期推导绝对路径（不依赖 working directory）/ Q6 chat.html 保留作调试工具 / Q7 响应式设计 P4 一次做对，mobile/ 暂不动 / Q8 系统托盘不做。
 
-- [ ] 选前端框架（推荐 Vue 3 + Vite，轻量）
-- [ ] 聊天界面：会话列表 + 消息区 + 输入框
-- [ ] Tauri Rust 端：拉起 uvicorn → health check → 显示窗口
-- [ ] 窗口关闭时 kill Agent 进程
-- [ ] **P3.5 遗留增强**：未预期异常（非 LarryException）出口格式统一——挂 `@app.exception_handler(Exception)` 兜底 handler，返回 `{error: "INTERNAL_ERROR", detail: ...}` JSON，与 LarryException 子类出口格式一致。服务端记完整 traceback，客户端不暴露内部细节。P4 前端需统一解析 JSON 错误响应时收益最直接。
+**P4.1 - Tauri 进程管理（Rust 侧）**（2026-08-15 派发：Trae 实现 / WorkBuddy 复验通过）
+
+- [x] `main.rs` 实现 `spawn_agent()`：`Command::new(python_path).args(["-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"])`，backend 路径从 `CARGO_MANIFEST_DIR` 编译期常量推导，不依赖 working directory
+- [x] Python 探测：spawn 前先 `python --version` 检测（Windows Store stub 会静默失败），失败再试 `py -3`，给清晰错误提示
+- [x] `setup` 钩子：先对 `http://127.0.0.1:8000/health` 做签名校验（响应体含 `version` 字段，防 8000 被其他服务占用时假阳性）——已跑则复用（dev mode，同时解决端口冲突），未跑再 spawn
+- [x] 轮询 health check：500ms 间隔，超时 30s 报错
+- [x] `AgentProcess` state 注入 Tauri，持有 `Child` 句柄；暴露 **restart 能力**（kill + respawn + 重新 health check，P4.5 依赖）
+- [x] `on_window_event(Destroyed)`：只 kill 自己 spawn 的 child（防误杀），kill + wait
+- [x] 后端崩溃感知：后台线程每 5s health check，状态变化时 emit `"backend-status"` 事件给前端（payload: `{status, error?}`），前端提示而非白屏
+- [x] 注意：用 `/health` 而非 `/api/health`（前者不被 AuthMiddleware 拦截，无需 API key）
+
+**P4.2 - 前端项目搭建（Vue 3 + Vite）**（2026-08-15 派发：Trae 实现 / WorkBuddy 复验通过）
+
+- [x] `client/` 下初始化 Vue 3 + Vite + TypeScript
+- [x] `vite.config.ts`：dev server 端口 5173、proxy `/api` + `/health` → `http://127.0.0.1:8000`、strictPort（端口被占用报错而非换端口）
+- [x] 基础布局 `AppLayout`（左侧栏 + 主区域），响应式（768px 断点，移动端汉堡菜单）
+- [x] 路由：`/`（聊天）、`/settings`（P4.5 填充），懒加载
+- [x] 全局状态：当前会话 ID、会话列表、连接状态（Pinia）
+- [x] `package.json` 更新：vue、vue-router、vite、typescript、pinia、vue-tsc
+- [x] 验证 `npm run build` 通过（vue-tsc 类型检查 + vite build 41 模块）。⚠️ tauri dev 实际窗口启动链路待真机验证（需 GUI 环境）
+
+**P4.35 - 界面基调定义**（2026-08-15 派发：Marvis 出初稿 / UI Designer 精化 / 老大审定 — ✅ 完工）
+
+- [x] 产出一页设计约定：布局结构（左会话栏 + 右消息流）、配色基调（暗色为主，灰阶 + 交互锚点色 #378ADD）、字体（中文系统字体优先 + Inter fallback）、组件风格（5 个核心组件规格 + 边界状态 + WCAG AA 合规）
+- [x] 定案多角色差异化呈现方案：default=亮中性灰 #9CA3AF / health=低饱和翠绿 #34D399 / finance=低饱和琥珀 #FBBF24；色点+问候语+AI 气泡色带+工具卡片 header 色，不做三套换肤
+- [x] Logo 定案：C2 写意版（毛笔三笔 + 禅圆缺口 + 朱红点），老大拍板"外圈缺口是灵魂"
+- [x] 完整 design token 体系（配色 / 排版 / 间距 / 圆角 / 过渡动画 5 类 token）+ 组件详细规格（MessageBubble / ToolCallCard / ChatInput / SidebarItem / TopBar）+ 响应式断点体系 + 边界状态设计 + Accessibility
+- [ ] Trae 的 P4.4 组件按此基调实现
+
+**P4.3 - 会话管理 API（后端补全）**（待 P4.2 后派发：Trae 实现 / Claude 测试）
+
+- [ ] `db/database.py` 开启 `PRAGMA foreign_keys=ON`（SQLite 默认不强制外键，`ON DELETE CASCADE` 当前不生效）
+- [ ] `db/conversations.py` 新增 `list_conversations(limit=50)` → `[{id, title, updated_at, is_archived}]`，按 `updated_at DESC`
+- [ ] `db/conversations.py` 新增 `delete_conversation(conversation_id)` → 级联删除（pragma 生效后由 `ON DELETE CASCADE` 触发，测试显式验证）
+- [ ] `db/conversations.py` 新增 `rename_conversation(conversation_id, title)`
+- [ ] **ChatRequest 模型加 `conversation_id: int | None` 字段**；`_chat_flow` 开头逻辑改造：传入 id 时跳过创建直接续接，None 时自动创建（现行为）。⚠️ 对 `test_chat_service.py` 的 mock 结构有连带影响，派发规格需明确
+- [ ] 标题生成落地：`chat_service` 新建会话时用首条用户消息截取前 20 字符作 title；`POST /api/conversations` 手动新建时 title 空串，前端显示"新会话"占位
+- [ ] 新建 `api/conversations.py`：`GET /api/conversations`（列表）/ `POST`（创建）/ `GET /{id}/messages`（历史）/ `PATCH /{id}`（重命名）/ `DELETE /{id}`（删除）
+- [ ] 新增 `GET /api/models`：返回 `llm._MODEL_PROVIDER_MAP` 的 keys，避免前端硬编码模型列表与后端不同步
+- [ ] `main.py` 注册 conversations router
+- [ ] tool 消息处理：`GET /{id}/messages` 返回完整数据（含 role="tool"），**前端过滤**不展示，保持 API 完整
+- [ ] 测试（Claude）：conversations CRUD + 级联删除验证 + chat 续接会话 + models 端点
+
+**P4.4 - 聊天界面（Vue 组件）**（待 P4.3 + P4.35 后派发：Trae 实现 / Claude 审查）
+
+- [ ] `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
+- [ ] `MessageList.vue`：消息气泡（user/agent/error）+ 自动滚动；过滤 role="tool" 消息
+- [ ] `ToolCallCard.vue`：工具调用卡片（spinner→✅/❌ + 参数 + 结果摘要），从 chat.html 移植
+- [ ] `ChatInput.vue`：Enter 发送 / Shift+Enter 换行 + 禁用状态
+- [ ] `ModelSelector.vue`：从 `GET /api/models` 拉取列表
+- [ ] `RoleSelector.vue`：角色切换下拉（health/finance/default），传 role 给 `/api/chat`
+- [ ] `StatusBar.vue`：连接状态 + 当前会话 ID + token 统计
+- [ ] SSE composable `useChatStream`：移植 chat.html 的 `consumeSSEStream` + `parseSSE`
+- [ ] 会话切换：侧栏点击 → 加载历史 → 切换 conversation_id
+- [ ] 错误处理：网络错误 / 后端 500 / SSE error 事件统一展示（解析 JSON 错误响应）
+- [ ] 前端请求带 `Authorization: Bearer <key>`（P3.4 兼容，key 留空时不带——别把鉴权坑留给 P5）
+
+**P4.5 - 首次启动引导 + 配置入口**（待 P4.4 后派发：Trae 实现）
+
+- [ ] 检测 `backend/config.yaml` 是否有 `models.<provider>.api_key`（⚠️ 不是 `llm.api_key`，真实 schema 按 provider 段；检测与写入逻辑须与 P4.1 用同一路径基准）
+- [ ] 无 key：引导页输入 API key → Tauri IPC → Rust 写入 config.yaml（**写入前先备份 `config.yaml.bak`，失败回滚**）→ 调用 P4.1 restart 重启后端（uvicorn 不热重载 yaml）
+- [ ] 有 key：直接进主界面
+- [ ] `/settings` 页放"打开配置文件"按钮（`tauri-plugin-shell`），改完提示需重启
+
+**P4.6 - P3.5 遗留增强：异常出口统一**（待派发：Trae 实现 / Claude 更新测试）
+
+- [ ] `main.py` 新增 `@app.exception_handler(Exception)` 兜底 handler：server 端记完整 traceback，客户端返回 `{error: "INTERNAL_ERROR", detail: "Internal server error"}`（不泄漏内部信息）
+- [ ] 测试：非 LarryException 未预期异常 → JSON 格式（非 Starlette 纯文本 500）
+- [ ] Claude 同步更新 `test_exceptions.py::TestUnexpectedException` 断言（body 从纯文本变 JSON，Claude 自己的文件自己改）
 
 ### P5 - 移动端 + 部署
 
@@ -296,6 +361,8 @@ P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先
 - [ ] Nginx 部署脚本示例（静态文件 + API 反代）
 - [ ] PWA manifest + Service Worker（可选）
 - [ ] 部署文档 + 安全加固
+
+P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先 set `server.api_key`），当前本机使用可空。
 
 **上云前架构债清算（P5 前置，记账不追债，2026-08-12 确认）**
 
