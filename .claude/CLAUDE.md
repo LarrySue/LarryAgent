@@ -35,56 +35,7 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 
 ## 项目结构
 
-```
-backend/
-├── main.py              # FastAPI 入口 + lifespan
-├── config.py            # 配置管理（dataclass + yaml）
-├── config.yaml          # 实际配置（含 API Key，不提交、不输出）
-├── config.example.yaml  # 配置模板
-├── logging_config.py    # 日志配置
-├── api/                 # API 路由层（参数校验 + 错误转换）
-│   ├── chat.py          # POST /api/chat（Accept header 分支流式/非流式）
-│   ├── memory.py        # 记忆归档 API
-│   └── tools.py         # 工具管理 API
-├── middleware/          # 中间件
-│   └── auth.py          # API Key 鉴权（空 key 透传 / Bearer 校验）
-├── services/            # 业务逻辑层
-│   └── chat_service.py  # _chat_flow generator（统一聊天流程）
-├── models/              # LLM 路由 + Embedding + Token 估算
-│   ├── llm.py           # chat_completion / chat_completion_stream_events（全程流式）
-│   ├── embedding.py     # LocalEmbedding / OpenAIEmbedding
-│   └── token_counter.py # tiktoken 估算 + 中间截断
-├── db/                  # SQLite 数据层
-│   ├── database.py      # 连接管理（aiosqlite, WAL 模式）
-│   ├── schema.py        # 建表 DDL
-│   ├── migrations.py    # 增量迁移
-│   ├── conversations.py # 会话与消息 CRUD
-│   └── memories.py      # 记忆 CRUD
-├── memory/              # 记忆引擎
-│   ├── engine.py        # 短期/长期记忆检索 + 上下文构建
-│   └── archiver.py      # 会话归档：LLM 摘要 → 分块 → 双写
-├── rag/                 # 向量检索
-│   ├── vector_store.py  # ChromaDB 封装（insert/search/delete）
-│   └── chunker.py       # 文本分块
-├── tools/               # 工具系统
-│   ├── base.py          # BaseTool + ToolResult
-│   ├── registry.py      # 工具注册中心
-│   ├── file_ops.py      # 文件读写（路径沙箱）
-│   └── shell.py         # Shell 执行（IP 白名单 + 黑名单）
-└── tests/               # 测试
-    ├── test_chat_service.py
-    ├── test_auth_middleware.py
-    ├── test_file_ops_tool.py
-    ├── test_shell_tool.py
-    ├── test_integration_llm.py
-    ├── test_embedding.py
-    ├── test_embedding_enhanced_version.py
-    └── test_chromadb_degradation.py
-
-client/
-├── chat.html            # 测试用对话页面（SSE 流式）
-└── src-tauri/           # Tauri 壳（P4）
-```
+以 README.md 的项目结构树为准（避免双份维护腐化）。关键补充：`backend/middleware/auth.py`（P3.4 API Key 鉴权中间件）。
 
 ## 当前开发阶段
 

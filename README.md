@@ -17,18 +17,31 @@ AIGC:
 
 ```
 LarryAgent/
-├── backend/           # Python 后端（FastAPI + SQLite + ChromaDB）
-│   ├── main.py        # 入口文件
-│   ├── config.yaml    # 配置文件
-│   ├── models/        # LLM 路由 + Embedding
-│   ├── db/            # 数据库层
-│   ├── rag/           # 向量检索
-│   ├── memory/        # 记忆引擎
-│   ├── tools/         # 工具系统
-│   └── api/           # API 路由
-├── client/            # PC 客户端（Tauri 壳）
-├── mobile/            # 手机端（HTML5 Web App）
-├── Makefile           # 快捷命令
+├── backend/               # Python 后端（FastAPI + SQLite + ChromaDB）
+│   ├── main.py            # 入口文件
+│   ├── config.py          # 配置解析
+│   ├── config.yaml        # 配置文件（不入库）
+│   ├── config.example.yaml# 配置模板
+│   ├── requirements.txt   # Python 依赖
+│   ├── logging_config.py  # 日志配置
+│   ├── api/               # API 路由（chat / memory / tools）
+│   ├── services/          # 业务逻辑层（chat_service 等）
+│   ├── models/            # LLM 路由 + Embedding + Token 统计
+│   ├── db/                # 数据库层（schema / migrations / CRUD）
+│   ├── rag/               # 向量检索（vector_store / chunker）
+│   ├── memory/            # 记忆引擎（engine / archiver）
+│   ├── middleware/        # 中间件（API Key 鉴权）
+│   ├── tools/             # 工具系统（base / registry / shell / file_ops）
+│   └── tests/             # 测试套件
+├── client/                # PC 客户端（Tauri 壳 + HTML）
+│   ├── chat.html          # 聊天界面
+│   └── src-tauri/         # Tauri 配置 + Rust 入口
+├── mobile/                # 手机端（HTML5 Web App）
+├── exchange/              # 多 AI 协作交流区
+├── HUMAN.md               # 人类治理文件（最高优先级，AI 只读）
+├── .claude/CLAUDE.md      # Claude 约束配置
+├── .trae/TRAE.md          # Trae CN 约束配置
+├── Makefile               # 快捷命令
 └── .gitignore
 ```
 
