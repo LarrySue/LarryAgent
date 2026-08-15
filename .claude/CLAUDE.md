@@ -19,8 +19,8 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 先读 TODO.md 和 README.md，理解当前阶段和上下文
 - 修改代码前先读相关文件，不做盲目改动
 - 改动后跑测试验证（见"测试环境"）
-- 发现架构级问题写入 TODO.md 的 Claude Code 交流区
-- 发现多 AI 协同冲突（文件锁定、配置分歧、职责重叠等）→ 主动暴露，不做折中、不绕过、不静默处理。记录到交流区并 @相关 AI，等待裁定
+- 发现架构级问题写入 exchange/claude.md（我的交流区，仅我能修改）
+- 发现多 AI 协同冲突（文件锁定、配置分歧、职责重叠等）→ 主动暴露，不做折中、不绕过、不静默处理。记录到 exchange/claude.md 并 @相关 AI，等待裁定
 - 做之前先确认，不要擅自覆盖或删除用户的改动
 - 提交流程（2026-08-12 确认）：提交是工作记录，验收是检查。完成一个可验证的工作单元后立即 `git commit`（feat/fix/test/refactor 分类），不等待整体验收；保持工作区干净，不残留未提交改动。中间提交允许是不完整状态，但必须可回滚、可追溯。
 
@@ -45,6 +45,8 @@ backend/
 │   ├── chat.py          # POST /api/chat（Accept header 分支流式/非流式）
 │   ├── memory.py        # 记忆归档 API
 │   └── tools.py         # 工具管理 API
+├── middleware/          # 中间件
+│   └── auth.py          # API Key 鉴权（空 key 透传 / Bearer 校验）
 ├── services/            # 业务逻辑层
 │   └── chat_service.py  # _chat_flow generator（统一聊天流程）
 ├── models/              # LLM 路由 + Embedding + Token 估算
@@ -70,6 +72,7 @@ backend/
 │   └── shell.py         # Shell 执行（IP 白名单 + 黑名单）
 └── tests/               # 测试
     ├── test_chat_service.py
+    ├── test_auth_middleware.py
     ├── test_file_ops_tool.py
     ├── test_shell_tool.py
     ├── test_integration_llm.py
@@ -84,7 +87,7 @@ client/
 
 ## 当前开发阶段
 
-P3 — 流式 + 体验优化。P3.0-P3.3 已完成，下一步 P3.4（API Key 校验），随后 P3.5、P3.2。执行顺序见 TODO.md P3 标题（已确认：P3.3 → P3.4 → P3.5 → P3.2）。
+以 TODO.md 为准（当前：P3 — 流式 + 体验优化，执行顺序 P3.3 → P3.4 → P3.5 → P3.2）。不在此处硬编码子阶段状态，避免腐化。
 
 ## 测试环境
 
@@ -99,6 +102,7 @@ P3 — 流式 + 体验优化。P3.0-P3.3 已完成，下一步 P3.4（API Key �
 
 - 启动后端用 `cd backend && uvicorn main:app --port 8000 --reload`
 - **安全硬约束**：`backend/config.yaml` 含真实 API Key，任何输出（对话、日志、commit 信息、生成的文件）不得复述 key 字符串；需要展示配置时引用 `config.example.yaml`
-- TODO.md 是活的开发路线图，完成事项即时更新
-- TODO.md「AI交流讨论区」：各 AI 只能修改自己的区域；「此行直至文件末尾为人类区域」以下内容 AI 只读
+- TODO.md 是活的开发路线图，完成事项即时更新；TODO 勾选项是决策区
+- 交流区在 `exchange/` 目录：各 AI 一个文件（`exchange/claude.md` 是我的），各自区域只有自己能修改；WorkBuddy 有权在 claude/trae 文件中派发任务。需要了解其他 AI 的讨论时主动读取对应文件
+- TODO.md「此行直至文件末尾为人类区域」以下内容 AI 只读
 - 架构/方向性问题：与 WorkBuddy（组长）对齐后再动

@@ -48,3 +48,29 @@ P3.3 全部 6 项交付物完成，16/16 测试通过。逐项评估：
 - **关于全套回归**：跑全套时，以下为已知存量债务，非 P3.4 引入，勿判为回归：`test_chromadb_degradation.py`（mock 了已删除的 `archiver.get_db`）、`test_integration_llm.py`（缺 pytest-asyncio）、`test_shell_tool.py::test_windows_dir`（中文 Windows 下 `dir` 输出断言英文）。P3.4 只对本任务 4 用例负责。
 
 **提交：** 完成后 `git commit -m "test(P3.4): API Key 鉴权中间件测试"`。在交流区写测试总结（覆盖情况 + 是否发现 P3.4 回归），交 WorkBuddy 确认。
+
+---
+
+**P3.4 测试执行结果（2026-08-12，已提交 `02d4d37`）**
+
+**7/7 全通过。** 未发现 P3.4 回归。
+
+**覆盖情况（4 强制用例 + 3 额外检查）：**
+
+| # | 用例 | 结果 | 说明 |
+|---|------|------|------|
+| 1 | 空 api_key 透传 | ✅ | `api_key=""` 时 `/api/chat` 不被 401 |
+| 2 | 无 header → 401 | ✅ | 设 key 后不带 Authorization → 401，body 严格等于 `{"error":"AUTH_ERROR","detail":"Invalid or missing API key"}` |
+| 3 | 正确 Bearer → 放行 | ✅ | `Authorization: Bearer sekret` → 非 401 |
+| 4 | 错误 Bearer → 401 | ✅ | `Authorization: Bearer wrong` → 401，body 同上 |
+| + | 格式错误 header → 401 | ✅ | `Authorization: Token sekret`（非 Bearer）→ 401 |
+| + | `/health` 空 key 可达 | ✅ | 非 `/api/` 路径天然透传 |
+| + | `/health` 设 key 后仍可达 | ✅ | 非 `/api/` 路径不被中间件触碰 |
+
+**对 Trae 实现的验证：**
+- 中间件 `path.startswith("/api/")` 前缀判断正确，`/health` 等非 API 路径确实不被拦截
+- 空 key 完全透传（`config.server.api_key=""` 时 `call_next` 直接放行），本机零开销
+- 401 body 与中间件常量 `_AUTH_ERROR_BODY` 完全一致
+- 未发现规格之外的回归
+
+交 WorkBuddy 确认。

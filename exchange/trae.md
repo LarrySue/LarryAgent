@@ -18,24 +18,35 @@
 
 ---
 
-**P3.4 任务派发（WorkBuddy 组长，2026-08-12）**
+**P3.4 执行总结：API Key 鉴权中间件（2026-08-12）** ✅ 已实现，提交 `8266354`
 
-目标：为 `/api/*` 加 Bearer Token 鉴权中间件，空 key 即禁用（透传），非空时校验 `Authorization: Bearer <key>`。
+**已按派发清单 1–5 全部完成：**
 
-**实现清单（你来写）：**
-1. 新增 `backend/middleware/auth.py`：`AuthMiddleware(BaseHTTPMiddleware)`。逻辑严格照决策流：
-   - 仅拦截 `request.url.path.startswith("/api/")`；非 `/api/` 路径（如 `/chat.html`、`/health`、OPTIONS）天然透传，不要写白名单分支。
-   - 取 `config = get_config()`；若 `not config.server.api_key:` → `return response`（**完全透传，这是最重要的一条**）。
-   - 非空时解析 `Authorization` header：`Bearer <key>` 格式；缺失/格式错/不匹配 → `return JSONResponse(status_code=401, content={"error": "AUTH_ERROR", "detail": "Invalid or missing API key"})`。
-2. `config.py` 的 `ServerConfig` 补 `api_key: str = ""` 字段（`load_config` 已用 `ServerConfig(**raw.get("server", {}))`，自动吸收，无需改解析逻辑）。
-3. `config.yaml` 的 `server` 段加 `api_key: ""`（保持空，当前不启用）。
-4. `config.example.yaml` 的 `server` 段加 `api_key: ""` + 注释："P5 放开局域网访问前必须设置，否则等于无鉴权暴露 shell 工具"。
-5. `main.py`：在 `include_router` 之前 `app.add_middleware(AuthMiddleware)`。
+1. **[middleware/auth.py](file:///d:/Code/LarryAgent/backend/middleware/auth.py)** — 新增 `AuthMiddleware(BaseHTTPMiddleware)`，严格按决策流：
+   - `path.startswith("/api/")` 才拦截，`/health`、`/chat.html` 等非 `/api/` 路径天然透传，**未写白名单分支**
+   - `config.server.api_key` 为空 → 直接 `call_next` 完全透传（本机零校验）
+   - 非空时解析 `Authorization: Bearer <key>`：缺失 / 非 Bearer 前缀 / 值不匹配 → `401 + {error:AUTH_ERROR, detail:...}`
 
-**硬性验收点（任一不满足即不合格）：**
-- 空 api_key 时整站 `/api/*` 完全可用（本机不校验）。
-- 设 key 后，无 header → 401，body 严格为 `{"error":"AUTH_ERROR","detail":"Invalid or missing API key"}`；正确 Bearer → 200；错误 Bearer → 401。
+2. **[config.py ServerConfig](file:///d:/Code/LarryAgent/backend/config.py#L26-L29)** — 补 `api_key: str = ""`；`load_config` 用 `ServerConfig(**raw["server"])` 自动吸收，未改解析逻辑
 
-**不要做：** 不要引入异常类（P3.5 才做 AuthError）；不要动现有路由逻辑；不要写冗余路径白名单。
+3. **[config.yaml](file:///d:/Code/LarryAgent/backend/config.yaml#L36-L39) server 段** — 加 `api_key: ""`，保持空（当前不启用）
 
-**提交：** 实现完即 `git commit -m "feat(P3.4): API Key 鉴权中间件"`（按提交流程约定）。完成后在交流区写执行总结，交 Claude Code 测试。
+4. **[config.example.yaml](file:///d:/Code/LarryAgent/backend/config.example.yaml#L36-L39)** — 同步加字段 + "P5 放开局域网访问前必须设置，否则等于无鉴权暴露 shell 工具"注释
+
+5. **[main.py](file:///d:/Code/LarryAgent/backend/main.py#L89-L94)** — 在 `include_router` 之前 `app.add_middleware(AuthMiddleware)`
+
+**硬性验收点自测通过（临时 TestClient 脚本，4 维度共 7 断言全过）：**
+- ✅ 空 api_key → `/api/*` 200 完全透传
+- ✅ 空 api_key → `/health`（非 `/api/`）不被中间件触碰
+- ✅ 设 key + 无 Authorization header → 401，body 严格等于 `{"error":"AUTH_ERROR","detail":"Invalid or missing API key"}`
+- ✅ 设 key + Authorization 格式错（`Token wrong`）→ 401 + 同 body
+- ✅ 设 key + 正确 `Bearer sekret` → 200 放行
+- ✅ 设 key + `Bearer wrong`（格式对、值错）→ 401 + 同 body
+- ✅ 设 key + `/health`（非 `/api/` 路径）→ 200 不拦截
+
+**未做的（严格按派发规格跳过）：**
+- ❌ 未引入 `AuthError` 异常类（留给 P3.5）
+- ❌ 未动现有路由 handler 逻辑
+- ❌ 未写路径白名单分支（仅靠 `/api/` 前缀判断）
+
+**下一步：** 等 Claude Code 写 `tests/test_auth_middleware.py` 跑 4 个强制用例，通过后再走 WorkBuddy → 人类确认，最后勾选 TODO。
