@@ -34,9 +34,9 @@
 
 - [x] ~~**安全底线强制语气 vs 正向改写取舍未锁定**~~ → 已解决。MEMORY.md 改写时已执行"安全底线保留强制语气"原则（不输出 key、锚点保护未转正向）；用户确认"先保持"。
 
-- [ ] **派发方复验边界未成文**（2026-08-15 更新）：P3.4 已在实践中执行独立复验（读 auth.py 代码 + 跑 auth_middleware 7/7 + chat_service 16/16），但"组长派发后必须独立复验关键交付物"这条规则未固化到任何约束文件。当前靠用户提醒驱动，若下次派发后再次遗漏复验，建议固化为成文规则（写入 MEMORY.md 定位段或 exchange/README.md 协作规则）。
+- [x] ~~**派发方复验边界未成文**~~ → 已解决。规则已写入 MEMORY.md「WorkBuddy 定位」段：派发方复验规则（建议独立复验关键交付物，复验通过后再勾选 TODO 完工）。
 
-- [ ] **WorkBuddy 核心约束文件（MEMORY.md）不在版本库内，跨 AI 可见性不对称**（2026-08-15 新增）：MEMORY.md 是 WorkBuddy 最密集的约束来源，但被 `.gitignore` 忽略（用户此前为保护记忆文件主动忽略），导致：(1) Claude/Trae 无法通过 git 读取 WorkBuddy 的约束状态；(2) MEMORY.md 的改写只有本地磁盘生效，不像 CLAUDE.md/TRAE.md 的修改会进 git 可被其他 AI 感知。当前影响较小（Claude/Trae 的约束文件已自足），但随着协作深入，跨 AI 约束可见性不对称可能成为摩擦点。建议：维持现状（记忆文件不入库），但后续若出现因"看不到 WorkBuddy 约束"导致的协作摩擦，再考虑放行 MEMORY.md 或将其关键约束摘要同步到 exchange/workbuddy.md。
+- [x] ~~**WorkBuddy 核心约束文件（MEMORY.md）不在版本库内**~~ → 已解决。`.gitignore` 已放行 `.workbuddy/memory/`，MEMORY.md 及日志文件已入库，跨 AI 约束可见性对称。
 
 ---
 
