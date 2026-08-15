@@ -127,13 +127,33 @@ def load_config(config_path: str | None = None) -> Config:
             base_url=cfg.get("base_url", ""),
         )
 
+    # === 路径锚定（修复双库问题）===
+    # 相对路径一律相对【配置文件所在目录】解析，而非当前工作目录(CWD)。
+    # 原因：原实现按 CWD 解析 data/larry.db，从项目根 / backend/ 等不同目录启动后端
+    #       会写出多个散落的 larry.db。锚定后无论何处启动都指向同一文件。
+    # 注意：测试通过 LARRY_CONFIG 指向临时 yaml 且 database.path 用【绝对路径】，
+    #       此处会原样透传，因此测试隔离不受影响。
+    config_dir = Path(config_path).resolve().parent
+
+    db_raw = dict(raw.get("database", {}) or {})
+    db_path = db_raw.get("path", "data/larry.db")
+    if not os.path.isabs(db_path):
+        db_path = str((config_dir / db_path).resolve())
+    db_raw["path"] = db_path
+
+    vs_raw = dict(raw.get("vector_store", {}) or {})
+    vs_path = vs_raw.get("path", "data/chroma")
+    if not os.path.isabs(vs_path):
+        vs_path = str((config_dir / vs_path).resolve())
+    vs_raw["path"] = vs_path
+
     _config = Config(
         machine_id=raw.get("machine_id", ""),
         roles=raw.get("roles", {}),
         models=models,
         server=ServerConfig(**raw.get("server", {})),
-        database=DatabaseConfig(**raw.get("database", {})),
-        vector_store=VectorStoreConfig(**raw.get("vector_store", {})),
+        database=DatabaseConfig(**db_raw),
+        vector_store=VectorStoreConfig(**vs_raw),
         embedding=EmbeddingConfig(**raw.get("embedding", {})),
         tools=ToolsConfig(**raw.get("tools", {})),
         llm=LLMConfig(**raw.get("llm", {})),
