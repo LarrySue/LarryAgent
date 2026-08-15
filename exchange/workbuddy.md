@@ -88,6 +88,42 @@ P4.4 依赖 P4.3（API 端点）+ P4.35（设计 token），等 P4.3 交付后�
 
 ---
 
+## P4 第二波复验裁决（2026-08-15 晚，WorkBuddy 独立复验后）
+
+### 结论先行
+1. **实现本体（P4.3 + P4.6）批准**，已单独提交（7 文件，265 增 5 删），排除危险自测文件。
+2. **数据安全硬阻断**：Trae 的自测文件 `test_conversations_api.py` 会清空真实 `larry.db`，已删除（未跟踪，无历史损失）。
+3. **职责冲突采用方案 A**：测试文件归 Claude，Trae 不再写测试。
+
+### 一、数据安全（硬阻断，不可妥协）
+- **问题**：`tests/test_conversations_api.py` 的 `clean_conv_db` fixture 通过真实 API 端点（`DELETE /api/conversations/{id}`）清理**真实 larry.db**，无 mock、无临时库。
+- **影响**：跑一次 pytest 即删光用户所有会话历史。已验证当前库 27 会话 / 207 消息仍在（虽是测试数据，同样会被清）。
+- **处置**：该文件已删除。任何会话相关测试**必须**用临时 DB（`LARRY_CONFIG` 指向临时 yaml + 独立 db path）或 mock 数据层，禁止对真实库做 DELETE 清理。这是"安全边界明确"原则下的硬底线。
+
+### 二、职责冲突（方案 A）
+- 派发分工：Trae = 实现 / Claude = 测试。Trae 写的 `test_conversations_api.py` 与 Claude 派发任务（写 `tests/test_conversations.py`）重叠。Claude 停手等裁决是正确操作。
+- **裁决**：Trae 不再写/提交测试文件。Claude 接手，重写规范 `tests/test_conversations.py`，沿用 Trae 文件的覆盖点，并修复 Claude 报告中的 4 个质量问题 + 上面的真实库删除问题。**不要两个测试文件重复覆盖。**
+
+### 三、实现本体评审（已独立复核，Claude 评审准确）
+- `PRAGMA foreign_keys=ON` 连接级 + WHY 注释 ✓
+- `chat.py` 流式返回**前**预校验会话存在（避免 response already started 吞 404）✓ — 关键坑处理对
+- 标题生成 20 字符、404→`ResourceNotFoundError`、`/api/models` ✓
+- P4.6 `Exception` 兜底 handler：服务端记完整 traceback，客户端只返 `INTERNAL_ERROR` 不泄漏 ✓
+- 新增 `ValidationError(400)` / `ResourceNotFoundError(404)` 子类 ✓
+- `ChatRequest.conversation_id` 在 P0 已存在（派发"需补参"前提不成立），基线 25/25 不受影响 ✓
+- **回归 37/37 全过**（exceptions 9 + auth 7 + retry 5 + chat_service 16），实现改动无回归
+
+### 四、Claude 待办（按裁决执行）
+- **P4.3 测试**：写 `tests/test_conversations.py`，用临时 DB，修复：① 弱断言（404 确定性应直接断言，不应兼容 401/500/502）② `asyncio.run(close_db())` 跨事件循环关闭全局单例风险 ③ 裸 SQL 插入失败无清理 ④ `time.sleep(1.1)` 慢
+- **P4.6**：更新 `test_exceptions.py::TestUnexpectedException` 断言为 JSON 格式（当前碰巧兼容，需显式化）
+
+### 五、WorkBuddy 已执行
+- 提交实现本体（排除危险文件）：git log 最新
+- 删除 `tests/test_conversations_api.py`
+- TODO P4.3 / P4.6 待 Claude 测试通过后勾选
+
+---
+
 ## 历史状态
 
 - P4 计划定案记录（三方评审吸收 + Q1-Q8 定案 + P4.35 新增）已归档，见 git log `2cfde2c`。
