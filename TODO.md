@@ -218,13 +218,18 @@
 - [x] `client/chat.html`：SSE 流解析 + delta 文本实时追加 + 工具调用卡片（spinner→✅/❌ + 结果展示）
 - [x] 测试验证：11 项 mock 测试全通过 + 3 项真实 DeepSeek API 集成测试全通过
 
-**P3.2 - LLM 重试**
+**P3.2 - LLM 重试**（2026-08-15 派发：Trae 实现 / Claude 测试 / WorkBuddy 确认）
 
-- [ ] 引入 `tenacity`，`chat_completion` 外层加 `@retry`
-- [ ] 触发条件：网络错误、429（尊重 Retry-After header）、5xx
-- [ ] 不在重试策略内：4xx 参数错误（代码 bug 重试没用）
-- [ ] `config.yaml` 新增 `llm.max_retries`（默认 3）、`llm.retry_backoff_base`（默认 1.0，指数退避 1s/2s/4s）
-- [ ] 日志：每次重试记录 `batch_llm_call retry attempt=2/3 error=xxx wait=2s`
+- [ ] `requirements.txt` 新增 `tenacity>=8.2.0`
+- [ ] `models/llm.py` 新增重试包装函数（`AsyncRetrying` + `retry_if_exception_type`），参数从 config 读取
+- [ ] 可重试异常：`APITimeoutError` / `APIConnectionError` / `RateLimitError` / `InternalServerError`
+- [ ] 不可重试：4xx `APIStatusError` / `AuthenticationError` / 其他
+- [ ] `chat_completion`（非流式）：`create` 调用套重试包装
+- [ ] `chat_completion_stream_events`（流式）：`create` 调用套重试包装；流迭代中失败不重试（已部分消费）
+- [ ] 每次重试有日志（含 attempt 次数 + 异常类型 + 等待时间）
+- [ ] `max_retries=0` 时不重试（直接抛）
+- [ ] 测试 `tests/test_llm_retry.py`（Claude）：5 项强制——可重试异常触发重试 / 不可重试不触发 / 重试耗尽抛原始异常 / max_retries=0 不重试 / 流式 create 阶段重试
+- [ ] 回归：`test_chat_service.py` 16 项 + `test_auth_middleware.py` 7 项 + `test_exceptions.py` 9 项全通过
 
 **P3.3 - Token 用量统计** ✅（2026-08-12，含 token 翻倍优化）
 

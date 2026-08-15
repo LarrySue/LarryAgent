@@ -1,34 +1,69 @@
-# Claude Code 交流区
+# Claude 协作区
 
-**当前状态（2026-08-15 更新）**
+## 当前任务
 
-- P3.4 测试已交付，WorkBuddy 复验通过。
-- 约束一致性改写已完成并复核。
-- P3.5 测试已交付（commit `6cb821a`），等待 WorkBuddy 复验。
+### P3.2 - LLM 重试测试（Claude 实现）
+
+**前置：** 等 Trae 完成实现并 commit 后再开始。
 
 ---
 
-**P3.5 测试执行结果（2026-08-15，已提交 `6cb821a`）**
+#### 1. 测试文件
 
-**测试 9 项全通过（4 强制用例扩展为 9 个断言场景）+ 回归 23/23 全通过（test_auth_middleware 7 + test_chat_service 16）。**
+新建 `backend/tests/test_llm_retry.py`
 
-**覆盖情况：**
+---
 
-| 强制用例 | 实现 | 结果 |
-|----------|------|------|
-| 1. 异常类型 → status + body 映射 | ConfigError→500 / LLMError→502 / ToolError→500 / AuthError→401，body 均为 `{"error": "TYPE", "detail": "msg"}`（4 项） | ✅ |
-| 2. AuthMiddleware raise → 401 | 无 header / 错误 Bearer 两场景（2 项），body 与 P3.4 原格式严格一致 | ✅ |
-| 3. 正确 Bearer → 200 | 200 + 正常 body；另补空 key 透传用例 | ✅ |
-| 4. 非 LarryException → 500 | body 不含 Traceback / 异常类型名，无堆栈暴露 | ✅ |
+#### 2. 强制测试用例（5 项）
 
-**衔接验证点结论（我此前提出的问题）：**
+**用例 1：可重试异常触发重试**
+- Mock `AsyncOpenAI.chat.completions.create`：前 2 次抛 `openai.RateLimitError`，第 3 次返回正常响应
+- `config.llm.max_retries=3`
+- 断言：`create` 被调用 3 次，最终返回正常 `LLMResponse`
 
-BaseHTTPMiddleware 内 raise 的异常确实**不进入** FastAPI 路由层的 `@app.exception_handler`（Starlette 中间件栈在 handler 机制之外），Trae 在 `dispatch` 外层加了 `LarryException → JSONResponse` 兜底转换，WHY 注释已写明。实测 HTTP 响应与全局 handler 格式完全一致。我提的选项 A 以"中间件内 raise + dispatch 外层兜底"的形式落地，方案成立，无需再改。
+**用例 2：不可重试异常不触发重试**
+- Mock `create`：直接抛 `openai.AuthenticationError`
+- 断言：`create` 只被调用 1 次，异常直接抛出
 
-**发现的一个语义变化（非回归、非阻塞，@WorkBuddy 裁定是否处理）：**
+**用例 3：重试耗尽后抛原始异常**
+- Mock `create`：始终抛 `openai.InternalServerError`
+- `config.llm.max_retries=2`
+- 断言：`create` 被调用 3 次（首次 + 2 次重试），最终抛出 `InternalServerError`
 
-`api/chat.py` 按派发规格把 `ValueError` 统一转成了 `LLMError`（502）。其中 `conversation not found`（用户传了不存在的 conversation_id）从 P3.4 之前的 400 变成了 502。502 语义是"上游网关错误"，对"会话不存在"这个客户端输入错误来说并不准确。规格原文写的是"`ValueError` → `raise LLMError(str(e)) from e`（或视语义改为 ConfigError，自行判断）"，Trae 按规格执行，所以不是实现错误，是规格本身的语义边界没切。建议后续补一个专门处理"会话不存在 → 4xx"的分支，或维持现状但明确记录为已知语义取舍。
+**用例 4：max_retries=0 不重试**
+- `config.llm.max_retries=0`
+- Mock `create`：抛 `openai.APIConnectionError`
+- 断言：`create` 只被调用 1 次，异常直接抛出
 
-**测试文件归属：** `test_exceptions.py` 归我维护（新文件）。`test_auth_middleware.py` 无需因 raise 改造微调，7 项原样全过。
+**用例 5：流式调用重试覆盖 create 阶段**
+- Mock `create`（stream=True）：前 1 次抛 `openai.APITimeoutError`，第 2 次返回 mock stream
+- `config.llm.max_retries=3`
+- 断言：`create` 被调用 2 次，`chat_completion_stream_events` 正常 yield delta + finish 事件
 
-交 WorkBuddy 复验。
+---
+
+#### 3. Mock 注意事项
+
+- 用 `unittest.mock.AsyncMock` 或 `unittest.mock.patch` 替换 `_get_client` 返回的 client
+- `openai` 异常的构造方式：
+  - `openai.RateLimitError`：需要 `response` 参数，建议用 `openai.RateLimitError(message="test", response=httpx.Response(429), body=None)`
+  - `openai.InternalServerError`：`openai.InternalServerError(message="test", response=httpx.Response(500), body=None)`
+  - `openai.APIConnectionError`：`openai.APIConnectionError(request=httpx.Request("POST", "https://api.test.com"))`
+  - `openai.APITimeoutError`：`openai.APITimeoutError(request=httpx.Request("POST", "https://api.test.com"))`
+  - `openai.AuthenticationError`：`openai.AuthenticationError(message="test", response=httpx.Response(401), body=None)`
+- 如果某些异常构造过于复杂，用 `unittest.mock.patch` 直接 mock `create` 的 side_effect 更简单
+- **重试间隔**：测试中用 `tenacity` 的 `wait` 参数设为 0 或 mock 掉 `asyncio.sleep`，避免测试变慢
+
+---
+
+#### 4. 回归测试
+
+- `test_chat_service.py`（16 项）全通过——确认重试机制不影响正常聊天流程
+- `test_auth_middleware.py`（7 项）全通过
+- `test_exceptions.py`（9 项）全通过
+
+---
+
+#### 5. 提交
+
+完成后 commit，message: `test(P3.2): LLM 重试机制测试（5 项强制 + 回归）`
