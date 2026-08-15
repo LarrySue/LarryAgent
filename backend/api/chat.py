@@ -13,10 +13,11 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from openai import APIError
 
+from exceptions import LLMError
 from services.chat_service import ChatRequest, ChatResponse, handle_chat, handle_chat_stream
 
 logger = logging.getLogger(__name__)
@@ -53,11 +54,12 @@ async def chat(req: ChatRequest, request: Request):
     try:
         return await handle_chat(req, caller_ip)
     except ValueError as e:
+        # _chat_flow 里 generator 推送的 error 事件对应 LLM 请求过程内部异常，归 LLMError
         logger.warning("Chat error: %s", e)
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise LLMError(str(e)) from e
     except APIError as e:
         logger.error("LLM API error: %s", e)
-        raise HTTPException(status_code=502, detail=f"LLM API error: {e}") from e
+        raise LLMError(f"LLM API error: {e}") from e
     except Exception as e:
         logger.exception("Unexpected error during chat")
-        raise HTTPException(status_code=502, detail=f"LLM request failed: {e}") from e
+        raise LLMError(f"LLM request failed: {e}") from e

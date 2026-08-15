@@ -15,11 +15,12 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from config import get_config
 from db.memories import list_memories, delete_memory as db_delete_memory
+from exceptions import LarryException, LLMError
 from memory.archiver import generate_summary, confirm_and_store
 from rag.vector_store import delete_by_memory_id
 
@@ -78,10 +79,11 @@ async def trigger_archive(req: ArchiveRequest):
             summary=summary,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # generate_summary 内部 LLM 请求 / 摘要提取阶段异常，归 LLMError
+        raise LLMError(str(e)) from e
     except Exception as e:
         logger.exception("Archive generation failed")
-        raise HTTPException(status_code=500, detail=f"Archive generation failed: {e}")
+        raise LLMError(f"Archive generation failed: {e}") from e
 
 
 @router.post("/archive/confirm")
@@ -105,7 +107,7 @@ async def confirm_archive(req: ConfirmRequest):
         }
     except Exception as e:
         logger.exception("Archive confirm failed")
-        raise HTTPException(status_code=500, detail=f"Archive confirm failed: {e}")
+        raise LarryException(f"Archive confirm failed: {e}") from e
 
 
 @router.get("", response_model=list[MemoryResponse])
@@ -142,7 +144,7 @@ async def delete_memory(memory_id: int):
         await db_delete_memory(memory_id)
     except Exception as e:
         logger.exception("Failed to delete memory from SQLite")
-        raise HTTPException(status_code=500, detail=f"Failed to delete memory: {e}")
+        raise LarryException(f"Failed to delete memory: {e}") from e
 
     logger.info("Memory deleted: id=%d", memory_id)
     return {"status": "deleted", "memory_id": memory_id}

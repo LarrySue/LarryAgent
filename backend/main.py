@@ -18,10 +18,11 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 
 from config import load_config, get_config
+from exceptions import LarryException
 from logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,18 @@ app = FastAPI(
 
 # 注：不再配置 CORS 中间件。服务仅监听本机回环地址，前端与 API 同源部署
 # （测试页通过下方 /chat.html 路由托管），无需跨域支持。
+
+
+# === 全局异常 handler ===
+# 统一出口：所有 LarryException 子类都格式化为
+# {error: TYPE, detail: msg} + 对应 status_code，与 P3.4 AuthMiddleware 格式一致。
+
+@app.exception_handler(LarryException)
+async def larry_exception_handler(request: Request, exc: LarryException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.error_type, "detail": exc.detail},
+    )
 
 
 # === 挂载中间件 ===
