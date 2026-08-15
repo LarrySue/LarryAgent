@@ -158,11 +158,36 @@ class TestMiddlewarePass:
 # ---------------------------------------------------------------------------
 
 class TestUnexpectedException:
-    """未预期异常返回 500，body 不含堆栈信息。"""
+    """
+    未预期异常（非 LarryException）→ P4.6 兜底 handler：
+    - 客户端收到 500 + 统一 JSON {"error": "INTERNAL_ERROR", "detail": "Internal server error"}
+    - 不泄漏任何内部信息（堆栈 / 异常类型名 / 异常消息）
+    - 服务端日志记录完整 traceback（排查用，不出门）
+    """
 
-    def test_unexpected_500_no_traceback(self, client):
+    def test_unexpected_500_json_format(self, client):
+        """body 为统一 JSON 格式（P4.6 后不再是 Starlette 纯文本）。"""
         res = client.get("/api/_exc_test/unexpected")
         assert res.status_code == 500
-        body = res.text.lower()
-        assert "traceback" not in body
-        assert "valueerror" not in body
+        assert res.json() == {
+            "error": "INTERNAL_ERROR",
+            "detail": "Internal server error",
+        }
+
+    def test_unexpected_no_internal_leak(self, client):
+        """响应不泄漏异常类型名 / 异常消息 / 堆栈内容。"""
+        res = client.get("/api/_exc_test/unexpected")
+        text = res.text
+        assert "Traceback" not in text
+        assert "ValueError" not in text
+        assert "boom" not in text  # _raise_unexpected 的异常消息，不得出现在响应中
+
+    def test_unexpected_logs_traceback_server_side(self, client, caplog):
+        """服务端日志必须记录完整 traceback（P4.6 设计意图：日志留服务端，响应给客户端）。"""
+        import logging
+
+        with caplog.at_level(logging.ERROR):
+            client.get("/api/_exc_test/unexpected")
+        assert any(
+            "Unhandled exception" in rec.message for rec in caplog.records
+        ), "服务端未记录未预期异常日志"
