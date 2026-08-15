@@ -20,7 +20,15 @@
 - [ ] 用户画像沉淀：长期 — 从记忆中提炼结构化用户画像，注入 system prompt
 - [ ] 场景间信息同步策略：长期 — 定义全局共享 vs 领域私有的记忆边界
 
-### 对于AI的约束条件/提示词/注意力/配置文件等的一致性调整（Marvis情况特殊，不纳入自查和调整）
+### 工程债务（需要重新考虑）
+
+- [ ] **存量测试债务是否修复**：`test_chromadb_degradation.py`（mock 了已不存在的 archiver.get_db）、`test_integration_llm.py`（缺 pytest-asyncio）、`test_shell_tool.py::test_windows_dir`（中文 Windows 编码断言）。选项 A：修复恢复"全套绿"基线；选项 B：维持"相关测试 + 已知项甄别"现状。当前规则以 B 运转（见 CLAUDE.md/TRAE.md 测试环境段）。此事不是很急，找个合适的机会讨论一下
+
+### 对于AI的约束条件/提示词/注意力/配置文件等的一致性调整（）
+
+- Marvis情况特殊，不纳入自查和调整
+- Claude和Trae已经完成约束一致性改写，除非后续观察到其他问题，否则视为完成。
+- WorkBuddy经过初步的一致性调整，已经取得了可见的效果，后续会继续观察并调整。
 
 > WorkBuddy 自查发现的张力点（2026-08-14 初版，2026-08-15 复审更新）
 
@@ -247,11 +255,15 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 
 P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先 set `server.api_key`），当前本机使用可空。
 
-**P3.5 - 自定义异常类**
+**P3.5 - 自定义异常类**（2026-08-15 派发：Trae 实现 / Claude 测试 / WorkBuddy 确认）
 
-- [ ] `exceptions.py`：`LarryException` 基类 → `ConfigError` / `LLMError` / `ToolError` / `AuthError`
-- [ ] 替换 `chat.py` 中通用 `ValueError`、`Exception` 为具体类型
-- [ ] 全局异常 handler：`larry_exception_handler` 注册到 FastAPI，统一响应 `{"error": "TYPE", "detail": "msg"}` + 对应 HTTP 状态码
+- [ ] 新增 `backend/exceptions.py`：`LarryException` 基类（`error_type` + `status_code` + `detail`）→ `ConfigError`(500) / `LLMError`(502) / `ToolError`(500) / `AuthError`(401)
+- [ ] 改造 `middleware/auth.py`：内联 `JSONResponse(401)` → `raise AuthError("Invalid or missing API key")`（Option A 统一出口，WorkBuddy 裁定）
+- [ ] 改造 `api/chat.py`：三段 try/except（ValueError/APIError/Exception）→ 转为 `raise LLMError(...)` 等具体类型；去掉 `HTTPException` import
+- [ ] 全局异常 handler 注册到 `main.py`：`@app.exception_handler(LarryException)` → `JSONResponse(status_code=exc.status_code, content={"error": exc.error_type, "detail": exc.detail})`
+- [ ] 扫描 `api/memory.py` / `api/tools.py`，通用异常替换为对应 LarryException 子类（FastAPI 内置 404 等可保留 HTTPException）
+- [ ] 测试 `tests/test_exceptions.py`（Claude）：4 项强制——异常类型映射 / AuthMiddleware raise→401 / 正确 Bearer→200 / 非预期异常→500
+- [ ] 回归：`test_auth_middleware.py` 7 项 + `test_chat_service.py` 16 项全通过
 
 ---
 
