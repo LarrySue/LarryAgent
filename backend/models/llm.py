@@ -18,9 +18,17 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import AsyncGenerator
+from functools import partial
+from typing import AsyncGenerator, Callable
 
 from openai import AsyncOpenAI
+import openai
+from tenacity import (
+    AsyncRetrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from config import get_config
 
@@ -135,6 +143,80 @@ def _debug_log_response(obj: object) -> None:
         logger.debug("LLM raw response:\n%s", json.dumps(data, ensure_ascii=False, indent=2, default=str))
     except Exception:
         logger.debug("LLM raw response serialization failed")
+
+
+# ====================================================================
+# 重试机制（P3.2 指数退避）
+# ====================================================================
+
+# 可重试的异常类型（网络/超时/429/5xx）
+# 4xx 参数错误、AuthenticationError 不在此列表，不重试
+_RETRYABLE_EXCEPTIONS = (
+    openai.APITimeoutError,
+    openai.APIConnectionError,
+    openai.RateLimitError,
+    openai.InternalServerError,
+)
+
+
+def _log_retry(state, total_attempts: int) -> None:
+    """tenacity before_sleep 回调：每次重试前记录日志。
+
+    格式：batch_llm_call retry attempt=2/4 error=RateLimitError wait=2.0s
+
+    Args:
+        state: tenacity RetryCallState
+        total_attempts: 总尝试次数（max_retries + 1），通过 partial 绑定
+    """
+    # state.next_action.sleep 是下次等待秒数
+    wait_sec = state.next_action.sleep if state.next_action else 0
+    # 失败异常类型名（去掉 module 前缀）
+    exc = state.outcome.exception() if state.outcome else None
+    exc_name = type(exc).__name__ if exc else "Unknown"
+    logger.warning(
+        "batch_llm_call retry attempt=%d/%d error=%s wait=%.2fs",
+        state.attempt_number,
+        total_attempts,
+        exc_name,
+        wait_sec,
+    )
+
+
+async def _call_with_retry(func: Callable, *args, **kwargs):
+    """带指数退避重试的异步调用包装。
+
+    - 从 config.llm.max_retries + retry_backoff_base 读取参数
+    - 可重试异常：_RETRYABLE_EXCEPTIONS（超时/连接/429/5xx）
+    - max_retries=0 时不重试，直接调用
+    - 重试耗尽后 reraise 原始异常
+
+    Args:
+        func: 异步可调用
+        *args, **kwargs: 透传给 func 的参数
+
+    Returns:
+        func 的返回值
+    """
+    cfg = get_config()
+    max_retries = cfg.llm.max_retries
+    backoff_base = cfg.llm.retry_backoff_base
+
+    # max_retries=0：完全跳过 tenacity，直接调用
+    if max_retries <= 0:
+        return await func(*args, **kwargs)
+
+    # tenacity 总尝试次数 = max_retries + 1（首次 + max_retries 次重试）
+    total_attempts = max_retries + 1
+
+    async for attempt in AsyncRetrying(
+        stop=stop_after_attempt(total_attempts),
+        wait=wait_exponential(multiplier=backoff_base, min=backoff_base, max=backoff_base * (2 ** max_retries)),
+        retry=retry_if_exception_type(_RETRYABLE_EXCEPTIONS),
+        before_sleep=partial(_log_retry, total_attempts=total_attempts),
+        reraise=True,
+    ):
+        with attempt:
+            return await func(*args, **kwargs)
 
 
 # ====================================================================
@@ -274,7 +356,7 @@ async def chat_completion(
 
         _debug_log_request(model, messages, {k: v for k, v in kwargs.items() if k != "messages"})
 
-        response = await client.chat.completions.create(**kwargs)
+        response = await _call_with_retry(client.chat.completions.create, **kwargs)
         choice = response.choices[0]
         msg = choice.message
         content = msg.content or ""
@@ -388,7 +470,10 @@ async def chat_completion_stream_events(
     _debug_log_request(model, messages, {k: v for k, v in kwargs.items()
                                          if k not in ("messages", "stream", "stream_options")})
 
-    stream = await client.chat.completions.create(**kwargs)
+    # 重试只包裹 create 调用；create 成功后流迭代中的异常不重试
+    # 理由：create 失败通常是连接/超时/429，值得重试；
+    #       流迭代中失败通常是中途网络断开，重试整个流代价高且用户已看到部分输出
+    stream = await _call_with_retry(client.chat.completions.create, **kwargs)
 
     usage_data: dict = {}
     finish_reason: str | None = None
