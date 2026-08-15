@@ -263,15 +263,15 @@
 
 P3 只做记录告警，DB 表和 API 留给 P4。
 
-**P3.4 - API Key 校验**（进行中，2026-08-12 派发：Trae 实现 / Claude 测试 / WorkBuddy 确认）
+**P3.4 - API Key 校验** ✅（2026-08-15，Trae 实现 / Claude 测试 / WorkBuddy 复验通过）
 
-- [ ] 新增 `backend/middleware/auth.py`：`AuthMiddleware(BaseHTTPMiddleware)`，仅拦截 `path.startswith("/api/")`，非 `/api/` 天然透传；空 `server.api_key` 完全透传；非空时校验 `Authorization: Bearer <key>`，失败返回 401
-- [ ] `config.py` `ServerConfig` 补 `api_key: str = ""` 字段（解析逻辑已兼容，无需改）
-- [ ] `config.yaml` `server` 段新增 `api_key: ""`（保持空，当前不启用）
-- [ ] `config.example.yaml` `server` 段新增 `api_key: ""` + "P5 放开局域网前必须设置"注释
-- [ ] `main.py` 在 `include_router` 前 `app.add_middleware(AuthMiddleware)`
-- [ ] 401 响应体严格为 `{"error": "AUTH_ERROR", "detail": "Invalid or missing API key"}`
-- [ ] 测试 `tests/test_auth_middleware.py`（FastAPI TestClient）：空 key 透传 / 无 header→401 / 正确 Bearer→200 / 错误 Bearer→401
+- [x] 新增 `backend/middleware/auth.py`：`AuthMiddleware(BaseHTTPMiddleware)`，仅拦截 `path.startswith("/api/")`，非 `/api/` 天然透传；空 `server.api_key` 完全透传；非空时校验 `Authorization: Bearer <key>`，失败返回 401
+- [x] `config.py` `ServerConfig` 补 `api_key: str = ""` 字段（解析逻辑已兼容，无需改）
+- [x] `config.yaml` `server` 段新增 `api_key: ""`（保持空，当前不启用）
+- [x] `config.example.yaml` `server` 段新增 `api_key: ""` + "P5 放开局域网前必须设置"注释
+- [x] `main.py` 在 `include_router` 前 `app.add_middleware(AuthMiddleware)`
+- [x] 401 响应体严格为 `{"error": "AUTH_ERROR", "detail": "Invalid or missing API key"}`
+- [x] 测试 `tests/test_auth_middleware.py`（FastAPI TestClient）：空 key 透传 / 无 header→401 / 正确 Bearer→200 / 错误 Bearer→401 — 7 项全通过；回归 `test_chat_service.py` 16 项全通过，无回归
 
 P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先 set `server.api_key`），当前本机使用可空。
 
