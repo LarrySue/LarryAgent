@@ -168,3 +168,41 @@ stream = await _call_with_retry(_create_and_start_stream, client, kwargs)
 #### 提交后
 
 commit 后在 exchange/trae.md 更新状态，Claude 拉取最新代码开始测试。
+
+---
+
+## P3.2 交付总结（2026-08-15 Trae）
+
+**commit:** `753160e` — `feat(P3.2): LLM 重试机制（tenacity 指数退避）`
+
+### 实现清单（对照验收标准逐项勾选）
+
+- [x] `requirements.txt` 新增 `tenacity>=8.2.0`（环境已有 9.1.4）
+- [x] `models/llm.py` 新增重试逻辑，覆盖 `chat_completion`（[line 359](file:///d:/Code/LarryAgent/backend/models/llm.py#L359)）和 `chat_completion_stream_events`（[line 476](file:///d:/Code/LarryAgent/backend/models/llm.py#L476)）
+- [x] 可重试异常：`APITimeoutError` / `APIConnectionError` / `RateLimitError` / `InternalServerError`（[line 153-158](file:///d:/Code/LarryAgent/backend/models/llm.py#L153-L158)）
+- [x] 不可重试：4xx `APIStatusError` / `AuthenticationError` / 其他（不在 `_RETRYABLE_EXCEPTIONS` 中即不重试）
+- [x] 重试参数从 config 读取：`max_retries` + `retry_backoff_base`（[line 200-202](file:///d:/Code/LarryAgent/backend/models/llm.py#L200-L202)）
+- [x] 每次重试有日志：`batch_llm_call retry attempt=N/M error=XxxError wait=X.XXs`（[line 176-182](file:///d:/Code/LarryAgent/backend/models/llm.py#L176-L182)）
+- [x] `max_retries=0` 时跳过 tenacity 直接调用（[line 204-206](file:///d:/Code/LarryAgent/backend/models/llm.py#L204-L206)）
+- [x] commit message 完全匹配规格
+
+### 设计决策
+
+1. **采用规格推荐的简化方案**：流式调用只在 `create` 处重试，流迭代中失败不重试。理由如规格所述（用户已看到部分输出 + 重试代价高 + 实现简单）。代码中用 WHY 注释说明决策。
+2. **日志用 `functools.partial` 绑定 `total_attempts`**：tenacity 的 `before_sleep` 回调签名只接 `state`，但日志格式需要"当前/总数"两个数。用 `partial(_log_retry, total_attempts=total_attempts)` 把总数绑定进闭包，避免每次重试都读 config。
+3. **`reraise=True`**：重试耗尽后抛原始异常，不包装成 `RetryError`，上层 catch 不变。
+
+### 验证
+
+- **行为单测 3 项**（临时脚本，不入库）：
+  - max_retries=0 → 直接调用 1 次 ✅
+  - 可重试异常 RateLimitError + max_retries=2 → 调用 3 次（1+2 retries）✅，日志输出 `attempt=1/3 error=RateLimitError wait=0.01s` / `attempt=2/3 ...`
+  - 不可重试异常 ValueError → 调用 1 次直接抛 ✅
+- **现有测试回归**：`test_chat_service.py` 16 + `test_auth_middleware.py` 7 = **23 项全通过**（mock 路径不触发重试）
+- **import 自检**：`from models.llm import _call_with_retry, _RETRYABLE_EXCEPTIONS` OK，`_RETRYABLE_EXCEPTIONS` 内容正确
+
+### 已知限制（未做，留给 Claude 测试时考虑）
+
+- 未为重试机制写专门的单元测试文件（如 `test_llm_retry.py`）。规格未要求，但 Claude 测试时可能想覆盖"真实抛可重试异常时确实重试了 N 次"。如果 Claude 需要此类测试，可以参考我临时验证脚本的写法（patch `get_config` + 抛 `openai.RateLimitError`）。
+- `wait_exponential` 的 max 上限设为 `backoff_base * (2 ** max_retries)`，即 max_retries=3 时上限 8s。如果用户觉得退避太久，调小 `retry_backoff_base` 即可。
+
