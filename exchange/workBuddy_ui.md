@@ -453,7 +453,6 @@ AI 消息：
 
 **产出文件**：
 - `D:\Code\LarryAgent\.workbuddy\artifacts\FINAL_app_icon_logo_for_LarryA_2026-08-15T10-10-35.png` — 最终版 1024×1024
-- 中间稿保留在 artifacts 目录供参考
 
 **待办**：
 - [ ] 导出 .ico 格式（Tauri 窗口图标需要）
