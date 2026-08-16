@@ -58,6 +58,52 @@
 
 ---
 
+## P4.4 派发规格（第三波，2026-08-16 WorkBuddy 派发）
+
+**目标**：聊天界面 Vue 组件，接 P4.3 会话 API + P4.35 界面基调。
+**实现**：Trae ｜ **审查**：Claude
+**依赖**：P4.1(进程管理)✅ / P4.2(Vue骨架)✅ / P4.3(会话API)✅ / P4.35(token基调)✅ —— 全部满足，可派发。
+
+### 一、需求清单（源自 TODO.md P4.4，11 项）
+
+1. `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
+2. `MessageList.vue`：消息气泡(user/agent/error) + 自动滚动；过滤 `role="tool"`
+3. `ToolCallCard.vue`：工具调用卡片(spinner→✅/❌ + 参数 + 结果摘要)，从 `client/chat.html` 移植
+4. `ChatInput.vue`：Enter 发送 / Shift+Enter 换行 + 禁用状态
+5. `ModelSelector.vue`：从 `GET /api/models` 拉取列表
+6. `RoleSelector.vue`：角色切换下拉(health/finance/default)，传 `role` 给 `/api/chat`
+7. `StatusBar.vue`：连接状态 + 当前会话 ID + token 统计
+8. SSE composable `useChatStream`：移植 `chat.html` 的 `consumeSSEStream` + `parseSSE`
+9. 会话切换：侧栏点击 → 加载历史 → 切换 `conversation_id`
+10. 错误处理：网络错误 / 后端 500 / SSE error 事件统一展示(解析 JSON 错误响应)
+11. 前端请求带 `Authorization: Bearer <key>`(P3.4 兼容，key 空时不带——别把鉴权坑留给 P5)
+
+### 二、三交接点（P4.2 → P4.4，务必先处理）
+
+1. **配色换装**：P4.2 的 `AppLayout`/`main.css` 用了 Catppuccin Mocha 临时色(#1e1e2e 等)。P4.4 **第一步**把 UI Designer 的 design token 落成 `client/src/styles/tokens.css` 全局引用(#0F1117 / #E4E4E7 等)。**token 权威来源 = `exchange/workBuddy_ui.md`（UI Designer 精化版，第 103–131 行完整 CSS 变量表 + WCAG AA 校验）**，不要另起一套配色。
+2. **砍底部状态栏**：Marvis 拍板不要。AppLayout 当前有底部状态栏，P4.4 去掉；连接状态改为 Tauri event(`backend-status`)驱动的全局轻提示(toast/banner)，不占固定栏。
+3. **加 TopBar**：UI Designer 设计了 TopBar（角色切换 + 设置入口 `/settings`）。P4.2 缺失，P4.4 补上；`RoleSelector` 直接挂在 TopBar 内。
+
+### 三、design token 落地要求
+
+- 在 `client/src/styles/tokens.css` 定义全部 CSS 变量，由 `workBuddy_ui.md` 变量表逐条映射（底板/文字/边框/强调/角色色等）。
+- 锚点色 `#378ADD` 仅用于交互强调（按钮/链接/focus/spinner），**不做品牌铺色**。
+- 多角色差异化用 `role-default(#9CA3AF)` / `health(#34D399)` / `finance(#FBBF24)` 作为色点/气泡色带，**不做三套换肤**。
+- 响应式断点 768px（P4.2 已定），移动端汉堡菜单沿用。
+
+### 四、验收 / 协作
+
+- Trae 只写实现、不写测试文件；自测基线后交 Claude 补规范测试（Vitest 或等价），测试数据隔离（不碰真实 `larry.db`，沿用 `LARRY_CONFIG` 临时 DB 约定）。
+- 覆盖场景：正常对话 / 工具调用卡片 / 网络断 / 后端 500 / 会话切换。
+- SSE 流与 error 事件需按 P4.6 的统一 JSON 错误体(`{error, detail}`)解析展示。
+- 真机窗口链路(dev/tauri)待 GUI 环境验证，交付时标注清楚。
+
+### 五、派发日期
+
+2026-08-16，WorkBuddy 派发。
+
+---
+
 ## 历史状态
 
 - **P4.1 + P4.2 已交付并复验通过**（2026-08-15）：Rust 壳 + Vue 骨架

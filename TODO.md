@@ -326,7 +326,7 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] tool 消息处理：`GET /{id}/messages` 返回完整数据（含 role="tool"），**前端过滤**不展示，保持 API 完整
 - [x] 测试（Claude）：conversations CRUD + 级联删除验证 + chat 续接会话 + models 端点（17/17 全过，临时 DB 隔离）
 
-**P4.4 - 聊天界面（Vue 组件）**（待 P4.3 + P4.35 后派发：Trae 实现 / Claude 审查）
+**P4.4 - 聊天界面（Vue 组件）**（🔄 派发中：Trae 实现 / Claude 审查，2026-08-16 WorkBuddy 派发）
 
 - [ ] `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
 - [ ] `MessageList.vue`：消息气泡（user/agent/error）+ 自动滚动；过滤 role="tool" 消息
