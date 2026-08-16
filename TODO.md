@@ -5,8 +5,9 @@
 ### 记忆系统调优
 
 - [ ] 检索参数调优（`memory/engine.py::get_long_term_memory`）：长期 — 根据实际使用中召回质量持续调整 score_threshold / top_k / 分级阈值
-- [ ] 向量检索上下文扩展 → **已归入 P3 记忆系统调优**
-- [ ] 记忆保鲜机制 → **已归入 P3 记忆系统调优**
+- [ ] 向量检索上下文扩展：archive 中同一 memory_id 的相邻 chunk 在命中时一并拉出合并，避免 LLM 看到被截断的片段
+- [ ] `search()` score_threshold 分级：不同来源检索用不同阈值
+- [ ] 记忆保鲜机制：`last_hit_at` / `priority`，被频繁检索的记忆提升保留权重
 - [ ] 向量同步补偿：长期 — ChromaDB 异常恢复后自动校验 SQLite ↔ ChromaDB 一致性并补写缺失向量
 - [ ] Embedding 模型迁移脚本：长期 / 待触发 — 更换模型时重建 collection + 全量重索引
 - [ ] `llm.py::_resolve_provider_key` → **已归入 P3.0 前置修补**
@@ -35,6 +36,10 @@
 - [x] ~~**CoT 过度纠结根因 = 四条并行准则冲突**~~ → 已解决。「表达与决策协议」已写入 MEMORY.md 并经用户确认；用户观察"基本没有了纠结"，观察锚点已建立（见 2026-08-15 日志）。
 
 - [x] ~~**安全底线强制语气 vs 正向改写取舍未锁定**~~ → 已解决。MEMORY.md 改写时已执行"安全底线保留强制语气"原则（不输出 key、锚点保护未转正向）；用户确认"先保持"。
+
+### 其他长期增强（待触发）
+
+- [ ] chat_service token 累计上限（单次对话 tool call 总 token 阈值）：防止单轮读大文件等场景暴增，当前仅轮次限制。优先级很低，不做主动处理；若后续出现相关问题再讨论完善，不静默自动处理。
 
 ---
 
@@ -139,8 +144,6 @@
 - [x] Windows 超时杀进程树：`taskkill /T /F /PID` 杀孙进程，非 Windows 用 `proc.kill()`
 - [x] 端到端测试 15 项全通过（`tests/test_shell_tool.py`，2026-08-11）
 
-- [ ] ShellTool 黑名单已知可绕过（字符串包含匹配，`rm -rf  /`、`rm --recursive --force /`、`find / -delete` 等变体均可穿透）。当前安全依赖 IP 白名单（仅 `127.0.0.1`/`::1`）兜底，单人本机使用场景下攻击面极小。不做主动修复，后续若放开 IP 白名单（如 P5 局域网部署），须先将黑名单升级为正则/词法解析或换用沙箱方案。
-
 注意：config 采用扁平结构 `tools.shell_allowed_ips` + `tools.shell_timeout`，而非嵌套 `tools.shell.xxx`，简化读取逻辑。
 
 **P2.3 - Function Calling 循环（/api/chat）** ✅
@@ -163,7 +166,6 @@
 - [x] 每轮 tool call 记录日志（工具名、结果摘要 200 字符）
 - [x] 持久化设计：每轮的 assistant 消息（含 tool_calls）和 tool 结果消息（含 tool_call_id）实时写入 DB，会话恢复时 `get_messages` 反序列化并转为 OpenAI 格式，不丢失工具调用上下文。
 - [x] 端到端测试 8 项全通过（`tests/test_chat_service.py`，2026-08-11）：无工具调用、单工具调用、多工具调用、最大轮次限制、工具不存在处理、消息持久化（tool_calls + tool_call_id）、角色过滤。
-- [ ] 注：后续可加 token 累计上限（单次对话 tool call 总 token 阈值），防止单轮读大文件等场景暴增。当前仅轮次限制。本条目优先级很低，不做主动处理，后续若出现与此条目相关的问题，再考虑是否需要完善，完善前先进行充分讨论，任何情况下不静默自动处理。
 
 **P2.4 - /api/tools 接口实现** ✅
 
@@ -270,12 +272,6 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 
 ---
 
-#### 记忆系统调优（P3 中后期）
-
-- [ ] `engine.py` 向量检索上下文扩展：archive 中同一 memory_id 的相邻 chunk 在命中时一并拉出合并，避免 LLM 看到被截断的片段
-- [ ] `search()` score_threshold 分级：不同来源检索用不同阈值
-- [ ] 记忆保鲜机制：`last_hit_at` / `priority`，被频繁检索的记忆提升保留权重
-
 ### P4 - PC 客户端可用
 
 > 双击图标直接用
@@ -310,7 +306,6 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] 定案多角色差异化呈现方案：default=亮中性灰 #9CA3AF / health=低饱和翠绿 #34D399 / finance=低饱和琥珀 #FBBF24；色点+问候语+AI 气泡色带+工具卡片 header 色，不做三套换肤
 - [x] Logo 定案：C2 写意版（毛笔三笔 + 禅圆缺口 + 朱红点），老大拍板"外圈缺口是灵魂"
 - [x] 完整 design token 体系（配色 / 排版 / 间距 / 圆角 / 过渡动画 5 类 token）+ 组件详细规格（MessageBubble / ToolCallCard / ChatInput / SidebarItem / TopBar）+ 响应式断点体系 + 边界状态设计 + Accessibility
-- [ ] Trae 的 P4.4 组件按此基调实现
 
 **P4.3 - 会话管理 API（后端补全）**（Trae 实现 / Claude 测试 / WorkBuddy 复验 ✅）
 
@@ -328,6 +323,7 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 
 **P4.4 - 聊天界面（Vue 组件）**（🔄 派发中：Trae 实现 / Claude 审查，2026-08-16 WorkBuddy 派发）
 
+- [ ] 严格遵循 P4.35 界面基调（design token / 配色 / 组件规格 / 多角色差异）实现下列组件
 - [ ] `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
 - [ ] `MessageList.vue`：消息气泡（user/agent/error）+ 自动滚动；过滤 role="tool" 消息
 - [ ] `ToolCallCard.vue`：工具调用卡片（spinner→✅/❌ + 参数 + 结果摘要），从 chat.html 移植
@@ -369,5 +365,6 @@ P5 局域网访问时必须启用（硬性前置：改 `host: 0.0.0.0` 前须先
 - [ ] 记忆隔离：长期记忆检索按 `source_role` 加权（软隔离），多场景角色记忆分离
 - [ ] 边界侵蚀：工具消息与对话消息分离（`tool_calls` / `tool_call_id` 不再写入 `messages` 表）
 - [ ] shell IP 白名单重构：`127.0.0.1` / `::1` 白名单与公网访问不兼容，上云前改为 API Key 鉴权为主
+- [ ] ShellTool 黑名单加固：当前为字符串包含匹配（`rm -rf  /`、`rm --recursive --force /`、`find / -delete` 等变体可穿透）。本机单人使用攻击面极小，暂不修；但放开 IP 白名单（如 P5 局域网/上云）前须先升级为正则/词法解析或换沙箱方案（与上方白名单重构同批处理）
 
 > AI 交流讨论区已迁移至 `exchange/` 目录（各 AI 独立文件，各自区域只有自己能修改，特殊：workbuddy有权在claude和trae的文件中通过新增内容的方式派发任务）。人类治理区迁移至`HUMAN.md`文件 
