@@ -61,8 +61,9 @@ AIGC:
 ## 3. Tier 1 角色约束文件
 
 **文件与载体（不对称，按风险面）：**
-- 已有：`.claude/CLAUDE.md`、`.trae/TRAE.md` → 平台会话开始自动加载（强）。
-- 新建/固化：`.workbuddy/WORKBUDDY.md` → 经 Skill 挂载（开会话手动激活一次，内容强制 + 会话持久 + 作用域隔离）。
+- **Claude / Trae**：`.claude/CLAUDE.md`、`.trae/TRAE.md` → 平台会话开始自动加载（强）。
+- **WB（正式主渠道）**：`.workbuddy/WORKBUDDY.md` → 经 `user_custom_instructions` 在会话开始注入，且可随时改文件动态刷新（实测比 Skill 挂载效果更好，是 WB 的正式约束载体）。
+- **Skill 保留为备选**：`larry-agent-workbuddy-constraint` skill 仍可用作可控注入，内容与 WORKBUDDY.md 保持一致。
 - **Marvis 不进约束体系**：保持"外部审计"定位——唯一不参与实施、能独立怀疑全局的视角，塞进约束反而削弱它。
 
 **统一结构：**
