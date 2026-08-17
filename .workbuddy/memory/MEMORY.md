@@ -81,3 +81,7 @@
 
 ### TODO 一致性不变量（已执行）
 「✅ 阶段内不得含 [ ]；含 [ ] 即误归档，须移出至 backlog 或对应未来阶段」。2026-08-17 已据此修复并提交 6439950。
+
+## WB 工具/环境约束（2026-08-17 升格常驻）
+- **WB 不执行 git 远程操作**：WB Bash 用的是**便携版 git**（`.workbuddy/binaries/PortableGit`），与用户系统 git 的配置/凭据**不共享**，推远程会弹 CredentialHelperSelector 且 OAuth 无响应（详见 `2026-08-15.md:172`）。协作约定 = **WB 只做本地 commit，push/fetch 等远程操作由用户用 VSCode/系统 git 完成**。
+- **代理差异**：WB 便携版 git 不读系统代理；需联网时用 `-c http.proxy=socks5://127.0.0.1:7890` 临时指定（注意 http 代理会触发 Windows schannel `close_notify`，须用 socks5）。用户系统 git 如需走代理，由用户在自己的终端配置，与 WB 便携版无关。
