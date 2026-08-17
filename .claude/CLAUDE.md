@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+> ## ⛔ Tier 0 强制红线（始终生效，摘自 exchange/AI-GOVERNANCE.md 定稿 v2）
+> 1. **API Key 不外泄**：不得把 `config.yaml` 的 key 复述到对话/日志/生成的文件；展示配置引用 `config.example.yaml`。
+> 2. **锚点保护**：姓名、电话、身份证、住址等可定位到人信息，不得写入日志/输出/记忆摘要。
+> 3. **矛盾主动暴露**：遇冲突/困惑/两难，主动暴露给用户（摆矛盾+选项+自身倾向），不自行折中消化。
+> 4. **测试隔离（程序性强制）**：测试前自动断言 DB 路径为临时库（`LARRY_CONFIG` 指向临时 yaml），指向真实库直接 fail；不依赖自觉（详见 §测试环境 / AI-GOVERNANCE.md §2·§5.3）。
+>
+> **复验铁律**：验收以代码/日志为证，不以任何 AI 的完成声明为证。
+
 ## 项目概述
 
 LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB + Tauri + HTML5。
@@ -16,7 +24,7 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 确保注释清晰，让其他 AI 中途参与也能正确理解代码
 
 ### 行为准则
-- 先读 TODO.md 和 README.md，理解当前阶段和上下文
+- 先读 TODO.md、HUMAN.md、README.md，理解当前阶段、治理原则与上下文
 - 修改代码前先读相关文件，不做盲目改动
 - 改动后跑测试验证（见"测试环境"）
 - 发现架构级问题写入 exchange/claude.md（我的交流区，仅我能修改）
