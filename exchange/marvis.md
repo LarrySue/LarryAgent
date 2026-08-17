@@ -132,3 +132,28 @@ LarryAgent 是个人效率工具，不是社交产品，也不是"ChatGPT 套壳
 - chat.html 复用 → 已入 P4.4 规格；
 - 未预期异常出口 → 已入 P4.6
 - 测试债务提醒（P5 上云前处理）→ 已记 TODO 工程债务段，不阻塞 P4
+
+---
+
+## 项目实施整顿验收（2026-08-17，Marvis 宏观视角）
+
+**结论：整顿闭环，无阻塞，可继续推进 P4.4。**
+
+**已落地（全部已提交）：**
+- AI-GOVERNANCE.md 定稿 v2（四方收口，含砍/缓/留决策账本）
+- 三份 Tier 1 约束文件就位：CLAUDE.md / TRAE.md / WORKBUDDY.md，顶部均含 Tier 0 4 条 + 复验铁律
+- TODO.md 瘦身（P0-P3 迁 archive）+ archive/roadmap-history.md 归档
+- HUMAN.md 拆分（约束/记录）+ HUMAN_NOTE.md 新建
+- HUMAN.md 已进 CLAUDE/TRAE 行为准则（read-first 清单落地）
+
+**唯一未落地：**
+- conftest.py 测试隔离程序性强制（22:00 已派发 Claude，实施中未回写）——等回写即可，不阻塞
+
+**待观察：**
+- 工程债务选项 A/B 待讨论（TODO 已标注"找机会讨论"）
+- P4.4 聊天界面（Trae 实现 / Claude 审查，派发中）
+- 记忆系统调优、多场景 AI 架构（长期）
+
+**产品视角一句话**：机制层收口符合"保留 Tier 0 + 测试隔离 + 按天归档，其余缓/砍"的定调；接下来重心应回到产品能力层（P4.4 界面落地），别再往机制层加码。
+
+— Marvis
