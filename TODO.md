@@ -66,7 +66,7 @@
 - [x] Python 探测：spawn 前先 `python --version` 检测（Windows Store stub 会静默失败），失败再试 `py -3`，给清晰错误提示
 - [x] `setup` 钩子：先对 `http://127.0.0.1:8000/health` 做签名校验（响应体含 `version` 字段，防 8000 被其他服务占用时假阳性）——已跑则复用（dev mode，同时解决端口冲突），未跑再 spawn
 - [x] 轮询 health check：500ms 间隔，超时 30s 报错
-- [x] `AgentProcess` state 注入 Tauri，持有 `Child` 句柄；暴露 **restart 能力**（kill + respawn + 重新 health check，P4.5 依赖）
+- [x] `AgentProcess` state 注入 Tauri，持有 `Child` 句柄；暴露 **restart 能力**（kill + respawn + 重新 health check，供配置变更 / 崩溃恢复重启）
 - [x] `on_window_event(Destroyed)`：只 kill 自己 spawn 的 child（防误杀），kill + wait
 - [x] 后端崩溃感知：后台线程每 5s health check，状态变化时 emit `"backend-status"` 事件给前端（payload: `{status, error?}`），前端提示而非白屏
 - [x] 注意：用 `/health` 而非 `/api/health`（前者不被 AuthMiddleware 拦截，无需 API key）
@@ -76,7 +76,7 @@
 - [x] `client/` 下初始化 Vue 3 + Vite + TypeScript
 - [x] `vite.config.ts`：dev server 端口 5173、proxy `/api` + `/health` → `http://127.0.0.1:8000`、strictPort（端口被占用报错而非换端口）
 - [x] 基础布局 `AppLayout`（左侧栏 + 主区域），响应式（768px 断点，移动端汉堡菜单）
-- [x] 路由：`/`（聊天）、`/settings`（P4.5 填充），懒加载
+- [x] 路由：`/`（聊天），懒加载
 - [x] 全局状态：当前会话 ID、会话列表、连接状态（Pinia）
 - [x] `package.json` 更新：vue、vue-router、vite、typescript、pinia、vue-tsc
 - [x] 验证 `npm run build` 通过（vue-tsc 类型检查 + vite build 41 模块）。⚠️ tauri dev 实际窗口启动链路待真机验证（需 GUI 环境）
@@ -118,13 +118,6 @@
 - [x] 前端请求带 `Authorization: Bearer <key>`（P3.4 兼容）：实际未实现 header 构造，留 P5（key 留空无需求）
 - [x] 前端逻辑层测试基建（Claude，Vitest 31/31 全绿，零 Tauri 依赖）：`client/tests/` 下 `api` / `useChatStream` / `toolCallCard` / `chatInput` 四个测试文件，覆盖错误体解析 + SSE 解析 + 组件状态机
 - 已知项：错误响应 `error` 类型名当前被 `detail` 覆盖（如 `NOT_FOUND` 不直接显示），是否展示类型名待产品裁定（非缺陷，属信息展示选择）
-
-**P4.5 - 首次启动引导 + 配置入口**（🔄 派发中：Trae 实现，2026-08-19 WorkBuddy 派发）
-
-- [ ] 检测 `backend/config.yaml` 是否有 `models.<provider>.api_key`（⚠️ 不是 `llm.api_key`，真实 schema 按 provider 段；检测与写入逻辑须与 P4.1 用同一路径基准）
-- [ ] 无 key：引导页输入 API key → Tauri IPC → Rust 写入 config.yaml（**写入前先备份 `config.yaml.bak`，失败回滚**）→ 调用 P4.1 restart 重启后端（uvicorn 不热重载 yaml）
-- [ ] 有 key：直接进主界面
-- [ ] `/settings` 页放"打开配置文件"按钮（`tauri-plugin-shell`），改完提示需重启
 - [ ] 前端集成层测试（会话切换加载 / 角色切换传参）：逻辑层已由 Claude 覆盖（P4.4 测试），集成层需 mock RouterView + store 联动；引入新逻辑层时一并补，或 WB 明确要求再做
 
 **P4.6 - P3.5 遗留增强：异常出口统一**（Trae 实现 / Claude 更新测试 / WorkBuddy 复验 ✅）

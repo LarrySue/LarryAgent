@@ -43,9 +43,6 @@ function onRoleChange(role: Role) {
         <RouterLink to="/" class="nav-item" @click="sidebarOpen = false">
           💬 聊天
         </RouterLink>
-        <RouterLink to="/settings" class="nav-item" @click="sidebarOpen = false">
-          ⚙️ 设置
-        </RouterLink>
       </nav>
 
       <!-- 会话列表（P4.4 填充） -->
@@ -83,7 +80,6 @@ function onRoleChange(role: Role) {
         </div>
         <div class="topbar-right">
           <RoleSelector :model-value="appStore.currentRole" @update:model-value="onRoleChange" />
-          <RouterLink to="/settings" class="settings-btn" title="设置">⚙️</RouterLink>
         </div>
       </header>
 
@@ -359,27 +355,6 @@ function onRoleChange(role: Role) {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.settings-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--color-text-secondary);
-  font-size: var(--text-base);
-  cursor: pointer;
-  text-decoration: none;
-  transition: all var(--duration-fast);
-}
-
-.settings-btn:hover {
-  background: var(--color-border-hover);
-  color: var(--color-text-primary);
 }
 
 .main-content {

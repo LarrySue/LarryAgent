@@ -8,7 +8,7 @@
 // - 健康检查（带签名校验，防端口被其他服务假阳性占用）
 // - dev mode：后端已在跑则复用，不重复 spawn（方便开发时单独跑 uvicorn + npm run dev）
 // - 窗口关闭时 kill 自己 spawn 的子进程（不误杀用户手动起的后端）
-// - 暴露 restart_agent IPC 命令（P4.5 改 config 后重启后端用）
+// - 暴露 restart_agent IPC 命令（供配置变更 / 崩溃恢复后重启后端）
 // - 崩溃感知：周期性 health check，状态变化时 emit "backend-status" 事件给前端
 
 use std::io::{Read, Write};
@@ -242,7 +242,7 @@ fn start_crash_watcher(app: tauri::AppHandle) {
 // IPC 命令
 // ====================================================================
 
-/// 重启后端（P4.5 改 config 后调用）
+/// 重启后端（供配置变更 / 崩溃恢复后调用）
 #[tauri::command]
 async fn restart_agent(
     state: tauri::State<'_, AgentProcess>,
