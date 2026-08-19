@@ -71,9 +71,6 @@ class TestToolLoop(unittest.IsolatedAsyncioTestCase):
     """测试 function calling 循环（P3.3 全程流式版本）"""
 
     async def asyncSetUp(self):
-        os.environ["LARRY_CONFIG"] = os.path.join(
-            os.path.dirname(__file__), "..", "config.yaml"
-        )
         await get_db()
         await scan_and_register()
 
@@ -344,9 +341,6 @@ class TestRoleFilter(unittest.TestCase):
     """测试工具按角色过滤"""
 
     def setUp(self):
-        os.environ["LARRY_CONFIG"] = os.path.join(
-            os.path.dirname(__file__), "..", "config.yaml"
-        )
         asyncio.run(scan_and_register())
 
     def test_no_role_config_returns_all(self):
@@ -382,9 +376,6 @@ class TestRoleFilterEndToEnd(unittest.IsolatedAsyncioTestCase):
     """角色过滤端到端：验证传给 LLM 的 tools 参数确实不含被过滤工具"""
 
     async def asyncSetUp(self):
-        os.environ["LARRY_CONFIG"] = os.path.join(
-            os.path.dirname(__file__), "..", "config.yaml"
-        )
         await get_db()
         await scan_and_register()
 
@@ -432,9 +423,6 @@ class TestToolErrorRecovery(unittest.IsolatedAsyncioTestCase):
     """工具执行失败恢复：error 内容回到 messages 且对话不中断"""
 
     async def asyncSetUp(self):
-        os.environ["LARRY_CONFIG"] = os.path.join(
-            os.path.dirname(__file__), "..", "config.yaml"
-        )
         await get_db()
         await scan_and_register()
 
@@ -506,9 +494,6 @@ class TestCallerIpInjection(unittest.IsolatedAsyncioTestCase):
     """caller_ip 注入验证：_chat_flow 调 shell 时 caller_ip 正确传入 kwargs"""
 
     async def asyncSetUp(self):
-        os.environ["LARRY_CONFIG"] = os.path.join(
-            os.path.dirname(__file__), "..", "config.yaml"
-        )
         await get_db()
         await scan_and_register()
 

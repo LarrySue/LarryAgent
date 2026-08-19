@@ -30,63 +30,25 @@ import aiosqlite
 import pytest
 from fastapi.testclient import TestClient
 
-# backend/ 根目录（本文件在 tests/ 下）
-_BACKEND_DIR = Path(__file__).parent.parent
-
 
 # ---------------------------------------------------------------------------
 # Fixtures：临时 DB 环境（安全硬约束）
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
-def temp_db(tmp_path_factory):
+def temp_db(session_db_path):
     """
-    构建临时 DB 环境并重载全局 config 单例。
+    返回会话级临时 DB 文件路径（由 conftest.py 提供，LARRY_CONFIG 指向会话级临时 yaml）。
 
-    - 临时 yaml 只含最小配置：database.path 指向临时库、vector_store 关闭、
-      server.api_key 为空（鉴权透传）。models 段留空（LLM 调用会在客户端构造阶段
-      抛错，本文件全部用例均已 mock LLM 路径，不会触达）
-    - **必须设置 LARRY_CONFIG 环境变量**：main.py 的 lifespan 启动时会再次调用
-      load_config()（不传路径 → 从 env / 默认 config.yaml 重新读取，忽略内存单例），
-      只改内存单例不够——曾因此让测试意外连上真实 larry.db（教训记录）
-    - 重载前把 db.database._db 置 None：旧的连接可能绑定在已结束的事件循环上，
-      跨循环 close 有风险，直接弃用引用交给 GC，新连接由 TestClient 事件循环内
-      的 lifespan 用新配置重建
+    额外职责：把 db.database._db 置 None 丢弃旧连接引用——session 中其他测试文件
+    可能留下绑定在已结束事件循环上的连接，弃用后由本模块 TestClient 的 lifespan
+    在自身事件循环内用临时配置重建新连接。
     """
-    import os
-
     import db.database as db_module
-    from config import load_config
 
-    tmpdir = tmp_path_factory.mktemp("p43")
-    db_file = tmpdir / "test_conversations.db"
-    cfg_file = tmpdir / "config.test.yaml"
-    cfg_file.write_text(
-        "database:\n"
-        f"  path: \"{db_file.as_posix()}\"\n"
-        "vector_store:\n"
-        "  enabled: false\n"
-        "server:\n"
-        "  api_key: \"\"\n",
-        encoding="utf-8",
-    )
-
-    # 换配置（env 变量 + 内存单例双保险）+ 丢弃旧连接引用
-    original_env = os.environ.get("LARRY_CONFIG")
-    os.environ["LARRY_CONFIG"] = str(cfg_file)
     db_module._db = None
-    load_config(str(cfg_file))
-
-    yield db_file
-
-    # 还原：env 变量、内存单例、连接引用。TestClient lifespan 退出时已在其自身
-    # 事件循环内 close_db，此处只需弃用引用；恢复真实配置保证后续测试文件不受影响
+    yield Path(session_db_path)
     db_module._db = None
-    if original_env is None:
-        os.environ.pop("LARRY_CONFIG", None)
-    else:
-        os.environ["LARRY_CONFIG"] = original_env
-    load_config(str(_BACKEND_DIR / "config.yaml"))
 
 
 @pytest.fixture(scope="module")
