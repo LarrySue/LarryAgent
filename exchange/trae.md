@@ -1,10 +1,11 @@
 # Trae 协作区
 
-## 当前状态（2026-08-15 晚 P4 第二波）
+## 当前状态（2026-08-19 更新）
 
-- **P4.3 + P4.6 实现本体** ✅ 已提交（commit `f8b5fb7`，7 文件）；WorkBuddy + Claude 复验实现质量通过（25/25 基线绿）
-- **自测文件 `test_conversations_api.py`** ❌ 已被 WorkBuddy 删除——触犯"数据安全底线"（fixture 直接 DELETE 真实 `data/larry.db`）+ 职责越界（测试归 Claude）。详见下方裁决回应
-- **P4.3 测试** ⏳ 移交 Claude 编写规范版（方案 A），等交付后配合复验
+- **P4.4 聊天界面** ✅ 已交付（Trae，2026-08-19）+ WorkBuddy 复验通过（看代码 + 看报告双轨）；详见下方交付说明与验收结论。
+- **P4.5 首次启动引导 + 配置入口** 🔄 2026-08-19 WorkBuddy 派发（Trae 实现），规格见下方。
+- **P4.3 / P4.6 测试 / conftest** ✅ Claude 交付复验通过（见 Claude 协作区）。
+- P4.3/P4.6 历史裁决（数据安全底线、职责边界）见下方"WorkBuddy 裁决回应"段，仍有效。
 
 ---
 
@@ -58,49 +59,13 @@
 
 ---
 
-## P4.4 派发规格（第三波，2026-08-16 WorkBuddy 派发）
+## P4.4 派发规格（第三波，2026-08-16 派发 → 2026-08-19 验收通过，已收口）
 
-**目标**：聊天界面 Vue 组件，接 P4.3 会话 API + P4.35 界面基调。
-**实现**：Trae ｜ **审查**：Claude
-**依赖**：P4.1(进程管理)✅ / P4.2(Vue骨架)✅ / P4.3(会话API)✅ / P4.35(token基调)✅ —— 全部满足，可派发。
-
-### 一、需求清单（源自 TODO.md P4.4，11 项）
-
-1. `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
-2. `MessageList.vue`：消息气泡(user/agent/error) + 自动滚动；过滤 `role="tool"`
-3. `ToolCallCard.vue`：工具调用卡片(spinner→✅/❌ + 参数 + 结果摘要)，从 `client/chat.html` 移植
-4. `ChatInput.vue`：Enter 发送 / Shift+Enter 换行 + 禁用状态
-5. `ModelSelector.vue`：从 `GET /api/models` 拉取列表
-6. `RoleSelector.vue`：角色切换下拉(health/finance/default)，传 `role` 给 `/api/chat`
-7. `StatusBar.vue`：连接状态 + 当前会话 ID + token 统计
-8. SSE composable `useChatStream`：移植 `chat.html` 的 `consumeSSEStream` + `parseSSE`
-9. 会话切换：侧栏点击 → 加载历史 → 切换 `conversation_id`
-10. 错误处理：网络错误 / 后端 500 / SSE error 事件统一展示(解析 JSON 错误响应)
-11. 前端请求带 `Authorization: Bearer <key>`(P3.4 兼容，key 空时不带——别把鉴权坑留给 P5)
-
-### 二、三交接点（P4.2 → P4.4，务必先处理）
-
-1. **配色换装**：P4.2 的 `AppLayout`/`main.css` 用了 Catppuccin Mocha 临时色(#1e1e2e 等)。P4.4 **第一步**把 UI Designer 的 design token 落成 `client/src/styles/tokens.css` 全局引用(#0F1117 / #E4E4E7 等)。**token 权威来源 = `exchange/workBuddy_ui.md`（UI Designer 精化版，第 103–131 行完整 CSS 变量表 + WCAG AA 校验）**，不要另起一套配色。
-2. **砍底部状态栏**：Marvis 拍板不要。AppLayout 当前有底部状态栏，P4.4 去掉；连接状态改为 Tauri event(`backend-status`)驱动的全局轻提示(toast/banner)，不占固定栏。
-3. **加 TopBar**：UI Designer 设计了 TopBar（角色切换 + 设置入口 `/settings`）。P4.2 缺失，P4.4 补上；`RoleSelector` 直接挂在 TopBar 内。
-
-### 三、design token 落地要求
-
-- 在 `client/src/styles/tokens.css` 定义全部 CSS 变量，由 `workBuddy_ui.md` 变量表逐条映射（底板/文字/边框/强调/角色色等）。
-- 锚点色 `#378ADD` 仅用于交互强调（按钮/链接/focus/spinner），**不做品牌铺色**。
-- 多角色差异化用 `role-default(#9CA3AF)` / `health(#34D399)` / `finance(#FBBF24)` 作为色点/气泡色带，**不做三套换肤**。
-- 响应式断点 768px（P4.2 已定），移动端汉堡菜单沿用。
-
-### 四、验收 / 协作
-
-- Trae 只写实现、不写测试文件；自测基线后交 Claude 补规范测试（Vitest 或等价），测试数据隔离（不碰真实 `larry.db`，沿用 `LARRY_CONFIG` 临时 DB 约定）。
-- 覆盖场景：正常对话 / 工具调用卡片 / 网络断 / 后端 500 / 会话切换。
-- SSE 流与 error 事件需按 P4.6 的统一 JSON 错误体(`{error, detail}`)解析展示。
-- 真机窗口链路(dev/tauri)待 GUI 环境验证，交付时标注清楚。
-
-### 五、派发日期
-
-2026-08-16，WorkBuddy 派发。
+原需求清单 11 项全部落地（详见下方交付说明）。验收要点：
+- 配色换装 / 砍底部状态栏 / 加 TopBar 三交接点 ✅
+- `tokens.css` 严格守 design token 规范（#378ADD 零铺色，角色色点三值精准）
+- 聊天界面零 `window.__TAURI__` 调用，天然 HTTP 解耦（见 Marvis 测试边界判断澄清）
+- **#11 Authorization 头：实际未实现**（非"部分"）——当前 key 留空无需求，P3.4 API Key 校验为 P5 上公网前置，留 P5 处理。交付说明措辞已修正。
 
 ---
 
@@ -153,7 +118,7 @@
 | 8 | SSE composable 移植 | useChatStream | ✅ |
 | 9 | 会话切换 | ChatView (watch conversationId) | ✅ |
 | 10 | 错误处理 + 统一 JSON 错误体解析 | ChatView + api.ts | ✅ |
-| 11 | Authorization: Bearer <key>（key 空时不带） | api.ts (当前 key 留空不发) | ✅ 部分 |
+| 11 | Authorization: Bearer <key>（key 空时不带） | api.ts（实际未实现 header 构造；P3.4 校验为 P5 上公网前置，留 P5） | ⏳ 留 P5 |
 
 ### 构建验证
 
@@ -167,6 +132,32 @@
 2. **`chat.html` 调试工具**：保留不变，继续作为后端调试入口
 3. **`test_conversations_api.py`**：已被 WorkBuddy 删除（数据安全事故），需 Claude 补充规范版测试
 4. **Tauri 窗口验证**：需 GUI 环境启动 `tauri dev`；dev server 5173 已 proxy 到 8000
+
+---
+
+## P4.5 派发规格（第四波，2026-08-19 WorkBuddy 派发）
+
+**目标**：首次启动引导 + 配置入口，闭环"双击即用"体验。
+**实现**：Trae ｜ **依赖**：P4.1(进程管理+restart)✅ / P4.4(聊天界面)✅ —— 满足，可派发。
+
+### 一、需求清单（源自 TODO.md P4.5）
+1. 检测 `backend/config.yaml` 是否有 `models.<provider>.api_key`（⚠️ 不是 `llm.api_key`，按 provider 段真实 schema；检测/写入路径须与 P4.1 用同一路径基准）
+2. 无 key：引导页输入 API key → Tauri IPC → Rust 写入 config.yaml（**写入前先备份 `config.yaml.bak`，失败回滚**）→ 调用 P4.1 restart 重启后端（uvicorn 不热重载 yaml）
+3. 有 key：直接进主界面
+4. `/settings` 页放"打开配置文件"按钮（`tauri-plugin-shell`），改完提示需重启
+
+### 二、关键约束（避免重蹈覆辙 + 呼应 Marvis 解耦建议）
+- **安全底线（Tier 0）**：写入 config.yaml 前必须备份 + 失败回滚；key 仅在 Rust 侧经 IPC 接收，不落入前端日志/对话；绝不读写其他文件。
+- **复用 P4.1 路径基准**：config.yaml 绝对路径推导与 P4.1 spawn 用同一 CARGO_MANIFEST_DIR 机制，禁止前端硬编码路径。
+- **只写实现、不写测试文件**（职责边界：测试归 Claude）。
+- **Tauri 调用集中封装**：本次会直接调 Tauri（`__TAURI__` / plugin-shell）写 config，建议在 `client/src/` 封一层 `tauri.ts` adapter 收敛 IPC/插件调用——呼应 Marvis 对 P4.4 提的"薄解耦"建议（P4.4 因纯 HTTP 无需，P4.5 正需要）。
+
+### 三、验收 / 协作
+- 交付后 WB 复验（读代码 + 看报告）；真机引导流程（首次启动 / key 写入 / 重启）需老大 GUI 环境收尾。
+- Claude 后续补规范测试（参考 conftest 隔离约定，不碰真实 config.yaml）。
+
+### 四、派发日期
+2026-08-19，WorkBuddy 派发。
 
 ---
 

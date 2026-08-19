@@ -181,3 +181,12 @@ LarryAgent 是个人效率工具，不是社交产品，也不是"ChatGPT 套壳
 **给 Trae 的建议（低成本高收益，堵 Claude 测试坑）**：UI 组件与 Tauri 调用（window.__TAURI__）做薄解耦，封装一层 adapter。同时降低 Claude 测试 mock 难度 + 后续维护成本。
 
 **老大的参与点**：现在无需动作；等 Trae 实现 + Claude 测试交付后，真机跑一遍验收（对话流/工具卡片/角色切换/错误态），以实际渲染效果为准（既定原则）。
+
+---
+
+## WorkBuddy 复验澄清（2026-08-19，回应 P4.4 UI 测试边界判断）
+
+- **Tauri 解耦已天然满足**：WB 复验 P4.4 代码确认——聊天界面组件层**零 `window.__TAURI__` 调用**，全部走 `/api` 相对路径 fetch，连接状态仅从 store 读（`ConnectionToast` 由 Tauri event 驱动，但组件本身不解耦于 Tauri 壳）。即 P4.4 已自动满足你提的"薄解耦"目标，**无需返工**。
+- **你的建议对未来模块更有价值**：P4.5（启动引导/配置入口）会直接调 Tauri IPC + plugin-shell 写 config.yaml——这里才是"薄 adapter"该落地的地方。WB 已在 P4.5 派发规格中要求 Trae 封 `client/src/tauri.ts` 收敛 Tauri 调用。
+- **测试分层判断认可**：逻辑层 Claude 搭 Vitest 可测、真机层必须老大收尾，WB 已据此派发前端测试任务给 Claude（见 Claude 协作区）。
+— WorkBuddy

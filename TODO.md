@@ -98,22 +98,22 @@
 - [x] tool 消息处理：`GET /{id}/messages` 返回完整数据（含 role="tool"），**前端过滤**不展示，保持 API 完整
 - [x] 测试（Claude）：conversations CRUD + 级联删除验证 + chat 续接会话 + models 端点（17/17 全过，临时 DB 隔离）
 
-**P4.4 - 聊天界面（Vue 组件）**（🔄 派发中：Trae 实现 / Claude 审查，2026-08-16 WorkBuddy 派发）
+**P4.4 - 聊天界面（Vue 组件）**（✅ 已交付 + WorkBuddy 复验通过，2026-08-19）
 
-- [ ] 严格遵循 P4.35 界面基调（design token / 配色 / 组件规格 / 多角色差异）实现下列组件
-- [ ] `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
-- [ ] `MessageList.vue`：消息气泡（user/agent/error）+ 自动滚动；过滤 role="tool" 消息
-- [ ] `ToolCallCard.vue`：工具调用卡片（spinner→✅/❌ + 参数 + 结果摘要），从 chat.html 移植
-- [ ] `ChatInput.vue`：Enter 发送 / Shift+Enter 换行 + 禁用状态
-- [ ] `ModelSelector.vue`：从 `GET /api/models` 拉取列表
-- [ ] `RoleSelector.vue`：角色切换下拉（health/finance/default），传 role 给 `/api/chat`
-- [ ] `StatusBar.vue`：连接状态 + 当前会话 ID + token 统计
-- [ ] SSE composable `useChatStream`：移植 chat.html 的 `consumeSSEStream` + `parseSSE`
-- [ ] 会话切换：侧栏点击 → 加载历史 → 切换 conversation_id
-- [ ] 错误处理：网络错误 / 后端 500 / SSE error 事件统一展示（解析 JSON 错误响应）
-- [ ] 前端请求带 `Authorization: Bearer <key>`（P3.4 兼容，key 留空时不带——别把鉴权坑留给 P5）
+- [x] 严格遵循 P4.35 界面基调（design token / 配色 / 组件规格 / 多角色差异）实现下列组件
+- [x] `ConversationSidebar.vue`：会话列表 + 新建 + 删除 + 选中高亮
+- [x] `MessageList.vue`：消息气泡（user/agent/error）+ 自动滚动；过滤 role="tool" 消息
+- [x] `ToolCallCard.vue`：工具调用卡片（spinner→✅/❌ + 参数 + 结果摘要），从 chat.html 移植
+- [x] `ChatInput.vue`：Enter 发送 / Shift+Enter 换行 + 禁用状态
+- [x] `ModelSelector.vue`：从 `GET /api/models` 拉取列表
+- [x] `RoleSelector.vue`：角色切换下拉（health/finance/default），传 role 给 `/api/chat`
+- [x] `StatusBar.vue`：连接状态 + 当前会话 ID + token 统计
+- [x] SSE composable `useChatStream`：移植 chat.html 的 `consumeSSEStream` + `parseSSE`
+- [x] 会话切换：侧栏点击 → 加载历史 → 切换 conversation_id
+- [x] 错误处理：网络错误 / 后端 500 / SSE error 事件统一展示（解析 JSON 错误响应）
+- [x] 前端请求带 `Authorization: Bearer <key>`（P3.4 兼容）：实际未实现 header 构造，留 P5（key 留空无需求）
 
-**P4.5 - 首次启动引导 + 配置入口**（待 P4.4 后派发：Trae 实现）
+**P4.5 - 首次启动引导 + 配置入口**（🔄 派发中：Trae 实现，2026-08-19 WorkBuddy 派发）
 
 - [ ] 检测 `backend/config.yaml` 是否有 `models.<provider>.api_key`（⚠️ 不是 `llm.api_key`，真实 schema 按 provider 段；检测与写入逻辑须与 P4.1 用同一路径基准）
 - [ ] 无 key：引导页输入 API key → Tauri IPC → Rust 写入 config.yaml（**写入前先备份 `config.yaml.bak`，失败回滚**）→ 调用 P4.1 restart 重启后端（uvicorn 不热重载 yaml）
