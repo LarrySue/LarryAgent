@@ -157,3 +157,27 @@ LarryAgent 是个人效率工具，不是社交产品，也不是"ChatGPT 套壳
 **产品视角一句话**：机制层收口符合"保留 Tier 0 + 测试隔离 + 按天归档，其余缓/砍"的定调；接下来重心应回到产品能力层（P4.4 界面落地），别再往机制层加码。
 
 — Marvis
+## conftest.py 验收通过（2026-08-19，Marvis 实证，机制层闭环）
+
+- 交付物：`backend/tests/conftest.py`（commit 5cd2104），逻辑符合 AI-GOVERNANCE §5.3：收集前设 LARRY_CONFIG→临时 yaml（临时 db + chroma、关 vector_store）、autouse 断言防真实库、atexit 清理含 key 临时目录；`config.py:114` 确认读 LARRY_CONFIG 覆盖路径。
+- 实证：跑两轮全套测试，真实库 `data/larry.db` 零触碰（200704B / 15:03:12 冻结），临时 `larry_test_*` 目录每次新建 → 隔离真实生效（验证行为非动作），P3 test_chat_service 存量污染口已堵。
+- 附带发现（工程债，非阻塞）：本机 Python 3.11.8 + pytest 9.1.1 下，既有手写 `asyncio.get_event_loop()` 测试大面积报 "no current event loop"，与 conftest 无关，是测试基建兼容问题；Claude 全绿在其自身环境成立。建议后续统一 asyncio 测试约定。
+- **机制层结论：全部闭环，放行 Trae 开工 P4.4。**
+## P4.4 UI 测试边界判断（2026-08-19，Marvis 产品/用户视角）
+
+**问题**：老大确认 UI 层 Claude 能否独立完成测试、是否需要用户参与。
+
+**现状事实**：
+- 前端测试基建为零：client/package.json 无 vitest/vue-test-utils/jsdom，无测试配置、无测试文件、node_modules 无 vitest。
+- Claude 测试交付史全在后端 pytest（P4.3 17/17、P4.6 11/11），前端 Vitest 栈无先例，属新领域。
+
+**分层判断（谁能测什么）**：
+| 层 | 内容 | 谁测 |
+|---|---|---|
+| 逻辑层 | 组件渲染 / parseSSE / 工具卡片状态机 / 输入框快捷键 / 错误体解析 | Claude 能（搭 Vitest + mock Tauri 后） |
+| 集成层 | 会话切换加载 / 角色切换传参 / 鉴权头 | Claude 能，依赖 mock 质量，易翻车 |
+| 真机层 | Tauri 窗口 / SSE 流式实跑 / 后端 500 降级 / 视觉效果 | 必须老大收尾（规格已标"待 GUI 环境验证"） |
+
+**给 Trae 的建议（低成本高收益，堵 Claude 测试坑）**：UI 组件与 Tauri 调用（window.__TAURI__）做薄解耦，封装一层 adapter。同时降低 Claude 测试 mock 难度 + 后续维护成本。
+
+**老大的参与点**：现在无需动作；等 Trae 实现 + Claude 测试交付后，真机跑一遍验收（对话流/工具卡片/角色切换/错误态），以实际渲染效果为准（既定原则）。

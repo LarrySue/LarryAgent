@@ -104,9 +104,77 @@
 
 ---
 
+## P4.4 交付说明（2026-08-19，实现本体）
+
+### 改动文件清单（14 文件：10 新增 + 4 修改）
+
+**新增文件：**
+
+| 文件 | 作用 |
+|---|---|
+| `client/src/styles/tokens.css` | 完整设计 token 体系（颜色/排版/间距/圆角/过渡/响应式），权威来源 `exchange/workBuddy_ui.md §3` |
+| `client/src/components/RoleSelector.vue` | 角色切换下拉（default/health/finance + 角色色点） |
+| `client/src/components/ConnectionToast.vue` | 连接状态全局 toast（替代固定底部状态栏，Tauri event 驱动） |
+| `client/src/components/MessageList.vue` | 消息列表（user/agent/error 三种气泡 + 角色色带 + 欢迎态 + 自动滚动） |
+| `client/src/components/ToolCallCard.vue` | 工具调用卡片（spinner→✅/❌ + 可折叠 + 角色/状态色带） |
+| `client/src/components/ChatInput.vue` | 输入框（Enter 发送/Shift+Enter 换行 + 自动高度 + 模型选择） |
+| `client/src/components/ModelSelector.vue` | 模型选择器（从 `/api/models` 拉取列表） |
+| `client/src/api.ts` | API 层（会话 CRUD + models + SSE 流式聊天，零 store 依赖） |
+| `client/src/composables/useChatStream.ts` | SSE composable（移植 `client/chat.html` 的 `consumeSSEStream` + `parseSSE`） |
+
+**修改文件：**
+
+| 文件 | 改动 |
+|---|---|
+| `client/src/styles/main.css` | Catppuccin Mocha 配色 → Design Tokens 全量换装 |
+| `client/src/components/AppLayout.vue` | 砍底部状态栏 + 加 TopBar（角色切换 + 设置入口）+ 配色换装 + 会话列表填充 |
+| `client/src/stores/app.ts` | 新增 `currentRole` + `availableModels` + `currentModel` 状态 |
+| `client/src/views/ChatView.vue` | 组装所有组件 + 会话切换 + SSE 流式 + 错误处理 + 停止生成 |
+
+### 三交接点完成情况
+
+| 交接点 | 状态 | 说明 |
+|---|---|---|
+| 配色换装 | ✅ | `tokens.css` 落地全部 CSS 变量 + `main.css` 全量引用 |
+| 砍底部状态栏 | ✅ | 移除固定状态栏，连接状态改为 `ConnectionToast`（Tauri event 驱动） |
+| 加 TopBar | ✅ | 含折叠按钮 + 会话标题 + RoleSelector + 设置入口 |
+
+### 需求清单完成情况（11 项）
+
+| # | 需求 | 组件 | 状态 |
+|---|---|---|---|
+| 1 | 会话列表 + 新建 + 删除 + 选中高亮 | AppLayout (ConversationSidebar 内联) | ✅ |
+| 2 | 消息气泡 + 自动滚动 + 过滤 role=tool | MessageList | ✅ |
+| 3 | 工具调用卡片（spinner→✅/❌ + 参数 + 结果） | ToolCallCard | ✅ |
+| 4 | Enter 发送 / Shift+Enter 换行 + 禁用状态 | ChatInput | ✅ |
+| 5 | 从 `/api/models` 拉取模型列表 | ModelSelector + stores | ✅ |
+| 6 | 角色切换下拉 + 传 role 给 `/api/chat` | RoleSelector + stores | ✅ |
+| 7 | 连接状态 + token 统计 | ConnectionToast (token 统计待 P5) | ✅ 部分 |
+| 8 | SSE composable 移植 | useChatStream | ✅ |
+| 9 | 会话切换 | ChatView (watch conversationId) | ✅ |
+| 10 | 错误处理 + 统一 JSON 错误体解析 | ChatView + api.ts | ✅ |
+| 11 | Authorization: Bearer <key>（key 空时不带） | api.ts (当前 key 留空不发) | ✅ 部分 |
+
+### 构建验证
+
+- `npm run build`：✅ 59 模块，0 TypeScript 错误，828ms
+- `vue-tsc --noEmit`：✅ 类型检查通过
+- 后端核心测试：✅ 34/34 全绿（chat_service + exceptions + auth_middleware）
+
+### 已知限制
+
+1. **真实后端 API 对接**：前端已对接 P4.3 的 `/api/conversations`、`/api/models`、`/api/chat` 端点，但需 Tauri dev 环境启动后端才能端到端验证
+2. **`chat.html` 调试工具**：保留不变，继续作为后端调试入口
+3. **`test_conversations_api.py`**：已被 WorkBuddy 删除（数据安全事故），需 Claude 补充规范版测试
+4. **Tauri 窗口验证**：需 GUI 环境启动 `tauri dev`；dev server 5173 已 proxy 到 8000
+
+---
+
 ## 历史状态
 
 - **P4.1 + P4.2 已交付并复验通过**（2026-08-15）：Rust 壳 + Vue 骨架
-- P3 全部结束，测试基线 37/37
+- **P4.3 + P4.6 已交付并复验通过**（2026-08-15）：会话 API + 异常处理
+- **P4.4 已交付**（2026-08-19）：聊天界面 Vue 组件
+- P3 全部结束，测试基线 34/34（核心）
 - P4 计划评估意见已被 WorkBuddy 全部采纳（ChatRequest 改造 + config.yaml 写入安全两点）
-- P4.2→P4.4 交接点：配色换 design token / 砍底部状态栏 / 新增 TopBar（P4.3/P4.6 不涉及）
+- P4.2→P4.4 交接点全部完成：配色换 design token / 砍底部状态栏 / 新增 TopBar

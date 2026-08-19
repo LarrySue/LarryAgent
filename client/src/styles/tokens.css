@@ -1,0 +1,115 @@
+/* ==========================================================================
+ * LarryAgent Design Tokens
+ * Authoritative source: exchange/workBuddy_ui.md §3
+ * DO NOT add custom values here — extend via component CSS or local overrides
+ * ========================================================================== */
+
+:root {
+  /* ===== 背景层级 ===== */
+  --color-bg-base:         #0F1117;
+  --color-bg-surface:      #1A1D24;
+  --color-bg-elevated:     #242830;
+  --color-bg-overlay:      rgba(0, 0, 0, 0.6);
+  --sidebar-bg:            #13141C;
+
+  /* ===== 文字层级 ===== */
+  --color-text-primary:    #E4E4E7;
+  --color-text-secondary:  #A1A1AA;
+  --color-text-muted:      #71717A;
+  --color-text-inverse:    #0F1117;
+
+  /* ===== 边框 ===== */
+  --color-border-default:  rgba(255, 255, 255, 0.08);
+  --color-border-hover:    rgba(255, 255, 255, 0.15);
+  --color-border-focus:    #378ADD;
+
+  /* ===== 交互强调色 ===== */
+  --color-accent:          #378ADD;
+  --color-accent-hover:    #5BA4ED;
+  --color-accent-muted:    rgba(55, 138, 221, 0.15);
+
+  /* ===== 语义色 ===== */
+  --color-success:         #10B981;
+  --color-success-bg:      rgba(16, 185, 129, 0.12);
+  --color-warning:         #F59E0B;
+  --color-warning-bg:      rgba(245, 158, 11, 0.12);
+  --color-error:           #EF4444;
+  --color-error-bg:        rgba(239, 68, 68, 0.12);
+  --color-info:            #378ADD;
+  --color-info-bg:         rgba(55, 138, 221, 0.12);
+
+  /* ===== 角色标识色 ===== */
+  --role-default:          #9CA3AF;
+  --role-health:           #34D399;
+  --role-finance:          #FBBF24;
+
+  /* ===== 消息气泡 ===== */
+  --bubble-user-bg:        #1E293B;
+  --bubble-user-border:    rgba(55, 138, 221, 0.3);
+  --bubble-agent-bg:       #1A1D24;
+  --bubble-agent-border:   transparent;
+  --bubble-error-bg:       rgba(239, 68, 68, 0.08);
+  --bubble-error-border:   rgba(239, 68, 68, 0.3);
+
+  /* ===== 侧栏 ===== */
+  --sidebar-item-hover:    rgba(255, 255, 255, 0.04);
+  --sidebar-item-active:   rgba(255, 255, 255, 0.08);
+
+  /* ===== 字体 ===== */
+  --font-sans: "Inter", "SF Pro Display", "Microsoft YaHei", "PingFang SC",
+    -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+
+  /* ===== 字号 ===== */
+  --text-xs:   0.75rem;
+  --text-sm:   0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg:   1rem;
+  --text-xl:   1.125rem;
+  --text-2xl:  1.25rem;
+
+  /* ===== 字重 ===== */
+  --weight-normal:  400;
+  --weight-medium:  500;
+  --weight-semibold: 600;
+  --weight-bold:   700;
+
+  /* ===== 行高 ===== */
+  --leading-tight:   1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.6;
+
+  /* ===== 间距（4px 基准） ===== */
+  --space-0:   0;
+  --space-1:   0.25rem;
+  --space-2:   0.5rem;
+  --space-3:   0.75rem;
+  --space-4:   1rem;
+  --space-5:   1.25rem;
+  --space-6:   1.5rem;
+  --space-8:   2rem;
+  --space-10:  2.5rem;
+  --space-12:  3rem;
+
+  /* ===== 圆角 ===== */
+  --radius-sm:   0.375rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-full: 9999px;
+
+  /* ===== 过渡动画 ===== */
+  --duration-fast:   150ms;
+  --duration-normal: 300ms;
+  --duration-slow:   500ms;
+
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===== 响应式断点 ===== */
+  --breakpoint-sm:  640px;
+  --breakpoint-md:  768px;
+  --breakpoint-lg:  1024px;
+  --breakpoint-xl:  1280px;
+}

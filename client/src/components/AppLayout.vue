@@ -1,47 +1,36 @@
 <script setup lang="ts">
-// 应用布局组件
-// - 桌面端：左侧栏（会话列表 / 导航）+ 右侧主区域
-// - 移动端（< 768px）：左侧栏隐藏，通过汉堡菜单切换
-// - 响应式设计：P5 移动端可直接复用，CSS media query 成本低
 import { ref } from "vue";
 import { RouterLink } from "vue-router";
-import { useAppStore } from "@/stores/app";
+import { useAppStore, type Role } from "@/stores/app";
+import RoleSelector from "@/components/RoleSelector.vue";
+import ConnectionToast from "@/components/ConnectionToast.vue";
 
 const appStore = useAppStore();
-const sidebarOpen = ref(false); // 移动端侧栏开关
-
-const connectionLabel: Record<string, string> = {
-  ok: "已连接",
-  down: "已断开",
-  restarting: "重启中",
-  failed: "启动失败",
-};
-
-const connectionColor: Record<string, string> = {
-  ok: "#4ade80",
-  down: "#f87171",
-  restarting: "#fbbf24",
-  failed: "#f87171",
-};
+const sidebarOpen = ref(false);
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value;
+}
+
+function onRoleChange(role: Role) {
+  appStore.setRole(role);
 }
 </script>
 
 <template>
   <div class="app-layout">
-    <!-- 移动端顶部栏（含汉堡菜单） -->
+    <!-- 移动端顶部栏 -->
     <header class="mobile-header">
       <button class="menu-btn" @click="toggleSidebar">☰</button>
       <span class="mobile-title">LarryAgent</span>
+      <span class="role-dot" :style="{ background: `var(--role-${appStore.currentRole})` }"></span>
     </header>
 
     <!-- 侧栏遮罩（移动端） -->
     <div
       v-if="sidebarOpen"
       class="sidebar-overlay"
-      @click="toggleSidebar"
+      @click="sidebarOpen = false"
     ></div>
 
     <!-- 左侧栏 -->
@@ -62,26 +51,50 @@ function toggleSidebar() {
       <!-- 会话列表（P4.4 填充） -->
       <div class="conversation-list">
         <div class="section-title">会话</div>
-        <!-- P4.4 会在这里渲染 ConversationSidebar 组件 -->
-        <div class="conversation-placeholder">
-          会话列表将在 P4.4 实现
+        <div v-if="appStore.conversations.length === 0" class="empty-state">
+          <div class="empty-icon">💬</div>
+          <div class="empty-text">暂无会话</div>
         </div>
-      </div>
-
-      <!-- 底部状态栏 -->
-      <div class="status-bar">
-        <span
-          class="status-dot"
-          :style="{ background: connectionColor[appStore.connectionStatus] }"
-        ></span>
-        <span class="status-text">{{ connectionLabel[appStore.connectionStatus] }}</span>
+        <div v-else class="conversation-items">
+          <div
+            v-for="conv in appStore.conversations"
+            :key="conv.id"
+            class="conversation-item"
+            :class="{ active: conv.id === appStore.currentConversationId }"
+            @click="appStore.selectConversation(conv.id)"
+          >
+            <span class="conv-dot" :style="{ background: `var(--role-${appStore.currentRole})` }"></span>
+            <span class="conv-title">{{ conv.title || "新会话" }}</span>
+          </div>
+        </div>
       </div>
     </aside>
 
     <!-- 主区域 -->
-    <main class="main-content">
-      <slot></slot>
-    </main>
+    <div class="main-area">
+      <!-- TopBar -->
+      <header class="topbar">
+        <button class="collapse-btn" @click="toggleSidebar" title="切换侧栏">◀</button>
+        <div class="topbar-center">
+          <span v-if="appStore.currentConversationId" class="conversation-title">
+            {{ appStore.conversations.find(c => c.id === appStore.currentConversationId)?.title || "新会话" }}
+          </span>
+          <span v-else class="app-title">LarryAgent</span>
+        </div>
+        <div class="topbar-right">
+          <RoleSelector :model-value="appStore.currentRole" @update:model-value="onRoleChange" />
+          <RouterLink to="/settings" class="settings-btn" title="设置">⚙️</RouterLink>
+        </div>
+      </header>
+
+      <!-- 主内容 -->
+      <main class="main-content">
+        <slot></slot>
+      </main>
+    </div>
+
+    <!-- 连接状态 toast -->
+    <ConnectionToast />
   </div>
 </template>
 
@@ -91,36 +104,38 @@ function toggleSidebar() {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  background: var(--color-bg-base);
 }
 
-/* === 桌面端（>= 768px）=== */
+/* === 桌面端 === */
 .mobile-header {
   display: none;
 }
 
 .sidebar {
-  width: 240px;
-  min-width: 240px;
-  background: #1e1e2e;
-  color: #cdd6f4;
+  width: 260px;
+  min-width: 260px;
+  background: var(--sidebar-bg);
+  color: var(--color-text-primary);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #313244;
+  border-right: 1px solid var(--color-border-default);
+  transition: width var(--duration-normal) var(--ease-standard);
 }
 
 .sidebar-overlay {
   display: none;
 }
 
-/* === 移动端（< 768px）=== */
+/* === 移动端 === */
 @media (max-width: 768px) {
   .mobile-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 16px;
-    background: #1e1e2e;
-    color: #cdd6f4;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
     height: 48px;
     position: fixed;
     top: 0;
@@ -132,14 +147,15 @@ function toggleSidebar() {
   .menu-btn {
     background: none;
     border: none;
-    color: #cdd6f4;
-    font-size: 20px;
+    color: var(--color-text-primary);
+    font-size: var(--text-xl);
     cursor: pointer;
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
   }
 
   .mobile-title {
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
+    flex: 1;
   }
 
   .app-layout {
@@ -154,7 +170,7 @@ function toggleSidebar() {
     bottom: 0;
     z-index: 15;
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
+    transition: transform var(--duration-normal) var(--ease-standard);
   }
 
   .sidebar.open {
@@ -168,84 +184,202 @@ function toggleSidebar() {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--color-bg-overlay);
     z-index: 14;
   }
 }
 
-/* === 侧栏内部样式 === */
+/* === 侧栏内容 === */
 .sidebar-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #313244;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-default);
 }
 
 .logo {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
 }
 
 .nav {
-  padding: 12px 8px;
+  padding: var(--space-3) var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .nav-item {
   display: block;
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: #cdd6f4;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
   text-decoration: none;
-  transition: background 0.15s;
+  font-size: var(--text-sm);
+  transition: all var(--duration-fast);
 }
 
 .nav-item:hover {
-  background: #313244;
+  background: var(--sidebar-item-hover);
+  color: var(--color-text-primary);
 }
 
 .nav-item.router-link-active {
-  background: #45475a;
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
 }
 
 .conversation-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
 }
 
 .section-title {
-  font-size: 12px;
-  color: #6c7086;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
-.conversation-placeholder {
-  color: #6c7086;
-  font-size: 13px;
-  padding: 12px 8px;
+.empty-state {
+  padding: var(--space-6) var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
 }
 
-.status-bar {
-  padding: 12px 20px;
-  border-top: 1px solid #313244;
+.empty-icon {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-2);
+}
+
+.empty-text {
+  font-size: var(--text-sm);
+}
+
+.conversation-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.conversation-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-fast);
 }
 
-.status-dot {
+.conversation-item:hover {
+  background: var(--sidebar-item-hover);
+}
+
+.conversation-item.active {
+  background: var(--sidebar-item-active);
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--space-2);
+}
+
+.conv-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
 
-.status-text {
-  color: #a6adc8;
+.conv-title {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* === 主区域 === */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-bg-base);
+}
+
+.topbar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  gap: var(--space-3);
+}
+
+.collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--text-base);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+
+.collapse-btn:hover {
+  background: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.topbar-center {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.conversation-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--duration-fast);
+}
+
+.settings-btn:hover {
+  background: var(--color-border-hover);
+  color: var(--color-text-primary);
 }
 
 .main-content {
