@@ -25,10 +25,6 @@ backend/data/*.db-shm
 *.swp
 *.swo
 
-# AI 工具工作区（记忆文件入库，临时数据仍忽略）
-.workbuddy/*
-!.workbuddy/memory/
-
 # Node
 node_modules/
 client/dist/

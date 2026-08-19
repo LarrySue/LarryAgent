@@ -1,6 +1,6 @@
 # LarryAgent TODO
 > **TODO 治理约定**（2026-08-17 定稿）
-> - 本文件为**活跃 TODO**：只含当前待办 + 在飞阶段（P4）+ P5 骨架 + 工程债务。已完成历史阶段见 `archive/roadmap-history.md`。
+> - 本文件为**活跃 TODO**：只含当前待办 + 在飞阶段（P4）+ 后续阶段骨架 + 部分远期计划 + 工程债务。已完成历史阶段见 `archive/roadmap-history.md`。
 > - **一致性不变量**：✅ 阶段内不得含 [ ]；含 [ ] 即误归档，须移出至 backlog 或对应未来阶段。
 > - 加载方式：软性机制——AI 任务相关时主动 Read 本文件，不自动注入。
 > - 检索归档：需要时 Grep `archive/roadmap-history.md`；排查 BUG / 做改动前先扫归档（精细索引 P5 后启用，见 WORKBUDDY.md）。
@@ -17,7 +17,6 @@
 - [ ] 记忆保鲜机制：`last_hit_at` / `priority`，被频繁检索的记忆提升保留权重
 - [ ] 向量同步补偿：长期 — ChromaDB 异常恢复后自动校验 SQLite ↔ ChromaDB 一致性并补写缺失向量
 - [ ] Embedding 模型迁移脚本：长期 / 待触发 — 更换模型时重建 collection + 全量重索引
-- [ ] `llm.py::_resolve_provider_key` → **已归入 P3.0 前置修补**
 
 ### 多场景 AI 架构
 
