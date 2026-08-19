@@ -9,6 +9,10 @@
 
 ## 当前待办
 
+### UI/UX优化
+
+- [ ] 绝对长期项目，人类至高训导权 + 个人项目 的完全体现，人类想做啥就做啥，我就是要五彩斑斓的黑！
+
 ### 记忆系统调优
 
 - [ ] 检索参数调优（`memory/engine.py::get_long_term_memory`）：长期 — 根据实际使用中召回质量持续调整 score_threshold / top_k / 分级阈值
@@ -112,6 +116,8 @@
 - [x] 会话切换：侧栏点击 → 加载历史 → 切换 conversation_id
 - [x] 错误处理：网络错误 / 后端 500 / SSE error 事件统一展示（解析 JSON 错误响应）
 - [x] 前端请求带 `Authorization: Bearer <key>`（P3.4 兼容）：实际未实现 header 构造，留 P5（key 留空无需求）
+- [x] 前端逻辑层测试基建（Claude，Vitest 31/31 全绿，零 Tauri 依赖）：`client/tests/` 下 `api` / `useChatStream` / `toolCallCard` / `chatInput` 四个测试文件，覆盖错误体解析 + SSE 解析 + 组件状态机
+- 已知项：错误响应 `error` 类型名当前被 `detail` 覆盖（如 `NOT_FOUND` 不直接显示），是否展示类型名待产品裁定（非缺陷，属信息展示选择）
 
 **P4.5 - 首次启动引导 + 配置入口**（🔄 派发中：Trae 实现，2026-08-19 WorkBuddy 派发）
 
@@ -119,6 +125,7 @@
 - [ ] 无 key：引导页输入 API key → Tauri IPC → Rust 写入 config.yaml（**写入前先备份 `config.yaml.bak`，失败回滚**）→ 调用 P4.1 restart 重启后端（uvicorn 不热重载 yaml）
 - [ ] 有 key：直接进主界面
 - [ ] `/settings` 页放"打开配置文件"按钮（`tauri-plugin-shell`），改完提示需重启
+- [ ] 前端集成层测试（会话切换加载 / 角色切换传参）：逻辑层已由 Claude 覆盖（P4.4 测试），集成层需 mock RouterView + store 联动；引入新逻辑层时一并补，或 WB 明确要求再做
 
 **P4.6 - P3.5 遗留增强：异常出口统一**（Trae 实现 / Claude 更新测试 / WorkBuddy 复验 ✅）
 
