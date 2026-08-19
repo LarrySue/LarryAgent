@@ -19,6 +19,9 @@ backend/data/*.db-journal
 backend/data/*.db-wal
 backend/data/*.db-shm
 
+# 临时UI资产
+.workbuddy/artifacts
+
 # IDE
 .vscode/
 .idea/
