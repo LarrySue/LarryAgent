@@ -63,6 +63,19 @@ class ToolsConfig:
     shell_timeout: int = 30
     file_ops_workspace: str = "~/larry_workspace"
     function_calling_max_iterations: int = 10
+    # 配置驱动启用：列出的工具名才会被注册（registry.scan_and_register 读取）。
+    # 空列表 = 未配置 → 全部启用（保持向后兼容）。
+    enabled_tools: list = field(default_factory=list)
+
+
+@dataclass
+class SearchConfig:
+    """网络搜索配置（web_search 工具）"""
+    provider: str = "brave"
+    brave_api_key: str = ""
+    timeout: float = 8.0          # 单次搜索硬超时（秒）
+    max_retries: int = 2          # 失败/限流后的指数退避重试次数
+    max_results: int = 5          # 默认返回结果条数
 
 
 @dataclass
@@ -83,6 +96,7 @@ class Config:
     vector_store: VectorStoreConfig = field(default_factory=VectorStoreConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
+    search: SearchConfig = field(default_factory=SearchConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
@@ -156,6 +170,7 @@ def load_config(config_path: str | None = None) -> Config:
         vector_store=VectorStoreConfig(**vs_raw),
         embedding=EmbeddingConfig(**raw.get("embedding", {})),
         tools=ToolsConfig(**raw.get("tools", {})),
+        search=SearchConfig(**raw.get("search", {})),
         llm=LLMConfig(**raw.get("llm", {})),
         logging=LoggingConfig(**raw.get("logging", {})),
     )

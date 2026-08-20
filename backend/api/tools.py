@@ -64,7 +64,8 @@ async def execute_tool(req: ToolExecuteRequest, request: Request):
         params["caller_ip"] = request.client.host if request.client else "unknown"
 
     logger.info("Manual tool execute: %s params=%s", req.name, list(params.keys()))
-    result = await tool.execute(**params)
+    # BaseTool.run() 统一护栏：超时强制 + 错误归一 + 执行日志
+    result = await tool.run(**params)
 
     return {
         "success": result.success,

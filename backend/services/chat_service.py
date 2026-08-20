@@ -286,7 +286,8 @@ async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, N
                 tool_result = f"Error: tool '{tool_name}' not found"
                 tool_success = False
             else:
-                result = await tool.execute(**args)
+                # BaseTool.run() 统一护栏：超时强制 + 错误归一 + 执行日志
+                result = await tool.run(**args)
                 tool_result = result.content if result.success else f"Error: {result.error}"
                 tool_success = result.success
 
