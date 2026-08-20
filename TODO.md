@@ -9,16 +9,17 @@
 
 ## 当前待办
 
-### 网络搜索能力
+### 网络搜索能力 ✅（实现 Trae CN / 测试 Claude Code / WorkBuddy 逻辑层复验通过，2026-08-20）
 
-> 实现：Trae CN ｜ 测试：Claude Code
+> 实现：Trae CN ｜ 测试：Claude Code ｜ WB 复验：读代码 + 42 项测试绿（本人亲跑）+ 前端零改动 + Tier0 key 不落日志
 
-- [ ] **web_search Tool（Brave 免费层，provider 可插拔）**：对话内 AI 自主发起搜索，实时性问题自动搜并整合，回答标注来源 URL；首版数据源用 Brave 免费层（2000 次/月，需 key），provider 封装可插拔，后续按需替换为 SearXNG（VPS 自托管）
-- [ ] **Tool 框架底座（与 web_search 同步夯实地基）**：BaseTool 护栏基类统一超时强制 + 错误归一(ToolError) + 执行日志；"访问外部/本地资源"类叠加 SSRF/caller 校验钩子；配置驱动启用（config.yaml 列启用 Tool + 各自参数）；第三方挂载契约先留接口
-- [ ] **安全边界**：目标 URL 内网拦截（SSRF，防 169.254.169.254/10.x/192.168.x/localhost）+ 硬性超时，不阻塞 SSE 流
-- [ ] **降级策略**：搜索失败/限流 → 指数退避后仍失败 → 降级为正常回答并提示"未能联网核实"，不报错不中断
-- [ ] **前端展示**：复用 P4.4 ToolCallCard 展示搜索过程与来源（工具调用可见性价值）
-- [ ] **验收方向**：实时性问题→自动搜→带来源标注；失败→降级不中断；抓取超时/内网 URL 被拦截
+- [x] **web_search Tool（Brave 免费层，provider 可插拔）**：对话内 AI 自主发起搜索，实时性问题自动搜并整合，回答标注来源 URL；首版数据源用 Brave 免费层（2000 次/月，需 key），provider 封装可插拔，后续按需替换为 SearXNG（VPS 自托管）
+- [x] **Tool 框架底座（与 web_search 同步夯实地基）**：BaseTool 护栏基类统一超时强制 + 错误归一(ToolError) + 执行日志；"访问外部/本地资源"类叠加 SSRF/caller 校验钩子；配置驱动启用（config.yaml 列启用 Tool + 各自参数）；第三方挂载契约先留接口
+- [x] **安全边界**：目标 URL 内网拦截（SSRF，防 169.254.169.254/10.x/192.168.x/localhost）+ 硬性超时，不阻塞 SSE 流
+- [x] **降级策略**：搜索失败/限流 → 指数退避后仍失败 → 降级为正常回答并提示"未能联网核实"，不报错不中断
+- [x] **前端展示**：复用 P4.4 ToolCallCard 展示搜索过程与来源（工具调用可见性价值）
+- [x] **验收方向**：实时性问题→自动搜→带来源标注；失败→降级不中断；抓取超时/内网 URL 被拦截（均由测试覆盖验证）
+- [ ] **真机端到端验收（待老大收尾）**：WB 不碰真实 key（Tier0 红线）且需 GUI 环境，此步只能由老大做——填 `config.yaml` 的 `search.brave_api_key` 真实 Brave key → 启动 LarryAgent → 聊实时问题看来源标注 → 测降级（错 key/断网出现"未能联网核实"且不崩）。逻辑层已全收口，此步为端到端收尾。
 - 注：首版**不做 web_fetch 正文抓取**（代价高：SSRF/反爬/内容清洗/阻塞风险，复杂度高一个量级）；SearXNG 待 VPS 部署后替换 Brave
 
 ### 移动端开发
@@ -64,7 +65,7 @@
 
 ### 工程债务（需要重新考虑）
 
-- [ ] **前端集成层测试（P4.4 遗留）**：会话切换加载 / 角色切换传参的集成测试（mock RouterView + store 联动）。逻辑层已由 Claude 覆盖（P4.4 测试 31/31 绿），集成层待补；原规格"引入新逻辑层时一并补，或 WB 明确要求再做"。P4 完结时不阻塞（功能闭环已达成），归此待补
+- [ ] **前端集成层测试**：会话切换加载 / 角色切换传参的集成测试（mock RouterView + store 联动）。逻辑层已由 Claude 覆盖（P4.4 测试 31/31 绿），集成层待补；原规格"引入新逻辑层时一并补，或 WB 明确要求再做"。P4 完结时不阻塞（功能闭环已达成），归此待补
 - [ ] **存量测试债务是否修复**：`test_chromadb_degradation.py`（mock 了已不存在的 archiver.get_db）、`test_integration_llm.py`（缺 pytest-asyncio）、`test_shell_tool.py::test_windows_dir`（中文 Windows 编码断言）。选项 A：修复恢复"全套绿"基线；选项 B：维持"相关测试 + 已知项甄别"现状。当前规则以 B 运转（见 CLAUDE.md/TRAE.md 测试环境段）。此事不是很急，找个合适的机会讨论一下
 
 ### 其他长期增强（待触发）
@@ -75,7 +76,7 @@
 
 ## 开发路线图
 
-> 主线阶段 **P0–P4 已全部完成 ✅**，LarryAgent 进入「能力增强 / 长期迭代」新阶段。详细计划冷存于 `archive/roadmap-history.md`。
+> 主线阶段 **P0–P4 已全部完成 ✅**，LarryAgent 进入「能力增强 / 长期迭代」新阶段。主线阶段详细情况冷存于 `archive/roadmap-history.md`。
 
 ### 历史索引（已完成阶段，冷存于 `archive/roadmap-history.md`）
 
