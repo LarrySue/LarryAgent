@@ -11,6 +11,8 @@
 
 ### 网络搜索能力
 
+> 实现：Trae CN ｜ 测试：Claude Code
+
 - [ ] **web_search Tool（Brave 免费层，provider 可插拔）**：对话内 AI 自主发起搜索，实时性问题自动搜并整合，回答标注来源 URL；首版数据源用 Brave 免费层（2000 次/月，需 key），provider 封装可插拔，后续按需替换为 SearXNG（VPS 自托管）
 - [ ] **Tool 框架底座（与 web_search 同步夯实地基）**：BaseTool 护栏基类统一超时强制 + 错误归一(ToolError) + 执行日志；"访问外部/本地资源"类叠加 SSRF/caller 校验钩子；配置驱动启用（config.yaml 列启用 Tool + 各自参数）；第三方挂载契约先留接口
 - [ ] **安全边界**：目标 URL 内网拦截（SSRF，防 169.254.169.254/10.x/192.168.x/localhost）+ 硬性超时，不阻塞 SSE 流
