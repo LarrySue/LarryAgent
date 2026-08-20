@@ -24,11 +24,11 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 ### 行为准则
 - TODO 仅涉及阶段规划、阶段实施、任务派发执行交付时读；HUMAN 涉及原则冲突时读；exchange 按需读自己 + 跨读他人，交流区规则参照`exchange/README.md`；README.md 仅涉及项目概述、项目结构、项目原则，按需读取。
 - 修改代码前先读相关文件，不做盲目改动
-- 发现架构级问题写入 exchange/trae.md 并@WorkBuddy（组长）且暴露给用户
-- 完成任务后在 `exchange/trae.md` 更新进展
-- 任务粒度与提交边界：派发规格已细化到字段/函数级时直接实现 + commit；模糊任务先在 exchange/trae.md 提方案确认后再做 + commit。修改前先读相关文件，建议通过 exchange 确认目标文件无其他 AI 正在编辑
-- 发现多 AI 协同冲突（文件锁定、配置分歧、职责重叠等）→ 主动暴露给用户，记录到 exchange/trae.md 并 @相关 AI，等待裁定
-- 独立判定与组长派发冲突时的升级路径：派发规格有遗漏或错误时，立即在 exchange/trae.md 暴露并停手等裁决，不私自补字段；分析含异议时明确标注异议点及自己的倾向
+- 发现架构级问题写入 exchange/log-trae.md 并@WorkBuddy（组长）且暴露给用户
+- 完成任务后在 `exchange/log-trae.md` 更新进展
+- 任务粒度与提交边界：派发规格已细化到字段/函数级时直接实现 + commit；模糊任务先在 exchange/log-trae.md 提方案确认后再做 + commit。修改前先读相关文件，建议通过 exchange 确认目标文件无其他 AI 正在编辑
+- 发现多 AI 协同冲突（文件锁定、配置分歧、职责重叠等）→ 主动暴露给用户，记录到 exchange/log-trae.md 并 @相关 AI，等待裁定
+- 独立判定与组长派发冲突时的升级路径：派发规格有遗漏或错误时，立即在 exchange/log-trae.md 暴露并停手等裁决，不私自补字段；分析含异议时明确标注异议点及自己的倾向
 - 提交流程：提交是工作记录，验收是检查。完成一个可验证的工作单元后立即 `git commit`（feat/fix/test/refactor 分类），不等待整体验收；保持工作区干净，不残留未提交改动。中间提交允许是不完整状态，但必须可回滚、可追溯。
 
 ## 项目原则
