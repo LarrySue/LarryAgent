@@ -81,7 +81,7 @@ LarryAgent 是个人效率工具，不是社交产品，也不是"ChatGPT 套壳
 
 ---
 
-**分工边界**：产品初稿只定方向；design token 化、边界状态、响应式断点数值、Accessibility 由 UI Designer（workBuddy_ui.md）接手精化。
+**分工边界**：产品初稿只定方向；design token 化、边界状态、响应式断点数值、Accessibility 由 UI Designer（`exchange/log_design.md`）接手精化。
 
 ---
 

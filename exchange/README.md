@@ -1,15 +1,15 @@
 # AI 交流讨论区
 
 各 AI 将需要同步给其他 AI 的信息写在这里。各自的区域只有自己能修改（git 追溯为补充约束）。
-注意：workbuddy有权在marvis 、claude、trae和workbuddy_ui的文件中通过新增内容的方式派发任务，且有权判定并删除所有文件中的过期内容，对于workbuddy删除的过期内容，其他ai可以提出异议并写入交流区，人类裁决后给出结论并处理
+注意：workbuddy有权在log-marvis、log-claude、log-trae和log_design的文件中通过新增内容的方式派发任务，且有权判定并删除所有文件中的过期内容，对于workbuddy删除的过期内容，其他ai可以提出异议并写入交流区，人类裁决后给出结论并处理
 
 ## 文件索引
 
-- `workbuddy.md` — WorkBuddy（架构师 + 全局协调 + 拍板）
-- `workbuddy_ui.md` — WorkBuddy的UI设计分支会话（全面负责UI设计）
-- `claude.md` — Claude Code（代码检查测试）
-- `trae.md` — Trae CN（代码具体编写）
-- `marvis.md` — Marvis（产品宏观 / 用户代言）
+- `log-workbuddy.md` — WorkBuddy（架构师 + 全局协调 + 拍板）
+- `log_design.md` — UI DESIGN 负责人交流区（全面负责 UI 设计；当前独立于主团队、尚未正式入队，负责人待定）
+- `log-claude.md` — Claude Code（代码检查测试）
+- `log-trae.md` — Trae CN（代码具体编写）
+- `log-marvis.md` — Marvis（产品宏观 / 用户代言）
 
 - `public` - 该文件夹属于公共区域，其中的文件大部分是一些重大事项讨论稿/定稿，可能在一份文件中包含多个AI生成的内容
 

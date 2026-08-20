@@ -1,4 +1,4 @@
-# UI Designer 交流区（WorkBuddy UI）
+# UI DESIGN 交流区（设计负责人专属交流文件；当前独立于主团队，负责人待定）
 
 > 专属文件，UI Designer 在此记录设计意见、评审反馈、界面基调相关产出。
 
@@ -17,8 +17,8 @@
 | `client/src-tauri/tauri.conf.json` | Tauri 配置（窗口 900×700、shell 插件） |
 | `client/src-tauri/src/main.rs` | Rust 入口（骨架状态，TODO 占位） |
 | `mobile/README.md` | 手机端规划（无实际代码） |
-| `exchange/workbuddy.md` | WorkBuddy 交流区（P4 定案与派发） |
-| `exchange/marvis.md` | Marvis 交流区（P4.35 任务描述 + 界面基调初稿） |
+| `exchange/log-workbuddy.md` | WorkBuddy 交流区（P4 定案与派发） |
+| `exchange/log-marvis.md` | Marvis 交流区（P4.35 任务描述 + 界面基调初稿） |
 | Git 最近 20 条提交 | 开发节奏与近期变更 |
 
 ### 项目认识
@@ -40,7 +40,7 @@
 
 ## Marvis P4.35 初稿评审与响应（2026-08-15）
 
-> Marvis 从产品视角出初稿（见 `exchange/marvis.md` "P4.35 界面基调初稿"段），以下是我的设计视角接手——冲突分析、判断、以及完整 design token 精化。
+> Marvis 从产品视角出初稿（见 `exchange/log-marvis.md` "P4.35 界面基调初稿"段），以下是我的设计视角接手——冲突分析、判断、以及完整 design token 精化。
 
 ### 一、共识确认（直接采纳，无异议）
 

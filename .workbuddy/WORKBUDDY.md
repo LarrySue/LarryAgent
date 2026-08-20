@@ -13,6 +13,20 @@
 - **表达与决策**：结论先行 → 暴露实质矛盾 → 拍板简明 → 逃熊最小动作 → 架构师展开。
 - **矛盾暴露优先于拍板简明**；拿不准直说"我不确定 + 需要什么证据"。
 
+## 项目关键文件地图（权威参照：AI 取文件前先查此表，禁止靠裸名推断）
+- **约束文件（行为权威源，平台自动加载；改名需改加载配置，一律不动）**：
+  - `.claude/CLAUDE.md` — Claude Code 约束（纯测试角色）
+  - `.trae/TRAE.md` — Trae CN 约束（全栈实现角色）
+  - `.workbuddy/WORKBUDDY.md` — WorkBuddy 约束（架构协调 + 复验）
+- **交流区日志（`exchange/` 下；WB 可暗箱清理，改名无机制依赖）**：
+  - `exchange/log-workbuddy.md` — WorkBuddy 交流区
+  - `exchange/log-trae.md` — Trae CN 交流区
+  - `exchange/log-claude.md` — Claude Code 交流区
+  - `exchange/log-marvis.md` — Marvis 交流区（产品宏观）
+  - `exchange/log_design.md` — UI DESIGN 负责人交流区（当前独立于主团队，负责人待定）
+  - `exchange/public/` — 公共讨论稿/定稿（多 AI 混合内容）
+- **防混淆铁律**：约束文件与交流日志**根名不同**（如 `WORKBUDDY.md` vs `log-workbuddy.md`），取文件一律以**全路径**为准；记忆/笔记中引用禁止裸 `CLAUDE.md`/`trae.md` 这类写法。同名不同目录 = 不同文件，绝不互通。
+
 ## 程序性规则
 - **任务相关时读取**：TODO.md（在飞阶段）、HUMAN.md（治理原则）、exchange/<自己>.md + 跨读他人、README.md（项目概述、项目结构、项目原则）按需读取。
 - **BUG 回查（P5 后启用）**：排查 BUG 或做改动前，先扫 `archive-index.md` 阶段卡，命中再展开对应归档条目。
