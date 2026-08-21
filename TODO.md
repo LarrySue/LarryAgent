@@ -44,8 +44,16 @@
 
 - [ ] 绝对长期项目，人类至高训导权 + 个人项目 的完全体现，人类想做啥就做啥，我就是要五彩斑斓的黑！
 - [ ] 初步测试，UI还是存在一些BUG，这个慢慢来
-- [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `UI-Reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `UI-Reference.md`
+- [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `UI-Reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `UI-Reference.md`（优先级：低）
 - [ ] **Trae 实现期 UI 细节文档化**：实现期新增的 UI 细节（如 `--weight-semibold/bold` 等 token）以 `tokens.css` / 组件代码为准，待点将时回写 `UI-Reference.md` §10 已知局限所列项
+- [ ] **会话项时间戳展示**：UI-Reference §5.4 SidebarItem 规格要求"角色色点 + 标题 + 时间戳（右对齐）"，当前代码只有色点 + 标题（API 已返回 `updated_at`，待实现展示）
+- [ ] **UI-Reference §5.5 设置按钮描述回写**：代码已删除 TopBar 设置按钮（`/settings` 路由随 P4.5 砍除），文件描述与代码不一致，待回写或拍板
+- [ ] **断点折叠模式（640–1023 48px 图标）**：UI-Reference §3 规格，当前代码仅实现 <768 抽屉，640–1023 折叠模式未落地
+- [ ] **桌面端侧栏折叠按钮 bug**：TopBar `collapse-btn`(◀) 点击无效（只切换移动端抽屉状态，桌面端侧栏宽度不变）；修复或删除
+- [ ] **网络断开常驻提示**：ConnectionToast 由临时 toast 改为**常驻 banner**；不做输入框禁用（网络问题是外部问题、不入工具范畴），有提示即可（UI-Reference §6）
+- [ ] **SSE 中断恢复**：流中断 5s 无数据 → 提示"重新发送"（UI-Reference §6）
+- [ ] **超长消息折叠**：>2000 字默认折叠前 6 行 + "展开全文"；代码块独立横向滚动（UI-Reference §6，优先级：低）
+- [ ] **Accessibility（WCAG AA）**：触控目标 ≥44px / aria-label / prefers-reduced-motion 关闭动画（UI-Reference §7）
 
 ### 记忆系统调优
 

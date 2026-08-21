@@ -63,14 +63,15 @@
 
 ## 4. 多角色差异化呈现（轻量，不做三套换肤）
 
-- 落地：侧栏条目角色色点 + 顶部角色专属问候语 + AI 气泡左侧色带 + 工具卡片 header 色跟随角色 + 切换时 **color transition 200ms**（无 transform 位移）
+- 落地：侧栏条目角色色点 + AI 气泡左侧色带 + 工具卡片 header 色跟随角色 + 切换时 **color transition 200ms**（无 transform 位移）
+- 明确不做：角色专属问候语（2026-08-21 老大定：不要问候语）
 - 明确不做：三套完整主题换肤（成本高、维护噩梦）
 
 ## 5. 核心组件规格
 
 ### 5.1 ToolCallCard（灵魂组件）
 - 展示：工具名 + 轮次 + 状态（执行中 spinner / 成功 ✅ / 失败 ❌）+ 参数（可折叠）+ 结果摘要
-- 样式：`--color-bg-elevated` 底 + 1px `--color-border-default` 边 + radius-md(8px) + padding 10/14 + max-width 85%
+- 样式：`--color-bg-elevated` 底 + 1px `--color-border-default` 边 + radius-md(8px) + padding 12/16（实际代码 `--space-3 var(--space-4)`）+ max-width 85%
 - header 左侧色带 3px = `--role-{current}`；成功→`--color-success` 绿条 / 失败→`--color-error` 红条
 - 可点击 header toggle 参数/结果区
 
@@ -81,7 +82,7 @@
 
 ### 5.3 ChatInput
 - `--color-bg-elevated` 底 + radius-lg(12px)；focus 时 border `--color-accent` + box-shadow `0 0 0 2px --color-accent-muted`
-- min-height 44px（触控最小）/ max-height 120px（约 5 行超出滚动）；发送按钮 `--color-accent` 底白字 radius-md，disabled opacity 0.4
+- min-height 24px（实际代码 `.input-area` 为 min-height: 24px）/ max-height 120px（约 5 行超出滚动）；发送按钮 `--color-accent` 底白字 radius-md，disabled opacity 0.4
 - Enter 发送 / Shift+Enter 换行
 
 ### 5.4 SidebarItem
@@ -96,10 +97,9 @@
 
 | 场景 | 处理 |
 |------|------|
-| 空会话列表 | 侧栏中央空状态 + "开始新对话" + 新建按钮高亮 |
-| 空消息流 | 中央欢迎语（含角色专属问候，无快捷建议气泡——已砍） |
+| 空消息流 | 中央欢迎语（无快捷建议气泡——已砍） |
 | 超长消息(>2000字) | 默认折叠前 6 行 + "展开全文"；代码块独立横向滚动 |
-| 网络断开 | 顶部 warning banner + 输入框禁用 + 自动重连 3 次失败显示"手动重试" |
+| 网络断开 | 顶部**常驻** warning banner（不做输入框禁用——网络属外部问题，不入工具范畴，2026-08-21 老大定）+ 自动重连 3 次失败显示"手动重试" |
 | SSE 流中断 | 最后 delta 后 "..." 态；5s 无数据→"重新发送"；工具中断→卡片 spinner + 红警"执行超时" |
 | AI 回复为空 | 不渲染气泡；状态栏闪现提示；不阻塞后续 |
 | 并发防护 | 发送时禁用输入+发送；上一条未完成可"停止生成" |
@@ -123,7 +123,7 @@
 ## 9. 过渡动画
 
 - 原则：**color transition 替代 transform**（柔和无冲击感，"温和地变了，没有动的感觉"）
-- 角色切换色带 / 顶部问候语 / 侧栏色点 / 工具卡片 header 条：background-color transition 150–200ms ease
+- 角色切换色带 / 侧栏色点 / 工具卡片 header 条：background-color transition 150–200ms ease
 - `prefers-reduced-motion` 时全部关闭
 
 ## 10. 来源与版本
