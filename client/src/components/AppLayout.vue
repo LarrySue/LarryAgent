@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useAppStore, type Role } from "@/stores/app";
 import RoleSelector from "@/components/RoleSelector.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
+import logoUrl from "@/assets/logo.svg";
 
 const appStore = useAppStore();
 const sidebarOpen = ref(false);
@@ -40,18 +41,17 @@ function startNewChat() {
     <!-- 左侧栏 -->
     <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-header">
-        <h1 class="logo">LarryAgent</h1>
+        <div class="brand">
+          <img class="sidebar-logo" :src="logoUrl" alt="LarryAgent logo" />
+          <h1 class="logo">LarryAgent</h1>
+        </div>
+        <button class="new-chat-btn" title="新建会话" @click="startNewChat">
+          <span class="new-chat-icon">＋</span>
+        </button>
       </div>
 
       <!-- 会话列表 -->
       <div class="conversation-list">
-        <div class="section-header">
-          <div class="section-title">会话列表</div>
-          <button class="new-chat-btn" title="新建会话" @click="startNewChat">
-            <span class="new-chat-icon">＋</span>
-            <span class="new-chat-text">新建会话</span>
-          </button>
-        </div>
         <div v-if="appStore.conversations.length === 0" class="empty-state">
           <div class="empty-icon">💬</div>
           <div class="empty-text">暂无会话</div>
@@ -191,8 +191,26 @@ function startNewChat() {
 
 /* === 侧栏内容 === */
 .sidebar-header {
-  padding: var(--space-4) var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border-default);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.sidebar-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
 }
 
 .logo {
@@ -200,42 +218,25 @@ function startNewChat() {
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
-}
-
-.conversation-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-2) var(--space-3);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-}
-
-.section-title {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0;
+  white-space: nowrap;
 }
 
 .new-chat-btn {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   background: transparent;
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-family: var(--font-sans);
   cursor: pointer;
   transition: all var(--duration-fast);
+  flex-shrink: 0;
 }
 
 .new-chat-btn:hover {
@@ -245,12 +246,13 @@ function startNewChat() {
 }
 
 .new-chat-icon {
-  font-size: var(--text-sm);
   line-height: 1;
 }
 
-.new-chat-text {
-  white-space: nowrap;
+.conversation-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3);
 }
 
 .empty-state {
