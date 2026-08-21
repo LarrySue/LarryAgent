@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { RouterLink } from "vue-router";
 import { useAppStore, type Role } from "@/stores/app";
 import RoleSelector from "@/components/RoleSelector.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
@@ -14,6 +13,11 @@ function toggleSidebar() {
 
 function onRoleChange(role: Role) {
   appStore.setRole(role);
+}
+
+function startNewChat() {
+  appStore.selectConversation(null); // 清空选中 → ChatView watch 到 null 显示欢迎页
+  sidebarOpen.value = false; // 移动端收起侧栏
 }
 </script>
 
@@ -39,15 +43,15 @@ function onRoleChange(role: Role) {
         <h1 class="logo">LarryAgent</h1>
       </div>
 
-      <nav class="nav">
-        <RouterLink to="/" class="nav-item" @click="sidebarOpen = false">
-          💬 聊天
-        </RouterLink>
-      </nav>
-
-      <!-- 会话列表（P4.4 填充） -->
+      <!-- 会话列表 -->
       <div class="conversation-list">
-        <div class="section-title">会话</div>
+        <div class="section-header">
+          <div class="section-title">会话列表</div>
+          <button class="new-chat-btn" title="新建会话" @click="startNewChat">
+            <span class="new-chat-icon">＋</span>
+            <span class="new-chat-text">新建会话</span>
+          </button>
+        </div>
         <div v-if="appStore.conversations.length === 0" class="empty-state">
           <div class="empty-icon">💬</div>
           <div class="empty-text">暂无会话</div>
@@ -198,37 +202,17 @@ function onRoleChange(role: Role) {
   color: var(--color-text-primary);
 }
 
-.nav {
-  padding: var(--space-3) var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.nav-item {
-  display: block;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  font-size: var(--text-sm);
-  transition: all var(--duration-fast);
-}
-
-.nav-item:hover {
-  background: var(--sidebar-item-hover);
-  color: var(--color-text-primary);
-}
-
-.nav-item.router-link-active {
-  background: var(--color-accent-muted);
-  color: var(--color-accent);
-}
-
 .conversation-list {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-2) var(--space-3);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
 }
 
 .section-title {
@@ -236,7 +220,37 @@ function onRoleChange(role: Role) {
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: var(--space-2);
+  margin-bottom: 0;
+}
+
+.new-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.new-chat-btn:hover {
+  background: var(--color-accent-muted);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.new-chat-icon {
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.new-chat-text {
+  white-space: nowrap;
 }
 
 .empty-state {
