@@ -44,6 +44,8 @@
 
 - [ ] 绝对长期项目，人类至高训导权 + 个人项目 的完全体现，人类想做啥就做啥，我就是要五彩斑斓的黑！
 - [ ] 初步测试，UI还是存在一些BUG，这个慢慢来
+- [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `UI-Reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `UI-Reference.md`
+- [ ] **Trae 实现期 UI 细节文档化**：实现期新增的 UI 细节（如 `--weight-semibold/bold` 等 token）以 `tokens.css` / 组件代码为准，待点将时回写 `UI-Reference.md` §10 已知局限所列项
 
 ### 记忆系统调优
 

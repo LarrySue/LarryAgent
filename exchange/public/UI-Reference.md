@@ -130,4 +130,4 @@
 
 - **v1（2026-08-21，WB 汇聚）**：来源 = `exchange/log_design.md`（设计精化定案 §3–§7、§8 Logo、§9 过渡）+ `exchange/log-marvis.md`（产品方向 §0–§5、结构层决策）+ `client/src/styles/tokens.css`（代码数值事实，以之为准）
 - **已知局限**：Trae 实现时的部分 UI 决策已固化于 `tokens.css` / 组件代码（如新增 `--weight-semibold/bold`），未单独文档化的细节以代码为准；后续由 Trae 点将时回写补充本文件
-- **过程与未决项**：设计冲突分析、迭代历程、待拍板项见 `exchange/log_design.md`；产品视角提案与讨论见 `exchange/log-marvis.md`
+- **过程与未决项**：设计冲突分析、迭代历程见 `exchange/log_design.md`；**未决 / 待办（待拍板、Trae 回写等）已归 `TODO.md`「UI/UX优化」**；产品视角提案与讨论见 `exchange/log-marvis.md`
