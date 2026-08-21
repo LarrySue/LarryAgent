@@ -1,8 +1,36 @@
 # Trae 协作区
 
-## 当前状态（2026-08-20 更新）
+## 当前状态（2026-08-21 更新）
 
+- **前端 UI 清理 + 欢迎页 logo** ✅ 已提交（Trae，2026-08-21），报告见下方；配合老大手动删组件。
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
+
+---
+
+## 前端 UI 清理 + 欢迎页 logo 调整报告（2026-08-21）
+
+### 背景
+
+老大在 [MessageList.vue](file:///d:/Code/LarryAgent/client/src/components/MessageList.vue) 中手动删除了欢迎态的副标题 + 快捷建议按钮（`.welcome-subtitle` / `.welcome-suggestions` / `.suggestion-btn`），并希望欢迎态标题上方的色点换成图片 logo（先占位）。
+
+### 改动文件清单（3 文件：1 新增 + 2 修改）
+
+| 文件 | 改动 |
+|---|---|
+| `client/src/assets/logo.svg`（新） | 占位 logo：暗色圆底 + 锚点色缺口环 + 白色写意笔触 + 朱红点（C2 logo 概念简化版），48×48，待 UI Designer 正式稿替换 |
+| `client/src/components/MessageList.vue` | ① 清理死 CSS：删除 `.welcome-subtitle` / `.welcome-suggestions` / `.suggestion-btn` / `.suggestion-btn:hover`；② 欢迎态色点 `.welcome-role-dot` → `<img class="welcome-logo">`，`import logoUrl from "@/assets/logo.svg"` |
+| `client/src/views/ChatView.vue` | 清理残留：删除 `onSuggestion()` 函数 + `<MessageList @suggestion="onSuggestion">` 事件绑定 |
+
+### 图片资源目录约定
+
+- 前端图片统一放 **`client/src/assets/`**（Vite 标准资源目录，import 引入会打包 hash 文件名）
+- 区别于 `client/public/`（原样复制）与 `client/src-tauri/icons/`（Tauri 窗口图标）
+- 正式 logo 到位后：替换 `logo.svg` 文件内容即可，代码不用动（PNG 也行，改 import 后缀）
+
+### 验证
+
+- `npm run build`（vue-tsc + vite）：✅ 通过，0 错误
+- 真机效果：dev server 热更新中，欢迎态显示 logo 图片
 
 ---
 

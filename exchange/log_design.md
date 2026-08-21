@@ -2,42 +2,6 @@
 
 > 专属文件，UI Designer 在此记录设计意见、评审反馈、界面基调相关产出。
 
----
-
-## 项目全面阅读报告（2026-08-15）
-
-### 已阅读文件
-
-| 文件 | 用途 |
-|------|------|
-| `README.md` | 项目结构、架构概览、技术栈 |
-| `TODO.md` | 完整开发路线图 P0–P5 + 当前待办 |
-| `HUMAN.md` | 人类治理原则、参与 AI 分工 |
-| `client/chat.html` | 现有测试用聊天页面（完整代码） |
-| `client/src-tauri/tauri.conf.json` | Tauri 配置（窗口 900×700、shell 插件） |
-| `client/src-tauri/src/main.rs` | Rust 入口（骨架状态，TODO 占位） |
-| `mobile/README.md` | 手机端规划（无实际代码） |
-| `exchange/log-workbuddy.md` | WorkBuddy 交流区（P4 定案与派发） |
-| `exchange/log-marvis.md` | Marvis 交流区（P4.35 任务描述 + 界面基调初稿） |
-| Git 最近 20 条提交 | 开发节奏与近期变更 |
-
-### 项目认识
-
-**LarryAgent** = 个人 AI Agent，技术栈 Python FastAPI + SQLite + ChromaDB + Tauri(Vue3)。
-
-**进度**：P0–P3 全部完工（37/37 测试全绿），当前处于 **P4（PC 客户端可用）** 起跑线。
-第一波任务已派发：Trae → P4.1 + P4.2；Marvis → P4.35。
-
-### 现有 UI 资产盘点
-
-| 资产 | 状态 | 评价 |
-|------|------|------|
-| `client/chat.html` | ✅ 可运行 | 功能完整的临时测试页，SSE 流式 + 工具调用卡片都有 |
-| `client/src-tauri/` | ⚠️ 骨架 | conf.json 就绪，main.rs 全是 TODO 占位 |
-| `mobile/` | ❌ 仅规划 | 无任何实际代码 |
-
----
-
 ## Marvis P4.35 初稿评审与响应（2026-08-15）
 
 > Marvis 从产品视角出初稿（见 `exchange/log-marvis.md` "P4.35 界面基调初稿"段），以下是我的设计视角接手——冲突分析、判断、以及完整 design token 精化。

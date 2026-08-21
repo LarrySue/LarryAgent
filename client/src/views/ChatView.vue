@@ -172,10 +172,6 @@ async function handleSend(message: string) {
   }
 }
 
-function onSuggestion(text: string) {
-  handleSend(text);
-}
-
 watch(
   () => appStore.currentConversationId,
   async (id) => {
@@ -200,7 +196,7 @@ onMounted(async () => {
 <template>
   <AppLayout>
     <div class="chat-view">
-      <MessageList :messages="messages" @suggestion="onSuggestion" />
+      <MessageList :messages="messages" />
       <div v-if="isStreaming" class="stop-bar">
         <button class="stop-btn" @click="stop">■ 停止生成</button>
       </div>

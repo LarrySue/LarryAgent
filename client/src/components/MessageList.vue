@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick } from "vue";
 import { useAppStore } from "@/stores/app";
 import ToolCallCard from "@/components/ToolCallCard.vue";
+import logoUrl from "@/assets/logo.svg";
 
 export interface ChatMessage {
   id: string;
@@ -51,20 +52,8 @@ function onScroll() {
 <template>
   <div ref="containerRef" class="message-list" @scroll="onScroll">
     <div v-if="messages.length === 0" class="welcome">
-      <div class="welcome-role-dot" :style="{ background: roleClass }"></div>
-      <h2 class="welcome-title">你好，我是 LarryAgent</h2>
-      <p class="welcome-subtitle">有什么可以帮你的吗？</p>
-      <div class="welcome-suggestions">
-        <button class="suggestion-btn" @click="$emit('suggestion', '帮我分析一下最近的健康数据')">
-          📊 健康数据分析
-        </button>
-        <button class="suggestion-btn" @click="$emit('suggestion', '帮我制定一个投资计划')">
-          💹 投资规划建议
-        </button>
-        <button class="suggestion-btn" @click="$emit('suggestion', '帮我写一份周报')">
-          📝 周报撰写
-        </button>
-      </div>
+      <img class="welcome-logo" :src="logoUrl" alt="LarryAgent logo" />
+      <h2 class="welcome-title">LarryAgent</h2>
     </div>
 
     <template v-else>
@@ -126,11 +115,11 @@ function onScroll() {
   gap: var(--space-3);
 }
 
-.welcome-role-dot {
-  width: 16px;
-  height: 16px;
+.welcome-logo {
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-full);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .welcome-title {
@@ -138,41 +127,6 @@ function onScroll() {
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
   margin: 0;
-}
-
-.welcome-subtitle {
-  font-size: var(--text-base);
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-.welcome-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  justify-content: center;
-  margin-top: var(--space-4);
-}
-
-.suggestion-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-primary);
-  font-size: var(--text-sm);
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.suggestion-btn:hover {
-  background: var(--color-accent-muted);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
 }
 
 /* === Message rows === */
