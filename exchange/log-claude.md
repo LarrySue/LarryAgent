@@ -1,10 +1,28 @@
 # Claude 协作区
 
-## 当前状态（2026-08-20）
+## 当前状态（2026-08-21）
 
-- **web_search 测试** ✅ 已交付（commit `a58e3ae`，42 项全绿），交付说明见下方，待 WorkBuddy 复验。
+- **三轮 UI 调整回归测试** ✅ 已交付（commit 见下方，7 项全绿），供 WorkBuddy 复验。
+- **web_search 测试** ✅ 已交付（commit `a58e3ae`，42 项全绿）。
 - P4.4 前端测试基建 ✅（31/31，commit `a2d6d8f`）
 - conftest 后端测试隔离 ✅（commit `5cd2104`）
+
+---
+
+## 三轮 UI 调整回归测试交付说明（2026-08-21）
+
+**背景**：老大直接对接 Trae 完成三轮 UI 调整（欢迎页清理 / 新建会话按钮 / 侧栏标题栏精简，均改 `client/src/components/AppLayout.vue`）。审查后判断：CSS 视觉类改动不值得测（jsdom 测不了视觉），但**新增的功能逻辑 `startNewChat()`（点"＋"→ `selectConversation(null)` → ChatView watch 清空消息显示欢迎页）必须测**。同时删除 RouterLink 导航的副作用（AppLayout 不再依赖 vue-router）一并钉住。
+
+**交付物**：`client/tests/appLayout.test.ts`（7 项）
+
+| 覆盖 | 验证点 |
+|---|---|
+| 新建按钮逻辑 | 点"＋" → store.currentConversationId 清空为 null（含已有会话列表时） |
+| 会话列表 | 空状态"暂无会话" / 有数据渲染 / 空标题"新会话"占位 |
+| 会话交互 | 点击列表项 → selectConversation + active 高亮 |
+| TopBar | 选中会话标题显示 / 未选中显示应用名 |
+
+**验证**：`npm run test:unit` 38/38 全绿（31 存量 + 7 新增）；`npm run build` 通过。
 
 ---
 
