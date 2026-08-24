@@ -44,6 +44,7 @@
 
 - [ ] 绝对长期项目，人类至高训导权 + 个人项目 的完全体现，人类想做啥就做啥，我就是要五彩斑斓的黑！
 - [ ] 初步测试，UI还是存在一些BUG，这个慢慢来
+- [ ] **BUG（Claude 测出 · WB 读代码复验 2026-08-24）会话重命名输入框自动聚焦失效**：`client/src/components/AppLayout.vue` 中 `ref="renameInput"` 落在 `v-for="conv in appStore.conversations"`（line 107）作用域内，Vue 3 将其收集为数组；`startRename` 的 `renameInput.value?.focus()`（line 34）在数组上调用必抛 `TypeError`，真实浏览器中点"重命名"后输入框不自动聚焦/不自动全选（功能不中断，错误在 nextTick 内）。修复：v-for 内改用函数 ref `:ref="(el) => (renameInput = el)"`（v-if 保证同时仅一个实例，renameInput 保持单值）；备选：调用侧取 `renameInput.value?.[0]?.focus()`。修复后 Claude 移除测试兜底（`Array.prototype.focus/select` 注释段）。派发 Trae，规格见 `exchange/log-trae.md`。
 - [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `UI-Reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `UI-Reference.md`（优先级：低）
 - [ ] **Trae 实现期 UI 细节文档化**：实现期新增的 UI 细节（如 `--weight-semibold/bold` 等 token）以 `tokens.css` / 组件代码为准，待点将时回写 `UI-Reference.md` §10 已知局限所列项
 - [ ] **会话项时间戳展示**：UI-Reference §5.4 SidebarItem 规格要求"标题 + 时间戳（右对齐）"，当前代码只有标题（API 已返回 `updated_at`，待实现展示）
