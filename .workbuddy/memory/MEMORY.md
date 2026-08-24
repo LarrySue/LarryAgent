@@ -100,3 +100,9 @@
 - **交流区清理 = WB 可直接判删（暗箱），事后异议**：清理交流区是老大授予 WB 的职责也是权利（见 exchange/README）。WB **有权直接判删，无需事前确认 / 出清单征求同意**；其他 AI 事后发现不对可提异议→人类裁决。事前反复确认是浪费沟通成本。
   - 纠正 WB 误区：此前 WB 曾在清理条款写"拟删前先出清单、不暗箱删"，是把"事前确认"误当前置；正确形态是"WB 直接判删 + 其他 AI 事后异议"。
 
+## 交流与文档结构规范（2026-08-24 确立）
+
+- **交流区（exchange/）只承载活日志，不做任何存档留底**：仅 5 个 per-AI 日志（log-workbuddy / log-trae / log-claude / log-marvis / log_design）+ README。已定稿/功能性文件不当放交流区（原 `exchange/public/` 已拆）。
+- **文档落位按"冻法"分两类**：活跃权威（仍被代码/测试引用）→ `docs/`（中立、跨 AI 可读，如 `docs/ui-reference.md`、`docs/ai-governance.md`）；冷历史（仅复盘）→ `archive/`（如 `report-2026-08-16.md`）。不把活跃权威塞进 `archive/`（那是 Tier3 冷存），也不放 `.workbuddy/`（那是 WB 私属目录，其他 AI 读着别扭且违背共享原则——老大 2026-08-24 纠正）。
+- 同源：AI-GOVERNANCE 的 Tier 模型本就区分"活约束(Tier0-1)"与"冷归档(Tier3)"；本规范把"交流区去存档化"落到了目录结构。
+
