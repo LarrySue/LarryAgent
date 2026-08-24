@@ -67,7 +67,7 @@ watch(
         ref="textarea"
         v-model="text"
         class="input-area"
-        placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+        placeholder="输入消息..."
         :disabled="disabled"
         rows="1"
         @keydown="onKeyDown"

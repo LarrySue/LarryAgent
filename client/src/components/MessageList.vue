@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick } from "vue";
 import { useAppStore } from "@/stores/app";
 import ToolCallCard from "@/components/ToolCallCard.vue";
+import BrandText from "@/components/BrandText.vue";
 import logoUrl from "@/assets/logo.svg";
 
 export interface ChatMessage {
@@ -53,7 +54,7 @@ function onScroll() {
   <div ref="containerRef" class="message-list" @scroll="onScroll">
     <div v-if="messages.length === 0" class="welcome">
       <img class="welcome-logo" :src="logoUrl" alt="LarryAgent logo" />
-      <h2 class="welcome-title">LarryAgent</h2>
+      <h2 class="welcome-title"><BrandText /></h2>
     </div>
 
     <template v-else>
@@ -116,14 +117,14 @@ function onScroll() {
 }
 
 .welcome-logo {
-  width: 48px;
-  height: 48px;
+  width: 96px;
+  height: 96px;
   border-radius: var(--radius-full);
   margin-bottom: var(--space-3);
 }
 
 .welcome-title {
-  font-size: var(--text-2xl);
+  font-size: 40px;
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
   margin: 0;

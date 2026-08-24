@@ -47,7 +47,6 @@
   }
   select:hover, button:hover { border-color: rgba(255,255,255,0.2); }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  /* 颜色控制行 */
   .colorbar {
     display: flex;
     align-items: center;
@@ -73,6 +72,23 @@
     cursor: pointer; transition: transform .1s;
   }
   .swatch:hover { transform: scale(1.2); }
+  /* 文字（逐字母调色） */
+  .wordbar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .wordbar input[type="text"].word {
+    width: 160px; background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; font-size: 14px; font-family: var(--font-sans), sans-serif;
+  }
+  .wordbar .wb-label { font-size: 12px; color: var(--text-muted); }
+  #letter-pickers { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .letter-picker { display: flex; align-items: center; gap: 3px; }
+  .letter-char {
+    font-size: 13px; font-weight: 600; min-width: 14px; text-align: center; color: var(--text);
+  }
+  .letter-picker input[type="color"] {
+    width: 24px; height: 24px; padding: 0; border: 1px solid var(--border);
+    border-radius: 6px; background: none; cursor: pointer;
+  }
+  .letter-picker input[type="color"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   main { flex: 1; display: flex; min-height: 0; }
   .editor, .viewer { width: 50%; height: 100%; display: flex; flex-direction: column; }
   .editor { border-right: 1px solid var(--border); }
@@ -114,16 +130,16 @@
 <body>
   <header>
     <h1>LarryAgent Logo 调试台</h1>
-    <span class="tip">左侧改源码 / 取色器调色，右侧实时预览；满意后「复制源码」发我同步</span>
+    <span class="tip">改源码 / 取色器调色 / 逐字母文字色，实时预览；满意后「复制源码」发我同步</span>
     <div class="controls">
       <label>预览尺寸
         <select id="size">
           <option value="24">24px（侧栏）</option>
-          <option value="48" selected>48px</option>
+          <option value="48">48px</option>
           <option value="96">96px</option>
           <option value="160">160px</option>
           <option value="256">256px</option>
-          <option value="384">384px</option>
+          <option value="384" selected>384px</option>
         </select>
       </label>
       <label>背景
@@ -141,7 +157,7 @@
   </header>
 
   <div class="colorbar">
-    <span class="cb-label">调色（作用于对应元素）：</span>
+    <span class="cb-label">图形调色（作用于对应元素）：</span>
     <span class="color-picker">圆环 <input type="color" id="c-ring"><input type="text" id="t-ring" spellcheck="false"></span>
     <span class="color-picker">笔触 <input type="color" id="c-brush"><input type="text" id="t-brush" spellcheck="false"></span>
     <span class="color-picker">红点 <input type="color" id="c-red"><input type="text" id="t-red" spellcheck="false"></span>
@@ -149,9 +165,16 @@
     <span class="palette" id="palette" title="项目色板，点击应用到最近使用的取色器"></span>
   </div>
 
+  <div class="wordbar">
+    <span class="wb-label">文字（逐字母调色）：</span>
+    <input type="text" class="word" id="word" value="LarryAgent" spellcheck="false" title="编辑文字内容（字母数可变）">
+    <span id="letter-pickers"></span>
+    <span class="palette" id="palette2" title="项目色板，点击应用到最近聚焦的字母"></span>
+  </div>
+
   <main>
     <div class="editor">
-      <div class="panel-title">SVG 源码（直接编辑，实时预览）</div>
+      <div class="panel-title">SVG 源码（直接编辑，实时预览；文字块为 data-role="wordmark"）</div>
       <textarea id="src" spellcheck="false"></textarea>
     </div>
     <div class="viewer">
@@ -165,14 +188,14 @@
 
 <script>
   const DEFAULT_SRC = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <!-- 占位 logo（C2 写意版简化：禅圆缺口 + 红点 + 白点） -->
-  <circle cx="24" cy="24" r="20" fill="none" stroke="#378ADD" stroke-width="2.5"
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="60" viewBox="0 0 48 60">
+  <circle cx="24" cy="24" r="20" fill="none" stroke="#6596c8" stroke-width="2.5"
           stroke-dasharray="100 16" stroke-dashoffset="66.1" stroke-linecap="round" />
-  <path d="M17 24 Q 15 32 28 27 Q 41 22 14 40" fill="none" stroke="#E4E4E7"
+  <path d="M17 24 Q 15 32 28 27 Q 41 22 14 40" fill="none" stroke="#707070"
         stroke-width="3" stroke-linecap="round" />
-  <circle cx="26" cy="15.5" r="2.3" fill="#EF4444" />
-  <circle cx="20" cy="16" r="2" fill="#E4E4E7" />
+  <circle cx="26" cy="15.5" r="2.3" fill="#c83c3c" />
+  <circle cx="20" cy="16" r="2" fill="#bfbfbf" />
+  <text x="24" y="52" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="600" data-role="wordmark"><tspan fill="#E4E4E7">LarryAgent</tspan></text>
 </svg>`;
 
   // 元素角色 → (标签名, 第几个, 属性)
@@ -182,7 +205,6 @@
     red:    { tag: 'circle', nth: 1, attr: 'fill'   },
     white:  { tag: 'circle', nth: 2, attr: 'fill'   },
   };
-  // 角色 → 对应 input 元素
   const PICKERS = {};
   for (const [role, cfg] of Object.entries(ROLES)) {
     PICKERS[role] = {
@@ -197,6 +219,104 @@
   const viewerBody = document.getElementById('viewerBody');
   const sizeEl = document.getElementById('size');
   const bgEl = document.getElementById('bg');
+  const wordEl = document.getElementById('word');
+  const letterBox = document.getElementById('letter-pickers');
+
+  // === 文字模型：每字母 {char, color} ===
+  let wordLetters = [];
+  let activeLetter = -1; // 色板应用到哪个字母
+
+  function escapeXml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // 从源码的 data-role="wordmark" 文字块解析字母
+  function syncWordFromSource() {
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(srcEl.value, 'image/svg+xml');
+      if (doc.querySelector('parsererror')) return;
+    } catch { return; }
+    const textEl = doc.querySelector('text[data-role="wordmark"]');
+    if (!textEl) {
+      // 源码尚无文字块：按输入框当前词生成字母（改动时才插入 SVG）
+      const seed = wordEl.value || 'LarryAgent';
+      wordLetters = seed.split('').map(ch => ({ char: ch, color: '#E4E4E7' }));
+      renderLetterPickers();
+      return;
+    }
+    const spans = textEl.querySelectorAll('tspan');
+    if (spans.length === 0) {
+      const raw = textEl.textContent || '';
+      wordLetters = raw.split('').map(ch => ({ char: ch, color: '#E4E4E7' }));
+    } else {
+      wordLetters = Array.from(spans).map(t => ({
+        char: t.textContent || '',
+        color: t.getAttribute('fill') || '#E4E4E7',
+      }));
+    }
+    renderLetterPickers();
+  }
+
+  // 重建字母取色器 UI
+  function renderLetterPickers() {
+    wordEl.value = wordLetters.map(l => l.char).join('');
+    letterBox.innerHTML = '';
+    wordLetters.forEach((l, i) => {
+      const wrap = document.createElement('span');
+      wrap.className = 'letter-picker';
+      const ch = document.createElement('span');
+      ch.className = 'letter-char';
+      ch.textContent = l.char || '?';
+      const inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = l.color;
+      inp.dataset.i = i;
+      inp.title = '第 ' + (i + 1) + ' 个字母 ' + (l.char || '');
+      inp.addEventListener('focus', () => { activeLetter = i; });
+      inp.addEventListener('input', () => {
+        wordLetters[i].color = inp.value;
+        updateWordInSource();
+        render();
+        applySize();
+      });
+      wrap.appendChild(ch);
+      wrap.appendChild(inp);
+      letterBox.appendChild(wrap);
+    });
+  }
+
+  // 把 wordLetters 写回源码（保留 text 开标签属性，只重建内部 tspan；没有则插入）
+  function updateWordInSource() {
+    if (wordLetters.length === 0) return;
+    const tspans = wordLetters
+      .map(l => `<tspan fill="${l.color}">${escapeXml(l.char)}</tspan>`)
+      .join('');
+    const re = /(<text\b[^>]*?data-role="wordmark"[^>]*>)([\s\S]*?)(<\/text>)/;
+    if (re.test(srcEl.value)) {
+      srcEl.value = srcEl.value.replace(re, `$1${tspans}$3`);
+    } else {
+      // 首次插入文字块：画布从 48x48 拉高到 48x60，文字放在圆环下方
+      srcEl.value = srcEl.value.replace(/viewBox="0 0 48 48"/, 'viewBox="0 0 48 60"');
+      const block =
+        `<text x="24" y="52" text-anchor="middle" font-family="sans-serif" ` +
+        `font-size="8" font-weight="600" data-role="wordmark">${tspans}</text>`;
+      srcEl.value = srcEl.value.replace(/<\/svg>/, `  ${block}\n</svg>`);
+    }
+  }
+
+  wordEl.addEventListener('change', () => {
+    const newWord = wordEl.value || 'LarryAgent';
+    const colors = wordLetters.map(l => l.color);
+    wordLetters = newWord.split('').map((ch, i) => ({
+      char: ch,
+      color: colors[i] || '#E4E4E7',
+    }));
+    updateWordInSource();
+    render();
+    applySize();
+    renderLetterPickers();
+  });
 
   function render() {
     const svg = srcEl.value.trim();
@@ -237,6 +357,7 @@
         }
       }
     }
+    syncWordFromSource();
   }
 
   // 在源码中，把「第 nth 个 <tag> 标签内第一个 attr="..."」替换为新值
@@ -249,7 +370,7 @@
     });
   }
 
-  // 取色器 input 事件 → 改源码并重渲染
+  // 图形取色器
   for (const [role, cfg] of Object.entries(ROLES)) {
     const apply = (val) => {
       const v = /^#[0-9a-fA-F]{3,8}$/.test(val) ? val : '#' + val.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
@@ -265,18 +386,24 @@
     PICKERS[role].text.addEventListener('focus', () => activeRole = role);
   }
 
-  let activeRole = 'ring'; // 色板点击应用到哪个角色（取色器聚焦时切换）
+  let activeRole = 'ring';
 
-  // 项目色板
+  // 项目色板（两个色板共用同一逻辑）
   const PALETTE = ['#378ADD', '#5BA4ED', '#E4E4E7', '#A1A1AA', '#71717A',
                    '#EF4444', '#10B981', '#F59E0B', '#9CA3AF', '#34D399', '#FBBF24', '#0F1117'];
-  const paletteEl = document.getElementById('palette');
-  PALETTE.forEach(hex => {
-    const s = document.createElement('span');
-    s.className = 'swatch';
-    s.style.background = hex;
-    s.title = hex + ' → ' + activeRole;
-    s.addEventListener('click', () => {
+  function applyPalette(hex) {
+    if (activeRole === 'letter' || activeLetter >= 0) {
+      const i = activeLetter;
+      if (i >= 0 && i < wordLetters.length) {
+        wordLetters[i].color = hex;
+        updateWordInSource();
+        render();
+        applySize();
+        renderLetterPickers();
+        return;
+      }
+    }
+    if (PICKERS[activeRole]) {
       PICKERS[activeRole].color.value = hex;
       PICKERS[activeRole].text.value = hex;
       const cfg = ROLES[activeRole];
@@ -284,9 +411,21 @@
       render();
       applySize();
       syncPickers();
+    }
+  }
+  function buildPalette(containerId) {
+    const box = document.getElementById(containerId);
+    PALETTE.forEach(hex => {
+      const s = document.createElement('span');
+      s.className = 'swatch';
+      s.style.background = hex;
+      s.title = hex;
+      s.addEventListener('click', () => applyPalette(hex));
+      box.appendChild(s);
     });
-    paletteEl.appendChild(s);
-  });
+  }
+  buildPalette('palette');
+  buildPalette('palette2');
 
   srcEl.addEventListener('input', () => { render(); applySize(); syncPickers(); });
   sizeEl.addEventListener('change', applySize);

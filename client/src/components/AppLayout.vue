@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useAppStore, type Role } from "@/stores/app";
 import RoleSelector from "@/components/RoleSelector.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
+import BrandText from "@/components/BrandText.vue";
 import logoUrl from "@/assets/logo.svg";
 
 const appStore = useAppStore();
@@ -27,7 +28,7 @@ function startNewChat() {
     <!-- 移动端顶部栏 -->
     <header class="mobile-header">
       <button class="menu-btn" @click="toggleSidebar">☰</button>
-      <span class="mobile-title">LarryAgent</span>
+      <span class="mobile-title"><BrandText /></span>
       <span class="role-dot" :style="{ background: `var(--role-${appStore.currentRole})` }"></span>
     </header>
 
@@ -43,7 +44,7 @@ function startNewChat() {
       <div class="sidebar-header">
         <div class="brand">
           <img class="sidebar-logo" :src="logoUrl" alt="LarryAgent logo" />
-          <h1 class="logo">LarryAgent</h1>
+          <h1 class="logo"><BrandText /></h1>
         </div>
         <button class="new-chat-btn" title="新建会话" @click="startNewChat">
           <span class="new-chat-icon">＋</span>
@@ -78,7 +79,7 @@ function startNewChat() {
           <span v-if="appStore.currentConversationId" class="conversation-title">
             {{ appStore.conversations.find(c => c.id === appStore.currentConversationId)?.title || "新会话" }}
           </span>
-          <span v-else class="app-title">LarryAgent</span>
+          <span v-else class="app-title">新会话</span>
         </div>
         <div class="topbar-right">
           <RoleSelector :model-value="appStore.currentRole" @update:model-value="onRoleChange" />
@@ -205,8 +206,8 @@ function startNewChat() {
 }
 
 .sidebar-logo {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
