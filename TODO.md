@@ -45,8 +45,8 @@
 - [ ] 绝对长期项目，人类至高训导权 + 个人项目 的完全体现，人类想做啥就做啥，我就是要五彩斑斓的黑！
 - [ ] 初步测试，UI还是存在一些BUG，这个慢慢来
 - [x] **BUG（Claude 测出 · WB 读代码复验 2026-08-24 · ✅ 已修复闭环）会话重命名输入框自动聚焦失效**：根因 `AppLayout.vue` `ref="renameInput"` 落 v-for 作用域被 Vue3 收为数组 → `startRename` 的 `.focus()` 在数组上抛 `TypeError`，点重命名后不自动聚焦/全选。修复：v-for 内改函数 ref `:ref="(el) => (renameInput = el)"`（Trae commit `e2fbb74`）；Claude 移除测试兜底、45/45 全绿；WB 读代码复验通过（ref 已为单值绑定）。
-- [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `UI-Reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `UI-Reference.md`（优先级：低）
-- [ ] **Trae 实现期 UI 细节文档化**：实现期新增的 UI 细节（如 `--weight-semibold/bold` 等 token）以 `tokens.css` / 组件代码为准，待点将时回写 `UI-Reference.md` §10 已知局限所列项
+- [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `docs/ui-reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `docs/ui-reference.md`（优先级：低）
+- [ ] **Trae 实现期 UI 细节文档化**：实现期新增的 UI 细节（如 `--weight-semibold/bold` 等 token）以 `tokens.css` / 组件代码为准，待点将时回写 `docs/ui-reference.md` §10 已知局限所列项
 - [ ] **会话项时间戳展示**：UI-Reference §5.4 SidebarItem 规格要求"标题 + 时间戳（右对齐）"，当前代码只有标题（API 已返回 `updated_at`，待实现展示）
 - [ ] **角色归属设计**（老大暂缓，待数据模型支撑）：会话级角色（每条会话属于哪个场景角色）目前无数据模型支撑，前端已删全局色点；如何按会话表达角色待定
 - [ ] **UI-Reference §5.5 设置按钮描述回写**：代码已删除 TopBar 设置按钮（`/settings` 路由随 P4.5 砍除），文件描述与代码不一致，待回写或拍板

@@ -9,7 +9,7 @@ pytest 会话级测试隔离（Tier 0 第 4 条的程序性强制实现）
   `backend/data/larry.db`，直接 pytest.fail——不依赖任何测试的自觉
 - 会话结束自动删除临时目录（含临时 yaml 里复制过来的真实 API key，不留盘）
 
-关键时序（首版 fixture 翻车教训，见 exchange/public/AI-GOVERNANCE.md §5.3）：
+关键时序（首版 fixture 翻车教训，见 docs/ai-governance.md §5.3）：
 - main.py 的 lifespan 会无参调用 `load_config()`，从 `LARRY_CONFIG` 环境变量
   **重新读取**配置、忽略内存单例。所以环境变量必须在【导入任何业务模块之前】
   就位。pytest 在收集测试模块之前先加载本文件，天然满足时序。

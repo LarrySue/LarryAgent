@@ -24,8 +24,7 @@
   - `exchange/log-claude.md` — Claude Code 交流区
   - `exchange/log-marvis.md` — Marvis 交流区（产品宏观）
   - `exchange/log_design.md` — UI DESIGN 负责人交流区（当前独立于主团队，负责人待定）
-  - `exchange/public/` — 公共讨论稿/定稿（多 AI 混合内容）
-  - `exchange/public/UI-Reference.md` — **UI 设计权威参考（单一真相源）**：所有 AI 以它为准；数值以 `client/src/styles/tokens.css` 为准；过程/未决项在 `log_design.md` / `log-marvis.md`
+  - `docs/ui-reference.md` — **UI 设计权威参考（单一真相源）**：所有 AI 以它为准；数值以 `client/src/styles/tokens.css` 为准；过程/未决项在 `log_design.md` / `log-marvis.md`
 - **防混淆铁律**：约束文件与交流日志**根名不同**（如 `WORKBUDDY.md` vs `log-workbuddy.md`），取文件一律以**全路径**为准；记忆/笔记中引用禁止裸 `CLAUDE.md`/`trae.md` 这类写法。同名不同目录 = 不同文件，绝不互通。
 
 ## 程序性规则
