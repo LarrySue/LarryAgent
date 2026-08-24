@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick, onMounted } from "vue";
 import { useAppStore, type Role } from "@/stores/app";
+import { renameConversation, listConversations } from "@/api";
 import RoleSelector from "@/components/RoleSelector.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
 import BrandText from "@/components/BrandText.vue";
@@ -8,6 +9,50 @@ import logoUrl from "@/assets/logo.svg";
 
 const appStore = useAppStore();
 const sidebarOpen = ref(false);
+
+// 会话操作（三点菜单 / 重命名）
+const menuOpenId = ref<number | null>(null);
+const editingId = ref<number | null>(null);
+const editText = ref("");
+const renameInput = ref<HTMLInputElement | null>(null);
+
+onMounted(() => {
+  document.addEventListener("click", () => {
+    menuOpenId.value = null;
+  });
+});
+
+function toggleMenu(id: number) {
+  menuOpenId.value = menuOpenId.value === id ? null : id;
+}
+
+function startRename(conv: { id: number; title: string }) {
+  menuOpenId.value = null;
+  editingId.value = conv.id;
+  editText.value = conv.title || "";
+  nextTick(() => {
+    renameInput.value?.focus();
+    renameInput.value?.select();
+  });
+}
+
+function cancelRename() {
+  editingId.value = null;
+  editText.value = "";
+}
+
+async function confirmRename(id: number) {
+  const title = editText.value.trim();
+  editingId.value = null;
+  if (!title) return; // 空输入视为取消
+  try {
+    await renameConversation(id, title);
+    const list = await listConversations();
+    appStore.setConversations(list); // 重命名后 updated_at 刷新，重新拉列表保持排序
+  } catch {
+    // 重命名失败暂静默，后续可加提示
+  }
+}
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value;
@@ -62,10 +107,33 @@ function startNewChat() {
             v-for="conv in appStore.conversations"
             :key="conv.id"
             class="conversation-item"
-            :class="{ active: conv.id === appStore.currentConversationId }"
+            :class="{ active: conv.id === appStore.currentConversationId, editing: editingId === conv.id }"
             @click="appStore.selectConversation(conv.id)"
           >
-            <span class="conv-title">{{ conv.title || "新会话" }}</span>
+            <template v-if="editingId === conv.id">
+              <input
+                ref="renameInput"
+                v-model="editText"
+                class="rename-input"
+                @click.stop
+                @keydown.enter="confirmRename(conv.id)"
+                @keydown.esc="cancelRename"
+                @blur="confirmRename(conv.id)"
+              />
+            </template>
+            <template v-else>
+              <span class="conv-title">{{ conv.title || "新会话" }}</span>
+              <button
+                class="conv-menu-btn"
+                :class="{ 'is-open': menuOpenId === conv.id }"
+                title="会话操作"
+                @click.stop="toggleMenu(conv.id)"
+              >⋮</button>
+            </template>
+
+            <div v-if="menuOpenId === conv.id" class="conv-menu" @click.stop>
+              <button class="conv-menu-item" @click="startRename(conv)">重命名</button>
+            </div>
           </div>
         </div>
       </div>
@@ -276,6 +344,7 @@ function startNewChat() {
 }
 
 .conversation-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -296,11 +365,84 @@ function startNewChat() {
 }
 
 .conv-title {
+  flex: 1;
+  min-width: 0;
   font-size: var(--text-sm);
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 三点菜单按钮：默认隐藏，悬停显示 */
+.conv-menu-btn {
+  opacity: 0;
+  visibility: hidden;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: all var(--duration-fast);
+}
+
+.conversation-item:hover .conv-menu-btn,
+.conv-menu-btn:focus-visible,
+.conv-menu-btn.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.conv-menu-btn:hover {
+  background: var(--color-border-hover);
+  color: var(--color-text-primary);
+}
+
+.conv-menu {
+  position: absolute;
+  right: 8px;
+  top: calc(100% - 6px);
+  z-index: 30;
+  min-width: 100px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+}
+
+.conv-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.conv-menu-item:hover {
+  background: var(--color-border-hover);
+}
+
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  padding: 4px 6px;
+  outline: none;
 }
 
 /* === 主区域 === */
@@ -339,7 +481,7 @@ function startNewChat() {
 
 .app-title {
   font-size: var(--text-base);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   color: var(--color-text-primary);
 }
 
