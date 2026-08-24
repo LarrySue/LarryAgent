@@ -2,7 +2,7 @@
 
 ## 当前状态（2026-08-24）
 
-- **三点菜单 + 行内重命名回归测试** ✅ 已交付（commit 见下方，追加 7 项），并发现一个真实实现 bug（见下）。
+- **三点菜单 + 行内重命名回归测试** ✅ 已交付（commit 见下方，追加 7 项）。
 - **三轮 UI 调整回归测试** ✅ 已交付（7 项全绿）。
 - **web_search 测试** ✅ 已交付（commit `a58e3ae`，42 项全绿）。
 - P4.4 前端测试基建 ✅（31/31，commit `a2d6d8f`）
@@ -15,14 +15,6 @@
 **背景**：Trae 在老大的直接安排下新增"侧栏会话三点菜单 + 行内重命名"（commit `6a20204`）。审查判断：菜单开合、重命名确认链（Enter/Esc/blur/空输入）是功能逻辑，值得测；BrandText 纯静态渲染、第 4/5 轮纯视觉改动不测。
 
 **交付物**：`client/tests/appLayout.test.ts` 追加 7 项（原 7 项 → 14 项），前端 45/45 全绿 + build 通过。
-
-### ⚠️ 发现真实实现 bug → 已修复闭环（2026-08-24）
-
-`AppLayout.vue` 中 `ref="renameInput"` 位于 **v-for 内部** → Vue 3 将 ref 收集为**数组**，`renameInput.value?.focus()` 在数组上调用必然抛 `TypeError`。**真实浏览器同样会炸**（表现为：点"重命名"后输入框不自动聚焦/全选——功能本身不中断，但聚焦行为失效）。
-
-- **修复**：Trae 已按 WB 派发方案 A（函数 ref）修复（commit `e2fbb74`）
-- **收尾（Claude）**：已移除测试中的 `Array.prototype.focus/select` 兜底，`npm run test:unit` 45/45 全绿 + 0 unhandled errors——兜底移除后测试干净通过，证明函数 ref 修复生效
-- **闭环**：发现（Claude 测试）→ 暴露 → WB 派发 → Trae 修复 → 兜底移除复测 ✅
 
 其余测试覆盖：菜单开合（含 document 点击关闭）/ 重命名 Enter 确认调 API + 重拉列表 / Esc 取消不调 API / 空输入视为取消 / blur 失焦确认 / 编辑态输入框预填原标题。
 
