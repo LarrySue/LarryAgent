@@ -24,36 +24,8 @@
   - 侧栏会话项右侧新增 `⋮` 按钮：默认隐藏、悬停显示；点击弹出菜单（当前仅"重命名"）
   - 重命名为行内编辑：输入框自动聚焦全选，Enter/失焦确认、Esc 取消、空输入视为取消
   - 落库走既有 `PATCH /api/conversations/{id}`；确认后重新拉列表（重命名刷新 updated_at，会话移至顶部）
-- **重命名聚焦 BUG 修复** ✅ 已修复（Trae，2026-08-24）：上条"重命名自动聚焦全选"因 `ref="renameInput"` 落 v-for 内被 Vue3 收为数组而失效（点重命名后不自动聚焦）；已按派发方案 A 修复（函数 ref），45/45 前端单测绿。@Claude 请移除 `client/tests/appLayout.test.ts` 中 `Array.prototype.focus/select` 兜底。
+- **重命名聚焦 BUG 修复** ✅ 已修复并闭环（Trae，2026-08-24）：上条"重命名自动聚焦全选"因 `ref="renameInput"` 落 v-for 内被 Vue3 收为数组而失效（点重命名后不自动聚焦）；已按派发方案 A 修复（函数 ref `:ref="(el) => (renameInput = el)"`），45/45 前端单测绿；Claude 已移除测试兜底、WB 读代码复验通过。
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
-
----
-
-## 重命名聚焦 BUG 修复派发（2026-08-24，WB 派发 · ✅ Trae 已修复，待 Claude 移除测试兜底 + WB 复验）
-
-### 根因（代码事实，WB 已读代码复验）
-- `client/src/components/AppLayout.vue`
-  - `:17` `const renameInput = ref<HTMLInputElement | null>(null);` — 声明为单一 ref
-  - `:107` `v-for="conv in appStore.conversations"` — 循环体开始
-  - `:115` `<input ref="renameInput">` 落在该 v-for 作用域内（虽被 `v-if="editingId === conv.id"` 控只渲染一个，但模板编译期已置于 v-for 作用域，Vue 3 运行时把同名 ref 收集为**数组**）
-  - `:34-35` `renameInput.value?.focus()` / `.select()` 在数组上调用 → 抛 `TypeError`
-
-### 影响
-- 错误发生在 `nextTick` 回调（`startRename`，line 33）内，不中断重命名功能本身（v-model + 确认链正常）。
-- 但 `focus()` / `select()` 失效 → 真实浏览器中点"重命名"后输入框**不自动聚焦、不自动全选**，体验受损。Claude 回归测试据此发现（详见 `exchange/log-claude.md`）。
-
-### 修复方案（二选一，推荐 A）
-- **A（推荐）函数 ref**：将 `:115` 改为 `:ref="(el) => (renameInput = el)"`。因 `v-if` 保证同一时刻仅一个 input 渲染，`renameInput` 保持单一 `HTMLInputElement`，`renameInput.value?.focus()` 正常工作。
-  - TS 严格模式注意：函数 ref 的 `el` 类型为 `Element | ComponentPublicInstance | null`，赋值时需断言 `el as HTMLInputElement | null`（否则类型报错）。
-- **B（备选）调用侧取数组项**：`:34-35` 改为 `renameInput.value?.[0]?.focus()` / `?.select()`。当 Vue 收为数组时取第 0 项安全（仅一个实例）。不如 A 干净。
-
-### 约束
-- 不破坏现有重命名逻辑：`confirmRename` / `cancelRename` / Enter·Esc·blur 确认链 / 空输入视为取消 / 失焦确认。
-- 不碰 Claude 测试兜底：修复后**通知 Claude 移除** `client/tests/appLayout.test.ts` 中 `Array.prototype.focus/select` 兜底（注释标明"ref 数组 bug 待修"的那段）。
-- 修复后跑 `npm run test:unit` 确保前端 45/45 仍绿（含 Claude 追加的 7 项重命名测试）。
-
-### 验收
-- Trae 修复 → Claude 复测（45/45 绿 + 移除兜底）→ WB 复验（读代码确认 ref 改为单值绑定）。
 
 ---
 
