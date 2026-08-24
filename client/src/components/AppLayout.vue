@@ -64,7 +64,6 @@ function startNewChat() {
             :class="{ active: conv.id === appStore.currentConversationId }"
             @click="appStore.selectConversation(conv.id)"
           >
-            <span class="conv-dot" :style="{ background: `var(--role-${appStore.currentRole})` }"></span>
             <span class="conv-title">{{ conv.title || "新会话" }}</span>
           </div>
         </div>
@@ -75,7 +74,6 @@ function startNewChat() {
     <div class="main-area">
       <!-- TopBar -->
       <header class="topbar">
-        <button class="collapse-btn" @click="toggleSidebar" title="切换侧栏">◀</button>
         <div class="topbar-center">
           <span v-if="appStore.currentConversationId" class="conversation-title">
             {{ appStore.conversations.find(c => c.id === appStore.currentConversationId)?.title || "新会话" }}
@@ -296,13 +294,6 @@ function startNewChat() {
   padding-left: var(--space-2);
 }
 
-.conv-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-
 .conv-title {
   font-size: var(--text-sm);
   color: var(--color-text-primary);
@@ -328,22 +319,6 @@ function startNewChat() {
   background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border-default);
   gap: var(--space-3);
-}
-
-.collapse-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  font-size: var(--text-base);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
-}
-
-.collapse-btn:hover {
-  background: var(--color-border-hover);
-  color: var(--color-text-primary);
 }
 
 .topbar-center {

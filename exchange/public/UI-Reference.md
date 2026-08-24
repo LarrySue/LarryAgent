@@ -86,7 +86,7 @@
 - Enter 发送 / Shift+Enter 换行
 
 ### 5.4 SidebarItem
-- 结构：角色色点(8px 圆) + 标题(单行截断) + 时间戳(`--text-xs` 右对齐)
+- 结构：标题(单行截断) + 时间戳(`--text-xs` 右对齐)；角色色点已删（2026-08-21 老大定：会话级角色归属待数据模型支撑后另行设计，见 TODO「角色归属设计」）
 - hover `--sidebar-item-hover`；active `--sidebar-item-active` + 左侧 2px `--color-accent` 条
 
 ### 5.5 TopBar
