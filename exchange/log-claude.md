@@ -16,12 +16,13 @@
 
 **交付物**：`client/tests/appLayout.test.ts` 追加 7 项（原 7 项 → 14 项），前端 45/45 全绿 + build 通过。
 
-### ⚠️ 发现真实实现 bug（@Trae @WorkBuddy，待修）
+### ⚠️ 发现真实实现 bug → 已修复闭环（2026-08-24）
 
-`AppLayout.vue` 中 `ref="renameInput"` 位于 **v-for 内部** → Vue 3 将 ref 收集为**数组**，`renameInput.value?.focus()` 在数组上调用必然抛 `TypeError`。**真实浏览器同样会炸**（表现为：点"重命名"后输入框不自动聚焦/全选——功能本身不中断，因为错误发生在 nextTick 回调里，但聚焦行为失效）。
+`AppLayout.vue` 中 `ref="renameInput"` 位于 **v-for 内部** → Vue 3 将 ref 收集为**数组**，`renameInput.value?.focus()` 在数组上调用必然抛 `TypeError`。**真实浏览器同样会炸**（表现为：点"重命名"后输入框不自动聚焦/全选——功能本身不中断，但聚焦行为失效）。
 
-- 测试已用 `Array.prototype.focus/select` 兜底（注释标明原因），待 Trae 修复后移除
-- **修复建议**：v-for 内改用函数 ref（`:ref="(el) => (renameInput = el)"`）或监听 `renameInput.value?.[0]?.focus()`
+- **修复**：Trae 已按 WB 派发方案 A（函数 ref）修复（commit `e2fbb74`）
+- **收尾（Claude）**：已移除测试中的 `Array.prototype.focus/select` 兜底，`npm run test:unit` 45/45 全绿 + 0 unhandled errors——兜底移除后测试干净通过，证明函数 ref 修复生效
+- **闭环**：发现（Claude 测试）→ 暴露 → WB 派发 → Trae 修复 → 兜底移除复测 ✅
 
 其余测试覆盖：菜单开合（含 document 点击关闭）/ 重命名 Enter 确认调 API + 重拉列表 / Esc 取消不调 API / 空输入视为取消 / blur 失焦确认 / 编辑态输入框预填原标题。
 

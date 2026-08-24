@@ -24,15 +24,6 @@ import * as api from "@/api";
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.restoreAllMocks();
-  // ⚠️ 已知实现 bug 的测试兜底（已暴露给 Trae，待修）：
-  // AppLayout.vue 中 `ref="renameInput"` 位于 v-for 内 → Vue 3 将 ref 收集为数组，
-  // `renameInput.value?.focus()` 在数组上调用必然报错（真实浏览器同样会炸，
-  // 表现为输入框不自动聚焦）。在 Trae 修复前，给数组补 focus/select 兜底，
-  // 避免 nextTick 回调抛出 unhandled rejection 污染测试结果。
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (Array.prototype as any).focus = () => {};
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (Array.prototype as any).select = () => {};
 });
 
 function mountLayout() {
