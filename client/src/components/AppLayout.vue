@@ -112,7 +112,7 @@ function startNewChat() {
           >
             <template v-if="editingId === conv.id">
               <input
-                ref="renameInput"
+                :ref="(el) => (renameInput = el as HTMLInputElement | null)"
                 v-model="editText"
                 class="rename-input"
                 @click.stop

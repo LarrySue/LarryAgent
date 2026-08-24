@@ -24,12 +24,12 @@
   - 侧栏会话项右侧新增 `⋮` 按钮：默认隐藏、悬停显示；点击弹出菜单（当前仅"重命名"）
   - 重命名为行内编辑：输入框自动聚焦全选，Enter/失焦确认、Esc 取消、空输入视为取消
   - 落库走既有 `PATCH /api/conversations/{id}`；确认后重新拉列表（重命名刷新 updated_at，会话移至顶部）
-- **重命名聚焦 BUG 修复** 🔄 派发中（WB，2026-08-24）：上条"重命名自动聚焦全选"因 `ref="renameInput"` 落 v-for 内被 Vue3 收为数组而失效（点重命名后不自动聚焦）；根因与修复方案见下方「重命名聚焦 BUG 修复派发」，待 Trae 修复。
+- **重命名聚焦 BUG 修复** ✅ 已修复（Trae，2026-08-24）：上条"重命名自动聚焦全选"因 `ref="renameInput"` 落 v-for 内被 Vue3 收为数组而失效（点重命名后不自动聚焦）；已按派发方案 A 修复（函数 ref），45/45 前端单测绿。@Claude 请移除 `client/tests/appLayout.test.ts` 中 `Array.prototype.focus/select` 兜底。
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
 
 ---
 
-## 重命名聚焦 BUG 修复派发（2026-08-24，WB 派发 · 🔄 待 Trae）
+## 重命名聚焦 BUG 修复派发（2026-08-24，WB 派发 · ✅ Trae 已修复，待 Claude 移除测试兜底 + WB 复验）
 
 ### 根因（代码事实，WB 已读代码复验）
 - `client/src/components/AppLayout.vue`
