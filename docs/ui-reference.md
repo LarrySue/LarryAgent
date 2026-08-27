@@ -23,7 +23,7 @@
 ### 1.2 背景 / 文字 / 边框
 
 - 背景三级：`--color-bg-base #0F1117`（底板）/ `--color-bg-surface #1A1D24`（容器）/ `--color-bg-elevated #242830`（悬浮层）/ 遮罩 `rgba(0,0,0,0.6)`
-- 文字三级：`--color-text-primary #E4E4E7` / `--color-text-secondary #A1A1AA` / `--color-text-muted #71717A` / `--color-text-inverse #0F1117`
+- 文字三级：`--color-text-primary #D4D4D8`（2026-08-27 老大定：原 #E4E4E7 偏刺眼，调灰一档）/ `--color-text-secondary #A1A1AA` / `--color-text-muted #71717A` / `--color-text-inverse #0F1117`
 - 边框：`--color-border-default rgba(255,255,255,0.08)` / `--color-border-hover rgba(255,255,255,0.15)` / `--color-border-focus #378ADD`
 - 侧栏：`--sidebar-bg #13141C`；item hover `rgba(255,255,255,0.04)` / active `rgba(255,255,255,0.08)`
 
