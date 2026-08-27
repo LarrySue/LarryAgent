@@ -32,4 +32,13 @@
 - **遗留（非阻塞）**：回收站拒绝提取归 `LLMError→502`（`api/memory.py:81`），语义应为 4xx。测试仅断言 `>=400`，已通过；待裁定是否引入 `BadRequestError(400)` 收紧（已入 TODO P3.5）
 - **结论**：归档系统实现与派发规格一致，测试绿，闭环。仅 P3.5 语义细化待用户拍板，不阻塞。
 
+---
+
+## P3.5 语义修复落实（2026-08-27 用户拍板"直接改"）
+
+- `archiver.generate_summary`：三处校验由 `ValueError` 改为具体异常——`conv is None` → `ResourceNotFoundError(404)`；`deleted_at` 非空 / 无消息 → `ValidationError(400)`（import `exceptions.ResourceNotFoundError, ValidationError`）
+- `api/memory.py trigger_archive`：`except (ValidationError, ResourceNotFoundError): raise` 透传 4xx；仅真实 LLM 失败走 `except Exception` → `LLMError(502)`
+- 测试 `test_trash_conversation_rejected`：断言由 `>=400` 收紧为 `==400`
+- 复跑后端 29 项全绿（`test_archive.py` 11 + `test_conversations.py` 18）。本地提交。
+
 

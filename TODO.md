@@ -31,7 +31,7 @@
 - [x] **记忆可再提取**：仅归档的会话以后在已归档视图可再次触发提取；放宽 `archiver.generate_summary` 对 `is_archived` 的硬卡(允许已归档重提)，`deleted_at` 非空仍拒
 - [x] **删除语义变更**：`DELETE /conversations/{id}` 由硬删改为软删(`deleted_at`)，硬删仅留 `purge`(页面延后)；消息级联保留、恢复可见
 - [x] **重复提取幂等（Marvis 评审纳入）**：`confirm_and_store` 按 `source_conversation_id` 查重 → 命中覆盖更新(删旧向量重写)、未命中新建；配套放宽硬卡，防 unarchive→再归档复制重复记忆
-- [ ] **P3.5 遗留·待裁定**：回收站会话拒绝提取当前归 `LLMError→502`（见 `api/memory.py:81`），语义应为 4xx（业务校验失败非服务端错误）。非阻塞，测试仅断言 `>=400`；待 WB 裁定是否引入 `BadRequestError(400)` 收紧。详见 `exchange/log-claude.md`
+- [x] **P3.5 语义修复（已落实 2026-08-27）**：回收站/无消息/不存在会话拒绝提取改为透传 4xx——`archiver.generate_summary` 抛 `ValidationError(400)`/`ResourceNotFoundError(404)`，`api/memory.py` 不再包成 `LLMError→502`；测试 `test_trash_conversation_rejected` 断言精确到 400
 
 ### 测试层完善
 

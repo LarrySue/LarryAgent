@@ -31,6 +31,7 @@ from db.memories import (
     update_memory,
     get_active_memory_by_conversation_id,
 )
+from exceptions import ResourceNotFoundError, ValidationError
 from models.embedding import embed_batch
 from models.llm import chat_completion
 from rag.chunker import chunk_text
@@ -76,14 +77,14 @@ async def generate_summary(
     """
     conv = await get_conversation(conversation_id)
     if conv is None:
-        raise ValueError(f"Conversation not found: {conversation_id}")
+        raise ResourceNotFoundError(f"Conversation not found: {conversation_id}")
     # 已归档会话允许重提取（支持"仅归档后再提取"）；回收站会话不可提取
     if conv["deleted_at"] is not None:
-        raise ValueError(f"Conversation is in trash, cannot archive: {conversation_id}")
+        raise ValidationError(f"Conversation is in trash, cannot archive: {conversation_id}")
 
     messages = await get_messages(conversation_id, limit=None)
     if not messages:
-        raise ValueError(f"No messages in conversation: {conversation_id}")
+        raise ValidationError(f"No messages in conversation: {conversation_id}")
 
     # 构造 LLM 输入：系统提示 + 对话历史
     history_text = ""

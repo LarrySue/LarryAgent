@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from config import get_config
 from db.memories import list_memories, delete_memory as db_delete_memory
-from exceptions import LarryException, LLMError
+from exceptions import LarryException, LLMError, ValidationError, ResourceNotFoundError
 from memory.archiver import generate_summary, confirm_and_store
 from rag.vector_store import delete_by_memory_id
 
@@ -78,9 +78,9 @@ async def trigger_archive(req: ArchiveRequest):
             conversation_id=req.conversation_id,
             summary=summary,
         )
-    except ValueError as e:
-        # generate_summary 内部 LLM 请求 / 摘要提取阶段异常，归 LLMError
-        raise LLMError(str(e)) from e
+    except (ValidationError, ResourceNotFoundError):
+        # 业务校验失败（回收站/无消息/会话不存在）→ 透传 4xx，不归 LLMError（502）
+        raise
     except Exception as e:
         logger.exception("Archive generation failed")
         raise LLMError(f"Archive generation failed: {e}") from e

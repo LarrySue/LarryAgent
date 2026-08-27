@@ -231,18 +231,16 @@ class TestGenerateSummaryRelaxed:
 
     def test_trash_conversation_rejected(self, client):
         """
-        回收站会话（deleted_at 非空）仍拒绝提取。
+        回收站会话（deleted_at 非空）仍拒绝提取 → 400（业务校验失败，非 502）。
 
-        断言"拒绝"行为（非 2xx）而非具体状态码：当前实现 api/memory.py 把
-        ValueError（含"回收站拒绝"业务语义）统一归并为 LLMError→502（P3.5
-        遗留语义问题，已在交流区 @WorkBuddy 标注）。语义上回收站拒绝应为 4xx，
-        待 WB 裁定后收紧断言。
+        api/memory.py 透传 archiver.generate_summary 抛出的 ValidationError（400），
+        不再归并为 LLMError→502（P3.5 语义问题已修复，见 WB 复验闭环）。
         """
         cid = client.post("/api/conversations", json={"title": "回收站拒提"}).json()["id"]
         client.post("/api/chat", json={"conversation_id": cid, "message": "内容"})
         client.delete(f"/api/conversations/{cid}")  # 进回收站
         res = client.post("/api/memory/archive", json={"conversation_id": cid})
-        assert res.status_code >= 400, f"回收站会话应被拒绝，实际 {res.status_code}"
+        assert res.status_code == 400, f"回收站会话应 400 拒绝，实际 {res.status_code}"
         assert "trash" in res.json()["detail"].lower()
 
 
