@@ -26,10 +26,12 @@
 
 > 设计：WorkBuddy ｜ 实现：Trae ｜ 测试：Claude ｜ WB 复验。派发规格见 `exchange/log-trae.md`。
 
-- [ ] **两层合一「归档」动作**：会话 `⋮` 菜单加「归档」→ 确认弹窗(取消/归档/删除) → 归档触发 `POST /api/memory/archive` 提摘要 → 可编辑面板(确认存入/仅归档/取消)。确认存入=写记忆+标记归档；仅归档=只标记归档(记忆可弃，接住"短问答有无记忆价值"的犹疑)；删除=软删进回收站。前端本期建菜单+弹窗+编辑面板；活跃列表过滤 `is_archived=0`
-- [ ] **已归档 / 回收站 后端功能代码先写、页面延后**：archive/unarchive/trash/restore/purge 端点 + schema `deleted_at` 列 + 启动迁移全实现；两个 Vue 页面(已归档列表/回收站列表)暂缓——UI 高度复用、一并做（用户 2026-08-27 拍板）
-- [ ] **记忆可再提取**：仅归档的会话以后在已归档视图可再次触发提取；放宽 `archiver.generate_summary` 对 `is_archived` 的硬卡(允许已归档重提)，`deleted_at` 非空仍拒
-- [ ] **删除语义变更**：`DELETE /conversations/{id}` 由硬删改为软删(`deleted_at`)，硬删仅留 `purge`(页面延后)；消息级联保留、恢复可见
+- [x] **两层合一「归档」动作**：会话 `⋮` 菜单加「归档」→ 确认弹窗(取消/归档/删除) → 归档触发 `POST /api/memory/archive` 提摘要 → 可编辑面板(确认存入/仅归档/取消)。确认存入=写记忆+标记归档；仅归档=只标记归档(记忆可弃，接住"短问答有无记忆价值"的犹疑)；删除=软删进回收站。前端本期建菜单+弹窗+编辑面板；活跃列表过滤 `is_archived=0`
+- [x] **已归档 / 回收站 后端功能代码先写、页面延后**：archive/unarchive/trash/restore/purge 端点 + schema `deleted_at` 列 + 启动迁移全实现；两个 Vue 页面(已归档列表/回收站列表)暂缓——UI 高度复用、一并做（用户 2026-08-27 拍板）
+- [x] **记忆可再提取**：仅归档的会话以后在已归档视图可再次触发提取；放宽 `archiver.generate_summary` 对 `is_archived` 的硬卡(允许已归档重提)，`deleted_at` 非空仍拒
+- [x] **删除语义变更**：`DELETE /conversations/{id}` 由硬删改为软删(`deleted_at`)，硬删仅留 `purge`(页面延后)；消息级联保留、恢复可见
+- [x] **重复提取幂等（Marvis 评审纳入）**：`confirm_and_store` 按 `source_conversation_id` 查重 → 命中覆盖更新(删旧向量重写)、未命中新建；配套放宽硬卡，防 unarchive→再归档复制重复记忆
+- [ ] **P3.5 遗留·待裁定**：回收站会话拒绝提取当前归 `LLMError→502`（见 `api/memory.py:81`），语义应为 4xx（业务校验失败非服务端错误）。非阻塞，测试仅断言 `>=400`；待 WB 裁定是否引入 `BadRequestError(400)` 收紧。详见 `exchange/log-claude.md`
 
 ### 测试层完善
 
