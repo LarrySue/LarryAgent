@@ -195,7 +195,7 @@ class TestConversationPatchAndDelete:
 # ---------------------------------------------------------------------------
 
 class TestMessagesAndCascade:
-    """GET /{id}/messages + 删除会话后 messages 行必须真实消失。"""
+    """GET /{id}/messages + 软删/硬删语义（2026-08-27 归档系统变更）。"""
 
     def _db_count(self, db_file, sql, params):
         """用独立 aiosqlite 连接执行查询（避免跨事件循环复用全局单例连接）。"""
@@ -206,6 +206,20 @@ class TestMessagesAndCascade:
                 cursor = await conn.execute(sql, params)
                 row = await cursor.fetchone()
                 return row[0]
+            finally:
+                await conn.close()
+
+        return asyncio.run(_run())
+
+    def _db_get(self, db_file, sql, params):
+        """取单行单值（如 deleted_at）。"""
+
+        async def _run():
+            conn = await aiosqlite.connect(str(db_file))
+            try:
+                cursor = await conn.execute(sql, params)
+                row = await cursor.fetchone()
+                return row[0] if row else None
             finally:
                 await conn.close()
 
@@ -222,17 +236,8 @@ class TestMessagesAndCascade:
         assert res.status_code == 200
         assert res.json() == []
 
-    def test_cascade_delete_messages(self, client, temp_db):
-        """
-        级联删除实证：
-        1. 经 API 创建会话
-        2. 独立连接裸 SQL 插 3 条消息（含 tool_calls / tool_call_id）
-        3. 确认 messages 表 3 行
-        4. API DELETE 会话
-        5. 独立连接确认 messages 行 = 0、conversations 行 = 0
-        失败信息明确指向 PRAGMA foreign_keys=ON 未生效，而非仅 API 返回码。
-        """
-        cid = client.post("/api/conversations", json={"title": "cascade"}).json()["id"]
+    def _seed_messages(self, temp_db, cid):
+        """裸 SQL 插 3 条消息（含 tool_calls / tool_call_id），返回前确认 3 行。"""
 
         async def _insert():
             conn = await aiosqlite.connect(str(temp_db))
@@ -258,22 +263,58 @@ class TestMessagesAndCascade:
 
         asyncio.run(_insert())
 
+    def test_soft_delete_keeps_messages(self, client, temp_db):
+        """
+        软删语义（2026-08-27 变更）：
+        1. 创建会话 + 插 3 条消息
+        2. DELETE → deleted_at 置非空（进回收站），会话行保留
+        3. messages 行保留（软删不触发外键级联）
+        4. 历史接口仍可读（恢复可见）
+        """
+        cid = client.post("/api/conversations", json={"title": "soft"}).json()["id"]
+        self._seed_messages(temp_db, cid)
+
         before = self._db_count(temp_db, "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (cid,))
         assert before == 3, f"测试前置失败：应插 3 条消息，实际 {before}"
 
-        # 顺带验证历史接口返回完整数据（含 tool 消息 + OpenAI 格式反序列化）
+        res = client.delete(f"/api/conversations/{cid}")
+        assert res.status_code == 200
+
+        # 会话行保留 + deleted_at 非空
+        deleted_at = self._db_get(temp_db, "SELECT deleted_at FROM conversations WHERE id = ?", (cid,))
+        assert deleted_at is not None, "软删后 deleted_at 应为非空"
+        # messages 保留
+        after_msg = self._db_count(temp_db, "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (cid,))
+        assert after_msg == 3, f"软删不应级联删 messages：还剩 {after_msg} 行（应为 3）"
+        # 活跃列表不含回收站
+        convs = client.get("/api/conversations").json()
+        assert not any(c["id"] == cid for c in convs)
+        # 回收站列表包含
+        trash = client.get("/api/conversations/trash").json()
+        assert any(c["id"] == cid for c in trash)
+        # 历史消息仍可读
         msgs = client.get(f"/api/conversations/{cid}/messages").json()
         assert [m["role"] for m in msgs] == ["user", "assistant", "tool"]
         assert msgs[1]["tool_calls"][0]["function"]["name"] == "shell"
         assert msgs[2]["tool_call_id"] == "call_1"
 
-        res = client.delete(f"/api/conversations/{cid}")
+    def test_purge_cascades_messages(self, client, temp_db):
+        """
+        硬删（purge）级联实证：
+        1. 创建会话 + 插 3 条消息
+        2. POST /purge → 会话行消失 + messages 级联清空
+        失败信息明确指向 PRAGMA foreign_keys=ON 未生效。
+        """
+        cid = client.post("/api/conversations", json={"title": "purge"}).json()["id"]
+        self._seed_messages(temp_db, cid)
+
+        res = client.post(f"/api/conversations/{cid}/purge")
         assert res.status_code == 200
 
         after_msg = self._db_count(temp_db, "SELECT COUNT(*) FROM messages WHERE conversation_id = ?", (cid,))
         after_conv = self._db_count(temp_db, "SELECT COUNT(*) FROM conversations WHERE id = ?", (cid,))
-        assert after_msg == 0, f"级联删除未生效：messages 还剩 {after_msg} 行"
-        assert after_conv == 0, f"会话行未删除：conversations 还剩 {after_conv} 行"
+        assert after_msg == 0, f"purge 级联删除未生效：messages 还剩 {after_msg} 行"
+        assert after_conv == 0, f"purge 后会话行仍存在"
 
 
 # ---------------------------------------------------------------------------
