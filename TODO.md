@@ -31,6 +31,16 @@
 - [ ] **记忆可再提取**：仅归档的会话以后在已归档视图可再次触发提取；放宽 `archiver.generate_summary` 对 `is_archived` 的硬卡(允许已归档重提)，`deleted_at` 非空仍拒
 - [ ] **删除语义变更**：`DELETE /conversations/{id}` 由硬删改为软删(`deleted_at`)，硬删仅留 `purge`(页面延后)；消息级联保留、恢复可见
 
+### 测试层完善
+
+> Claude 初步想法（2026-08-27，待与 WorkBuddy 讨论定案）
+
+- [ ] **恢复真实 API 集成测试层（test_integration_llm.py）**：当前因缺 pytest-asyncio 被列为存量债务，实际是"真实 API 契约验证层"断供。修复 = 装 pytest-asyncio + 恢复 3 个用例（真实 DeepSeek 工具调用闭环）
+- [ ] **integration 层 marker 隔离**：`@pytest.mark.integration` + conftest `--real-api` 开关（pytest 原生，零新增依赖）。默认跳过（不会误烧 key），`pytest tests/ --real-api` 显式跑（发版前冒烟）
+- [ ] **分层原则成文**：单元/逻辑层永远 mock（快、确定、隔离）；集成冒烟层真实 API（验证契约/鉴权/网络/模型行为——mock 永远够不到的那层）。**不做"全量切换配置"**——同一批测试在 mock/真实间切换会毁掉 mock 层的确定性，语义混乱
+- [ ] **mock 覆盖不到的清单**（真实 API 才暴露）：API 契约漂移（字段/嵌套/usage 缺失）、SDK 行为、429/Retry-After/限流、key 失效/余额、模型非法 JSON（tool_calls arguments 幻觉）、reasoning_content 等模型差异字段、真实延迟下的 SSE 节奏——集成冒烟层就是为这些存在的
+- [ ] 争议点待讨论：integration 冒烟频率（每次大改动后 vs 发版前）；是否把真实搜索（Brave key）也纳入冒烟；`--real-api` 跑挂时是否阻塞交付
+
 ### 移动端开发
 
 - [ ] 响应式 UI 或独立 `mobile/index.html`
