@@ -159,6 +159,7 @@ watch(
 
 .input-area::placeholder {
   color: var(--color-text-muted);
+  font-size: 14px;
 }
 
 .input-area:disabled {
@@ -171,7 +172,7 @@ watch(
   border: none;
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-4);
-  font-size: var(--text-sm);
+  font-size: 14px;
   font-weight: var(--weight-medium);
   font-family: var(--font-sans);
   cursor: pointer;

@@ -232,6 +232,11 @@ function startNewChat() {
           </div>
         </div>
       </div>
+
+      <!-- 侧栏底部区域（占位，待调整） -->
+      <footer class="sidebar-footer">
+        <span class="footer-text">v0.1.0</span>
+      </footer>
     </aside>
 
     <!-- 主区域 -->
@@ -395,6 +400,7 @@ function startNewChat() {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  height: 50px;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border-default);
 }
@@ -404,6 +410,24 @@ function startNewChat() {
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+}
+
+/* === 侧栏底部区域（占位，待调整） === */
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  height: 48px;
+  flex-shrink: 0;
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.footer-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .sidebar-logo {
@@ -686,7 +710,7 @@ function startNewChat() {
 }
 
 .topbar {
-  height: 48px;
+  height: 50px;
   display: flex;
   align-items: center;
   padding: 0 var(--space-4);
@@ -702,8 +726,8 @@ function startNewChat() {
 }
 
 .conversation-title {
-  font-size: var(--text-base);
-  font-weight: var(--weight-medium);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -711,8 +735,8 @@ function startNewChat() {
 }
 
 .app-title {
-  font-size: var(--text-base);
-  font-weight: var(--weight-medium);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
   color: var(--color-text-primary);
 }
 
