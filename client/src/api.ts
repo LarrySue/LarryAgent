@@ -37,8 +37,21 @@ export interface ConversationMessage {
   created_at: string;
 }
 
-export async function listConversations(): Promise<Conversation[]> {
-  const res = await fetch(`${API_BASE}/conversations`);
+export interface ListConversationsOptions {
+  /** true=仅归档；false=仅活跃（is_archived=0）；缺省=不过滤 */
+  archived?: boolean;
+  /** true=仅回收站（deleted_at 非空） */
+  trash?: boolean;
+}
+
+export async function listConversations(
+  opts?: ListConversationsOptions
+): Promise<Conversation[]> {
+  const params = new URLSearchParams();
+  if (opts?.archived !== undefined) params.set("archived", String(opts.archived));
+  if (opts?.trash) params.set("trash", "true");
+  const qs = params.toString();
+  const res = await fetch(`${API_BASE}/conversations${qs ? `?${qs}` : ""}`);
   return handleResponse(res);
 }
 
@@ -64,8 +77,89 @@ export async function renameConversation(
 }
 
 export async function deleteConversation(id: number): Promise<void> {
+  // 软删除：进回收站（deleted_at 置当前时间），消息保留
   const res = await fetch(`${API_BASE}/conversations/${id}`, {
     method: "DELETE",
+  });
+  return handleResponse(res);
+}
+
+// === 归档 / 回收站 API ===
+
+export interface ArchiveExtractResult {
+  conversation_id: number;
+  summary: string;
+  status: string;
+}
+
+/** 提取摘要：POST /api/memory/archive（生成摘要，不存储，供用户确认） */
+export async function archiveConversationExtract(
+  id: number
+): Promise<ArchiveExtractResult> {
+  const res = await fetch(`${API_BASE}/memory/archive`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ conversation_id: id }),
+  });
+  return handleResponse(res);
+}
+
+export interface ConfirmArchiveRequest {
+  conversation_id: number;
+  summary: string;
+  source_role?: string;
+}
+
+/** 确认摘要并存库：POST /api/memory/archive/confirm（写 SQLite + ChromaDB + mark_archived） */
+export async function confirmArchive(
+  req: ConfirmArchiveRequest
+): Promise<{ memory_id: number; conversation_id: number; status: string }> {
+  const res = await fetch(`${API_BASE}/memory/archive/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      conversation_id: req.conversation_id,
+      summary: req.summary,
+      source_role: req.source_role || "default",
+    }),
+  });
+  return handleResponse(res);
+}
+
+/** 仅归档：POST /api/conversations/{id}/archive（mark_archived=1，不写记忆） */
+export async function archiveSessionOnly(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/conversations/${id}/archive`, {
+    method: "POST",
+  });
+  return handleResponse(res);
+}
+
+/** 取消归档：POST /api/conversations/{id}/unarchive */
+export async function unarchiveConversation(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/conversations/${id}/unarchive`, {
+    method: "POST",
+  });
+  return handleResponse(res);
+}
+
+/** 回收站列表：GET /api/conversations/trash（备用，页面延后） */
+export async function listTrash(): Promise<Conversation[]> {
+  const res = await fetch(`${API_BASE}/conversations/trash`);
+  return handleResponse(res);
+}
+
+/** 从回收站恢复：POST /api/conversations/{id}/restore（备用，页面延后） */
+export async function restoreConversation(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/conversations/${id}/restore`, {
+    method: "POST",
+  });
+  return handleResponse(res);
+}
+
+/** 硬删除：POST /api/conversations/{id}/purge（备用，页面延后） */
+export async function purgeConversation(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/conversations/${id}/purge`, {
+    method: "POST",
   });
   return handleResponse(res);
 }

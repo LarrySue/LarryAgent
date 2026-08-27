@@ -25,6 +25,7 @@
   - 重命名为行内编辑：输入框自动聚焦全选，Enter/失焦确认、Esc 取消、空输入视为取消
   - 落库走既有 `PATCH /api/conversations/{id}`；确认后重新拉列表（重命名刷新 updated_at，会话移至顶部）
 - **重命名聚焦 BUG 修复** ✅ 已修复并闭环（Trae，2026-08-24）：上条"重命名自动聚焦全选"因 `ref="renameInput"` 落 v-for 内被 Vue3 收为数组而失效（点重命名后不自动聚焦）；已按派发方案 A 修复（函数 ref `:ref="(el) => (renameInput = el)"`），45/45 前端单测绿；Claude 已移除测试兜底、WB 读代码复验通过。
+- **归档系统** ✅ 已实现（Trae，2026-08-27，WB 派发）：后端软删+回收站+归档/取消归档/恢复/purge 全套 + archiver 幂等 + 前端三点菜单「归档」+ 确认弹窗 + 摘要编辑面板；详情见下方「归档系统派发规格」。等 Claude 补测试（测试派发见 `exchange/log-claude.md`）+ WB 复验。
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
 
 ---
@@ -122,6 +123,10 @@
 
 **`memory/archiver.py`**：
 - `generate_summary`（:76-77）：放宽 `if conv["is_archived"]` 硬卡——改为**允许已归档会话重提取**（支持"仅归档后再提取"）；但 `deleted_at` 非空仍 `raise`（回收站会话不可提取）。`get_conversation` 需一并返回 `deleted_at`
+- `confirm_and_store`（:118 起）：加**按会话查重幂等**——confirm 前 `get_active_memory_by_conversation_id(conv_id)` 查活跃记忆；命中则 `update_memory` 覆盖内容（复用 `:93`）+ 删旧 ChromaDB 点（按 `memory_id`）后重写向量；未命中走原 `create_memory` 新建。语义：同会话只留一条"最新生效"记忆，避免 unarchive→再归档→再确认复制重复（Marvis 评审 2026-08-27，记忆库首发前定死；成本几行）
+
+**`db/memories.py`**：
+- 新增 `get_active_memory_by_conversation_id(conv_id)`：`SELECT id, content, source_conversation_id, created_at, updated_at, is_active FROM memories WHERE source_conversation_id=? AND is_active=1`，返回单条或 None（复用 `list_memories` 同款列）
 
 **`api/memory.py`**：不变（`/archive`+`/archive/confirm` 已通；confirm 内 `mark_archived` 对仅归档幂等）
 
@@ -135,6 +140,12 @@
 - `AppLayout.vue`：菜单加「归档」+ 确认弹窗 + 摘要编辑面板（本期建）；活跃列表过滤 `is_archived=0`（store 侧或拉取侧）
 - 已归档视图 / 回收站视图 Vue 页面：**延后**
 
+### 范围边界（Marvis 产品评审 2026-08-27，老大拍板不纳入）
+- 删除/归档的"用户不可逆感"防护、purge 二次确认：页面延后且数据未真删，单人自用可兜底，不做。
+- FastAPI 布尔参数 `"false"→True` 坑：本期页面延后、活跃列表默认过滤用不到，下期已归档视图注意，不预埋。
+- 测试断言语义：软删必然测 `deleted_at`，实现时自然覆盖，不单列。
+- 远期轻提：会话量上来后归档/删除应支持批量；本期单会话起步合理，不入本期。
+
 ### 约束
 - 不破坏现有重命名/删除逻辑；删除改软删后，原硬删路径只剩 purge（页面延后）
 - 记忆提取用 `deepseek-chat` 文本模型（项目 `config.yaml` key 够用，**不依赖外部 Key**）
@@ -142,5 +153,17 @@
 - 测试：复用 conftest 隔离；新增 archive 双路径 / unarchive / trash 软删+恢复+purge / `generate_summary` 已归档可重提+回收站拒提 单测（Claude 补）
 
 ### 验收
-- Trae 实现 → Claude 补测试 → WB 复验（读代码 + 跑测试绿）
+- Trae 实现 → Claude 补测试（**测试派发见 `exchange/log-claude.md`**） → WB 复验（读代码 + 跑测试绿）
+
+### Trae 实现记录（2026-08-27，已提交）
+- **db/schema.py**：`CREATE_CONVERSATIONS` 加 `deleted_at TEXT DEFAULT NULL`；**db/migrations.py** 增量迁移列表加对应列（老库启动自动 ALTER，非破坏性）
+- **db/conversations.py**：`get_conversation` 返回 `deleted_at`；`list_conversations` 加 `archived`/`include_trash` 过滤（默认排除回收站）；`delete_conversation` 改**软删**（置 deleted_at）；新增 `unarchive_conversation` / `list_trash` / `restore_conversation` / `purge_conversation`
+- **db/memories.py**：新增 `get_active_memory_by_conversation_id`（幂等查重用）
+- **memory/archiver.py**：`generate_summary` 放宽 `is_archived` 硬卡（改为 `deleted_at` 非空才 raise）；`confirm_and_store` 加**按会话查重幂等**（同会话已有活跃记忆 → update_memory + 删旧 ChromaDB 向量后重写）
+- **api/conversations.py**：`GET /conversations` 加 `?archived=`/`?trash=`；新增 `GET /trash`、`POST /{id}/archive|unarchive|restore|purge`；`DELETE /{id}` 改软删
+- **client/src/api.ts**：`listConversations` 支持 opts；新增 `archiveConversationExtract` / `confirmArchive` / `archiveSessionOnly` / `unarchiveConversation` / `listTrash` / `restoreConversation` / `purgeConversation`
+- **client/src/components/AppLayout.vue**：三点菜单加「归档」；确认弹窗（取消/删除/归档）+ 摘要编辑面板（确认存入/仅归档/取消）；归档/删除后若为当前会话则回欢迎页并刷新活跃列表（`archived:false`）
+- **client/src/views/ChatView.vue**：活跃列表拉取改 `listConversations({ archived: false })`
+- **验证**：前端单测 45/45 绿；后端 core 34 通过 + conversations 16/17（1 失败 = `test_cascade_delete_messages` 断言**旧硬删语义**，软删变更后预期需 Claude 改写，log 确认软删路径执行正确）；后端 import 检查通过
+- **注意**：`deleted_at` 迁移在下一次后端启动时自动执行（ADD COLUMN，非破坏性）；已归档/回收站 Vue 页面按规格延后，api.ts 函数已备
 

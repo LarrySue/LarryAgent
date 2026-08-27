@@ -34,7 +34,7 @@ function toChatMessages(apiMsgs: ConversationMessage[]): ChatMessage[] {
 
 async function loadConversations() {
   try {
-    const list = await listConversations();
+    const list = await listConversations({ archived: false });
     appStore.setConversations(list);
   } catch {
     // Backend might not be ready yet

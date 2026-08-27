@@ -26,6 +26,8 @@ _INCREMENTAL_ALTERS = [
     ("tools", "group_name", "TEXT NOT NULL DEFAULT 'core'"),
     # messages 表：添加 tool_call_id 字段（tool 消息匹配 assistant tool_calls 用）
     ("messages", "tool_call_id", "TEXT DEFAULT NULL"),
+    # conversations 表：添加 deleted_at 字段（软删除进回收站，NULL = 未删除）
+    ("conversations", "deleted_at", "TEXT DEFAULT NULL"),
 ]
 
 

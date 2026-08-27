@@ -32,7 +32,7 @@ async def get_conversation(conversation_id: int) -> dict | None:
     """按 ID 查询会话，不存在返回 None。"""
     db = await get_db()
     cursor = await db.execute(
-        "SELECT id, title, created_at, updated_at, is_archived "
+        "SELECT id, title, created_at, updated_at, is_archived, deleted_at "
         "FROM conversations WHERE id = ?",
         (conversation_id,),
     )
@@ -153,9 +153,13 @@ async def mark_archived(conversation_id: int) -> None:
     logger.info("Marked conversation id=%s as archived", conversation_id)
 
 
-async def list_conversations(limit: int = 50) -> list[dict]:
+async def list_conversations(
+    limit: int = 50,
+    archived: bool | None = None,
+    include_trash: bool = False,
+) -> list[dict]:
     """
-    列出所有会话（含归档），按 updated_at DESC, id DESC 排序。
+    列出会话，按 updated_at DESC, id DESC 排序。
 
     二级排序 id DESC 的原因：SQLite datetime('now') 只有秒级精度，
     同一秒内创建/修改的多个会话 updated_at 完全相同，此时按 id DESC
@@ -163,13 +167,25 @@ async def list_conversations(limit: int = 50) -> list[dict]:
 
     Args:
         limit: 最多返回多少条（默认 50）
+        archived: None=不过滤；True=仅归档；False=仅活跃（is_archived=0）
+        include_trash: True=仅回收站（deleted_at 非空）；False=排除回收站
+
     Returns:
-        [{id, title, updated_at, is_archived}]
+        [{id, title, updated_at, is_archived, deleted_at}]
     """
+    conditions: list[str] = []
+    if include_trash:
+        conditions.append("deleted_at IS NOT NULL")
+    else:
+        conditions.append("deleted_at IS NULL")
+    if archived is not None:
+        conditions.append("is_archived = 1" if archived else "is_archived = 0")
+
+    where = "WHERE " + " AND ".join(conditions) if conditions else ""
     db = await get_db()
     cursor = await db.execute(
-        "SELECT id, title, updated_at, is_archived FROM conversations "
-        "ORDER BY updated_at DESC, id DESC LIMIT ?",
+        "SELECT id, title, updated_at, is_archived, deleted_at FROM conversations "
+        f"{where} ORDER BY updated_at DESC, id DESC LIMIT ?",
         (limit,),
     )
     rows = await cursor.fetchall()
@@ -189,11 +205,64 @@ async def rename_conversation(conversation_id: int, title: str) -> None:
 
 async def delete_conversation(conversation_id: int) -> None:
     """
-    删除会话（级联删除 messages）。
+    软删除会话：置 deleted_at=datetime('now')，会话进入回收站。
 
-    注意：schema.py 中 messages 外键定义了 ON DELETE CASCADE，
-    database.py 已执行 PRAGMA foreign_keys=ON，删除会话会自动清理关联消息。
-    memories 外键定义了 ON DELETE SET NULL，会把 source_conversation_id 置空。
+    消息与记忆**保留**（软删不触发外键级联）；恢复后完整可见。
+    硬删除（purge）才真正级联清理 messages。
+    """
+    db = await get_db()
+    cursor = await db.execute(
+        "UPDATE conversations SET deleted_at = datetime('now') WHERE id = ?",
+        (conversation_id,),
+    )
+    await db.commit()
+    rows_affected = cursor.rowcount
+    logger.info(
+        "Soft-deleted conversation id=%s (rows affected=%d, entered trash)",
+        conversation_id, rows_affected,
+    )
+
+
+async def unarchive_conversation(conversation_id: int) -> None:
+    """取消归档：is_archived 置 0。"""
+    db = await get_db()
+    await db.execute(
+        "UPDATE conversations SET is_archived = 0 WHERE id = ?",
+        (conversation_id,),
+    )
+    await db.commit()
+    logger.info("Unarchived conversation id=%s", conversation_id)
+
+
+async def list_trash(limit: int = 100) -> list[dict]:
+    """列出回收站中的会话（deleted_at 非空），按删除时间倒序。"""
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, title, updated_at, is_archived, deleted_at FROM conversations "
+        "WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC LIMIT ?",
+        (limit,),
+    )
+    rows = await cursor.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def restore_conversation(conversation_id: int) -> None:
+    """从回收站恢复：deleted_at 置 NULL。"""
+    db = await get_db()
+    await db.execute(
+        "UPDATE conversations SET deleted_at = NULL WHERE id = ?",
+        (conversation_id,),
+    )
+    await db.commit()
+    logger.info("Restored conversation id=%s from trash", conversation_id)
+
+
+async def purge_conversation(conversation_id: int) -> None:
+    """
+    硬删除会话（彻底移除）。
+
+    messages 外键 ON DELETE CASCADE → 自动级联删除；
+    memories 外键 ON DELETE SET NULL → source_conversation_id 自动置空。
     """
     db = await get_db()
     cursor = await db.execute(
@@ -203,7 +272,7 @@ async def delete_conversation(conversation_id: int) -> None:
     await db.commit()
     rows_affected = cursor.rowcount
     logger.info(
-        "Deleted conversation id=%s (rows affected=%d, cascaded messages/memories via FK)",
+        "Purged conversation id=%s (rows affected=%d, cascaded messages/memories via FK)",
         conversation_id, rows_affected,
     )
 

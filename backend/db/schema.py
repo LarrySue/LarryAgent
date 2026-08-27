@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     title TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    is_archived INTEGER NOT NULL DEFAULT 0
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    deleted_at TEXT DEFAULT NULL
 );
 """
 

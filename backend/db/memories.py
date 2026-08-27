@@ -63,6 +63,25 @@ async def get_memory(memory_id: int) -> dict | None:
     return dict(row)
 
 
+async def get_active_memory_by_conversation_id(conversation_id: int) -> dict | None:
+    """
+    按来源会话查询活跃记忆（is_active=1），返回单条或 None。
+
+    语义：同会话只保留一条"最新生效"记忆；confirm 前调用以做重复提取幂等。
+    """
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, content, source_conversation_id, created_at, updated_at, is_active "
+        "FROM memories WHERE source_conversation_id = ? AND is_active = 1 "
+        "ORDER BY created_at DESC LIMIT 1",
+        (conversation_id,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+    return dict(row)
+
+
 async def list_memories(active_only: bool = True) -> list[dict]:
     """
     列出所有记忆。

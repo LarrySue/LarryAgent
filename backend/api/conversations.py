@@ -2,11 +2,16 @@
 会话管理 API 路由
 
 职责：
-- GET  /api/conversations          会话列表（updated_at DESC）
-- POST /api/conversations          手动新建（title 空 = 前端显示"新会话"占位）
-- GET  /api/conversations/{id}/messages  完整历史消息（含 role=tool，前端过滤）
-- PATCH /api/conversations/{id}    重命名
-- DELETE /api/conversations/{id}   删除（PRAGMA foreign_keys=ON 级联删 messages）
+- GET  /api/conversations               会话列表（updated_at DESC；?archived= / ?trash= 过滤）
+- POST /api/conversations               手动新建（title 空 = 前端显示"新会话"占位）
+- GET  /api/conversations/trash         回收站列表
+- GET  /api/conversations/{id}/messages 完整历史消息（含 role=tool，前端过滤）
+- PATCH /api/conversations/{id}         重命名
+- POST /api/conversations/{id}/archive  仅归档（mark_archived=1，不写记忆）
+- POST /api/conversations/{id}/unarchive 取消归档
+- POST /api/conversations/{id}/restore  从回收站恢复
+- POST /api/conversations/{id}/purge    硬删除（级联删 messages）
+- DELETE /api/conversations/{id}        软删除（进回收站，deleted_at 置当前时间）
 
 与其他模块的关系：
 - 依赖 db/conversations.py 持久化
@@ -40,14 +45,30 @@ class ConversationPatchRequest(BaseModel):
 # === Route handlers ===
 
 @router.get("")
-async def list_conversations(limit: int = 50):
+async def list_conversations(
+    limit: int = 50,
+    archived: bool | None = None,
+    trash: bool = False,
+):
     """
     获取会话列表，按 updated_at DESC 排序。
 
     Query params:
         limit: 最多返回条数（默认 50）
+        archived: 不过滤=None / 仅归档=True / 仅活跃=False
+        trash: True=仅回收站（deleted_at 非空）
     """
-    return await conv_db.list_conversations(limit=limit)
+    return await conv_db.list_conversations(
+        limit=limit,
+        archived=archived,
+        include_trash=trash,
+    )
+
+
+@router.get("/trash")
+async def list_trash(limit: int = 100):
+    """获取回收站会话列表（软删除，deleted_at 非空）。"""
+    return await conv_db.list_trash(limit=limit)
 
 
 @router.post("")
@@ -86,13 +107,52 @@ async def patch_conversation(conversation_id: int, req: ConversationPatchRequest
     return {"id": conversation_id, "title": req.title}
 
 
+@router.post("/{conversation_id}/archive")
+async def archive_conversation(conversation_id: int):
+    """仅归档：mark_archived=1，不写记忆（与 /api/memory/archive 提取摘要区分）。"""
+    existing = await conv_db.get_conversation(conversation_id)
+    if existing is None:
+        raise ResourceNotFoundError(f"Conversation not found: {conversation_id}")
+    await conv_db.mark_archived(conversation_id)
+    return {"ok": True, "conversation_id": conversation_id, "status": "archived"}
+
+
+@router.post("/{conversation_id}/unarchive")
+async def unarchive_conversation(conversation_id: int):
+    """取消归档：is_archived 置 0。"""
+    existing = await conv_db.get_conversation(conversation_id)
+    if existing is None:
+        raise ResourceNotFoundError(f"Conversation not found: {conversation_id}")
+    await conv_db.unarchive_conversation(conversation_id)
+    return {"ok": True, "conversation_id": conversation_id, "status": "unarchived"}
+
+
+@router.post("/{conversation_id}/restore")
+async def restore_conversation(conversation_id: int):
+    """从回收站恢复：deleted_at 置 NULL。"""
+    existing = await conv_db.get_conversation(conversation_id)
+    if existing is None:
+        raise ResourceNotFoundError(f"Conversation not found: {conversation_id}")
+    await conv_db.restore_conversation(conversation_id)
+    return {"ok": True, "conversation_id": conversation_id, "status": "restored"}
+
+
+@router.post("/{conversation_id}/purge")
+async def purge_conversation(conversation_id: int):
+    """硬删除：级联删 messages（记忆 source_conversation_id 置空）。"""
+    existing = await conv_db.get_conversation(conversation_id)
+    if existing is None:
+        raise ResourceNotFoundError(f"Conversation not found: {conversation_id}")
+    await conv_db.purge_conversation(conversation_id)
+    return {"ok": True, "conversation_id": conversation_id, "status": "purged"}
+
+
 @router.delete("/{conversation_id}")
 async def delete_conversation(conversation_id: int):
     """
-    删除会话。
+    软删除会话：进回收站（deleted_at 置当前时间）。
 
-    messages 外键 ON DELETE CASCADE → 自动级联删除；
-    memories 外键 ON DELETE SET NULL → source_conversation_id 自动置空。
+    消息与记忆保留；恢复（/restore）后完整可见；硬删除走 /purge。
     """
     existing = await conv_db.get_conversation(conversation_id)
     if existing is None:

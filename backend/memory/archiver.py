@@ -26,11 +26,15 @@ import logging
 import uuid
 
 from db.conversations import get_messages, get_conversation, mark_archived
-from db.memories import create_memory
+from db.memories import (
+    create_memory,
+    update_memory,
+    get_active_memory_by_conversation_id,
+)
 from models.embedding import embed_batch
 from models.llm import chat_completion
 from rag.chunker import chunk_text
-from rag.vector_store import insert
+from rag.vector_store import insert, delete_by_memory_id
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +77,9 @@ async def generate_summary(
     conv = await get_conversation(conversation_id)
     if conv is None:
         raise ValueError(f"Conversation not found: {conversation_id}")
-    if conv["is_archived"]:
-        raise ValueError(f"Conversation already archived: {conversation_id}")
+    # 已归档会话允许重提取（支持"仅归档后再提取"）；回收站会话不可提取
+    if conv["deleted_at"] is not None:
+        raise ValueError(f"Conversation is in trash, cannot archive: {conversation_id}")
 
     messages = await get_messages(conversation_id, limit=None)
     if not messages:
@@ -131,16 +136,35 @@ async def confirm_and_store(
     Returns:
         memory_id
     """
-    # 1. 写入 SQLite memories 表
-    memory_id = await create_memory(
-        content=summary,
-        source_conversation_id=conversation_id,
-    )
+    # 1. 幂等查重：同会话已有活跃记忆 → 覆盖更新（删旧向量后重写），否则新建
+    existing = await get_active_memory_by_conversation_id(conversation_id)
+    if existing is not None:
+        memory_id = existing["id"]
+        await update_memory(memory_id, summary)
+        logger.info(
+            "Re-archiving conv=%d: overwriting existing memory_id=%d",
+            conversation_id,
+            memory_id,
+        )
+        try:
+            await delete_by_memory_id(memory_id)
+        except Exception as e:
+            logger.warning(
+                "ChromaDB delete of old vectors failed for memory_id=%d: %s",
+                memory_id,
+                e,
+            )
+    else:
+        memory_id = await create_memory(
+            content=summary,
+            source_conversation_id=conversation_id,
+        )
 
     # 2. 分块
     chunks = chunk_text(summary)
     if not chunks:
         logger.warning("Summary produced no chunks, skipping vector store write")
+        await mark_archived(conversation_id)
         return memory_id
 
     # 3. 批量向量化

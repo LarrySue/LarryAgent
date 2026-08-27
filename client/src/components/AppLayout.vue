@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
 import { useAppStore, type Role } from "@/stores/app";
-import { renameConversation, listConversations } from "@/api";
+import {
+  renameConversation,
+  listConversations,
+  deleteConversation,
+  archiveConversationExtract,
+  confirmArchive,
+  archiveSessionOnly,
+} from "@/api";
 import RoleSelector from "@/components/RoleSelector.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
 import BrandText from "@/components/BrandText.vue";
@@ -10,17 +17,31 @@ import logoUrl from "@/assets/logo.svg";
 const appStore = useAppStore();
 const sidebarOpen = ref(false);
 
-// 会话操作（三点菜单 / 重命名）
+// 会话操作（三点菜单 / 重命名 / 归档）
 const menuOpenId = ref<number | null>(null);
 const editingId = ref<number | null>(null);
 const editText = ref("");
 const renameInput = ref<HTMLInputElement | null>(null);
+
+// 归档流程：确认弹窗 → 摘要编辑面板
+const archiveTarget = ref<{ id: number; title: string } | null>(null);
+const archiveLoading = ref(false);
+const archiveError = ref("");
+const summaryPanel = ref<{ convId: number } | null>(null);
+const summaryText = ref("");
+const confirmLoading = ref(false);
 
 onMounted(() => {
   document.addEventListener("click", () => {
     menuOpenId.value = null;
   });
 });
+
+// 拉取活跃列表（is_archived=0 且不在回收站）
+async function refreshConversations() {
+  const list = await listConversations({ archived: false });
+  appStore.setConversations(list);
+}
 
 function toggleMenu(id: number) {
   menuOpenId.value = menuOpenId.value === id ? null : id;
@@ -47,11 +68,84 @@ async function confirmRename(id: number) {
   if (!title) return; // 空输入视为取消
   try {
     await renameConversation(id, title);
-    const list = await listConversations();
-    appStore.setConversations(list); // 重命名后 updated_at 刷新，重新拉列表保持排序
+    await refreshConversations(); // 重命名后 updated_at 刷新，重新拉列表保持排序
   } catch {
     // 重命名失败暂静默，后续可加提示
   }
+}
+
+// === 归档流程 ===
+
+function openArchiveDialog(conv: { id: number; title: string }) {
+  menuOpenId.value = null;
+  archiveTarget.value = conv;
+  archiveError.value = "";
+}
+
+function closeArchiveDialog() {
+  if (!archiveLoading.value) archiveTarget.value = null;
+}
+
+async function confirmDelete() {
+  const target = archiveTarget.value;
+  if (!target) return;
+  try {
+    await deleteConversation(target.id); // 软删除进回收站
+    if (appStore.currentConversationId === target.id) appStore.selectConversation(null);
+    await refreshConversations();
+  } catch (e) {
+    archiveError.value = (e as Error).message || "删除失败";
+  }
+  archiveTarget.value = null;
+}
+
+async function startArchive() {
+  const target = archiveTarget.value;
+  if (!target) return;
+  archiveLoading.value = true;
+  archiveError.value = "";
+  try {
+    const res = await archiveConversationExtract(target.id); // 生成摘要（调 LLM）
+    summaryText.value = res.summary;
+    summaryPanel.value = { convId: res.conversation_id };
+    archiveTarget.value = null;
+  } catch (e) {
+    archiveError.value = (e as Error).message || "摘要生成失败";
+  }
+  archiveLoading.value = false;
+}
+
+async function confirmStore() {
+  const panel = summaryPanel.value;
+  if (!panel) return;
+  confirmLoading.value = true;
+  try {
+    await confirmArchive({
+      conversation_id: panel.convId,
+      summary: summaryText.value.trim(),
+    });
+    if (appStore.currentConversationId === panel.convId) appStore.selectConversation(null);
+    await refreshConversations();
+    summaryPanel.value = null;
+  } catch (e) {
+    archiveError.value = (e as Error).message || "存入失败";
+  }
+  confirmLoading.value = false;
+}
+
+async function archiveOnly() {
+  const panel = summaryPanel.value;
+  if (!panel) return;
+  confirmLoading.value = true;
+  try {
+    await archiveSessionOnly(panel.convId); // 仅归档，不写记忆
+    if (appStore.currentConversationId === panel.convId) appStore.selectConversation(null);
+    await refreshConversations();
+    summaryPanel.value = null;
+  } catch (e) {
+    archiveError.value = (e as Error).message || "归档失败";
+  }
+  confirmLoading.value = false;
 }
 
 function toggleSidebar() {
@@ -133,6 +227,7 @@ function startNewChat() {
 
             <div v-if="menuOpenId === conv.id" class="conv-menu" @click.stop>
               <button class="conv-menu-item" @click="startRename(conv)">重命名</button>
+              <button class="conv-menu-item" @click="openArchiveDialog(conv)">归档</button>
             </div>
           </div>
         </div>
@@ -162,6 +257,44 @@ function startNewChat() {
 
     <!-- 连接状态 toast -->
     <ConnectionToast />
+
+    <!-- 归档确认弹窗（取消 / 删除 / 归档） -->
+    <div v-if="archiveTarget" class="modal-overlay" @click.self="closeArchiveDialog">
+      <div class="modal">
+        <h3 class="modal-title">会话操作</h3>
+        <p class="modal-desc">「{{ archiveTarget.title || "新会话" }}」如何处理？</p>
+        <p v-if="archiveError" class="modal-error">{{ archiveError }}</p>
+        <div class="modal-actions">
+          <button class="modal-btn" :disabled="archiveLoading" @click="closeArchiveDialog">取消</button>
+          <button class="modal-btn danger" :disabled="archiveLoading" @click="confirmDelete">删除</button>
+          <button class="modal-btn primary" :disabled="archiveLoading" @click="startArchive">
+            {{ archiveLoading ? "生成摘要中…" : "归档" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 归档摘要编辑面板（确认存入 / 仅归档 / 取消） -->
+    <div v-if="summaryPanel" class="modal-overlay">
+      <div class="modal">
+        <h3 class="modal-title">归档摘要（可编辑）</h3>
+        <textarea
+          v-model="summaryText"
+          class="summary-input"
+          rows="10"
+          spellcheck="false"
+          placeholder="摘要将作为长期记忆存入，可手动修改"
+        ></textarea>
+        <p v-if="archiveError" class="modal-error">{{ archiveError }}</p>
+        <div class="modal-actions">
+          <button class="modal-btn" :disabled="confirmLoading" @click="summaryPanel = null">取消</button>
+          <button class="modal-btn" :disabled="confirmLoading" @click="archiveOnly">仅归档</button>
+          <button class="modal-btn primary" :disabled="confirmLoading" @click="confirmStore">
+            {{ confirmLoading ? "存入中…" : "确认存入" }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -443,6 +576,104 @@ function startNewChat() {
   font-size: var(--text-sm);
   padding: 4px 6px;
   outline: none;
+}
+
+/* === 归档弹窗 === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  width: 440px;
+  max-width: calc(100vw - 48px);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.modal-desc {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+
+.modal-error {
+  margin: 0 0 var(--space-3);
+  color: var(--color-error, #EF4444);
+  font-size: var(--text-sm);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.modal-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  transition: all var(--duration-fast);
+}
+
+.modal-btn:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+}
+
+.modal-btn.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.modal-btn.danger {
+  color: var(--color-error, #EF4444);
+  border-color: var(--color-error, #EF4444);
+}
+
+.modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summary-input {
+  width: 100%;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  resize: vertical;
+  margin-bottom: var(--space-4);
+  outline: none;
+}
+
+.summary-input:focus {
+  border-color: var(--color-accent);
 }
 
 /* === 主区域 === */
