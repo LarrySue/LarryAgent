@@ -22,16 +22,9 @@
 - [ ] **真机端到端验收（待老大收尾）**：WB 不碰真实 key（Tier0 红线）且需 GUI 环境，此步只能由老大做——填 `config.yaml` 的 `search.brave_api_key` 真实 Brave key → 启动 LarryAgent → 聊实时问题看来源标注 → 测降级（错 key/断网出现"未能联网核实"且不崩）。逻辑层已全收口，此步为端到端收尾。
 - 注：首版**不做 web_fetch 正文抓取**（代价高：SSRF/反爬/内容清洗/阻塞风险，复杂度高一个量级）；SearXNG 待 VPS 部署后替换 Brave
 
-### 归档系统：会话归档 + 记忆归档 两层合一（WB 设计定案 2026-08-27 · 待点将 Trae）
+### 归档系统：会话归档 + 记忆归档 两层合一 ✅（2026-08-27 闭环，冷存见 `archive/roadmap-history.md`）
 
-> 设计：WorkBuddy ｜ 实现：Trae ｜ 测试：Claude ｜ WB 复验。派发规格见 `exchange/log-trae.md`。
-
-- [x] **两层合一「归档」动作**：会话 `⋮` 菜单加「归档」→ 确认弹窗(取消/归档/删除) → 归档触发 `POST /api/memory/archive` 提摘要 → 可编辑面板(确认存入/仅归档/取消)。确认存入=写记忆+标记归档；仅归档=只标记归档(记忆可弃，接住"短问答有无记忆价值"的犹疑)；删除=软删进回收站。前端本期建菜单+弹窗+编辑面板；活跃列表过滤 `is_archived=0`
-- [x] **已归档 / 回收站 后端功能代码先写、页面延后**：archive/unarchive/trash/restore/purge 端点 + schema `deleted_at` 列 + 启动迁移全实现；两个 Vue 页面(已归档列表/回收站列表)暂缓——UI 高度复用、一并做（用户 2026-08-27 拍板）
-- [x] **记忆可再提取**：仅归档的会话以后在已归档视图可再次触发提取；放宽 `archiver.generate_summary` 对 `is_archived` 的硬卡(允许已归档重提)，`deleted_at` 非空仍拒
-- [x] **删除语义变更**：`DELETE /conversations/{id}` 由硬删改为软删(`deleted_at`)，硬删仅留 `purge`(页面延后)；消息级联保留、恢复可见
-- [x] **重复提取幂等（Marvis 评审纳入）**：`confirm_and_store` 按 `source_conversation_id` 查重 → 命中覆盖更新(删旧向量重写)、未命中新建；配套放宽硬卡，防 unarchive→再归档复制重复记忆
-- [x] **P3.5 语义修复（已落实 2026-08-27）**：回收站/无消息/不存在会话拒绝提取改为透传 4xx——`archiver.generate_summary` 抛 `ValidationError(400)`/`ResourceNotFoundError(404)`，`api/memory.py` 不再包成 `LLMError→502`；测试 `test_trash_conversation_rejected` 断言精确到 400
+- [x] 已实现并复验闭环：WB 设计 / Trae 实现（`43213e3`）/ Claude 测试（`2db9130`）/ WB 复验（`ffa3683`）/ P3.5 语义修复（`50ed895`）；派发稿 `exchange/log-trae.md`、测试 `exchange/log-claude.md`、复验 `exchange/log-workbuddy.md`
 
 ### 测试层完善
 

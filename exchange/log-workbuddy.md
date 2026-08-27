@@ -29,8 +29,8 @@
   - `archiver.py`：`generate_summary` 硬卡已放宽（仅 `deleted_at` 卡）、`confirm_and_store` 幂等查重（命中覆盖+删旧向量重写，未命中新建）✅ —— Marvis 评审的重复提取隐患已闭环
   - 前端：`api.ts` 全套客户端函数；`AppLayout.vue` 菜单「归档」→确认弹窗(取消/删除/归档)→摘要编辑面板(取消/仅归档/确认存入)；`ChatView.vue` 列表过滤 `is_archived=0` 一致 ✅；已归档/回收站 Vue 页面按约延后（函数标"页面延后"）
 - **测试对照派发稿（`exchange/log-claude.md`）**：双路径/取消归档/回收站/列表过滤/`generate_summary` 放宽/幂等 全覆盖；隔离正确（conftest 临时库 + monkeypatch LLM/ChromaDB，零真实 key）
-- **遗留（非阻塞）**：回收站拒绝提取归 `LLMError→502`（`api/memory.py:81`），语义应为 4xx。测试仅断言 `>=400`，已通过；待裁定是否引入 `BadRequestError(400)` 收紧（已入 TODO P3.5）
-- **结论**：归档系统实现与派发规格一致，测试绿，闭环。仅 P3.5 语义细化待用户拍板，不阻塞。
+- **P3.5 语义已修复**（2026-08-27 用户拍板"直接改"）：回收站/无消息/不存在会话拒绝提取改透传 4xx（`ValidationError(400)`/`ResourceNotFoundError(404)`），不再归 `LLMError→502`；测试断言收紧至 `==400`。commit `50ed895`
+- **结论**：归档系统实现与派发规格一致，测试绿，闭环。P3.5 语义细化已落实，无遗留。
 
 ---
 

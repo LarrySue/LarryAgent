@@ -2,7 +2,7 @@
 
 ## 当前状态（2026-08-27 更新）
 
-- **归档系统** ✅ 已实现（Trae，2026-08-27，WB 派发）：后端软删+回收站+归档/取消归档/恢复/purge 全套 + archiver 幂等 + 前端三点菜单「归档」+ 确认弹窗 + 摘要编辑面板；详情见下方「归档系统派发规格」。等 Claude 补测试（测试派发见 `exchange/log-claude.md`）+ WB 复验。
+- **归档系统** ✅ 已实现并闭环（Trae `43213e3` + Claude 测试 `2db9130` + WB 复验 `ffa3683` + P3.5 语义修复 `50ed895`）：后端软删+回收站+归档/取消归档/恢复/purge 全套 + archiver 幂等 + 前端三点菜单「归档」+ 确认弹窗 + 摘要编辑面板；详情见下方「归档系统派发规格」。
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
 
 ---
@@ -58,7 +58,7 @@
 
 ---
 
-## 归档系统派发规格（2026-08-27，WB 设计定案 · 待点将 Trae）
+## 归档系统派发规格（2026-08-27，WB 设计定案 · 已闭环）
 
 ### 设计意图
 把"会话软隐藏（`is_archived`）"与"记忆提取入库"合成一个「归档」动作，落地 LarryAgent "越来越懂你"主线：用户**显式归档时逐条把关**记忆值不值得存。原 P4 定案"归档入口不做"，本次补齐。已存在可复用底座：`api/memory.py` 的 `/archive`+`/archive/confirm`、`archiver.generate_summary`/`confirm_and_store`、`db/conversations.mark_archived`、`is_archived` 列。
@@ -129,8 +129,8 @@
 - Tier0：key 不落日志；测试用 mock，不碰真实 key/config
 - 测试：复用 conftest 隔离；新增 archive 双路径 / unarchive / trash 软删+恢复+purge / `generate_summary` 已归档可重提+回收站拒提 单测（Claude 补）
 
-### 验收
-- Trae 实现 → Claude 补测试（**测试派发见 `exchange/log-claude.md`**） → WB 复验（读代码 + 跑测试绿）
+### 验收（已闭环）
+- Trae 实现（`43213e3`）→ Claude 补测试（`2db9130`，**测试派发见 `exchange/log-claude.md`**）→ WB 复验（`ffa3683` 读代码 + 跑测试绿）+ P3.5 语义修复（`50ed895`）
 
 ### Trae 实现记录（2026-08-27，已提交）
 - **db/schema.py**：`CREATE_CONVERSATIONS` 加 `deleted_at TEXT DEFAULT NULL`；**db/migrations.py** 增量迁移列表加对应列（老库启动自动 ALTER，非破坏性）

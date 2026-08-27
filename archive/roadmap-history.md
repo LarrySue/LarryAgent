@@ -303,3 +303,20 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] `main.py` 新增 `@app.exception_handler(Exception)` 兜底 handler：server 端记完整 traceback，客户端返回 `{error: "INTERNAL_ERROR", detail: "Internal server error"}`（不泄漏内部信息）
 - [x] 测试：非 LarryException 未预期异常 → JSON 格式（非 Starlette 纯文本 500）
 - [x] Claude 同步更新 `test_exceptions.py::TestUnexpectedException` 断言（body 从纯文本变 JSON，Claude 自己的文件自己改）
+
+---
+
+### 功能增强（P4 之后）
+
+**归档系统：会话归档 + 记忆归档 两层合一** ✅（2026-08-27，WB 设计 / Trae 实现 / Claude 测试 / WB 复验）
+
+> 原 P4 定案"归档入口不做"，本次补齐：把"会话软隐藏（is_archived）"与"记忆提取入库"合成显式「归档」动作，落地"越来越懂你"主线——用户显式归档时逐条把关记忆价值。
+
+- [x] 会话 `⋮` 菜单加「归档」→ 确认弹窗(取消/归档/删除) → 归档触发记忆提取 → 可编辑摘要面板(确认存入/仅归档/取消)；确认存入=写记忆+标记归档，仅归档=只标记归档(记忆可弃)
+- [x] 后端：schema `deleted_at` 列 + 启动 ALTER 迁移；会话侧 archive/unarchive/trash(软删)/restore/purge + `DELETE` 语义改软删；`list_conversations` 过滤 archived/trash
+- [x] 记忆可再提取：放宽 `archiver.generate_summary` 对 `is_archived` 硬卡（仅 `deleted_at` 非空拒提），支持仅归档会话后再提取
+- [x] 重复提取幂等（Marvis 评审纳入）：`confirm_and_store` 按 `source_conversation_id` 查重 → 命中覆盖更新(删旧向量重写)、未命中新建，防 unarchive→再归档复制重复记忆
+- [x] P3.5 语义修复：回收站/无消息/不存在会话拒绝提取透传 4xx（`ValidationError(400)`/`ResourceNotFoundError(404)`），不再包 `LLMError→502`
+- [x] 前端：api.ts 全套客户端函数；AppLayout.vue 菜单+弹窗+面板；ChatView.vue 列表过滤 `is_archived=0`；已归档/回收站 Vue 页面按约延后
+- 测试：Claude `tests/test_archive.py`(11) + `test_conversations.py` 改写，后端 29 项全绿（隔离临时库 + mock LLM/ChromaDB，零真实 key）；WB 读码复验通过
+- 提交：`43213e3`(实现) / `2db9130`(测试) / `ffa3683`(WB复验闭环) / `50ed895`(P3.5语义修复)
