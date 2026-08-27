@@ -13,7 +13,7 @@
   --sidebar-bg:            #13141C;
 
   /* ===== 文字层级 ===== */
-  --color-text-primary:    #D4D4D8;
+  --color-text-primary:    #bebec0;
   --color-text-secondary:  #A1A1AA;
   --color-text-muted:      #71717A;
   --color-text-inverse:    #0F1117;
@@ -62,8 +62,8 @@
 
   /* ===== 字号 ===== */
   --text-xs:   0.75rem;
-  --text-sm:   0.8125rem;
-  --text-base: 0.875rem;
+  --text-sm:   1rem;
+  --text-base: 1rem;
   --text-lg:   1rem;
   --text-xl:   1.125rem;
   --text-2xl:  1.25rem;

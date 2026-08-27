@@ -13,10 +13,11 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
     "@tauri-apps/api": "^2.0.0",
+    "pinia": "^2.2.0",
     "vue": "^3.5.0",
-    "vue-router": "^4.4.0",
-    "pinia": "^2.2.0"
+    "vue-router": "^4.4.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

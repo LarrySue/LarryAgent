@@ -23,7 +23,7 @@
 ### 1.2 背景 / 文字 / 边框
 
 - 背景三级：`--color-bg-base #0F1117`（底板）/ `--color-bg-surface #1A1D24`（容器）/ `--color-bg-elevated #242830`（悬浮层）/ 遮罩 `rgba(0,0,0,0.6)`
-- 文字三级：`--color-text-primary #D4D4D8`（2026-08-27 老大定：原 #E4E4E7 偏刺眼，调灰一档）/ `--color-text-secondary #A1A1AA` / `--color-text-muted #71717A` / `--color-text-inverse #0F1117`
+- 文字三级：`--color-text-primary #bebec0`（2026-08-28 一轮UI调整：原 #D4D4D8 偏亮，再灰一档）/ `--color-text-secondary #A1A1AA` / `--color-text-muted #71717A` / `--color-text-inverse #0F1117`
 - 边框：`--color-border-default rgba(255,255,255,0.08)` / `--color-border-hover rgba(255,255,255,0.15)` / `--color-border-focus #378ADD`
 - 侧栏：`--sidebar-bg #13141C`；item hover `rgba(255,255,255,0.04)` / active `rgba(255,255,255,0.08)`
 
@@ -46,8 +46,8 @@
 
 ## 2. 排版 / 间距 / 圆角 / 过渡（数值以 `tokens.css` 为准）
 
-- 字体：`--font-sans` Inter / SF / 微软雅黑 / 苹方（中文优先系统字体）+ `--font-mono` 等宽
-- 字号：xs 12 / sm 13 / base 14（正文）/ lg 16 / xl 18 / 2xl 20
+- 字体：`--font-sans` Inter / SF / 微软雅黑 / 苹方（中文优先系统字体）+ `--font-mono` 等宽；**Inter 已本地打包**（@fontsource/inter，latin 400/500/600/700，2026-08-28 一轮UI调整），桌面端/PWA 离线一致渲染，不依赖系统字体
+- 字号：xs 12 / sm 16 / base 16（正文）/ lg 16 / xl 18 / 2xl 20（2026-08-28 一轮UI调整：sm/base 由 13/14 提到 16，当前 sm=base=lg 同级 16px）
 - 字重：normal 400 / medium 500（设计原则两级；代码另有 semibold 600 / bold 700 供需要时用）
 - 行高：tight 1.25（标题）/ normal 1.5（英文）/ relaxed 1.6（中文正文）
 - 间距：4px 基准（space-1~12 = 4~48px）
@@ -129,5 +129,6 @@
 ## 10. 来源与版本
 
 - **v1（2026-08-21，WB 汇聚）**：来源 = `exchange/log_design.md`（设计精化定案 §3–§7、§8 Logo、§9 过渡）+ `exchange/log-marvis.md`（产品方向 §0–§5、结构层决策）+ `client/src/styles/tokens.css`（代码数值事实，以之为准）
+- **v2（2026-08-28，一轮 UI 调整，老大直调）**：`--color-text-primary` #D4D4D8→#bebec0（再灰一档）；`--text-sm`/`--text-base` 0.8125/0.875rem→1rem（sm/base 与 lg 同级 16px）；Inter 字体本地打包（@fontsource/inter latin 400-700）——详见 §1.2 / §2
 - **已知局限**：Trae 实现时的部分 UI 决策已固化于 `tokens.css` / 组件代码（如新增 `--weight-semibold/bold`），未单独文档化的细节以代码为准；后续由 Trae 点将时回写补充本文件
 - **过程与未决项**：设计冲突分析、迭代历程见 `exchange/log_design.md`；**未决 / 待办（待拍板、Trae 回写等）已归 `TODO.md`「UI/UX优化」**；产品视角提案与讨论见 `exchange/log-marvis.md`
