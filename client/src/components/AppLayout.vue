@@ -34,6 +34,7 @@ const confirmLoading = ref(false);
 onMounted(() => {
   document.addEventListener("click", () => {
     menuOpenId.value = null;
+    footerMenuOpen.value = false;
   });
 });
 
@@ -46,6 +47,17 @@ async function refreshConversations() {
 function toggleMenu(id: number) {
   menuOpenId.value = menuOpenId.value === id ? null : id;
 }
+
+// 侧栏底部设置菜单
+const footerMenuOpen = ref(false);
+function toggleFooterMenu() {
+  footerMenuOpen.value = !footerMenuOpen.value;
+}
+
+// 设置菜单项（占位，后续接入对应页面/流程）
+function showArchived() {}
+function showTrash() {}
+function showAbout() {}
 
 function startRename(conv: { id: number; title: string }) {
   menuOpenId.value = null;
@@ -233,9 +245,30 @@ function startNewChat() {
         </div>
       </div>
 
-      <!-- 侧栏底部区域（占位，待调整） -->
+      <!-- 侧栏底部区域 -->
       <footer class="sidebar-footer">
-        <span class="footer-text">v0.1.0</span>
+        <button class="footer-btn" title="设置" @click.stop="toggleFooterMenu">
+          <svg
+            class="gear-icon"
+            viewBox="0 0 16 16"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="round"
+          >
+            <circle cx="8" cy="8" r="2.4" />
+            <path
+              d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"
+            />
+          </svg>
+        </button>
+        <div v-if="footerMenuOpen" class="footer-menu" @click.stop>
+          <button class="footer-menu-item" @click="showArchived">已归档</button>
+          <button class="footer-menu-item" @click="showTrash">回收站</button>
+          <button class="footer-menu-item" @click="showAbout">关于</button>
+        </div>
       </footer>
     </aside>
 
@@ -412,8 +445,9 @@ function startNewChat() {
   min-width: 0;
 }
 
-/* === 侧栏底部区域（占位，待调整） === */
+/* === 侧栏底部区域 === */
 .sidebar-footer {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -424,10 +458,56 @@ function startNewChat() {
   border-top: 1px solid var(--color-border-default);
 }
 
-.footer-text {
+.footer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.footer-btn:hover {
+  background: var(--color-accent-muted);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.footer-menu {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 4px);
+  z-index: 30;
+  min-width: 120px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+}
+
+.footer-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.footer-menu-item:hover {
+  background: var(--color-border-hover);
 }
 
 .sidebar-logo {
