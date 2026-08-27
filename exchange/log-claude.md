@@ -1,12 +1,40 @@
 # Claude 协作区
 
-## 当前状态（2026-08-24）
+## 当前状态（2026-08-27）
 
-- **三点菜单 + 行内重命名回归测试** ✅ 已交付（commit 见下方，追加 7 项）。
-- **三轮 UI 调整回归测试** ✅ 已交付（7 项全绿）。
+- **归档系统测试** ✅ 已交付（commit `2db9130`，11 项 + 级联改写），交付说明见下方，待 WB 复验。
+- **三点菜单 + 行内重命名回归测试** ✅ 已交付。
+- **三轮 UI 调整回归测试** ✅ 已交付。
 - **web_search 测试** ✅ 已交付（commit `a58e3ae`，42 项全绿）。
 - P4.4 前端测试基建 ✅（31/31，commit `a2d6d8f`）
 - conftest 后端测试隔离 ✅（commit `5cd2104`）
+
+---
+
+## 归档系统测试交付说明（2026-08-27，commit `2db9130`）
+
+### 交付物
+
+| 文件 | 覆盖 |
+|---|---|
+| `tests/test_archive.py`（11 项，新） | 归档双路径（提取+确认写记忆 / 仅归档不写记忆）/ unarchive / 软删+恢复 / purge 硬删 / 列表过滤（默认排除回收站、?archived= 双向、?trash=）/ generate_summary 放宽（已归档可重提取、回收站仍拒绝）/ 重复提取幂等（unarchive→再归档→再 confirm → 同一 memory_id，仅一条活跃记忆） |
+| `tests/test_conversations.py`（改写） | 原 test_cascade_delete_messages 拆分为：test_soft_delete_keeps_messages（DELETE 软删语义：deleted_at 置位 + messages 保留 + 回收站可见 + 历史可读）+ test_purge_cascades_messages（purge 硬删级联实证） |
+
+### 关键验证点
+
+- **零真实 LLM 调用**：`POST /api/chat` 的 stream_events 一并 mock（首版漏了，日志出现真实 token 消耗后已修）
+- **零真实 key / config / ChromaDB**：archiver 层 chat_completion/embed_batch/insert 全 mock；conftest 临时库隔离
+- **全套回归**：113 通过（101 基线 + archive 11 + conversations 拆分 1）/ 42 失败分布与 web_search 基线完全一致（chromadb 6 + integration 3 + shell 14 + file_ops 19），**无新增回归**
+- **真实库零写入**：归档测试日志确认走 `D:\Temp\Sys\larry_test_xxx\session.db` 临时库
+
+### ⚠️ 暴露一个语义问题（@WorkBuddy @Trae，P3.5 遗留，非本次引入）
+
+`api/memory.py` 的 trigger_archive 把 `ValueError`（含"回收站拒绝提取"等**业务语义**）统一归并为 `LLMError` → **502**。语义上"回收站会话不可提取"应为 **4xx**（400/404 类），502 是网关语义。这正是我在 P3.5 提过的"conversation not found 变 502"同一问题的另一处落点。
+
+- 测试当前断言"非 2xx 拒绝 + detail 含 trash"（记录现状，不收紧），待 WB 裁定语义后收紧
+- 建议：generate_summary 的业务拒绝（会话不存在 / 回收站）与 LLM 请求失败分流——业务拒绝走 4xx 专用异常，LLM 失败才走 LLMError(502)
+
+交 WorkBuddy 复验。
 
 ---
 
@@ -58,3 +86,38 @@
 `WebSearchTool` 构造时 `get_config().search`——若 config 缺 `search` 段（老配置没同步），`get_config().search` 是 `SearchConfig` dataclass 默认实例（dataclass 已给默认值），不会崩。已由测试覆盖（registry 空列表全启用路径会构造 WebSearchTool）。
 
 交 WorkBuddy 复验。
+
+---
+
+## 归档系统测试派发（2026-08-27，WB 派发 · 待点将 Claude）
+
+**背景**：Trae 实现归档系统（派发见 `exchange/log-trae.md`，标"待点将 Trae"）。Claude 负责补后端单测，覆盖会话侧 archive/trash 全套 + 记忆提取放宽硬卡。WB 事后读码 + 跑测试复验。
+
+**被测点（新增单测，建议入 `tests/test_conversations.py` 或新建 `tests/test_archive.py`）**
+
+| 模块 | 用例 |
+|---|---|
+| 归档双路径 | A. 提取+确认：`POST /memory/archive`（mock LLM 出摘要）→ `POST /memory/archive/confirm` → 断言 `is_archived=1` 且 `memories` 表有写入 + ChromaDB 隔离写入；B. 仅归档：`POST /conversations/{id}/archive` → `is_archived=1` 且 `memories` 表**无**新增 |
+| 取消归档 | `POST /conversations/{id}/unarchive` → `is_archived=0` |
+| 回收站软删 | `DELETE /conversations/{id}` → `deleted_at` 非空、`messages` 级联保留（恢复可见） |
+| 恢复 | `POST /conversations/{id}/restore` → `deleted_at` 重置 NULL |
+| 硬删 purge | `POST /conversations/{id}/purge` → 硬 DELETE、`messages` 级联清空 |
+| 列表过滤 | 默认 `list_conversations` 排除 `deleted_at` 非空（活跃列表不含回收站）；`?archived=` 透传过滤 `is_archived`；`?trash=`/`include_trash=True` 仅列回收站 |
+| `generate_summary` 放宽（关键行为变更） | 已归档会话（`is_archived=1`）可再次提取 → 成功出摘要（验证 `memory/archiver.py:76` 硬卡已放宽）；回收站会话（`deleted_at` 非空）仍 `raise` 拒绝 |
+| 重复提取幂等（Marvis 评审纳入） | 同会话 unarchive→再归档→再 confirm → `memories` 表仍仅一条 `is_active=1` 记忆（按 `source_conversation_id` 查重覆盖，非复制）；向量随内容更新（隔离集可行时断言） |
+
+**测试方法**
+- 复用 `tests/conftest.py` 隔离（autouse 真实库 fail-fast）；用临时/隔离库与隔离 ChromaDB，禁读写真实库。
+- `generate_summary` 的 LLM 调用必须 monkeypatch 返回假摘要——**零真实 key / 零真实 config**，不碰 `config.yaml`。
+- `confirm_and_store` 的 ChromaDB 写入走隔离集合或被 mock，不污染真实 collection。
+- 端点测试走 FastAPI TestClient（沿用 web_search 同款隔离手法）。
+
+**约束（Tier0）**
+- 测试隔离：禁读写真实库；真实库零写入（全套跑后会话数不变，参照 web_search 交付基线的 fail-fast 断言）。
+- key 不落日志/输出；测试用 mock，不碰真实 key/config。
+- 不越界改实现（发现问题按 web_search 先例 `@Trae @WorkBuddy` 标注，不改代码）。
+
+**验收**
+- 新增用例全绿；全套回归对比 web_search 基线（101 通过 + 已知存量债务：chromadb_degradation 6 / integration 3 / shell get_event_loop 14 / file_ops get_event_loop 19），**无新增回归**。
+- 交付说明回写本文件（仿 web_search 段：覆盖表 + 关键验证点 + 零真实 key/config 证据 + 真实库零写入证据）。
+- 交 WorkBuddy 复验（读代码 + 跑测试绿）。
