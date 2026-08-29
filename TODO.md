@@ -26,19 +26,14 @@
 
 - [x] 已实现并复验闭环：WB 设计 / Trae 实现（`43213e3`）/ Claude 测试（`2db9130`）/ WB 复验（`ffa3683`）/ P3.5 语义修复（`50ed895`）；派发稿 `exchange/log-trae.md`、测试 `exchange/log-claude.md`、复验 `exchange/log-workbuddy.md`
 
-### 测试层完善
+### 测试层完善（老大 2026-08-30 拍板：环境修复 + 集成层恢复 合并派发 Claude）
 
-> Claude 初步想法（2026-08-27，待与 WorkBuddy 讨论定案）
+> 派发规格见 `exchange/log-claude.md`「集成测试层恢复 + 测试环境修复（合并派发）」。细节由 Claude 定。
 
-- [ ] **恢复真实 API 集成测试层（test_integration_llm.py）**：当前因缺 pytest-asyncio 被列为存量债务，实际是"真实 API 契约验证层"断供。修复 = 装 pytest-asyncio + 恢复 3 个用例（真实 DeepSeek 工具调用闭环）
-- [ ] **integration 层 marker 隔离**：`@pytest.mark.integration` + conftest `--real-api` 开关（pytest 原生，零新增依赖）。默认跳过（不会误烧 key），`pytest tests/ --real-api` 显式跑（发版前冒烟）
-- [ ] **分层原则成文**：单元/逻辑层永远 mock（快、确定、隔离）；集成冒烟层真实 API（验证契约/鉴权/网络/模型行为——mock 永远够不到的那层）。**不做"全量切换配置"**——同一批测试在 mock/真实间切换会毁掉 mock 层的确定性，语义混乱
-- [ ] **mock 覆盖不到的清单**（真实 API 才暴露）：API 契约漂移（字段/嵌套/usage 缺失）、SDK 行为、429/Retry-After/限流、key 失效/余额、模型非法 JSON（tool_calls arguments 幻觉）、reasoning_content 等模型差异字段、真实延迟下的 SSE 节奏——集成冒烟层就是为这些存在的
-- [ ] 争议点待讨论：integration 冒烟频率（每次大改动后 vs 发版前）；是否把真实搜索（Brave key）也纳入冒烟；`--real-api` 跑挂时是否阻塞交付
-- **WB 复验（2026-08-30，事实修正 · 待老大拍板后由 Claude 执行）**：
-  - ① 上条「缺 pytest-asyncio」**前提已过期**：实测已装 `pytest-asyncio 1.4.0`（import OK），真卡点 = **pytest 9.1.1 与其不兼容、插件未被加载**——`pytest tests/test_integration_llm.py` 3 用例 **failed**（报 "async def functions are not natively supported"）。修复动作 = 升级 pytest-asyncio 至支持 pytest 9 的版本；按原描述"装 pytest-asyncio"执行会白做
-  - ② **假绿风险**：该三用例为脚本式（`try/except` + `return True/False`），失败不会被 pytest 判失败。改造须改 assert/raise，否则"恢复集成层"做完仍是假绿
-  - ③ 落点建议：第 3、4 条（分层原则 / mock 覆盖清单）属原则与论据、非待办，宜入 `.claude/CLAUDE.md` 或 docs，不占 TODO（TODO 治理约定：活跃 TODO 只含待办）
+- [ ] **合并任务（Claude 执行）**：① 修复 pytest 9.1.1 ↔ pytest-asyncio 1.4.0 不兼容（插件未被加载）② 恢复 `test_integration_llm.py` 3 用例并改 assert/raise 去假绿 ③ `--real-api` marker + conftest 开关（默认跳过，防误烧 key）④ 分层原则 + mock 覆盖清单写入 `.claude/CLAUDE.md`（不占 TODO）
+- [ ] **WB 复验新发现 · 建议一并评估**：33 个失败（`test_shell_tool` 14 + `test_file_ops_tool` 19）实为**跨文件事件循环污染**，与 pytest-asyncio 无关——FastAPI `TestClient` 退出时销毁当前线程事件循环，后续 sync 测试调 `asyncio.get_event_loop()` 抛 `RuntimeError: There is no current event loop in thread 'MainThread'`（`asyncio/events.py:681`）。实证：file_ops 单跑 20/20 绿；test_archive+file_ops 31 全绿；test_conversations 或 test_chat_service + file_ops → 19 failed。Claude 先评估修复成本，复杂则回报待裁
+- **WB 裁决（2026-08-30 已定，Claude 照办）**：冒烟频率 = 发版前 + 大改动后；Brave 真实搜索**暂不纳入**冒烟；`--real-api` 跑挂**不阻塞交付**（真实 API 不稳定属外部因素，该层定位为"契约哨兵"）
+- **基线（2026-08-30 01:47 WB 实测，供验收对比）**：`42 failed / 113 passed`。构成：integration 3（pytest-asyncio）+ chromadb 6（mock 已不存在的 `archiver.get_db`）+ test_windows_dir 1（中文 Windows 编码）= 真失败 10 个；其余 33 个为上述污染所致、单跑即绿。修复后须对比此基线，确保无新增回归
 
 ### 移动端开发
 
