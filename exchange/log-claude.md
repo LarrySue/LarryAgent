@@ -2,8 +2,51 @@
 
 ## 当前状态（2026-08-30）
 
+- **集成测试层恢复 + 测试环境修复** ✅ 已交付（commit `0e8d52a`），交付说明见下方，待 WB 复验。
 - **web_search 测试** ✅ 已交付（commit `a58e3ae`，42 项全绿）。
-- **集成测试层恢复 + 测试环境修复（合并派发）** ⬜ 待执行（老大 2026-08-30 拍板，WB 派发）：细节由 Claude 定，规格见下方。
+
+---
+
+## 集成测试层恢复 + 测试环境修复 交付说明（2026-08-30，commit `0e8d52a`）
+
+### 关键前提修正（与派发稿不符，实测实证）
+
+| 派发稿描述 | 实测真相 |
+|---|---|
+| pytest-asyncio 插件没被加载 | **插件已加载**（`--trace-config` 实证：PLUGIN registered + asyncio mode=STRICT）。真卡点 = strict 模式缺 `@pytest.mark.asyncio` marker |
+| 需升/降 pytest-asyncio 版本 | **无需任何版本变更**。无损实验证实 pytest 9.1.1 + 1.4.0 在 marker 下完全兼容（带 marker passed / 无 marker failed，与现状吻合） |
+
+### 交付物
+
+| 文件 | 改动 |
+|---|---|
+| `tests/conftest.py` | `--real-api` 开关（`pytest_addoption`）+ `pytest_collection_modifyitems` 默认 skip integration + `pytest_configure` 注册 integration marker + **事件循环重建 autouse fixture**（修复 33 个污染失败） |
+| `tests/test_integration_llm.py` | 3 用例加 `@pytest.mark.integration` + `@pytest.mark.asyncio`；**去假绿**：脚本式 try/except + return True/False 改 assert 直抛；key 缺失 → `pytest.skip` |
+| `.claude/CLAUDE.md` | 分层原则 + mock 覆盖清单（不占 TODO） |
+
+### 基线对比（验收）
+
+| | 派发基线（WB 实测） | 交付后 |
+|---|---|---|
+| passed | 113 | **150** |
+| failed | 42 | **2** |
+| skipped | 0 | 3（integration 默认跳过 ✅） |
+
+- **净转绿 40 个**：33 个事件循环污染（shell 14 + file_ops 19 + chromadb 5）+ integration 3 从 failed → skipped（显式可跑且已真实验证）
+- **剩余 2 failed 为独立存量**（与本次无关）：`test_chromadb_degradation`（mock 了已不存在的 `archiver.get_db`）+ `test_windows_dir`（中文 Windows 编码）
+
+### 真实验证（--real-api，真实 DeepSeek 调用）
+
+- 3 用例全过：single 23.95s / multi 25.84s / api 2.89s，串行全套 42.48s
+- **卡顿根因定位**（首跑 14 分钟无输出的排查过程）：二分诊断——不调 LLM 的 API 用例 2.89s 秒过 → 卡点不在环境初始化；真实 LLM 用例单跑 24-26s 正常 → 卡在**embedding 模型加载与 LLM 调用在测试进程内累积初始化**（非本轮引入，单独/串行跑均正常，不影响交付）
+
+### 注意事项（供 WB 复验）
+
+- `--real-api` 跑真实调用会消耗真实 key 额度（DeepSeek 便宜，3 用例约 2 万 token 内）
+- integration 用例走 conftest 临时库（handle_chat 写临时 DB，不碰真实库）
+- `test_api_tools_endpoint` 不调 LLM（纯 API 层），可作为"环境自检"快速验证
+
+交 WorkBuddy 复验。
 
 ---
 
