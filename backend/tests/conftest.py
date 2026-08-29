@@ -65,8 +65,58 @@ atexit.register(shutil.rmtree, _session_tmpdir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
+# --real-api 开关（integration 层：真实 API 契约哨兵）
+# ---------------------------------------------------------------------------
+
+def pytest_addoption(parser):
+    """--real-api：显式开启真实 API 集成测试（默认跳过，防误烧 key）。"""
+    parser.addoption(
+        "--real-api",
+        action="store_true",
+        default=False,
+        help="跑真实 API 集成测试（test_integration_llm.py，会消耗真实 key 额度）",
+    )
+
+
+def pytest_configure(config):
+    """注册自定义 mark（消除 PytestUnknownMarkWarning）。"""
+    config.addinivalue_line("markers", "integration: 真实 API 集成测试（默认跳过，--real-api 显式开启）")
+
+
+def pytest_collection_modifyitems(config, items):
+    """默认跳过 integration 标记的用例；--real-api 才放行。"""
+    if config.getoption("--real-api"):
+        return
+    skip_integration = pytest.mark.skip(reason="真实 API 集成测试，需 --real-api 显式开启")
+    for item in items:
+        if "integration" in item.keywords:
+            item.add_marker(skip_integration)
+
+
+# ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _ensure_event_loop():
+    """
+    修复跨文件事件循环污染（WB 二分实证，2026-08-30）。
+
+    根因：FastAPI TestClient（test_conversations / test_chat_service）退出时
+    销毁当前线程事件循环，后续 sync 测试（test_shell_tool / test_file_ops_tool）
+    调 asyncio.get_event_loop() 抛 RuntimeError: There is no current event loop
+    in thread 'MainThread'。
+
+    修复：每个测试前确保当前线程存在可用事件循环（无则新建）。
+    """
+    import asyncio
+
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+    yield
+
 
 @pytest.fixture(scope="session", autouse=True)
 def _assert_test_db_isolation():

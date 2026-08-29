@@ -61,3 +61,18 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 ### 测试范围规则
 - 每个任务必须跑相关测试文件 + 已知存量债务甄别
 - 全套跑仅在跨模块改动时强制
+
+### 测试分层原则（2026-08-30 定案）
+- **单元/逻辑层（默认，全 mock）**：快、确定、隔离——验证"代码逻辑对"。永远 mock，不切真实
+- **集成冒烟层（`@pytest.mark.integration`，真实 API）**：验证"接得上、跑得通"——契约/鉴权/网络/模型行为。默认 skip（防误烧 key），`pytest tests/ --real-api` 显式跑；定位是"契约哨兵"，跑挂不阻塞交付（真实 API 不稳定属外部因素）
+- **不做"全量切换配置"**：同一批测试在 mock/真实间切换会毁掉 mock 层的确定性
+- 冒烟频率：发版前 + 大改动后；Brave 真实搜索暂不纳入冒烟
+
+### mock 覆盖不到清单（真实 API 才暴露，集成冒烟层为这些存在）
+- API 契约漂移：字段名/嵌套结构/usage 缺失/`reasoning_content` 等模型差异字段
+- SDK 行为：流式 chunk 真实结构、版本升级变化
+- 网络层：真实超时挂起语义、429/Retry-After/限流、TLS/DNS/代理
+- 鉴权与配额：key 失效/过期/余额不足
+- LLM 行为不确定性：tool_calls arguments 非法 JSON（模型幻觉）、不按 schema 输出、幻觉工具名
+- 字符/编码：真实环境中文输出等（如 test_windows_dir 存量问题）
+- 真实延迟下的 SSE 流式节奏
