@@ -8,11 +8,15 @@
 
 ---
 
-## 三项待办（2026-08-30 老大交 Claude，源：archive/report-2026-08-30.md §七）
+## 三项待办（2026-08-30 老大交 Claude，源：archive/report-2026-08-30.md §七 + WB 派发规格 §203 起）
 
-1. **清理机制硬化**：conftest 的 `atexit` 不可靠（强杀不执行 + `ignore_errors=True` 静默吞失败）→ 改捕获异常 + `logger.warning` 告警；teardown 顺序确保先关 Chroma 再删目录
-2. **key 落盘兜底**：临时 `config.session.yaml` 写 **key 占位符**，仅 `--real-api` 时从真实 config 注入——源头消除"key 明文落盘"（QoderWork 定性：安全唯一正解）
-3. **产品侧防护**（低优先级）：`db/database.py` 文档化"一次性脚本必须显式 close_db"（atexit 兜底评估后决定是否做——避免在错误 loop 上关闭引入新风险）
+> **执行说明**：本待办最初由我据报告 §七 自行执行（commit `6cc2406` + 报告 §十一），后确认 WB 已在本文件派发详细规格（§203 起，含关键时序坑与递归替换要求）。**我漏看了该派发**（只读了文件开头），已对照规格补齐：① key 脱敏改递归替换（覆盖 embedding/search 等全部位置，commit `d205636`）；② CLAUDE.md 运维约定（强杀后清理 /tmp/larry_test_*）。以下为最终交付状态。
+
+1. **清理机制硬化** ✅：`ignore_errors=True` → 具名清理函数 + try/except + `logger.warning` 告警；`gc.collect()` 释放句柄。实测正常退出仍偶发 PermissionError（Windows 句柄占用），但有告警 + 无 key 残留；WB 建议的"挂 session fixture teardown"未采用（atexit + 告警已满足最小动作，fixture 挂载收益有限）
+2. **key 落盘兜底** ✅：**递归替换**所有 `api_key`/`brave_api_key` 为 `__TEST_PLACEHOLDER__`（不硬编码 provider 名单，覆盖 models/embedding/search 全部位置）；`pytest_configure` 中 `--real-api` 时递归注入真实 key（时序坑已按 WB 规格规避：configure 阶段 getoption 可用且业务模块未导入）。实测残留 yaml 无真实 key
+3. **产品侧防护** ✅（文档化）：`db/database.py` 头部生命周期警示（一次性脚本必须显式 close_db）；有意不做 atexit 兜底（WB 摆明的矛盾成立：错误 loop 上 close 与本次 BUG 同根因，可能引入新挂起）——只报不 close 的告警钩子未做（无实际触发入口，逃熊尺度）
+
+**⏳ 待授权验证**（WB 派发验收要求）：`--real-api` 注入路径**需老大授权后实测**（会烧 key 额度）——验证注入后 3 个集成用例通过。默认路径已验证：全套 2f/150p/3s 无回归。
 
 ---
 
