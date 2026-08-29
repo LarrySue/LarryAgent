@@ -62,6 +62,10 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 每个任务必须跑相关测试文件 + 已知存量债务甄别
 - 全套跑仅在跨模块改动时强制
 
+### 运维约定（2026-08-30）
+- **强杀 pytest 后手动清理 `/tmp/larry_test_*`**：atexit 清理在强杀（taskkill /F / timeout）时不执行，临时目录会残留。残留无 key（占位符设计，conftest 已硬化），但目录占用磁盘空间，定期清理
+- 后台跑 pytest 需 `taskkill /T` 杀进程树（Windows 下 TaskStop 只杀外层 shell 不杀 python 子进程）
+
 ### 测试分层原则（2026-08-30 定案）
 - **单元/逻辑层（默认，全 mock）**：快、确定、隔离——验证"代码逻辑对"。永远 mock，不切真实
 - **集成冒烟层（`@pytest.mark.integration`，真实 API）**：验证"接得上、跑得通"——契约/鉴权/网络/模型行为。默认 skip（防误烧 key），`pytest tests/ --real-api` 显式跑；定位是"契约哨兵"，跑挂不阻塞交付（真实 API 不稳定属外部因素）

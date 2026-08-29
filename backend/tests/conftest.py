@@ -62,11 +62,26 @@ _cfg.setdefault("vector_store", {}).update(
 )
 _cfg.setdefault("server", {})["api_key"] = ""  # 鉴权透传，测试不校验
 
-# 所有模型 api_key 写占位符（防 key 明文落盘）
+# 所有名为 api_key 的键写占位符（递归，防 key 明文落盘）
+# 覆盖 models.<name>.api_key / embedding.api_key / search.brave_api_key 等
+# 全部位置——未来新增 provider 自动覆盖，不硬编码名单（WB 派发规格要求）
 _KEY_PLACEHOLDER = "__TEST_PLACEHOLDER__"
-for _model_cfg in _cfg.get("models", {}).values():
-    if isinstance(_model_cfg, dict) and _model_cfg.get("api_key"):
-        _model_cfg["api_key"] = _KEY_PLACEHOLDER
+
+
+def _redact_keys(node):
+    """递归替换所有名为 api_key / brave_api_key 的值为占位符。"""
+    if isinstance(node, dict):
+        for k, v in list(node.items()):
+            if k in ("api_key", "brave_api_key") and isinstance(v, str) and v:
+                node[k] = _KEY_PLACEHOLDER
+            else:
+                _redact_keys(v)
+    elif isinstance(node, list):
+        for item in node:
+            _redact_keys(item)
+
+
+_redact_keys(_cfg)
 
 
 def _write_session_yaml():
@@ -121,17 +136,23 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: 真实 API 集成测试（默认跳过，--real-api 显式开启）")
 
     if config.getoption("--real-api"):
-        # 从真实 config 读取 key 注入临时 yaml（仅显式开启时；默认占位符，key 不落盘）
+        # 从真实 config 递归复制所有 key 到临时 yaml（仅显式开启时；默认占位符，key 不落盘）
         with open(_REAL_CONFIG, "r", encoding="utf-8") as f:
             real_cfg = yaml.safe_load(f)
-        injected = 0
-        for name, real_model in (real_cfg.get("models", {}) or {}).items():
-            real_key = (real_model or {}).get("api_key", "")
-            if real_key and name in _cfg.get("models", {}):
-                _cfg["models"][name]["api_key"] = real_key
-                injected += 1
+
+        def _inject_keys(target, source):
+            """递归：source 的 api_key/brave_api_key 非空时覆盖 target 对应位置。"""
+            if isinstance(source, dict):
+                for k, v in source.items():
+                    if k in ("api_key", "brave_api_key") and isinstance(v, str) and v:
+                        if isinstance(target, dict) and k in target:
+                            target[k] = v
+                    elif isinstance(v, (dict, list)) and isinstance(target, dict) and k in target:
+                        _inject_keys(target[k], v)
+
+        _inject_keys(_cfg, real_cfg)
         _write_session_yaml()
-        logger.info("--real-api: injected real API keys into session config (%d providers)", injected)
+        logger.info("--real-api: injected real API keys into session config")
 
 
 def pytest_collection_modifyitems(config, items):
