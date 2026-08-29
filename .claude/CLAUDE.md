@@ -63,7 +63,9 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 全套跑仅在跨模块改动时强制
 
 ### 运维约定（2026-08-30）
-- **强杀 pytest 后手动清理 `/tmp/larry_test_*`**：atexit 清理在强杀（taskkill /F / timeout）时不执行，临时目录会残留。残留无 key（占位符设计，conftest 已硬化），但目录占用磁盘空间，定期清理
+- **强杀 pytest 后手动清理临时目录**：atexit 清理在强杀（taskkill /F / timeout）时不执行，目录会残留。**路径 = `tempfile.gettempdir()`**（本机实测为 `D:\Temp\Sys\larry_test_*`，**不是** `/tmp`——那是 Linux 路径，别照着找）。
+  - **默认模式**：残留无 key（占位符设计，conftest 已硬化），仅为磁盘卫生，定期清即可
+  - **`--real-api` 模式**：`pytest_configure` 会注入真实 key 并重写 yaml 落盘（调真实 API 必须读到 key）→ **强杀会残留含 key 的目录，必须手动清理**。这是唯一会沾 key 的路径，排查该模式后务必清理
 - 后台跑 pytest 需 `taskkill /T` 杀进程树（Windows 下 TaskStop 只杀外层 shell 不杀 python 子进程）
 
 ### 测试分层原则（2026-08-30 定案）
@@ -80,3 +82,11 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - LLM 行为不确定性：tool_calls arguments 非法 JSON（模型幻觉）、不按 schema 输出、幻觉工具名
 - 字符/编码：真实环境中文输出等（如 test_windows_dir 存量问题）
 - 真实延迟下的 SSE 流式节奏
+- **资源生命周期（进程级，mock 结构性测不到）**：连接未关闭、临时文件残留、进程退出期 GC 挂起——见 `archive/report-2026-08-30.md`
+
+### 新增 mock / fixture 时的自检项（Trae + QoderWork + Marvis 三 AI 独立共识，2026-08-30）
+- 凡涉及**进程级资源**——连接、临时文件、进程退出行为——在代码注释中标注
+  **「此处无法被 mock 覆盖，需集成层验证」**
+- 理由：mock 层的资源语义（模拟 API 行为）与真实链路的资源语义（进程级生命周期）
+  **不一致**；mock 全绿 ≠ 行为正确。靠人记住不可靠，写进注释才可靠
+- 交付测试时对照上节「mock 覆盖不到清单」自检，不要基于"测试通过"直接断言"没问题"

@@ -41,10 +41,14 @@ _REAL_DB = (_BACKEND_DIR / "data" / "larry.db").resolve()
 # 会话级临时配置（模块导入时执行——先于一切测试模块）
 # ---------------------------------------------------------------------------
 # 安全设计（2026-08-30 待办 1+2 硬化，源：archive/report-2026-08-30.md §七）：
-# - **key 占位符**：临时 yaml 的 api_key 一律写占位符，绝不复制真实 key 落盘。
-#   仅 --real-api 运行时（pytest_configure 中）注入真实 key 并重写 yaml——
-#   即使清理机制彻底失效（强杀等），磁盘残留也不含真实 key。
-# - **清理告警**：atexit 删除临时目录失败时 logger.warning 告警，不静默吞。
+# - **key 占位符**：默认路径下临时 yaml 的 api_key 一律写占位符，真实 key 不落盘；
+#   强杀残留也不含 key（WB 2026-08-30 实证：残留目录 yaml 中 api_key = 占位符）。
+# - **⚠️ 例外（勿误读）**：`--real-api` 模式会在 pytest_configure 注入真实 key
+#   并重写 yaml——调真实 API 必须读到 key，无法避免。**该模式下强杀会残留含
+#   key 的目录**，排查后须手动清理。故"key 永不落盘"仅对默认路径成立。
+# - **清理告警**：atexit 删除失败时 logger.warning 告警，不静默吞。
+#   注：atexit 阶段 logging stream 可能已关闭（ValueError: I/O operation on
+#   closed file），靠 logging.handleError 兜底打到 stderr 才可见，输出带噪音。
 
 _session_tmpdir = tempfile.mkdtemp(prefix="larry_test_")
 _session_db = Path(_session_tmpdir) / "session.db"
