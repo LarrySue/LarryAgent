@@ -188,3 +188,70 @@ END: 03:45:31          ← 进程真正退出（= 18 分 2 秒 wall clock）
 ### 五、验收
 
 Claude 执行 → 交付说明写回本文件 → 交 WorkBuddy 复验（读代码 + 亲跑测试对比基线）。
+
+---
+
+## 归档报告遗留三条待办派发（2026-08-30 · 老大拍板「让 Claude 顺手补上」· 待执行）
+
+**背景**：`archive/report-2026-08-30.md` 第七节列出 aiosqlite 连接生命周期缺陷的三条未闭环项。老大已拍板交给你执行，**细节由你定**，以下是 WB 实测的精确定位与已知坑。
+
+### 待办 1：清理机制硬化（建议做）
+
+`tests/conftest.py:64`：
+
+```python
+atexit.register(shutil.rmtree, _session_tmpdir, ignore_errors=True)
+```
+
+两个缺陷叠加——
+1. **强杀即失效**：`atexit` 在 `taskkill /F` / `timeout` 强杀时不执行。本次排查中 `/tmp` 残留 **40+ 个含真实 key 的 `larry_test_xxx` 目录**（已由你清除）。
+2. **`ignore_errors=True` 静默吞失败**：**WB 独立复验证实**——正常退出（非强杀）跑完一套，仍残留 1 个目录（内剩 `chroma/chroma.sqlite3` 188KB）；所幸 `config.session.yaml` 与 `session.db` 已删、**本次 key 未落盘**。即"侥幸正确"而非"机制正确"。
+
+**最小动作**：改为具名清理函数，`try/except` 捕获并 `logger.warning`（或 stderr）**告警而非静默**。
+
+**已知坑（提前说，免得你撞）**：
+- 别改用 `tmp_path_factory` 的 session 目录——pytest 刻意保留最近几个临时目录不删，反而比现在更糟。
+- 可考虑把清理挂到 session 级 fixture `_assert_test_db_isolation`（:121）的 `yield` teardown：正常退出时**必然执行**（比 atexit 更靠前、更可控）。强杀场景仍无解，属进程外问题。
+- **强杀残留无法在进程内根治**，建议顺手在 `.claude/CLAUDE.md` 记一条运维约定：「强杀 pytest 后需手动清理 `/tmp/larry_test_*`」——这是唯一现实的兜底。
+
+### 待办 2：key 落盘源头消除（建议做）
+
+临时 `config.session.yaml` 以真实 `config.yaml` 为基底生成，**含真实 API key 明文副本**（conftest:48-59）。目标：默认写入占位符，**仅 `--real-api` 时注入真实 key**。
+
+**⚠️ 时序坑（最关键，不提前说你必然撞墙）**：
+
+- yaml 在 **conftest 模块导入时**写入（:58-59），此时 `--real-api` **尚未解析**——`pytest_addoption`（:71）要等 conftest 导入后才执行，模块导入期 `config.getoption()` 不可用。
+- **可行时序**：pytest 启动顺序 = conftest 导入 → `pytest_addoption` → **`pytest_configure`** → 收集（导入测试模块）。所以在 `pytest_configure` 里二次处理 yaml **是安全的**——此时 `config.getoption("--real-api")` 可用，且业务模块尚未导入。
+
+**实现建议**：
+- **递归**替换所有名为 `api_key` 的键为占位符，**不要硬编码 provider 名单**——已知位置有 `models.<name>.api_key`（deepseek/qwen/gpt）、`server.api_key`、`embedding.api_key`；未来新增 provider（如 Brave）自动覆盖。WB 只读了 `config.example.yaml` 的结构，**未读真实 config.yaml**（不碰 key 值）。
+- `server.api_key` conftest:56 已置空，别重复处理出错。
+
+**⚠️ 风险点（需你实测确认）**：若有业务模块在**导入时**校验 key 非空，占位符可能改变非 integration 测试的行为。改完必须跑全套验证无回归（基线见下）。
+
+### 待办 3：产品侧防护（优先级低 · 可选）
+
+`db/database.py` 可为 `_db` 注册 `atexit` 兜底 close，或文档化"一次性脚本必须显式 close"。当前全项目 `close_db()` 调用点**只有 `main.py:73-74` 的 lifespan 一处**，uvicorn 常驻安全，**无实际触发入口**。
+
+**⚠️ 矛盾摆明（请你判断，我不替你定）**：`atexit` 里 close 一个绑在已关闭 loop 上的 aiosqlite 连接——**跟本次 BUG 是同一个根因**，很可能引入新的退出期挂起。所以"强行 close"未必是净收益。
+
+**建议方向**：最小动作优先——文档化（写进 `.claude/CLAUDE.md` 或 docs）+ 或注册一个"退出时若 `_db` 未关闭则**告警**"的钩子（只报不 close，零挂起风险）。是否真做 close，你判断。
+
+### 硬约束（Tier 0）
+
+- **不得读取、打印、复制真实 key 的值**到日志/输出/交付说明——只看字段名结构。
+- 测试隔离不变：仍须禁连真实 `backend/data/larry.db`（`_assert_test_db_isolation` 保持）。
+- 默认路径仍不得误烧 key。
+
+### 验收基线（WB 2026-08-30 04:25 实测）
+
+**当前**：`2 failed / 150 passed / 3 skipped`，**42.72 秒正常退出**。
+其中 2 个 failed 是**独立存量问题**，与本次无关，不要顺手改（避免范围膨胀）：
+- `test_chromadb_degradation` 6 项中若干：mock 了已不存在的 `archiver.get_db`
+- `test_shell_tool::test_windows_dir`：中文 Windows 编码
+
+**验收要求**：
+1. 默认跑全套：`150 passed` 不得减少、不得新增失败；退出时间维持正常（无挂起）。
+2. **若你改了 key 注入机制（待办 2）**，`--real-api` 路径**必须实测**确认 key 能正常注入且 3 个集成用例通过——**这需要老大另行授权（会烧 key 额度）**，请在本文件回报说明"待授权后验证"，不要自行跑。
+
+Claude 执行 → 交付说明写回本文件 → 交 WorkBuddy 复验（读代码 + 亲跑测试对比基线）。
