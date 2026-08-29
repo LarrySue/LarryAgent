@@ -22,12 +22,15 @@ pytest 会话级测试隔离（Tier 0 第 4 条的程序性强制实现）
 """
 
 import atexit
+import logging
 import os
 import shutil
 import tempfile
 from pathlib import Path
 
 import pytest
+
+logger = logging.getLogger(__name__)
 import yaml
 
 _BACKEND_DIR = Path(__file__).parent.parent
@@ -37,14 +40,18 @@ _REAL_DB = (_BACKEND_DIR / "data" / "larry.db").resolve()
 # ---------------------------------------------------------------------------
 # 会话级临时配置（模块导入时执行——先于一切测试模块）
 # ---------------------------------------------------------------------------
+# 安全设计（2026-08-30 待办 1+2 硬化，源：archive/report-2026-08-30.md §七）：
+# - **key 占位符**：临时 yaml 的 api_key 一律写占位符，绝不复制真实 key 落盘。
+#   仅 --real-api 运行时（pytest_configure 中）注入真实 key 并重写 yaml——
+#   即使清理机制彻底失效（强杀等），磁盘残留也不含真实 key。
+# - **清理告警**：atexit 删除临时目录失败时 logger.warning 告警，不静默吞。
 
 _session_tmpdir = tempfile.mkdtemp(prefix="larry_test_")
 _session_db = Path(_session_tmpdir) / "session.db"
 _session_chroma = Path(_session_tmpdir) / "chroma"
 _session_yaml = Path(_session_tmpdir) / "config.session.yaml"
 
-# 以真实配置为基底，只替换持久化路径——其余行为（models/roles/tools/llm）完全一致，
-# 集成测试需要真实 API key 时行为不变；key 随临时目录在会话结束一并销毁。
+# 以真实配置为基底，只替换持久化路径——其余行为（models/roles/tools/llm）完全一致
 with open(_REAL_CONFIG, "r", encoding="utf-8") as f:
     _cfg = yaml.safe_load(f)
 
@@ -55,13 +62,44 @@ _cfg.setdefault("vector_store", {}).update(
 )
 _cfg.setdefault("server", {})["api_key"] = ""  # 鉴权透传，测试不校验
 
-with open(_session_yaml, "w", encoding="utf-8") as f:
-    yaml.safe_dump(_cfg, f, allow_unicode=True)
+# 所有模型 api_key 写占位符（防 key 明文落盘）
+_KEY_PLACEHOLDER = "__TEST_PLACEHOLDER__"
+for _model_cfg in _cfg.get("models", {}).values():
+    if isinstance(_model_cfg, dict) and _model_cfg.get("api_key"):
+        _model_cfg["api_key"] = _KEY_PLACEHOLDER
 
+
+def _write_session_yaml():
+    """写临时 yaml（占位符或注入后的真实 key）。"""
+    with open(_session_yaml, "w", encoding="utf-8") as f:
+        yaml.safe_dump(_cfg, f, allow_unicode=True)
+
+
+_write_session_yaml()
 os.environ["LARRY_CONFIG"] = str(_session_yaml)
 
-# 会话结束清理临时目录（含复制过来的真实 API key），无论测试成败
-atexit.register(shutil.rmtree, _session_tmpdir, ignore_errors=True)
+
+def _cleanup_session_tmpdir():
+    """atexit 清理：失败告警而非静默（待办 1）。
+
+    先 gc.collect() 释放文件句柄（ChromaDB/sqlite 句柄是 Windows 删除失败主因），
+    再删除；仍失败则告警（残留无 key，占位符设计，安全）。
+    """
+    try:
+        import gc
+
+        gc.collect()  # 释放 ChromaDB/sqlite 文件句柄，提高删除成功率
+        shutil.rmtree(_session_tmpdir, ignore_errors=False)
+        logger.info("Test session temp dir cleaned: %s", _session_tmpdir)
+    except Exception as e:
+        logger.warning(
+            "Test session temp dir cleanup FAILED: %s (%s). "
+            "目录可能残留（无 key，占位符设计），可手动删除。",
+            _session_tmpdir, e,
+        )
+
+
+atexit.register(_cleanup_session_tmpdir)
 
 
 # ---------------------------------------------------------------------------
@@ -79,8 +117,21 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    """注册自定义 mark（消除 PytestUnknownMarkWarning）。"""
+    """注册自定义 mark + --real-api 时注入真实 key（待办 2：占位符→真实 key 仅显式开启时注入）。"""
     config.addinivalue_line("markers", "integration: 真实 API 集成测试（默认跳过，--real-api 显式开启）")
+
+    if config.getoption("--real-api"):
+        # 从真实 config 读取 key 注入临时 yaml（仅显式开启时；默认占位符，key 不落盘）
+        with open(_REAL_CONFIG, "r", encoding="utf-8") as f:
+            real_cfg = yaml.safe_load(f)
+        injected = 0
+        for name, real_model in (real_cfg.get("models", {}) or {}).items():
+            real_key = (real_model or {}).get("api_key", "")
+            if real_key and name in _cfg.get("models", {}):
+                _cfg["models"][name]["api_key"] = real_key
+                injected += 1
+        _write_session_yaml()
+        logger.info("--real-api: injected real API keys into session config (%d providers)", injected)
 
 
 def pytest_collection_modifyitems(config, items):

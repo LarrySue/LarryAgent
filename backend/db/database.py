@@ -9,6 +9,14 @@ SQLite 连接管理模块
 与其他模块的关系：
 - 被 api/ 层和 memory/ 层通过 get_db() 获取连接
 - 依赖 config.py 获取数据库文件路径
+
+⚠️ 生命周期警示（2026-08-30，源：archive/report-2026-08-30.md）：
+- `_db` 连接绑定创建时的 asyncio loop。**一次性脚本 / CLI 入口若调 get_db()，
+  退出路径必须显式 close_db()**——未关闭的连接在进程退出时 GC 清理会挂起
+  （实测 60s~17.5min），且属于 aiosqlite + asyncio 通用行为，与框架无关。
+- uvicorn 常驻 loop 下由 lifespan shutdown 的 close_db() 负责，安全。
+- 有意不做 atexit 兜底：在已关闭的 loop 上关闭连接反而可能引入新问题，
+  显式管理优于兜底。
 """
 
 import logging
