@@ -39,10 +39,21 @@ def _require_deepseek_key():
 
 @pytest.fixture(scope="module", autouse=True)
 def _integration_setup():
-    """集成测试模块级准备：注册工具（DB 由 conftest 临时库隔离）。"""
+    """
+    集成测试模块级准备/清理（2026-08-30 修复连接泄漏）。
+
+    - setup：注册工具（DB 由 conftest 临时库隔离）
+    - teardown：**必须 close_db**——未关闭的 aiosqlite 全局连接在进程退出时
+      GC 清理会挂在已关闭的 pytest-asyncio loop 上（实测挂起 60s~17.5min），
+      这是"测试秒过但进程不退出"之谜的根因（排查记录见 exchange/log-claude.md）
+    """
     import asyncio
 
     asyncio.run(scan_and_register())
+    yield
+    from db.database import close_db
+
+    asyncio.run(close_db())
 
 
 @pytest.mark.integration
