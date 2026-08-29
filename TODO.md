@@ -35,6 +35,10 @@
 - [ ] **分层原则成文**：单元/逻辑层永远 mock（快、确定、隔离）；集成冒烟层真实 API（验证契约/鉴权/网络/模型行为——mock 永远够不到的那层）。**不做"全量切换配置"**——同一批测试在 mock/真实间切换会毁掉 mock 层的确定性，语义混乱
 - [ ] **mock 覆盖不到的清单**（真实 API 才暴露）：API 契约漂移（字段/嵌套/usage 缺失）、SDK 行为、429/Retry-After/限流、key 失效/余额、模型非法 JSON（tool_calls arguments 幻觉）、reasoning_content 等模型差异字段、真实延迟下的 SSE 节奏——集成冒烟层就是为这些存在的
 - [ ] 争议点待讨论：integration 冒烟频率（每次大改动后 vs 发版前）；是否把真实搜索（Brave key）也纳入冒烟；`--real-api` 跑挂时是否阻塞交付
+- **WB 复验（2026-08-30，事实修正 · 待老大拍板后由 Claude 执行）**：
+  - ① 上条「缺 pytest-asyncio」**前提已过期**：实测已装 `pytest-asyncio 1.4.0`（import OK），真卡点 = **pytest 9.1.1 与其不兼容、插件未被加载**——`pytest tests/test_integration_llm.py` 3 用例 **failed**（报 "async def functions are not natively supported"）。修复动作 = 升级 pytest-asyncio 至支持 pytest 9 的版本；按原描述"装 pytest-asyncio"执行会白做
+  - ② **假绿风险**：该三用例为脚本式（`try/except` + `return True/False`），失败不会被 pytest 判失败。改造须改 assert/raise，否则"恢复集成层"做完仍是假绿
+  - ③ 落点建议：第 3、4 条（分层原则 / mock 覆盖清单）属原则与论据、非待办，宜入 `.claude/CLAUDE.md` 或 docs，不占 TODO（TODO 治理约定：活跃 TODO 只含待办）
 
 ### 移动端开发
 
