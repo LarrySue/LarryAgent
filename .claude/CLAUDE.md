@@ -35,7 +35,7 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 ## 项目原则
 
 1. **个人项目** — 已用 ABC 的领域（LLM/Embedding provider）延续；新领域默认不抽象，除非用户/组长明确要求
-2. **成本敏感** — 避免浪费 token（如重复 LLM 调用），但代码可维护性优先于省几分钱
+2. **成本较敏感** — 避免过度浪费 token（如大量重复 LLM 调用、无限制循环调用等），但“代码可维护性”和“为了找到问题而充分测试”优先于省几分钱
 3. **安全边界明确而非控制** — 可以危险，但要知道哪里危险，让用户决策
 4. **严格版本管理** — 确保每次改动可追溯、可回滚
 5. **注释清楚** — 模块头部 docstring 必有；WHY 类注释按需添加（解释为什么这样做）；WHAT 类注释建议省略（代码本身能读出来的不重复）
@@ -62,17 +62,17 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 每个任务必须跑相关测试文件 + 已知存量债务甄别
 - 全套跑仅在跨模块改动时强制
 
-### 运维约定（2026-08-30）
+### 运维约定
 - **强杀 pytest 后手动清理临时目录**：atexit 清理在强杀（taskkill /F / timeout）时不执行，目录会残留。**路径 = `tempfile.gettempdir()`**（本机实测为 `D:\Temp\Sys\larry_test_*`，**不是** `/tmp`——那是 Linux 路径，别照着找）。
   - **默认模式**：残留无 key（占位符设计，conftest 已硬化），仅为磁盘卫生，定期清即可
   - **`--real-api` 模式**：`pytest_configure` 会注入真实 key 并重写 yaml 落盘（调真实 API 必须读到 key）→ **强杀会残留含 key 的目录，必须手动清理**。这是唯一会沾 key 的路径，排查该模式后务必清理
 - 后台跑 pytest 需 `taskkill /T` 杀进程树（Windows 下 TaskStop 只杀外层 shell 不杀 python 子进程）
 
-### 测试分层原则（2026-08-30 定案）
+### 测试分层原则
 - **单元/逻辑层（默认，全 mock）**：快、确定、隔离——验证"代码逻辑对"。永远 mock，不切真实
 - **集成冒烟层（`@pytest.mark.integration`，真实 API）**：验证"接得上、跑得通"——契约/鉴权/网络/模型行为。默认 skip（防误烧 key），`pytest tests/ --real-api` 显式跑；定位是"契约哨兵"，跑挂不阻塞交付（真实 API 不稳定属外部因素）
 - **不做"全量切换配置"**：同一批测试在 mock/真实间切换会毁掉 mock 层的确定性
-- 冒烟频率：发版前 + 大改动后；Brave 真实搜索暂不纳入冒烟
+- 冒烟频率：发版前 + 大改动后；真实搜索暂不纳入冒烟
 
 ### mock 覆盖不到清单（真实 API 才暴露，集成冒烟层为这些存在）
 - API 契约漂移：字段名/嵌套结构/usage 缺失/`reasoning_content` 等模型差异字段
@@ -84,7 +84,7 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 真实延迟下的 SSE 流式节奏
 - **资源生命周期（进程级，mock 结构性测不到）**：连接未关闭、临时文件残留、进程退出期 GC 挂起——见 `archive/report-2026-08-30.md`
 
-### 新增 mock / fixture 时的自检项（Trae + QoderWork + Marvis 三 AI 独立共识，2026-08-30）
+### 新增 mock / fixture 时的自检项
 - 凡涉及**进程级资源**——连接、临时文件、进程退出行为——在代码注释中标注
   **「此处无法被 mock 覆盖，需集成层验证」**
 - 理由：mock 层的资源语义（模拟 API 行为）与真实链路的资源语义（进程级生命周期）

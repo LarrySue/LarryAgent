@@ -1,14 +1,3 @@
----
-AIGC:
-    Label: "1"
-    ContentProducer: 001191440300708461136T1XGW3
-    ProduceID: 44c052101e5e236a5489b447016cb8fe_e06cb46f90db11f1bcfc525400e6dd8f
-    ReservedCode1: x+PpQkJYUPhRuNBhtKYcT/JoQtDbH+WDpP3heoM3Fk1J0OX/OMTVFwPSTzMwtM5ZvoQaMvzaVWt3v0599pUjCn6/3RwJ/+3PR1BeE0GY84PLvHp1e+sHVwaffimbelgHmWwpLU6UEFebzw2kd6LgtJ5+g5t3+GGv3/dApKyN6Q3a+ySrxFRqdD7ujdA=
-    ContentPropagator: 001191440300708461136T1XGW3
-    PropagateID: 44c052101e5e236a5489b447016cb8fe_e06cb46f90db11f1bcfc525400e6dd8f
-    ReservedCode2: x+PpQkJYUPhRuNBhtKYcT/JoQtDbH+WDpP3heoM3Fk1J0OX/OMTVFwPSTzMwtM5ZvoQaMvzaVWt3v0599pUjCn6/3RwJ/+3PR1BeE0GY84PLvHp1e+sHVwaffimbelgHmWwpLU6UEFebzw2kd6LgtJ5+g5t3+GGv3/dApKyN6Q3a+ySrxFRqdD7ujdA=
----
-
 # LarryAgent
 
 个人 AI Agent，技术栈：**Python FastAPI + SQLite + ChromaDB + Vue 3 + Tauri + HTML5**。
@@ -48,7 +37,6 @@ LarryAgent/
 │   ├── tests/               # 前端测试（Vitest）
 │   └── chat.html            # 单文件调试页，由后端同源托管于 /chat.html
 ├── mobile/                  # 手机端（HTML5 Web App，规划中）
-├── data/                    # 测试运行产物（chroma / chroma_test，不入库）
 ├── docs/                    # 活跃权威文档（见下方「文档导航」）
 ├── archive/                 # 冷存档：历史路线图 + 事故复盘报告
 ├── exchange/                # 多 AI 协作交流区（只承载活日志，不做存档）

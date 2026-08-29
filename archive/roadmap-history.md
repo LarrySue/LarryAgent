@@ -1,6 +1,7 @@
 # LarryAgent 路线图历史归档
 
 > 本文件为**冷存储归档**，由 `TODO.md` 于 2026-08-17 治理时迁出（P0–P3 已完成阶段全文）。
+> 本文件的P0-P4指项目的初版设计指标，后续均为优化迭代
 > 活跃 TODO 见根目录 `TODO.md`；检索用 Grep（按阶段标题 `### P0` / `### P1` / `### P2` / `### P3`）。
 > 排查 BUG / 做改动前先扫本文件（精细索引 P5 后启用，见 `WORKBUDDY.md`）。
 
@@ -320,3 +321,9 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] 前端：api.ts 全套客户端函数；AppLayout.vue 菜单+弹窗+面板；ChatView.vue 列表过滤 `is_archived=0`；已归档/回收站 Vue 页面按约延后
 - 测试：Claude `tests/test_archive.py`(11) + `test_conversations.py` 改写，后端 29 项全绿（隔离临时库 + mock LLM/ChromaDB，零真实 key）；WB 读码复验通过
 - 提交：`43213e3`(实现) / `2db9130`(测试) / `ffa3683`(WB复验闭环) / `50ed895`(P3.5语义修复)
+
+**UI/UX优化**
+
+>长期项目，已完成的优化项目酌情归档于此
+
+- [x] **BUG（Claude 测出 · WB 读代码复验 2026-08-24 · ✅ 已修复闭环）会话重命名输入框自动聚焦失效**：根因 `AppLayout.vue` `ref="renameInput"` 落 v-for 作用域被 Vue3 收为数组 → `startRename` 的 `.focus()` 在数组上抛 `TypeError`，点重命名后不自动聚焦/全选。修复：v-for 内改函数 ref `:ref="(el) => (renameInput = el)"`（Trae commit `e2fbb74`）；Claude 移除测试兜底、45/45 全绿；WB 读代码复验通过（ref 已为单值绑定）。

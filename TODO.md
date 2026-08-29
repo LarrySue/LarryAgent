@@ -1,15 +1,13 @@
 # LarryAgent TODO
 > **TODO 治理约定**（2026-08-17 定稿）
-> - 本文件为**活跃 TODO**：只含当前待办（能力增强 / 长期迭代）+ 工程债务 + 部分远期计划。已完成主线阶段（P0–P4）见 `archive/roadmap-history.md`。
+> - 本文件为**活跃 TODO**：只含当前待办（能力增强 / 长期迭代）+ 工程债务 + 部分远期计划。已完成部分见 `archive/roadmap-history.md`。
 > - **一致性不变量**：✅ 阶段内不得含 [ ]；含 [ ] 即误归档，须移出至 backlog 或对应未来阶段。
 > - 加载方式：软性机制——AI 任务相关时主动 Read 本文件，不自动注入。
 > - 检索归档：需要时 Grep `archive/roadmap-history.md`；排查 BUG / 做改动前先扫归档（精细索引见 WORKBUDDY.md）。
-> AI 交流讨论区已迁移至 `exchange/` 目录（该目录规则参照 `exchange/README.md` ）。
-> 人类治理区迁移至`HUMAN.md`和`HUMAN_NOTE.md`两个文件，前者偏约束和提示，后者偏零散记录。
 
 ## 当前待办
 
-### 网络搜索能力 ✅（实现 Trae CN / 测试 Claude Code / WorkBuddy 逻辑层复验通过，2026-08-20）
+### 网络搜索能力（实现 Trae CN / 测试 Claude Code / WorkBuddy 逻辑层复验通过，2026-08-20）
 
 > 实现：Trae CN ｜ 测试：Claude Code ｜ WB 复验：读代码 + 42 项测试绿（本人亲跑）+ 前端零改动 + Tier0 key 不落日志
 
@@ -21,10 +19,6 @@
 - [x] **验收方向**：实时性问题→自动搜→带来源标注；失败→降级不中断；抓取超时/内网 URL 被拦截（均由测试覆盖验证）
 - [ ] **真机端到端验收（待老大收尾）**：WB 不碰真实 key（Tier0 红线）且需 GUI 环境，此步只能由老大做——填 `config.yaml` 的 `search.brave_api_key` 真实 Brave key → 启动 LarryAgent → 聊实时问题看来源标注 → 测降级（错 key/断网出现"未能联网核实"且不崩）。逻辑层已全收口，此步为端到端收尾。
 - 注：首版**不做 web_fetch 正文抓取**（代价高：SSRF/反爬/内容清洗/阻塞风险，复杂度高一个量级）；SearXNG 待 VPS 部署后替换 Brave
-
-### 归档系统：会话归档 + 记忆归档 两层合一 ✅（2026-08-27 闭环，冷存见 `archive/roadmap-history.md`）
-
-- [x] 已实现并复验闭环：WB 设计 / Trae 实现（`43213e3`）/ Claude 测试（`2db9130`）/ WB 复验（`ffa3683`）/ P3.5 语义修复（`50ed895`）；派发稿 `exchange/log-trae.md`、测试 `exchange/log-claude.md`、复验 `exchange/log-workbuddy.md`
 
 ### 测试层完善（老大 2026-08-30 拍板：环境修复 + 集成层恢复 合并派发 Claude）
 
@@ -62,7 +56,6 @@
 
 - [ ] 绝对长期项目，人类至高训导权 + 个人项目 的完全体现，人类想做啥就做啥，我就是要五彩斑斓的黑！
 - [ ] 初步测试，UI还是存在一些BUG，这个慢慢来
-- [x] **BUG（Claude 测出 · WB 读代码复验 2026-08-24 · ✅ 已修复闭环）会话重命名输入框自动聚焦失效**：根因 `AppLayout.vue` `ref="renameInput"` 落 v-for 作用域被 Vue3 收为数组 → `startRename` 的 `.focus()` 在数组上抛 `TypeError`，点重命名后不自动聚焦/全选。修复：v-for 内改函数 ref `:ref="(el) => (renameInput = el)"`（Trae commit `e2fbb74`）；Claude 移除测试兜底、45/45 全绿；WB 读代码复验通过（ref 已为单值绑定）。
 - [ ] **角色切换过渡动画回写**：方向已定（纯 color transition 200ms，不用 transform/位移，定案见 `docs/ui-reference.md` §9）；C2 已落地，余留细节由 Trae 点将实现时回写 `docs/ui-reference.md`（优先级：低）
 - [ ] **Trae 实现期 UI 细节文档化**：实现期新增的 UI 细节（如 `--weight-semibold/bold` 等 token）以 `tokens.css` / 组件代码为准，待点将时回写 `docs/ui-reference.md` §10 已知局限所列项
 - [ ] **会话项时间戳展示**：UI-Reference §5.4 SidebarItem 规格要求"标题 + 时间戳（右对齐）"，当前代码只有标题（API 已返回 `updated_at`，待实现展示）
@@ -113,7 +106,7 @@
 
 ## 开发路线图
 
-> 主线阶段 **P0–P4 已全部完成 ✅**，LarryAgent 进入「能力增强 / 长期迭代」新阶段。主线阶段详细情况冷存于 `archive/roadmap-history.md`。
+> 主线阶段 **P0–P4 已全部完成 ✅**，LarryAgent 进入「能力增强 / 长期迭代」新阶段。详细情况冷存于 `archive/roadmap-history.md`。
 
 ### 历史索引（已完成阶段，冷存于 `archive/roadmap-history.md`）
 
