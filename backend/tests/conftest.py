@@ -44,8 +44,11 @@ _REAL_DB = (_BACKEND_DIR / "data" / "larry.db").resolve()
 # - **key 占位符**：默认路径下临时 yaml 的 api_key 一律写占位符，真实 key 不落盘；
 #   强杀残留也不含 key（WB 2026-08-30 实证：残留目录 yaml 中 api_key = 占位符）。
 # - **⚠️ 例外（勿误读）**：`--real-api` 模式会在 pytest_configure 注入真实 key
-#   并重写 yaml——调真实 API 必须读到 key，无法避免。**该模式下强杀会残留含
-#   key 的目录**，排查后须手动清理。故"key 永不落盘"仅对默认路径成立。
+#   并重写 yaml——调真实 API 必须读到 key，无法避免。**该模式残留的目录含 key
+#   明文**，须立即清理。故"key 永不落盘"仅对默认路径成立。
+# - **残留不限于强杀（WB 2026-08-30 实测更正）**：`--real-api` 正常退出同样会
+#   残留——ChromaDB 的 chroma.sqlite3 句柄未释放，atexit 的 rmtree 抛 WinError 32。
+#   此前"仅强杀才残留"的说法不成立，勿据此放松清理。
 # - **清理告警**：atexit 删除失败时 logger.warning 告警，不静默吞。
 #   注：atexit 阶段 logging stream 可能已关闭（ValueError: I/O operation on
 #   closed file），靠 logging.handleError 兜底打到 stderr 才可见，输出带噪音。
@@ -102,7 +105,7 @@ def _cleanup_session_tmpdir():
     """atexit 清理：失败告警而非静默（待办 1）。
 
     先 gc.collect() 释放文件句柄（ChromaDB/sqlite 句柄是 Windows 删除失败主因），
-    再删除；仍失败则告警（残留无 key，占位符设计，安全）。
+    再删除；仍失败则告警——告警文案须区分是否 --real-api：该模式残留含 key 明文。
     """
     try:
         import gc
@@ -111,11 +114,18 @@ def _cleanup_session_tmpdir():
         shutil.rmtree(_session_tmpdir, ignore_errors=False)
         logger.info("Test session temp dir cleaned: %s", _session_tmpdir)
     except Exception as e:
-        logger.warning(
-            "Test session temp dir cleanup FAILED: %s (%s). "
-            "目录可能残留（无 key，占位符设计），可手动删除。",
-            _session_tmpdir, e,
-        )
+        if _REAL_API_MODE:
+            logger.error(
+                "⚠️ 清理失败且为 --real-api 模式：%s 中的 config.session.yaml "
+                "【含真实 API key 明文】，请立即手动删除。原因：%s",
+                _session_tmpdir, e,
+            )
+        else:
+            logger.warning(
+                "Test session temp dir cleanup FAILED: %s (%s). "
+                "目录残留（无 key，占位符设计），可手动删除。",
+                _session_tmpdir, e,
+            )
 
 
 atexit.register(_cleanup_session_tmpdir)
@@ -124,6 +134,10 @@ atexit.register(_cleanup_session_tmpdir)
 # ---------------------------------------------------------------------------
 # --real-api 开关（integration 层：真实 API 契约哨兵）
 # ---------------------------------------------------------------------------
+
+# --real-api 模式标志：决定清理失败时告警的严重级别（含 key vs 占位符）
+_REAL_API_MODE = False
+
 
 def pytest_addoption(parser):
     """--real-api：显式开启真实 API 集成测试（默认跳过，防误烧 key）。"""
@@ -139,7 +153,9 @@ def pytest_configure(config):
     """注册自定义 mark + --real-api 时注入真实 key（待办 2：占位符→真实 key 仅显式开启时注入）。"""
     config.addinivalue_line("markers", "integration: 真实 API 集成测试（默认跳过，--real-api 显式开启）")
 
+    global _REAL_API_MODE
     if config.getoption("--real-api"):
+        _REAL_API_MODE = True
         # 从真实 config 递归复制所有 key 到临时 yaml（仅显式开启时；默认占位符，key 不落盘）
         with open(_REAL_CONFIG, "r", encoding="utf-8") as f:
             real_cfg = yaml.safe_load(f)

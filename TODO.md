@@ -34,6 +34,8 @@
 - [ ] **WB 复验新发现 · 建议一并评估**：33 个失败（`test_shell_tool` 14 + `test_file_ops_tool` 19）实为**跨文件事件循环污染**，与 pytest-asyncio 无关——FastAPI `TestClient` 退出时销毁当前线程事件循环，后续 sync 测试调 `asyncio.get_event_loop()` 抛 `RuntimeError: There is no current event loop in thread 'MainThread'`（`asyncio/events.py:681`）。实证：file_ops 单跑 20/20 绿；test_archive+file_ops 31 全绿；test_conversations 或 test_chat_service + file_ops → 19 failed。Claude 先评估修复成本，复杂则回报待裁
 - **WB 裁决（2026-08-30 已定，Claude 照办）**：冒烟频率 = 发版前 + 大改动后；Brave 真实搜索**暂不纳入**冒烟；`--real-api` 跑挂**不阻塞交付**（真实 API 不稳定属外部因素，该层定位为"契约哨兵"）
 - **基线（2026-08-30 01:47 WB 实测，供验收对比）**：`42 failed / 113 passed`。构成：integration 3（pytest-asyncio）+ chromadb 6（mock 已不存在的 `archiver.get_db`）+ test_windows_dir 1（中文 Windows 编码）= 真失败 10 个；其余 33 个为上述污染所致、单跑即绿。修复后须对比此基线，确保无新增回归
+- [x] **`--real-api` 注入路径实测（老大 2026-08-30 授权专用测试 key，WB 亲跑 2 轮，✅ 通过）**：对照组（无 flag）session yaml 的 `deepseek.api_key` = `__TEST_PLACEHOLDER__`；实验组（带 flag）= 真实 key（len 35，非占位符）→ **注入路径确实生效**；3 用例 `3 passed in ~34s`，**进程不再挂起**（原 17.5min aiosqlite BUG 已修复）；config.yaml 跑后已原样还原（校验一致）
+- [ ] **新发现（待 Trae 修，WB 实测·稳定复现 2/2）`vector_store.enabled=false` 被绕过**：`services/chat_service.py:142` 无条件调 `get_long_term_memory()` → `memory/engine.py:57-66` 直连 `embed_text` + `rag.vector_store.search`，**全程不判 `config.vector_store.enabled`**（`rag/vector_store.py:_get_client` 也不判）。后果两条：① 生产路径——每次 chat 白跑一次本地 embedding + 持有 ChromaDB 客户端，降级开关形同虚设（`test_chromadb_degradation.py` 声称的场景 1 实为「偷偷做、失败被 except 吞成 []」的静默降级）；② 测试路径——`--real-api` 下 chroma.sqlite3 句柄不释放，atexit 的 rmtree 抛 `WinError 32`，**正常退出也残留含 key 目录**（此前"仅强杀才残留"的说法已证伪）。修复取向：照 `api/memory.py:136` 既有写法，在 `get_long_term_memory` 开头判 `if not config.vector_store.enabled: return []`（治本，①②同解）
 
 ### 移动端开发
 
