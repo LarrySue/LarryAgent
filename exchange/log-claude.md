@@ -2,8 +2,50 @@
 
 ## 当前状态（2026-08-30）
 
-- **集成测试层恢复 + 测试环境修复** ✅ 已交付（commit `0e8d52a`），交付说明见下方，待 WB 复验。
+- **集成测试层恢复 + 测试环境修复** ✅ 已交付（commit `0e8d52a`，交付说明见下）——**含一次卡顿之谜排查**，当前结论：pytest 测试执行正常，**病根在"测试完成后进程退出阶段挂起 10-20 分钟"**，根因排查进行中。
 - **web_search 测试** ✅ 已交付（commit `a58e3ae`，42 项全绿）。
+
+---
+
+## 真实 API 集成测试"卡顿之谜"排查记录（2026-08-30，附于交付说明后）
+
+### 一、已固化的成果（改造交付，commit `0e8d52a`）
+
+| 文件 | 改动 |
+|---|---|
+| `tests/conftest.py` | `--real-api` 开关 + 默认 skip integration + marker 注册 + **事件循环重建 autouse fixture**（修复 33 个跨文件污染失败） |
+| `tests/test_integration_llm.py` | 3 用例加 `@pytest.mark.integration` + `@pytest.mark.asyncio`；**去假绿**（脚本式 try/except → assert 直抛）；key 缺失 → skip |
+| `.claude/CLAUDE.md` | 分层原则 + mock 覆盖清单（不占 TODO） |
+
+**基线对比**：42 failed/113 passed → **2 failed/150 passed/3 skipped**（剩余 2 = chromadb mock 存量 + windows_dir 编码存量，独立问题）。
+
+**前提修正**：派发稿"pytest-asyncio 插件没被加载"实测为误（插件已加载，真卡点 = strict 模式缺 `@pytest.mark.asyncio` marker）；**无需升降任何依赖版本**（无损实验证实 pytest 9.1.1 + 1.4.0 兼容）。
+
+### 二、排查过程与结论（重要：纠正过一次错误结论）
+
+**现象**：`--real-api` 跑 3 用例时 wall clock 远超 pytest 计时——两次等待 10 分钟+ 无结果（用户手动停），一次 pytest 报 42.48s 但用户体感更长。
+
+**已排除的假设**（干净实验 A/B/C/D 逐一推翻）：
+- API 限流 429：❌ 非流式 10 次 + 流式 5 次连续调用全 200（1.8-2.7s）
+- 进程退出清理挂起：❌（实验 C 中脚本自身退出毫秒级干净）
+- embedding 初始化：⚠️ 慢但有限（首次 ~26s：import 16.6 + init 9.5；缓存后 0.01s）
+
+**❌ 错误结论（已纠正）**：曾归因"僵尸 pytest 进程持续发调用"（用户反驳成立：卡死期间无新增调用 + 讨论期间调用数稳定 → 僵尸进程是**结果**不是**原因**）。
+
+**✅ 正确结论（铁证）**：终极测试完整日志（日志落文件，非管道）：
+```
+START: 03:27:29
+3 passed in 32.66s     ← pytest 计时（测试执行仅 32.66s）
+EXIT_CODE: 1           ← 退出码 1！pytest 报 3 passed 但进程异常退出
+END: 03:45:31          ← 进程真正退出（= 18 分 2 秒 wall clock）
+```
+**病根 = 测试执行完成后，进程在退出阶段挂起 17.5 分钟（退出码 1）**。两次卡死的"无新增调用"完全吻合（测试已完成，挂起阶段无调用）。中间那次"成功"是 `timeout 300` 到点强制杀进程所致（wall clock ≈ 5 分钟 ≠ pytest 计时 42.48s）。
+
+### 三、下一步（轻装上阵继续）
+
+**退出挂起根因排查**——最强嫌疑：conftest 的 atexit `shutil.rmtree` 删临时目录（Windows 上 ChromaDB/SQLite 文件被进程持有锁时 rmtree 卡住），且只在"用过 ChromaDB 的串行跑"时发生。计划：最小复现脚本（模拟 atexit 删临时 chroma 目录）验证。
+
+**遗留观察**：DS 控制台调用数 155（含全部历史实验累计，精确归因待退出挂起根因确认后复盘）。
 
 ---
 
