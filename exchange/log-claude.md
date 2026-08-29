@@ -41,11 +41,25 @@ END: 03:45:31          ← 进程真正退出（= 18 分 2 秒 wall clock）
 ```
 **病根 = 测试执行完成后，进程在退出阶段挂起 17.5 分钟（退出码 1）**。两次卡死的"无新增调用"完全吻合（测试已完成，挂起阶段无调用）。中间那次"成功"是 `timeout 300` 到点强制杀进程所致（wall clock ≈ 5 分钟 ≠ pytest 计时 42.48s）。
 
-### 三、下一步（轻装上阵继续）
+### 三、根因闭环（2026-08-30 已解决，commit `f27c091`）
 
-**退出挂起根因排查**——最强嫌疑：conftest 的 atexit `shutil.rmtree` 删临时目录（Windows 上 ChromaDB/SQLite 文件被进程持有锁时 rmtree 卡住），且只在"用过 ChromaDB 的串行跑"时发生。计划：最小复现脚本（模拟 atexit 删临时 chroma 目录）验证。
+**病根：未关闭的 aiosqlite 全局连接，进程退出时 GC 清理在已关闭的 pytest-asyncio loop 上挂起。**
 
-**遗留观察**：DS 控制台调用数 155（含全部历史实验累计，精确归因待退出挂起根因确认后复盘）。
+**定位过程（逐步二分，每步有对比实验）**：
+1. ❌ atexit rmtree 删临时 chroma 目录（实验 E：毫秒级，排除）
+2. ✅ 单用例也卡 → 非"串行多用例"特有
+3. ✅ collect-only 秒过 → conftest 收集正常
+4. ✅ 纯 async 测试秒过 + 退出秒过 → pytest-asyncio 正常
+5. ✅ get_db + SELECT 1：pytest 0.04s 通过，**退出挂起 60s+**
+6. ✅ get_db + 显式 close_db：pytest 0.04s，**退出秒过** → 根因确认
+
+**直接触发原因**：改造 test_integration_llm.py 时删除了原脚本式 run_tests 的 `close_db()`，handle_chat 创建的 `_db` 连接泄漏。全套跑 integration 默认 skip 不触发，仅 `--real-api` 暴露。
+
+**修复**：module 级 autouse fixture teardown 显式 `close_db()`（WHY 注释已写明根因）。
+
+**验证**：`--real-api` 3 用例 wall clock **18 分钟 → 26 秒**（≈ pytest 计时 23.70s）；全套无回归（2f/150p/3s）。
+
+**教训（供全员参考）**：① Windows 下 TaskStop 只杀外层 shell 不杀 python 子进程树，后台 pytest 需 `taskkill /T` 确认；② 显式管理资源生命周期（连接/loop），不依赖 GC——GC 清理时机不可控且可能挂起；③ 排查此类问题时"二分 + 最小复现 + wall clock 打点"比体感可靠。
 
 ---
 
