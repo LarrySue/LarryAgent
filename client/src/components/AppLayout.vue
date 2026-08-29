@@ -13,6 +13,7 @@ import RoleSelector from "@/components/RoleSelector.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
 import BrandText from "@/components/BrandText.vue";
 import logoUrl from "@/assets/logo.svg";
+import { version as appVersion } from "../../package.json";
 
 const appStore = useAppStore();
 const sidebarOpen = ref(false);
@@ -54,10 +55,15 @@ function toggleFooterMenu() {
   footerMenuOpen.value = !footerMenuOpen.value;
 }
 
-// 设置菜单项（占位，后续接入对应页面/流程）
+// 设置菜单项
 function showArchived() {}
 function showTrash() {}
-function showAbout() {}
+
+// 关于弹窗
+const aboutOpen = ref(false);
+function showAbout() {
+  aboutOpen.value = true;
+}
 
 function startRename(conv: { id: number; title: string }) {
   menuOpenId.value = null;
@@ -330,6 +336,23 @@ function startNewChat() {
           <button class="modal-btn primary" :disabled="confirmLoading" @click="confirmStore">
             {{ confirmLoading ? "存入中…" : "确认存入" }}
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关于弹窗 -->
+    <div v-if="aboutOpen" class="modal-overlay" @click.self="aboutOpen = false">
+      <div class="modal about-modal">
+        <div class="about-header">
+          <img class="about-logo" :src="logoUrl" alt="LarryAgent logo" />
+          <h3 class="about-title"><BrandText /></h3>
+          <p class="about-version">Version {{ appVersion }}</p>
+        </div>
+        <div class="about-info">
+          <p class="about-line"><span class="about-label">Creator &amp; Designer：</span><span class="about-value">SuLarry</span></p>
+          <p class="about-line"><span class="about-label">Crafted with：</span><span class="about-value">WorkBuddy · Trae · Claude · Marvis · Qoder</span></p>
+          <p class="about-line"><span class="about-label">AI Copilot：</span><span class="about-value">DeepSeek · GLM · Hunyuan · Qwen</span></p>
+          <p class="about-note">All AI-generated code has been reviewed, integrated, and warranted by SuLarry.</p>
         </div>
       </div>
     </div>
@@ -721,6 +744,82 @@ function startNewChat() {
   margin: 0 0 var(--space-3);
   color: var(--color-error, #EF4444);
   font-size: var(--text-sm);
+}
+
+/* === 关于弹窗 === */
+.about-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  width: 528px;
+}
+
+.about-header {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+}
+
+.about-logo {
+  width: 90px;
+  height: 90px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.about-title {
+  flex: 1;
+  margin: 0;
+  font-size: 48px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.about-version {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.about-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  justify-items: start;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  margin-top: var(--space-5);
+}
+
+.about-line {
+  display: contents;
+}
+
+.about-label,
+.about-value {
+  font-size: 14px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.about-label {
+  justify-self: end; /* 标签右对齐 → 冒号列对齐 */
+  white-space: nowrap;
+}
+
+.about-note {
+  grid-column: 1 / -1;
+  justify-self: center;
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
 .modal-actions {
