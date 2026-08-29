@@ -349,10 +349,10 @@ function startNewChat() {
           <p class="about-version">Version {{ appVersion }}</p>
         </div>
         <div class="about-info">
-          <p class="about-line"><span class="about-label">Creator &amp; Designer：</span><span class="about-value">SuLarry</span></p>
-          <p class="about-line"><span class="about-label">Crafted with：</span><span class="about-value">WorkBuddy · Trae · Claude · Marvis · Qoder</span></p>
+          <p class="about-line"><span class="about-label">Creator &amp; Designer：</span><span class="about-value">Su Larry</span></p>
+          <p class="about-line"><span class="about-label">Crafted with：</span><span class="about-value">苏苏(WorkBuddy) · Trae · Claude · Marvis · Qoder</span></p>
           <p class="about-line"><span class="about-label">AI Copilot：</span><span class="about-value">DeepSeek · GLM · Hunyuan · Qwen</span></p>
-          <p class="about-note">All AI-generated code has been reviewed, integrated, and warranted by SuLarry.</p>
+          <p class="about-note">All AI-generated code has been reviewed, integrated, and warranted by Su Larry.</p>
         </div>
       </div>
     </div>
@@ -753,7 +753,7 @@ function startNewChat() {
   align-items: center;
   gap: var(--space-3);
   text-align: center;
-  width: 528px;
+  width: 600px;
 }
 
 .about-header {
