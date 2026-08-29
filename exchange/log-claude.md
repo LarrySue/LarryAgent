@@ -61,6 +61,21 @@ END: 03:45:31          ← 进程真正退出（= 18 分 2 秒 wall clock）
 
 **教训（供全员参考）**：① Windows 下 TaskStop 只杀外层 shell 不杀 python 子进程树，后台 pytest 需 `taskkill /T` 确认；② 显式管理资源生命周期（连接/loop），不依赖 GC——GC 清理时机不可控且可能挂起；③ 排查此类问题时"二分 + 最小复现 + wall clock 打点"比体感可靠。
 
+### 四、独立实验 G（2026-08-30 补充：机制级确认，与 pytest 无关）
+
+为排除"修复只是碰巧/仅 pytest 环境特有"，做了**脱离 pytest 的纯 Python 对照实验**：
+
+| 实验 | 环境 | 连接处理 | 进程退出 |
+|------|------|---------|---------|
+| G1 | 纯 Python（无 pytest） | `asyncio.run()` 创建连接后不关闭 | **挂起 120s 超时（exit 143）** |
+| G2 | 纯 Python（无 pytest） | 显式 `conn.close()` | **秒过（exit 0）** |
+
+**结论（机制级）**：`aiosqlite` 连接绑定已关闭的 asyncio loop 后，进程退出时 GC 清理必然挂起——这是 **aiosqlite + asyncio 的通用行为**，与 pytest/pytest-asyncio 无关。F3/F4（pytest 环境）与 G1/G2（纯 Python）双环境互证，机制坐实。
+
+**普适警示**：项目里任何"`asyncio.run()`/loop 关闭后仍存活的 aiosqlite 连接"都会在进程退出时挂起——不限于测试。后端 `db/database.py` 的 `_db` 单例在 uvicorn 常驻 loop 下安全，但脚本/一次性任务/测试中必须显式 close。
+
+**顺带清理**：被强杀（taskkill /F）的 pytest 进程未执行 atexit 清理，`/tmp` 残留 40+ 个 `larry_test_xxx` 临时目录（含复制了真实 key 的 config.session.yaml）——已全部清除，消除 key 落盘隐患。
+
 ---
 
 ## 集成测试层恢复 + 测试环境修复 交付说明（2026-08-30，commit `0e8d52a`）
