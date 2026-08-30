@@ -15,6 +15,7 @@
 
 import logging
 
+from config import get_config
 from db.conversations import get_messages
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,10 @@ async def get_long_term_memory(
     Returns:
         相关记忆文本列表（从 payload.text 字段提取）
     """
+    # 开关关闭时跳过长期记忆召回：不加载 embedding、不建 ChromaDB 客户端
+    # （与 api/memory.py:136 的写法保持一致，放在入口拦截以覆盖所有调用方）
+    if not get_config().vector_store.enabled:
+        return []
     try:
         from models.embedding import embed_text
         from rag.vector_store import search

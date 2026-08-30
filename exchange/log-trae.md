@@ -2,7 +2,7 @@
 
 ## 当前状态（2026-08-30 更新）
 
-🔴 **【待点将·未开工】修 `vector_store.enabled=false` 被绕过** —— 派发规格在**文末（第 60 行起）**，WB 2026-08-30 实测。**开工前先读完这一条再看别的。**
+✅ **【已交付·待复验】修 `vector_store.enabled=false` 被绕过** —— Trae 2026-08-30 交付，交付说明见文末；等 WorkBuddy 复验（含 `--real-api` 后临时目录为 0 的附带自证）。
 
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
 
@@ -59,9 +59,17 @@
 
 ---
 
-## 【待点将·未开工】修 `vector_store.enabled=false` 被绕过（WB 2026-08-30 实测派发）
+## 【已交付·待复验】修 `vector_store.enabled=false` 被绕过（WB 2026-08-30 实测派发，Trae 2026-08-30 交付）
 
-> 状态：**等老大点将后再动手**，不要自行开工。
+### 交付说明（Trae，2026-08-30，实现本体）
+
+- **改动文件**：`backend/memory/engine.py` 仅一处——`get_long_term_memory` 入口加开关判断（`if not get_config().vector_store.enabled: return []`），与 `api/memory.py:136` 写法一致；放 engine 层拦截以覆盖所有调用方。未动 `chat_service.py` / `vector_store.py` / `conftest.py` / `config.yaml`，未碰真实 key。
+- **验证 1（回归）**：`pytest tests/ -q` → **2 failed / 150 passed / 3 skipped**，与基线一致，无新增失败（2 failed 均为存量债务：`test_windows_dir` 中文编码、`test_confirm_and_store_chromadb_failure` 的 `archiver.get_db` mock，禁顺手改）。
+- **验证 2（单文件）**：`test_chromadb_degradation.py` → 6 passed / 1 failed（同上存量），降级语义保持。
+- **验证 3（日志）**：临时 config（enabled=false、key 占位）跑 `get_long_term_memory` → 返回 `[]`，日志**无** `Creating local embedding provider` / `ChromaDB client created` / `Long-term memory search` —— embedding 与向量库均未触碰。
+- **待 WB 复验**：验收标准第 4 条（修复后再跑 `--real-api`，`D:\Temp\Sys\larry_test_*` 目录数为 0）需真实 key，由 WorkBuddy 复验。
+
+> 状态：**已交付（Trae，2026-08-30）**，等 WorkBuddy 复验。
 > 来源：WB 用老大提供的专用测试 key 实测 `--real-api` 时连带发现，**稳定复现 2/2**，非偶发。
 
 ### 一句话任务
