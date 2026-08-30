@@ -2,9 +2,8 @@
 
 ## 当前状态（2026-08-30 更新）
 
-✅ **【已交付·待复验】修 `vector_store.enabled=false` 被绕过** —— Trae 2026-08-30 交付，交付说明见文末；等 WorkBuddy 复验（含 `--real-api` 后临时目录为 0 的附带自证）。
-
 - **web_search 工具 + Tool 框架底座** ✅ 已交付（Trae，2026-08-20），交付说明见下方；等 Claude 补规范测试 + WorkBuddy 复验。
+- vector_store.enabled 开关贯通（召回 + 归档写入双路径）已于 2026-08-30 全链路闭环（Trae 修复 / Claude 测试 / WB 复验+补修写入+`--real-api` 终验），完整记录归档于 `archive/roadmap-history.md`，派发稿已清理。
 
 ---
 
@@ -56,58 +55,3 @@
 
 - Claude 补规范测试（mock provider，不碰真实 key / 真实 config）
 - WorkBuddy 复验（读代码 + 看报告）；真机搜索流程（首次搜索 / 来源标注 / 降级）需老大 GUI 环境收尾
-
----
-
-## 【已交付·待复验】修 `vector_store.enabled=false` 被绕过（WB 2026-08-30 实测派发，Trae 2026-08-30 交付）
-
-### 交付说明（Trae，2026-08-30，实现本体）
-
-- **改动文件**：`backend/memory/engine.py` 仅一处——`get_long_term_memory` 入口加开关判断（`if not get_config().vector_store.enabled: return []`），与 `api/memory.py:136` 写法一致；放 engine 层拦截以覆盖所有调用方。未动 `chat_service.py` / `vector_store.py` / `conftest.py` / `config.yaml`，未碰真实 key。
-- **验证 1（回归）**：`pytest tests/ -q` → **2 failed / 150 passed / 3 skipped**，与基线一致，无新增失败（2 failed 均为存量债务：`test_windows_dir` 中文编码、`test_confirm_and_store_chromadb_failure` 的 `archiver.get_db` mock，禁顺手改）。
-- **验证 2（单文件）**：`test_chromadb_degradation.py` → 6 passed / 1 failed（同上存量），降级语义保持。
-- **验证 3（日志）**：临时 config（enabled=false、key 占位）跑 `get_long_term_memory` → 返回 `[]`，日志**无** `Creating local embedding provider` / `ChromaDB client created` / `Long-term memory search` —— embedding 与向量库均未触碰。
-- **待 WB 复验**：验收标准第 4 条（修复后再跑 `--real-api`，`D:\Temp\Sys\larry_test_*` 目录数为 0）需真实 key，由 WorkBuddy 复验。
-
-> 状态：**已交付（Trae，2026-08-30）**，等 WorkBuddy 复验。
-> 来源：WB 用老大提供的专用测试 key 实测 `--real-api` 时连带发现，**稳定复现 2/2**，非偶发。
-
-### 一句话任务
-
-让 `vector_store.enabled=false` 真正生效——按该开关跳过长期记忆召回，不要再偷偷跑 embedding 和向量检索。
-
-### 根因（已定位到行，不用再查）
-
-- `services/chat_service.py:142`：`long_term = await get_long_term_memory(req.message)` —— **无条件调用，不看开关**
-- `memory/engine.py:57-66`：`get_long_term_memory` 内部直接 `embed_text()` + `vector_store.search()`，**也不看开关**
-- `rag/vector_store.py:32-42`：`_get_client()` 建 `chromadb.PersistentClient`，**同样不看开关**
-- 正确写法对照：`api/memory.py:136` 是 `if config.vector_store.enabled:` 才碰向量库。**照这个写法补即可**
-
-### 为什么必须修（两条后果，都是真的）
-
-1. **生产路径**：开关关着，每次 chat 仍跑一次本地 embedding 并建 ChromaDB 客户端——白耗算力与内存，降级设计形同虚设。`test_chromadb_degradation.py` 声称的"enabled=false 时聊天正常工作"，实际是「偷偷做、失败被 `except` 吞成 `[]`」的静默降级，不是真降级。
-2. **测试路径**：因为建了 ChromaDB 客户端，`chroma.sqlite3` 句柄不释放 → `--real-api` 跑完 atexit 的 `shutil.rmtree` 抛 `[WinError 32]`，**正常退出也残留含 key 的临时目录**（此前"只有强杀才残留"的说法已被证伪，conftest 注释已改）。
-
-### 修复取向（建议，细节你定）
-
-在 `memory/engine.py::get_long_term_memory` 开头加开关判断，与 `api/memory.py:136` 保持一致：
-
-```python
-if not get_config().vector_store.enabled:
-    return []
-```
-
-放 engine 层（而不是 chat_service 层）：`get_long_term_memory` 可能还有别的调用方，在入口拦住最稳。若你认为该在 `_get_client()` 再加一道防御，也行——但**别只加在 `_get_client()`**，那样 embedding 仍会白跑。
-
-### 验收标准
-
-- `vector_store.enabled=false` 时跑一次 chat，日志中**不应出现** `ChromaDB client created` / `Long-term memory search`，也不应加载 embedding 模型
-- `pytest tests/test_chromadb_degradation.py` 保持通过（这是降级测试，别改测试来迁就代码；若必须改，说明理由）
-- `pytest tests/ -q` 与基线 `2 failed / 150 passed / 3 skipped` 对比无新增失败（2 个 failed 为独立存量债务：chromadb mock、windows_dir 编码，**禁止顺手改**）
-- 附带自证：修复后再跑 `--real-api`，`D:\Temp\Sys\larry_test_*` 目录数应为 0（WB 会复验）
-
-### 边界
-
-- 不要动 `conftest.py`（WB 已改：清理失败告警区分 `--real-api` / 默认路径）
-- 不要动 `backend/config.yaml`
-- 不要碰任何真实 key

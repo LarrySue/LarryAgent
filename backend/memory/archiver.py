@@ -25,6 +25,7 @@
 import logging
 import uuid
 
+from config import get_config
 from db.conversations import get_messages, get_conversation, mark_archived
 from db.memories import (
     create_memory,
@@ -137,6 +138,10 @@ async def confirm_and_store(
     Returns:
         memory_id
     """
+    # 向量库开关：关闭时跳过所有 ChromaDB 操作（删旧向量/向量化/写入），
+    # SQLite 记录与会话归档标记照常——与 api/memory.py 删记忆时的守卫语义一致
+    vector_enabled = get_config().vector_store.enabled
+
     # 1. 幂等查重：同会话已有活跃记忆 → 覆盖更新（删旧向量后重写），否则新建
     existing = await get_active_memory_by_conversation_id(conversation_id)
     if existing is not None:
@@ -147,19 +152,30 @@ async def confirm_and_store(
             conversation_id,
             memory_id,
         )
-        try:
-            await delete_by_memory_id(memory_id)
-        except Exception as e:
-            logger.warning(
-                "ChromaDB delete of old vectors failed for memory_id=%d: %s",
-                memory_id,
-                e,
-            )
+        if vector_enabled:
+            try:
+                await delete_by_memory_id(memory_id)
+            except Exception as e:
+                logger.warning(
+                    "ChromaDB delete of old vectors failed for memory_id=%d: %s",
+                    memory_id,
+                    e,
+                )
     else:
         memory_id = await create_memory(
             content=summary,
             source_conversation_id=conversation_id,
         )
+
+    # 2-4. 向量写入仅在开关开启时执行（不加载 embedding、不建 ChromaDB 客户端）
+    if not vector_enabled:
+        logger.info(
+            "Vector store disabled: conv=%d archived to SQLite only (memory_id=%d)",
+            conversation_id,
+            memory_id,
+        )
+        await mark_archived(conversation_id)
+        return memory_id
 
     # 2. 分块
     chunks = chunk_text(summary)

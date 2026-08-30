@@ -327,3 +327,13 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 >长期项目，已完成的优化项目酌情归档于此
 
 - [x] **BUG（Claude 测出 · WB 读代码复验 2026-08-24 · ✅ 已修复闭环）会话重命名输入框自动聚焦失效**：根因 `AppLayout.vue` `ref="renameInput"` 落 v-for 作用域被 Vue3 收为数组 → `startRename` 的 `.focus()` 在数组上抛 `TypeError`，点重命名后不自动聚焦/全选。修复：v-for 内改函数 ref `:ref="(el) => (renameInput = el)"`（Trae commit `e2fbb74`）；Claude 移除测试兜底、45/45 全绿；WB 读代码复验通过（ref 已为单值绑定）。
+
+**vector_store.enabled 开关贯通（召回 + 归档写入双路径）** ✅（2026-08-30，WB 发现+复验 / Trae 修召回 / Claude 测试 / WB 补修写入+终验）
+
+> 来源：WB 用专用测试 key 实测 `--real-api` 时发现（稳定复现 2/2）：开关关闭后代码不看开关照跑 embedding + 建 ChromaDB 客户端，降级设计形同虚设；且 chroma 句柄不释放，正常退出也残留含 key 临时目录（原"仅强杀才残留"说法同轮证伪）。
+
+- [x] **召回路径**（Trae `b382b22`）：`memory/engine.py::get_long_term_memory` 入口加 `if not get_config().vector_store.enabled: return []`，与 `api/memory.py:136` 写法一致；engine 层拦截覆盖全部调用方（召回路径仅 chat_service.py:142 一处）
+- [x] **行为测试**（Claude `45a0625`，3 项）：enabled=false → spy 断言零触碰 embed/search；enabled=true → 正常召回返回记忆；检索异常 → 降级 [] 不中断
+- [x] **归档写入路径**（WB 补修，复验时同语义调用方扫描发现）：`memory/archiver.py::confirm_and_store` 同样不判开关——enabled=false 时手动归档仍跑 `embed_batch` + 建 ChromaDB 客户端。修复：开关关闭时跳过向量三件套（删旧向量/向量化/写入），SQLite 记忆记录 + 会话归档标记照常（与 api/memory.py 删记忆守卫语义对齐）；配套 `tests/test_archiver_switch.py`（2 项 spy 断言）
+- [x] **WB 复验**：代码逐行核对 + 全套亲跑 `2 failed / 155 passed / 3 skipped`（基线 +5 新增，2 failed 均为已知存量债务）+ `--real-api` 终验 `3 passed`、key 零泄漏、config.yaml 字节级还原、`larry_test_*` 残留 0（修复前 2/2 残留，此为验收标准第 4 条铁证）
+- 提交：`b382b22`（召回修复）/ `45a0625`（行为测试）/ `c19cbe1`（交付说明）/ 收尾本轮提交（写入路径修复 + 归档）
