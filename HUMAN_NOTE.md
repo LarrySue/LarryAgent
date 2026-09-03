@@ -17,18 +17,10 @@
 7.新加入了一个单独负责UI设计的Agent，由WorkBuddy的另一个单独会话来完成，调用GLM-5V-Turbo模型
 
 ## 一些记录
+
 关于项目级AI约束注入机制：Claude和Trae方案明了简单且已经执行（通过md文件），Marvis不支持也不需要，Workbuddy目前使用全局约束强制要求读取某个项目级文件，当前观察效果基本满足需求，需要持续观察，唯一的问题是无法同时让两个会话分担不同的任务（因为会同时注入同一份md文件），所以后续UI设计可能要交给QoderWork，其实我看到workbuddy的“设计创意”模式很好用，或许我应该把架构这个职责单独交给Qoder，现在似乎积重难返，不过其实没什么特别影响，毕竟只是一个简单的UI设计，我已经几乎完成了调整工作
 关于所谓的重开会话，可以加强约束注入，减少BUGU积累，但是也要保证尽量消除记忆断层，目前发现似乎有时候重开软件可以在保持会话的前提下触发注入机制，可以利用此方式刷新注入或着增加注入
-8月30日，发现似乎MEMORY.MD文件就是Workbuddy的项目级约束，存在强制注入机制，需要进行测试
-
-记忆注入通道
-
-- `MEMORY.md`经 `<working_memory_content>` 块**整文件注入，会话启动时取一次快照、此后不重读** → 会话中途改记忆对当前会话无效，须新建会话才生效；"改了却像没记"不是错觉。日志文件（`2026-08-*.md`）不注入，需主动 Read。
-- `WORKBUDDY.md` 经 `<user_custom_instructions>` 块注入的是**"去读"的指令**而非文件内容（源：`~/.workbuddy/app/app-config.json` → `personalization.customPrompt`）。
-- 判定注入与否须以**块名**为关键词，不能用文件内容关键词（曾因此误判"从未生效"）。
-- 取证路径：客户端「新建会话」= 一个本地进程，`~/.workbuddy/sessions/<pid>.json` 记 sessionId/cwd/startedAt；`traces/<pid>/` 存该会话全部 API 通信记录，按块名 grep 即可验证注入与否。
-- `~/.workbuddy/SOUL.md` 强制加载但全局级、污染其他会话，不得用于项目专属规则；云档案 `<memory>` 自动注入但 server 托管、本地不可改。
-
-MEMORY于8月30日压缩，原文已备份于 `D:\Temp\Sys\MEMORY.md.pre-compress-20260830`。
+8月30日，发现似乎MEMORY.MD文件就是Workbuddy的项目级约束，存在强制注入机制，需要进行测试。
+经过测试，记忆注入通道现已清楚，不再需要WORKBUDDY并通过软件设置要求AI读取，直接使用MEMORY即可。同时将MEMORY压缩，并融合WORKBUDDY文件内容，原版两个文件文已备份于 `D:\Temp\bak20260830\`。
 
 关于Marvis 提议的"宁可明确报错，不可静默坏掉"暂不升格为项目级约束，继续观察。
