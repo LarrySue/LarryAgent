@@ -3,13 +3,13 @@
 > - 本文件为**活跃 TODO**：只含当前待办（能力增强 / 长期迭代）+ 工程债务 + 部分远期计划。已完成部分见 `archive/roadmap-history.md`。
 > - **一致性不变量**：✅ 阶段内不得含 [ ]；含 [ ] 即误归档，须移出至 backlog 或对应未来阶段。
 > - 加载方式：软性机制——AI 任务相关时主动 Read 本文件，不自动注入。
-> - 检索归档：需要时 Grep `archive/roadmap-history.md`；排查 BUG / 做改动前先扫归档（精细索引见 WORKBUDDY.md）。
+> - 检索归档：需要时 Grep `archive/roadmap-history.md`；排查 BUG / 做改动前先扫归档。
 
 ## 当前待办
 
-### 网络搜索能力（实现 Trae CN / 测试 Claude Code / WorkBuddy 逻辑层复验通过，2026-08-20）
+### 网络搜索能力（WorkBuddy 逻辑层复验通过，2026-08-20）
 
-> 实现：Trae CN ｜ 测试：Claude Code ｜ WB 复验：读代码 + 42 项测试绿（本人亲跑）+ 前端零改动 + Tier0 key 不落日志
+> 42 项测试绿+ 前端零改动 + Tier0 key 不落日志
 
 - [x] **web_search Tool（Brave 免费层，provider 可插拔）**：对话内 AI 自主发起搜索，实时性问题自动搜并整合，回答标注来源 URL；首版数据源用 Brave 免费层（2000 次/月，需 key），provider 封装可插拔，后续按需替换为 SearXNG（VPS 自托管）
 - [x] **Tool 框架底座（与 web_search 同步夯实地基）**：BaseTool 护栏基类统一超时强制 + 错误归一(ToolError) + 执行日志；"访问外部/本地资源"类叠加 SSRF/caller 校验钩子；配置驱动启用（config.yaml 列启用 Tool + 各自参数）；第三方挂载契约先留接口
@@ -17,8 +17,7 @@
 - [x] **降级策略**：搜索失败/限流 → 指数退避后仍失败 → 降级为正常回答并提示"未能联网核实"，不报错不中断
 - [x] **前端展示**：复用 P4.4 ToolCallCard 展示搜索过程与来源（工具调用可见性价值）
 - [x] **验收方向**：实时性问题→自动搜→带来源标注；失败→降级不中断；抓取超时/内网 URL 被拦截（均由测试覆盖验证）
-- [ ] **真机端到端验收（待老大收尾）**：WB 不碰真实 key（Tier0 红线）且需 GUI 环境，此步只能由老大做——填 `config.yaml` 的 `search.brave_api_key` 真实 Brave key → 启动 LarryAgent → 聊实时问题看来源标注 → 测降级（错 key/断网出现"未能联网核实"且不崩）。逻辑层已全收口，此步为端到端收尾。
-- 注：首版**不做 web_fetch 正文抓取**（代价高：SSRF/反爬/内容清洗/阻塞风险，复杂度高一个量级）；SearXNG 待 VPS 部署后替换 Brave
+- [ ] **真机端到端验收（待老大亲自收尾）**：填 `config.yaml` 的 `search.brave_api_key` 真实 Brave key → 启动 LarryAgent → 聊实时问题看来源标注 → 测降级（错 key/断网出现"未能联网核实"且不崩）。逻辑层已全收口，此步为端到端收尾。
 
 ### 移动端开发
 
