@@ -5,13 +5,19 @@
 
 ## 文件索引
 
+**各 AI 日志**（各自区域只有自己能修改）：
+
 - `log-workbuddy.md` — WorkBuddy（架构师 + 全局协调 + 拍板）
 - `log_design.md` — UI DESIGN 负责人交流区（全面负责 UI 设计；当前独立于主团队、尚未正式入队，负责人待定）
 - `log-claude.md` — Claude Code（代码检查测试）
 - `log-trae.md` — Trae CN（代码具体编写）
 - `log-marvis.md` — Marvis（产品宏观 / 用户代言）
+
+**讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）：
+
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
-- `deployment-architecture.md` — 云部署架构方案草案（云/端边界、配置、隔离、打包、落地顺序，WB 2026-09-03 产，待老大确认后派发，定稿后回 `docs/`）
+- `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
+- `web-search-design.md` — 网络搜索技术选型与设计规格（老大 2026-09-04 由 `docs/` 移入：**尚未展开讨论**，停在讨论稿阶段）
 
 ## 协作规则
 

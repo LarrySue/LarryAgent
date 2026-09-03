@@ -22,4 +22,3 @@
 
 - `ai-governance.md` — 多 AI 协作约束分级总纲（Tier 约束模型、角色分工、协作规则）
 - `ui-reference.md` — UI 设计单一权威参考（组件 / 交互 / 视觉 token，所有 AI 以它为准）
-- `web-search-design.md` — 网络搜索技术选型与设计规格

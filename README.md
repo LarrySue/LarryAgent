@@ -37,9 +37,9 @@ LarryAgent/
 │   ├── tests/               # 前端测试（Vitest）
 │   └── chat.html            # 单文件调试页，由后端同源托管于 /chat.html
 ├── mobile/                  # 手机端（HTML5 Web App，规划中）
-├── docs/                    # 活跃权威文档（见下方「文档导航」）
-├── archive/                 # 冷存档：历史路线图 + 事故复盘报告
-├── exchange/                # 多 AI 协作交流区（只承载活日志，不做存档）
+├── docs/                    # 定案区：活跃权威文档（见 docs/README.md）
+├── archive/                 # 冷存区：历史路线图 + 事故复盘报告（见 archive/README.md）
+├── exchange/                # 活区：多 AI 交流日志 + 讨论稿 / 草案（见 exchange/README.md）
 ├── HUMAN.md                 # 人类治理文件（最高优先级，AI 只读）
 ├── HUMAN_NOTE.md            # 人类零散记录
 ├── TODO.md                  # 活跃待办（唯一事实源）
@@ -150,18 +150,37 @@ cd client && npm run test:unit
 
 ## 文档导航
 
+文档分三区（落位标准见各区 README）：**定案区 `docs/`**（活跃权威）、**活区 `exchange/`**（日志 + 讨论稿）、**冷存区 `archive/`**（已锁定）。
+
 | 文件 | 用途 |
 |---|---|
 | `HUMAN.md` / `HUMAN_NOTE.md` | 人类治理区：前者为约束（AI 只读），后者为零散记录 |
 | `TODO.md` | **活跃待办，唯一事实源**——未决事项一律以此为准 |
-| `docs/ai-governance.md` | 多 AI 协作治理：Tier 约束模型、角色分工、协作规则 |
-| `docs/ui-reference.md` | UI 设计规格（组件 / 交互 / 视觉 token） |
-| `exchange/deployment-architecture.md` | 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；草案待定稿后回 `docs/`） |
-| `docs/web-search-design.md` | 网络搜索能力设计 |
-| `archive/roadmap-history.md` | 冷存：P0–P4 已完成阶段详情 |
-| `archive/report-*.md` | 冷存：事故复盘报告（**已锁定，不追加讨论**） |
-| `exchange/README.md` | 协作交流区规则（只承载活日志，不做存档留底） |
+| `docs/README.md` / `archive/README.md` / `exchange/README.md` | 三区各自规则（落位标准 / 维护归属 / 区域纪律） |
 | `.claude/CLAUDE.md` / `.trae/TRAE.md` | 各 AI 角色约束，会话开始加载 |
+
+**定案区 `docs/`**（活跃权威 / 单一真相源）：
+
+| 文件 | 用途 |
+|---|---|
+| `docs/ai-governance.md` | 多 AI 协作治理：Tier 约束模型、角色分工、协作规则 |
+| `docs/ui-reference.md` | UI 设计规格（组件 / 交互 / 视觉 token），单一权威参考 |
+
+**活区 `exchange/`**（各 AI 日志 + 未定稿讨论稿）：
+
+| 文件 | 用途 |
+|---|---|
+| `log-*.md` / `log_design.md` | 各 AI 交流日志（WorkBuddy / Claude / Trae / Marvis / UI 设计） |
+| `deployment-architecture.md` | 云部署架构方案（待老大确认后派发，定稿回 `docs/`） |
+| `discussion-time-context.md` | 时间上下文（时间对齐）专题讨论 |
+| `web-search-design.md` | 网络搜索技术选型与设计规格（**尚未展开讨论**） |
+
+**冷存区 `archive/`**（已锁定，只复盘不追加）：
+
+| 文件 | 用途 |
+|---|---|
+| `archive/roadmap-history.md` | 冷存：P0–P4 已完成阶段 + 后续迭代详情 |
+| `archive/report-*.md` | 冷存：事故复盘报告（**已锁定，不追加讨论**） |
 
 ## 多 AI 协作
 
