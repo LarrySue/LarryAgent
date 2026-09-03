@@ -98,7 +98,7 @@
 - 固定 **48px**，border-top，与侧栏顶栏同风格（三轮UI调整新增）
 - 右侧设置按钮：齿轮图标（线性 SVG 临时占位，被戏称"太阳"，后续换正式图标）+ 向上弹出菜单（elevated 底 + 阴影，同 conv-menu 风格）
 - 菜单三项：**已归档 / 回收站**（点击事件空函数占位，待接入页面/流程）；**关于**（已实现弹窗，见下，2026-08-28）
-- "关于"弹窗（v5 落地）：header 一行布局（logo 90px + 产品名 48px/bold 左对齐 + "Version {版本号}" 右对齐，三者底部对齐）；版本号从 `client/package.json` 动态读取；中间三行制作名单（Creator & Designer / Crafted with / AI Copilot，标签列右对齐冒号对齐、14px/semibold）；末行英文版权说明（xs/muted）；无关闭按钮（点遮罩关闭）；弹窗宽 528px
+- "关于"弹窗（v5 落地，v7 补归属行）：header 一行布局（logo 90px + 产品名 48px/bold 左对齐 + "Version {版本号}" 右对齐，三者底部对齐）；版本号从 `client/package.json` 动态读取；中间三行制作名单（Creator & Designer / Crafted with / AI Copilot，标签列右对齐冒号对齐、14px/semibold）；末两行 about-note（英文版权说明 + "Web Search Powered by Brave" 归属标注，均为 xs/muted，2026-09-04 老大直加）；无关闭按钮（点遮罩关闭）；弹窗宽 528px
 - 历史：v3 曾为版本号占位文本（v0.1.0），三轮起改为设置入口
 
 ## 6. 边界状态
@@ -142,5 +142,6 @@
 - **v4（2026-08-28，三轮 UI 调整，老大直调）**：侧栏底部 footer 版本号占位 → 设置按钮（齿轮 SVG 临时占位）+ 向上弹出菜单（已归档/回收站/关于，点击事件空函数待接入）；设置入口自 TopBar 正式移至侧栏底部——详见 §5.6
 - **v5（2026-08-28，"关于"功能落地，老大直调）**：设置菜单"关于" → 弹窗实现——header 一行布局（logo 90px + 产品名 48px/bold 左对齐 + "Version" 版本号右对齐，底部对齐）；版本号从 package.json 动态读取；中间三行制作名单（标签右对齐冒号对齐、14px/semibold）；末行英文版权说明；无关闭按钮（点遮罩关闭）；弹窗宽 528px；名单间距上下 20px——详见 §5.6
 - **v6（2026-09-03，角色清单后端下发改造，WB 派发 / Trae 实现）**：角色清单从「前端硬编码 + config 两份、人工同步」改「后端 config 单一数据源 + `GET /api/roles` 下发 + 前端动态渲染」；`--role-default/health/finance` 三个 CSS 变量删除、改下发 hex 直用；前端 `type Role` 联合类型改 string；加新角色只改 config.yaml + 重启，前端零改动——详见 §1.4 / §5.5
+- **v7（2026-09-04，Brave 归属标注，老大直调）**："关于"弹窗末行版权说明下新增一行 about-note "Web Search Powered by Brave"（Brave $5/月信用的条款归属要求；换 provider 改一个词即可）——详见 §5.6
 - **已知局限**：Trae 实现时的部分 UI 决策已固化于 `tokens.css` / 组件代码（如新增 `--weight-semibold/bold`），未单独文档化的细节以代码为准；后续由 Trae 点将时回写补充本文件
 - **过程与未决项**：设计冲突分析、迭代历程见 `exchange/log_design.md`；**未决 / 待办（待拍板、Trae 回写等）已归 `TODO.md`「UI/UX优化」**；产品视角提案与讨论见 `exchange/log-marvis.md`

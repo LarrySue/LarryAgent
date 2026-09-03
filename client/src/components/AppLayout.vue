@@ -353,6 +353,7 @@ function startNewChat() {
           <p class="about-line"><span class="about-label">Crafted with：</span><span class="about-value">苏苏(WorkBuddy) · Trae · Claude · Marvis · Qoder</span></p>
           <p class="about-line"><span class="about-label">AI Copilot：</span><span class="about-value">DeepSeek · GLM · Hunyuan · Qwen</span></p>
           <p class="about-note">All AI-generated code has been reviewed, integrated, and warranted by Su Larry.</p>
+          <p class="about-note">Web Search Powered by Brave</p>
         </div>
       </div>
     </div>
