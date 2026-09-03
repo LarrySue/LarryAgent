@@ -171,6 +171,20 @@ export async function getConversationMessages(
   return handleResponse(res);
 }
 
+// === Roles API ===
+
+export interface RoleInfo {
+  key: string;
+  label: string;
+  color: string;
+}
+
+/** 角色清单：GET /api/roles（后端 config.yaml roles 段下发） */
+export async function listRoles(): Promise<RoleInfo[]> {
+  const res = await fetch(`${API_BASE}/roles`);
+  return handleResponse(res);
+}
+
 // === Models API ===
 
 export async function listModels(): Promise<string[]> {

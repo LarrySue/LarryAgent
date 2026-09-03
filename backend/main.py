@@ -132,12 +132,14 @@ app.add_middleware(AuthMiddleware)
 from api.chat import router as chat_router
 from api.conversations import router as conversations_router
 from api.memory import router as memory_router
+from api.roles import router as roles_router
 from api.tools import router as tools_router
 from models.llm import _MODEL_PROVIDER_MAP
 
 app.include_router(chat_router)
 app.include_router(conversations_router)
 app.include_router(memory_router)
+app.include_router(roles_router)
 app.include_router(tools_router)
 
 

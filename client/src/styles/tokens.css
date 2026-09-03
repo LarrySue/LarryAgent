@@ -38,10 +38,7 @@
   --color-info:            #378ADD;
   --color-info-bg:         rgba(55, 138, 221, 0.12);
 
-  /* ===== 角色标识色 ===== */
-  --role-default:          #9CA3AF;
-  --role-health:           #34D399;
-  --role-finance:          #FBBF24;
+  /* 角色标识色已移除（2026-09-03 角色清单后端下发改造）：改为 /api/roles 下发 hex，见 docs/ui-reference.md §1.4 */
 
   /* ===== 消息气泡 ===== */
   --bubble-user-bg:        #1E293B;

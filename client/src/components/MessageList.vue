@@ -24,10 +24,7 @@ const appStore = useAppStore();
 const containerRef = ref<HTMLElement | null>(null);
 const autoScroll = ref(true);
 
-const roleClass = computed(() => {
-  const color = `var(--role-${appStore.currentRole})`;
-  return color;
-});
+const roleClass = computed(() => appStore.currentRoleInfo.color);
 
 function scrollToBottom() {
   if (autoScroll.value && containerRef.value) {
@@ -168,7 +165,7 @@ function onScroll() {
   background: var(--bubble-agent-bg);
   border: 1px solid transparent;
   color: var(--color-text-primary);
-  border-left: 3px solid var(--role-color, var(--role-default));
+  border-left: 3px solid var(--role-color);
 }
 
 .error-bubble {

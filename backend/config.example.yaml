@@ -77,15 +77,30 @@ embedding:
 # 角色配置
 # 每个角色可定义 system_prompt 和可用工具列表
 # 未配置 tools 则该角色可使用所有已注册工具
+# label（显示名，缺省回退 = key）/ color（hex，缺省回退 = #9CA3AF）
+# 角色清单经 GET /api/roles 下发给前端，加新角色只需在此新增段 + 重启
 # ============================================================
 roles:
   default:
+    label: "通用"
+    color: "#9CA3AF"
     system_prompt: "你是 LarryAgent，一个个人 AI 助手。你可以调用工具来读写文件和执行命令。"
     # tools: ["file_ops", "shell"]  # 省略则允许所有工具
 
-  # coder:
-  #   system_prompt: "你是一个编程助手，擅长解决技术问题。"
-  #   tools: ["file_ops", "shell"]
+  code:
+    label: "编程"
+    color: "#60A5FA"
+    system_prompt: "你是 Larry 的编程搭档，擅长代码编写、调试与架构设计。假设用户具备专业能力，直接讨论技术细节。"
+
+  health:
+    label: "健康"
+    color: "#34D399"
+    system_prompt: "你是 Larry 的健康管理顾问，关注饮食、运动、睡眠与体检数据，帮助建立和维持健康习惯。不提供医疗诊断，疑似病症建议就医。"
+
+  finance:
+    label: "金融"
+    color: "#FBBF24"
+    system_prompt: "你是 Larry 的金融助手，关注投资理财、财务规划等话题。"
 
 # ============================================================
 # 工具安全配置

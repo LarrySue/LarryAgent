@@ -1,32 +1,34 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useAppStore, FALLBACK_ROLES } from "@/stores/app";
+import type { RoleInfo } from "@/api";
 
-export type Role = "default" | "health" | "finance";
+const appStore = useAppStore();
 
-interface RoleOption {
-  key: Role;
-  label: string;
-  colorVar: string;
-}
-
-defineProps<{
-  modelValue: Role;
+const props = defineProps<{
+  modelValue: string;
 }>();
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: Role): void;
+  (e: "update:modelValue", value: string): void;
 }>();
 
-const roles: RoleOption[] = [
-  { key: "default", label: "通用", colorVar: "var(--role-default)" },
-  { key: "health", label: "健康", colorVar: "var(--role-health)" },
-  { key: "finance", label: "金融", colorVar: "var(--role-finance)" },
-];
+// 选项来源：后端下发的角色清单（动态）；store 尚未拉取 / 兜底前用本地兜底，保证非空
+const options = computed<RoleInfo[]>(() =>
+  appStore.roles.length > 0 ? appStore.roles : FALLBACK_ROLES
+);
+
+// 当前选中角色的元数据；modelValue 不在清单时回退到第一项
+const current = computed<RoleInfo>(() => {
+  return (
+    options.value.find((r) => r.key === props.modelValue) ?? options.value[0]
+  );
+});
 
 const open = ref(false);
 
-function select(role: Role) {
-  emit("update:modelValue", role);
+function select(role: RoleInfo) {
+  emit("update:modelValue", role.key);
   open.value = false;
 }
 </script>
@@ -34,19 +36,19 @@ function select(role: Role) {
 <template>
   <div class="role-selector" :class="{ open }">
     <button class="selector-trigger" @click="open = !open">
-      <span class="role-dot" :style="{ background: roles.find(r => r.key === modelValue)?.colorVar }"></span>
-      <span class="role-label">{{ roles.find(r => r.key === modelValue)?.label }}</span>
+      <span class="role-dot" :style="{ background: current.color }"></span>
+      <span class="role-label">{{ current.label }}</span>
       <span class="chevron">▼</span>
     </button>
     <div v-if="open" class="dropdown" @click.stop>
       <button
-        v-for="role in roles"
+        v-for="role in options"
         :key="role.key"
         class="dropdown-item"
         :class="{ active: role.key === modelValue }"
-        @click="select(role.key)"
+        @click="select(role)"
       >
-        <span class="role-dot" :style="{ background: role.colorVar }"></span>
+        <span class="role-dot" :style="{ background: role.color }"></span>
         <span class="role-name">{{ role.label }}</span>
         <span v-if="role.key === modelValue" class="check">✓</span>
       </button>

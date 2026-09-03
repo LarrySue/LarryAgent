@@ -33,15 +33,15 @@
 
 ### 1.4 角色标识色（轻量差异化，不换肤）
 
-- `--role-default #9CA3AF`（亮中性灰，无角色）
-- `--role-health #34D399`（低饱和翠绿）
-- `--role-finance #FBBF24`（低饱和琥珀）
+- **色值来源（2026-09-03 起，角色清单后端下发）**：角色清单由后端 `config.yaml` `roles` 段经 `GET /api/roles` 下发（`{key, label, color}`），前端不再维护 `--role-*` 变量、不再硬编码角色；**加新角色只改 config.yaml + 重启，前端零改动**
+- 建议色值（放 config roles 段）：default `#9CA3AF`（亮中性灰）/ code `#60A5FA` / health `#34D399`（低饱和翠绿）/ finance `#FBBF24`（低饱和琥珀）
+- 缺省兜底：label 缺省回退 = key；color 缺省回退 = `#9CA3AF`（后端与前端同规则）
 - 语义层级：无角色=灰，有角色=淡彩
 
 ### 1.5 消息气泡
 
 - 用户：`--bubble-user-bg #1E293B` + 边框 `rgba(55,138,221,0.3)`（带一抹强调色），右对齐，无角色色带
-- AI：`--bubble-agent-bg #1A1D24`，左对齐，**左侧色带 3px = `--role-{current}`**，无外框
+- AI：`--bubble-agent-bg #1A1D24`，左对齐，**左侧色带 3px = 当前角色下发色（hex，§1.4）**，无外框
 - 错误：`--bubble-error-bg rgba(239,68,68,0.08)` + 边框 `rgba(239,68,68,0.3)`，文字 `--color-error`
 
 ## 2. 排版 / 间距 / 圆角 / 过渡（数值以 `tokens.css` 为准）
@@ -72,11 +72,11 @@
 ### 5.1 ToolCallCard（灵魂组件）
 - 展示：工具名 + 轮次 + 状态（执行中 spinner / 成功 ✅ / 失败 ❌）+ 参数（可折叠）+ 结果摘要
 - 样式：`--color-bg-elevated` 底 + 1px `--color-border-default` 边 + radius-md(8px) + padding 12/16（实际代码 `--space-3 var(--space-4)`）+ max-width 85%
-- header 左侧色带 3px = `--role-{current}`；成功→`--color-success` 绿条 / 失败→`--color-error` 红条
+- header 左侧色带 3px = 当前角色下发色（hex，§1.4）；成功→`--color-success` 绿条 / 失败→`--color-error` 红条
 - 可点击 header toggle 参数/结果区
 
 ### 5.2 MessageBubble
-- AI 气泡左侧 3px 色带 = `--role-{current}`；padding 12/16；max-width 72%（防过宽）
+- AI 气泡左侧 3px 色带 = 当前角色下发色（hex，§1.4）；padding 12/16；max-width 72%（防过宽）
 - 用户右对齐、`--bubble-user-bg`、带强调色边框、无角色色带
 - 错误气泡：error 底/边/文字，左对齐
 
@@ -91,7 +91,7 @@
 
 ### 5.5 TopBar
 - 高度 **50px**（2026-08-28 二轮UI调整：原 48px；侧栏顶栏同步固定 50px）；`--color-bg-surface` 底 + 1px 底边框
-- 左：侧栏折叠钮（仅桌面）；中：产品名/当前会话标题（`--text-xl` 18px / `--weight-bold` 700，二轮UI调整由 16/500 上调）；右：角色切换下拉（角色色点+名+箭头）
+- 左：侧栏折叠钮（仅桌面）；中：产品名/当前会话标题（`--text-xl` 18px / `--weight-bold` 700，二轮UI调整由 16/500 上调）；右：角色切换下拉（角色色点+名+箭头，角色清单由后端下发动态渲染）
 - 设置入口：不在 TopBar（P4.5 曾砍除），已移至侧栏底部 footer（§5.6，三轮UI调整）
 
 ### 5.6 SidebarFooter（侧栏底部）
@@ -141,5 +141,6 @@
 - **v3（2026-08-28，二轮 UI 调整，老大直调）**：顶栏统一固定 50px（主窗口 48→50、侧栏内容撑起~56→固定 50）；主窗口顶栏标题 16/500→18px/700（`--text-xl`/`--weight-bold`）；侧栏底部新增 footer 占位区域（48px 固定、border-top，当前仅占位文本 v0.1.0）；ChatInput placeholder 与发送按钮文字 14px（局部值）——详见 §3 / §5.5
 - **v4（2026-08-28，三轮 UI 调整，老大直调）**：侧栏底部 footer 版本号占位 → 设置按钮（齿轮 SVG 临时占位）+ 向上弹出菜单（已归档/回收站/关于，点击事件空函数待接入）；设置入口自 TopBar 正式移至侧栏底部——详见 §5.6
 - **v5（2026-08-28，"关于"功能落地，老大直调）**：设置菜单"关于" → 弹窗实现——header 一行布局（logo 90px + 产品名 48px/bold 左对齐 + "Version" 版本号右对齐，底部对齐）；版本号从 package.json 动态读取；中间三行制作名单（标签右对齐冒号对齐、14px/semibold）；末行英文版权说明；无关闭按钮（点遮罩关闭）；弹窗宽 528px；名单间距上下 20px——详见 §5.6
+- **v6（2026-09-03，角色清单后端下发改造，WB 派发 / Trae 实现）**：角色清单从「前端硬编码 + config 两份、人工同步」改「后端 config 单一数据源 + `GET /api/roles` 下发 + 前端动态渲染」；`--role-default/health/finance` 三个 CSS 变量删除、改下发 hex 直用；前端 `type Role` 联合类型改 string；加新角色只改 config.yaml + 重启，前端零改动——详见 §1.4 / §5.5
 - **已知局限**：Trae 实现时的部分 UI 决策已固化于 `tokens.css` / 组件代码（如新增 `--weight-semibold/bold`），未单独文档化的细节以代码为准；后续由 Trae 点将时回写补充本文件
 - **过程与未决项**：设计冲突分析、迭代历程见 `exchange/log_design.md`；**未决 / 待办（待拍板、Trae 回写等）已归 `TODO.md`「UI/UX优化」**；产品视角提案与讨论见 `exchange/log-marvis.md`

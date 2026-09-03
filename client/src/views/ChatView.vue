@@ -50,6 +50,10 @@ async function loadModels() {
   }
 }
 
+async function loadRoles() {
+  await appStore.fetchRoles(); // 内部已兜底：失败/空 → default（不白屏）
+}
+
 async function loadConversationMessages(id: number) {
   try {
     const apiMsgs = await getConversationMessages(id);
@@ -184,7 +188,7 @@ watch(
 );
 
 onMounted(async () => {
-  await Promise.all([loadConversations(), loadModels()]);
+  await Promise.all([loadConversations(), loadModels(), loadRoles()]);
 
   // If a conversation is already selected, load its messages
   if (appStore.currentConversationId !== null) {

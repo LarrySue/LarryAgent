@@ -13,7 +13,7 @@ const props = defineProps<{
 const appStore = useAppStore();
 const expanded = ref(true);
 
-const roleColor = computed(() => `var(--role-${appStore.currentRole})`);
+const roleColor = computed(() => appStore.currentRoleInfo.color);
 
 const statusColor = computed(() => {
   if (props.status === "success") return "var(--color-success)";

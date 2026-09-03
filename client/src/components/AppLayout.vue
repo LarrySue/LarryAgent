@@ -186,7 +186,7 @@ function startNewChat() {
     <header class="mobile-header">
       <button class="menu-btn" @click="toggleSidebar">☰</button>
       <span class="mobile-title"><BrandText /></span>
-      <span class="role-dot" :style="{ background: `var(--role-${appStore.currentRole})` }"></span>
+      <span class="role-dot" :style="{ background: appStore.currentRoleInfo.color }"></span>
     </header>
 
     <!-- 侧栏遮罩（移动端） -->
