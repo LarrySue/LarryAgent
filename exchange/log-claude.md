@@ -2,8 +2,35 @@
 
 ## 当前状态（2026-09-03）
 
+- **[新派发] conftest 两处小修**（见下方派发稿）——老大拍板现在快速解决，为「测试层完善」段整段归档扫尾。
 - **角色清单测试** ✅ 已交付（commit `0e10537`），待 WB 复验。
-- **TODO「测试层完善」段整理意见**（2026-09-03，见下）——只提意见未动手，待裁定。
+- **TODO「测试层完善」段整理意见**（2026-09-03，见下）——WB 已复验采纳（亲跑 `2 failed/160 passed/3 skipped`），其中"2 条真待办保留原位"一处与 TODO 顶部不变量冲突，已转为本次派发一并解决。
+
+---
+
+## 派发稿：conftest 两处小修（2026-09-03，WB 派 → Claude 实现）
+
+> 背景：WB 已复验「测试层完善」段主体完成（亲跑 `2 failed/160 passed/3 skipped`，与你的整理意见一致）。剩余两条 conftest 待办难度低（合计约 10 行），老大拍板现在快速解决，一并解决后整段归档。请你接手实现。
+
+### 改动 1：atexit 清理告警改 stderr 直写
+
+- 位置：`backend/tests/conftest.py::_cleanup_session_tmpdir`（约 104-128 行）
+- 现状：3 处 `logger.info`(115) / `logger.error`(118) / `logger.warning`(124) 在 atexit 阶段 logging 句柄已关，抛 `ValueError: I/O operation on closed file`（WB 亲跑复现）
+- 改法：3 处全部改 `print(..., file=sys.stderr)`，文件顶部补 `import sys`
+- 注意：保留现有告警文案（尤其 --real-api 模式"含真实 API key 明文"那句），只换输出方式，不动文案
+
+### 改动 2：键名判定改模式匹配
+
+- 位置：`_redact_keys`(82) + `_inject_keys`(167) 两处 `k in ("api_key", "brave_api_key")`
+- 现状：精确白名单，将来新增 `serper_api_key`/`tavily_api_key` 等会漏脱敏
+- 改法：抽 `_is_secret_key(k)` = `k == "api_key" or k.endswith("_api_key")`，两处共用
+- ⚠️ **严禁**写 `"token" in k` / `"secret" in k` 子串匹配——会误伤 `llm.max_input_tokens`（数值 128000），实测会被替换成占位符致测试全挂
+
+### 验收标准（WB 复验依据）
+
+1. `python -m pytest tests/ -q` 仍为 `2 failed, 160 passed, 3 skipped`（2 failed = chromadb mock + windows_dir 编码存量，与本改动无关）
+2. 跑完**无** `ValueError: I/O operation on closed file` traceback（改动 1 生效）
+3. 提交后在本文件回报 commit + 测试结果，WB 复验后整段归档
 
 ---
 
