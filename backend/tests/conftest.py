@@ -25,6 +25,7 @@ import atexit
 import logging
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 
@@ -75,11 +76,23 @@ _cfg.setdefault("server", {})["api_key"] = ""  # 鉴权透传，测试不校验
 _KEY_PLACEHOLDER = "__TEST_PLACEHOLDER__"
 
 
+def _is_secret_key(k: str) -> bool:
+    """
+    判定键名是否为密钥类字段（模式匹配，覆盖未来新增 provider）。
+
+    - 精确名 `api_key`（models.<name>.api_key / embedding.api_key 等）
+    - 后缀 `_api_key`（brave_api_key / 未来 serper_api_key / tavily_api_key 等）
+    ⚠️ 严禁子串匹配（`"token" in k` / `"secret" in k`）——会误伤
+    `llm.max_input_tokens`（数值 128000）等非密钥字段（实测替换后测试全挂）。
+    """
+    return k == "api_key" or k.endswith("_api_key")
+
+
 def _redact_keys(node):
-    """递归替换所有名为 api_key / brave_api_key 的值为占位符。"""
+    """递归替换所有密钥类字段（_is_secret_key 判定）的值为占位符。"""
     if isinstance(node, dict):
         for k, v in list(node.items()):
-            if k in ("api_key", "brave_api_key") and isinstance(v, str) and v:
+            if _is_secret_key(k) and isinstance(v, str) and v:
                 node[k] = _KEY_PLACEHOLDER
             else:
                 _redact_keys(v)
@@ -107,24 +120,27 @@ def _cleanup_session_tmpdir():
     先 gc.collect() 释放文件句柄（ChromaDB/sqlite 句柄是 Windows 删除失败主因），
     再删除；仍失败则告警——告警文案须区分是否 --real-api：该模式残留含 key 明文。
     """
+    # 注意：atexit 阶段 logging 句柄已关闭（logger.* 会抛 ValueError:
+    # I/O operation on closed file），统一用 stderr 直写（WB 派发 2026-09-03）
     try:
         import gc
 
         gc.collect()  # 释放 ChromaDB/sqlite 文件句柄，提高删除成功率
         shutil.rmtree(_session_tmpdir, ignore_errors=False)
-        logger.info("Test session temp dir cleaned: %s", _session_tmpdir)
+        print(f"[conftest] Test session temp dir cleaned: {_session_tmpdir}",
+              file=sys.stderr)
     except Exception as e:
         if _REAL_API_MODE:
-            logger.error(
-                "⚠️ 清理失败且为 --real-api 模式：%s 中的 config.session.yaml "
-                "【含真实 API key 明文】，请立即手动删除。原因：%s",
-                _session_tmpdir, e,
+            print(
+                f"⚠️ [conftest] 清理失败且为 --real-api 模式：{_session_tmpdir} 中的 "
+                f"config.session.yaml 【含真实 API key 明文】，请立即手动删除。原因：{e}",
+                file=sys.stderr,
             )
         else:
-            logger.warning(
-                "Test session temp dir cleanup FAILED: %s (%s). "
+            print(
+                f"[conftest] Test session temp dir cleanup FAILED: {_session_tmpdir} ({e}). "
                 "目录残留（无 key，占位符设计），可手动删除。",
-                _session_tmpdir, e,
+                file=sys.stderr,
             )
 
 
@@ -161,10 +177,10 @@ def pytest_configure(config):
             real_cfg = yaml.safe_load(f)
 
         def _inject_keys(target, source):
-            """递归：source 的 api_key/brave_api_key 非空时覆盖 target 对应位置。"""
+            """递归：source 的密钥类字段（_is_secret_key 判定）非空时覆盖 target。"""
             if isinstance(source, dict):
                 for k, v in source.items():
-                    if k in ("api_key", "brave_api_key") and isinstance(v, str) and v:
+                    if _is_secret_key(k) and isinstance(v, str) and v:
                         if isinstance(target, dict) and k in target:
                             target[k] = v
                     elif isinstance(v, (dict, list)) and isinstance(target, dict) and k in target:
