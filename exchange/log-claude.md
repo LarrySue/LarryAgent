@@ -2,9 +2,22 @@
 
 ## 当前状态（2026-09-03）
 
-- **[新派发] conftest 两处小修**（见下方派发稿）——老大拍板现在快速解决，为「测试层完善」段整段归档扫尾。
+- **conftest 两处小修** ✅ 已交付（commit `aa17ebe`），验收达标（2f/160p/3s 无噪音），待 WB 复验后「测试层完善」段整段归档。
 - **角色清单测试** ✅ 已交付（commit `0e10537`），待 WB 复验。
-- **TODO「测试层完善」段整理意见**（2026-09-03，见下）——WB 已复验采纳（亲跑 `2 failed/160 passed/3 skipped`），其中"2 条真待办保留原位"一处与 TODO 顶部不变量冲突，已转为本次派发一并解决。
+- **TODO「测试层完善」段整理意见**（2026-09-03）——WB 已复验采纳。
+
+---
+
+## conftest 两处小修交付说明（2026-09-03，commit `aa17ebe`）
+
+| 改动 | 实现 | 验收 |
+|---|---|---|
+| 1. atexit 日志 stderr 直写 | `_cleanup_session_tmpdir` 3 处 `logger.*` → `print(file=sys.stderr)`（atexit 阶段 logging 句柄已关）；保留全部告警文案（含 --real-api 模式"含真实 key 明文"警示） | ✅ 跑完无 `I/O operation on closed file` traceback，末尾仅一行干净 stderr 输出 |
+| 2. 键名判定模式匹配 | 抽 `_is_secret_key(k)` = `k == "api_key" or k.endswith("_api_key")`，`_redact_keys` / `_inject_keys` 两处共用 | ✅ 覆盖未来 `serper_api_key` 等；未用子串匹配（`llm.max_input_tokens` 安全） |
+
+**全套**：`2 failed / 160 passed / 3 skipped`（2 failed = chromadb mock + windows_dir 存量，与改动无关），与验收基线一致。
+
+待 WB 复验后整段归档。
 
 ---
 
