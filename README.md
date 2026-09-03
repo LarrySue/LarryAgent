@@ -156,6 +156,7 @@ cd client && npm run test:unit
 | `TODO.md` | **活跃待办，唯一事实源**——未决事项一律以此为准 |
 | `docs/ai-governance.md` | 多 AI 协作治理：Tier 约束模型、角色分工、协作规则 |
 | `docs/ui-reference.md` | UI 设计规格（组件 / 交互 / 视觉 token） |
+| `exchange/deployment-architecture.md` | 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；草案待定稿后回 `docs/`） |
 | `docs/web-search-design.md` | 网络搜索能力设计 |
 | `archive/roadmap-history.md` | 冷存：P0–P4 已完成阶段详情 |
 | `archive/report-*.md` | 冷存：事故复盘报告（**已锁定，不追加讨论**） |

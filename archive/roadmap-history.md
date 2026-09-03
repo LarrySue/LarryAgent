@@ -348,3 +348,16 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] **WB 复验**：代码逐行核对（4 验收标准全坐实）+ 后端全套 `2f/160p/3s`（基线 155+5 新增，2 failed 均已知存量：chromadb mock / windows_dir 编码）+ 前端 `58/58` 全绿 + `vue-tsc --noEmit` 通过（Claude 仅 grep，WB 实跑类型检查）
 - **遗留（不阻塞验收）**：本地 `config.yaml` roles 段实为 5 角色（default/code/health/finance/science，science 为老大新增）且均无 label/color → 前端显示英文 key + 灰色兜底；补 label/color 由老大决定
 - 提交：`8946d97`（实现）/ `0e10537`（测试）/ `fe8372d`（交付说明）
+
+**测试层完善（测试环境修复 + 集成测试层恢复）** ✅（2026-08-30 启动，2026-09-03 闭环；老大拍板合并派发 Claude，WB 复验）
+
+> 老大 2026-08-30 拍板：测试环境修复（pytest-asyncio 不兼容）+ 集成测试层恢复合并派发 Claude。原派发规格见 `exchange/log-claude.md`。
+
+- [x] **合并任务**（Claude `0e8d52a`）：① 修复 pytest 9.1.1 ↔ pytest-asyncio 1.4.0 不兼容（插件未加载）② 恢复 `test_integration_llm.py` 3 用例并改 assert/raise 去假绿 ③ `--real-api` marker + conftest 开关（默认跳过防误烧 key）④ 分层原则 + mock 覆盖清单写入 `.claude/CLAUDE.md`
+- [x] **33 个失败事件循环污染评估**（`0e8d52a`）：实为跨文件事件循环污染——FastAPI TestClient 退出销毁当前线程事件循环，后续 sync 测试 `asyncio.get_event_loop()` 抛 RuntimeError，与 pytest-asyncio 无关；conftest `_ensure_event_loop` autouse fixture 重建循环修复，42 failed → 2 failed
+- [x] **`--real-api` 注入路径实测**：老大授权专用测试 key，WB 亲跑 2 轮——对照组占位符 / 实验组真实 key，注入生效；3 用例 ~34s 通过，进程不再挂起（原 17.5min aiosqlite BUG 已修复）；config.yaml 跑后原样还原
+- [x] **atexit 清理告警改 stderr 直写**（Claude `aa17ebe`）：`_cleanup_session_tmpdir` 3 处 `logger.*` → `print(file=sys.stderr)`（atexit 阶段 logging 句柄已关，原抛 ValueError 夹 traceback 噪音）；保留原告警文案（含 --real-api key 明文警示）
+- [x] **conftest 键名判定改模式匹配**（Claude `aa17ebe`）：抽 `_is_secret_key(k)`，`_redact_keys`/`_inject_keys` 两处共用，覆盖未来新增 provider key；未用子串匹配（`llm.max_input_tokens` 安全）
+- **WB 裁决（2026-08-30）**：冒烟频率 = 发版前 + 大改动后；Brave 真实搜索暂不纳入冒烟；`--real-api` 跑挂不阻塞交付（真实 API 不稳定属外部因素，该层定位"契约哨兵"）
+- **最终基线（2026-09-03 WB 实测）**：`2 failed / 160 passed / 3 skipped`。2 failed = `test_chromadb_degradation`（mock 已不存在的 `archiver.get_db`）+ `test_windows_dir`（中文 Windows 编码断言），均为独立存量，已转「工程债务」待处理
+- 提交：`0e8d52a`（合并任务 + 污染修复）/ `aa17ebe`（两处小修）/ `c3db75a`（交付说明）

@@ -20,19 +20,6 @@
 - [ ] **真机端到端验收（待老大收尾）**：WB 不碰真实 key（Tier0 红线）且需 GUI 环境，此步只能由老大做——填 `config.yaml` 的 `search.brave_api_key` 真实 Brave key → 启动 LarryAgent → 聊实时问题看来源标注 → 测降级（错 key/断网出现"未能联网核实"且不崩）。逻辑层已全收口，此步为端到端收尾。
 - 注：首版**不做 web_fetch 正文抓取**（代价高：SSRF/反爬/内容清洗/阻塞风险，复杂度高一个量级）；SearXNG 待 VPS 部署后替换 Brave
 
-### 测试层完善（老大 2026-08-30 拍板：环境修复 + 集成层恢复 合并派发 Claude）
-
-> 派发规格见 `exchange/log-claude.md`「集成测试层恢复 + 测试环境修复（合并派发）」。细节由 Claude 定。
-
-- [ ] **合并任务（Claude 执行）**：① 修复 pytest 9.1.1 ↔ pytest-asyncio 1.4.0 不兼容（插件未被加载）② 恢复 `test_integration_llm.py` 3 用例并改 assert/raise 去假绿 ③ `--real-api` marker + conftest 开关（默认跳过，防误烧 key）④ 分层原则 + mock 覆盖清单写入 `.claude/CLAUDE.md`（不占 TODO）
-- [ ] **WB 复验新发现 · 建议一并评估**：33 个失败（`test_shell_tool` 14 + `test_file_ops_tool` 19）实为**跨文件事件循环污染**，与 pytest-asyncio 无关——FastAPI `TestClient` 退出时销毁当前线程事件循环，后续 sync 测试调 `asyncio.get_event_loop()` 抛 `RuntimeError: There is no current event loop in thread 'MainThread'`（`asyncio/events.py:681`）。实证：file_ops 单跑 20/20 绿；test_archive+file_ops 31 全绿；test_conversations 或 test_chat_service + file_ops → 19 failed。Claude 先评估修复成本，复杂则回报待裁
-- **WB 裁决（2026-08-30 已定，Claude 照办）**：冒烟频率 = 发版前 + 大改动后；Brave 真实搜索**暂不纳入**冒烟；`--real-api` 跑挂**不阻塞交付**（真实 API 不稳定属外部因素，该层定位为"契约哨兵"）
-- **基线（2026-08-30 01:47 WB 实测，供验收对比）**：`42 failed / 113 passed`。构成：integration 3（pytest-asyncio）+ chromadb 6（mock 已不存在的 `archiver.get_db`）+ test_windows_dir 1（中文 Windows 编码）= 真失败 10 个；其余 33 个为上述污染所致、单跑即绿。修复后须对比此基线，确保无新增回归
-- [x] **`--real-api` 注入路径实测（老大 2026-08-30 授权专用测试 key，WB 亲跑 2 轮，✅ 通过）**：对照组（无 flag）session yaml 的 `deepseek.api_key` = `__TEST_PLACEHOLDER__`；实验组（带 flag）= 真实 key（len 35，非占位符）→ **注入路径确实生效**；3 用例 `3 passed in ~34s`，**进程不再挂起**（原 17.5min aiosqlite BUG 已修复）；config.yaml 跑后已原样还原（校验一致）
-- [ ] **atexit 清理告警改用 stderr 直写（低优先级，待点将，来源 `archive/report-2026-08-30.md` §十三 第 3 条）**：`conftest.py::_cleanup_session_tmpdir` 用 `logger.warning` 报清理失败，但 atexit 阶段 logging 的文件句柄已关 → 抛 `ValueError: I/O operation on closed file`，靠 logging 的 `handleError` 兜底打到 stderr 才可见，输出夹带 traceback 噪音。**告警目的已达成，仅形式丑陋**，非功能缺陷。取向：改用 `print(..., file=sys.stderr)`（约 1 行）。属测试代码，WB 未越界改，待点将
-  - **WB 2026-08-30 07:00 实测补正**：噪音**不限于失败路径**——清理成功时 `conftest.py:115` 的 `logger.info` 同样报 `I/O operation on closed file`（实测 `38 passed` 且残留 0，仍吐 traceback）。故根因是"atexit 阶段 logging 已关闭"，与成败无关；修正取向应为**整个 `_cleanup_session_tmpdir` 的日志输出统一改 stderr 直写**，而非只改 warning 那一行
-- [ ] **conftest 键名判定改模式匹配（WB 2026-08-30 可扩展性清点发现，不急，待老大拍板）**：`_redact_keys` / `_inject_keys` 两处均为**精确白名单** `k in ("api_key", "brave_api_key")` → 将来新增 `serper_api_key` / `tavily_api_key` 等**不叫这两个精确名**的 key 会**漏脱敏**，默认路径明文落盘（防护静默失效）。改法：抽一个 `_is_secret_key(k)` = `k == "api_key" or k.endswith("_api_key")`，两处共用（约 5 分钟）。**⚠️ 不可写成 `"token" in k` / `"secret" in k` 子串匹配**——实测会误伤 `llm.max_input_tokens`（数值 128000），被替换成占位符后测试全挂。可等真加第三个 key 时顺手做，不必现在动
-
 ### 移动端开发
 
 - [ ] 响应式 UI 或独立 `mobile/index.html`
@@ -40,18 +27,13 @@
 
 ### 部署调试试运行
 
+> 统一架构方案见 **`exchange/deployment-architecture.md`**（云/端边界、配置、隔离、打包、落地顺序，2026-09-03，草案待定稿）。本段各条为其落地步骤，顺序 = 方案 §八。
+
 - [ ] Nginx 部署脚本示例（静态文件 + API 反代）
 - [ ] 部署文档 + 安全加固
 - [ ] 计划：租 VPS 部署 backend + SQLite + 小模型（bge-small 等），非纯本机。数据落云厂商磁盘，embedding 在自有服务器跑，LLM API 是唯一出境通道。
-- [ ] 未覆盖（上公网前需解决）：shell 工具 IP 白名单仅 127.0.0.1/::1，公网调用会被拒；P3.4 API Key 校验是硬前置；缺 HTTPS 时 key 明文过公网。
-
-### 上云前架构债清算
-
-- [ ] 记忆隔离：长期记忆检索按 `source_role` 加权（软隔离），多场景角色记忆分离
-- [ ] 边界侵蚀：工具消息与对话消息分离（`tool_calls` / `tool_call_id` 不再写入 `messages` 表）
-- [ ] shell IP 白名单重构：`127.0.0.1` / `::1` 白名单与公网访问不兼容，上云前改为 API Key 鉴权为主
-- [ ] ShellTool 黑名单加固：当前字符串包含匹配可穿透变体，上云/放开 IP 前须升级正则/词法解析或换沙箱（与白名单重构同批）
-- 注：局域网/上云访问 `host: 0.0.0.0` 前须先 set `server.api_key`，当前本机使用可空
+- [ ] **上云硬前置（方案 §五，不满足别上）**：① `server.api_key` 强制强随机 key（P3.4 校验已就绪）；② HTTPS（Nginx TLS 终止，DV 免费证书即可）；③ 上云初期显式禁用 shell/file_ops（`enabled_tools: ["web_search"]`），防云端误操作云机器。
+- [ ] **本地能力下沉（shell/file_ops 端侧化，方案 §七.1，单独立项、不与云部署捆绑）**：云端 backend 不注册 shell/file_ops，本地执行器（复用 backend 瘦身本地模式，倾向方案 B）承接。下沉时一并完成：① shell 鉴权重构（IP 白名单 `127.0.0.1`/`::1` 与公网不兼容，改 API Key 鉴权为主）；② ShellTool 命令注入加固（字符串包含匹配可穿透，升级正则/词法解析或换沙箱）。
 
 ### UI/UX优化
 
@@ -87,17 +69,19 @@
 
 ### 多场景 AI 架构
 
-> 以下为长期架构愿景，当前 P0-P3 仅支持手动切换角色，自动意图识别和跨域关联留待后续迭代。
+> 当前仅支持手动切换角色，以下为长期架构愿景，留待后续迭代。
 
 - [ ] 意图识别机制：长期 — 对话开头快速分类用户意图，自动切换角色
 - [ ] 跨域关联能力：长期 — 记忆检索不限单一领域，允许 AI 发现跨场景因果链
 - [ ] 用户画像沉淀：长期 — 从记忆中提炼结构化用户画像，注入 system prompt
-- [ ] 场景间信息同步策略：长期 — 定义全局共享 vs 领域私有的记忆边界
+- [ ] 场景间信息同步策略：长期 — 定义全局共享 vs 领域私有的记忆边界；落地手段 = 长期记忆检索按 `source_role` 加权（软隔离），多场景角色记忆分离
+- [ ] 根据记忆向量空间的分析，自动形成新角色的建议
 
 ### 工程债务（需要重新考虑）
 
 - [ ] **前端集成层测试**：会话切换加载 / 角色切换传参的集成测试（mock RouterView + store 联动）。逻辑层已由 Claude 覆盖（P4.4 测试 31/31 绿），集成层待补；原规格"引入新逻辑层时一并补，或 WB 明确要求再做"。P4 完结时不阻塞（功能闭环已达成），归此待补
-- [ ] **存量测试债务是否修复**：`test_chromadb_degradation.py`（mock 了已不存在的 archiver.get_db）、`test_integration_llm.py`（缺 pytest-asyncio）、`test_shell_tool.py::test_windows_dir`（中文 Windows 编码断言）。选项 A：修复恢复"全套绿"基线；选项 B：维持"相关测试 + 已知项甄别"现状。当前规则以 B 运转（见 CLAUDE.md/TRAE.md 测试环境段）。此事不是很急，找个合适的机会讨论一下
+- [ ] **存量测试债务是否修复**：`test_chromadb_degradation.py`（mock 了已不存在的 archiver.get_db）、`test_shell_tool.py::test_windows_dir`（中文 Windows 编码断言）。选项 A：修复恢复"全套绿"基线；选项 B：维持"相关测试 + 已知项甄别"现状。当前规则以 B 运转（见 CLAUDE.md/TRAE.md 测试环境段）。此事不是很急，找个合适的机会讨论一下
+- [ ] **边界侵蚀（工具/对话消息分离）**：`tool_calls` / `tool_call_id` 不再写入 `messages` 表，工具消息与对话消息分离（数据模型整洁）
 
 ### 其他长期增强（待触发）
 
@@ -117,4 +101,4 @@
 - **P3 - 流式 + 体验优化** ✅（2026-08-12~15）→ SSE / 重试 / Token / API Key 校验 / 异常类。详见 `archive/roadmap-history.md`。
 - **P4 - PC 客户端可用** ✅（2026-08-15~19）→ Tauri 进程管理 / Vue 前端 / 界面基调 / 会话 API / 聊天界面 / 异常出口统一。详见 `archive/roadmap-history.md`。
 
-> 原 P5（移动端 + 部署）已取消 P 编号，2026-08-20 拆分为「移动端开发」「部署调试试运行」「上云前架构债清算」三个普通阶段，列入上方「当前待办」区与记忆系统调优等并列。
+> 原 P5（移动端 + 部署）已取消 P 编号，2026-08-20 拆分为「移动端开发」「部署调试试运行」两个普通阶段，列入上方「当前待办」区与记忆系统调优等并列。

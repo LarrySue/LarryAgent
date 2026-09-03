@@ -10,6 +10,8 @@
 - `log-claude.md` — Claude Code（代码检查测试）
 - `log-trae.md` — Trae CN（代码具体编写）
 - `log-marvis.md` — Marvis（产品宏观 / 用户代言）
+- `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
+- `deployment-architecture.md` — 云部署架构方案草案（云/端边界、配置、隔离、打包、落地顺序，WB 2026-09-03 产，待老大确认后派发，定稿后回 `docs/`）
 
 ## 协作规则
 
