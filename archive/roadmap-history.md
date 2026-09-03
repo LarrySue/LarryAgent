@@ -324,7 +324,7 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 
 **UI/UX优化**
 
->长期项目，已完成的优化项目酌情归档于此
+> 长期项目，已完成的优化项目酌情归档于此
 
 - [x] **BUG（Claude 测出 · WB 读代码复验 2026-08-24 · ✅ 已修复闭环）会话重命名输入框自动聚焦失效**：根因 `AppLayout.vue` `ref="renameInput"` 落 v-for 作用域被 Vue3 收为数组 → `startRename` 的 `.focus()` 在数组上抛 `TypeError`，点重命名后不自动聚焦/全选。修复：v-for 内改函数 ref `:ref="(el) => (renameInput = el)"`（Trae commit `e2fbb74`）；Claude 移除测试兜底、45/45 全绿；WB 读代码复验通过（ref 已为单值绑定）。
 
@@ -337,3 +337,14 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] **归档写入路径**（WB 补修，复验时同语义调用方扫描发现）：`memory/archiver.py::confirm_and_store` 同样不判开关——enabled=false 时手动归档仍跑 `embed_batch` + 建 ChromaDB 客户端。修复：开关关闭时跳过向量三件套（删旧向量/向量化/写入），SQLite 记忆记录 + 会话归档标记照常（与 api/memory.py 删记忆守卫语义对齐）；配套 `tests/test_archiver_switch.py`（2 项 spy 断言）
 - [x] **WB 复验**：代码逐行核对 + 全套亲跑 `2 failed / 155 passed / 3 skipped`（基线 +5 新增，2 failed 均为已知存量债务）+ `--real-api` 终验 `3 passed`、key 零泄漏、config.yaml 字节级还原、`larry_test_*` 残留 0（修复前 2/2 残留，此为验收标准第 4 条铁证）
 - 提交：`b382b22`（召回修复）/ `45a0625`（行为测试）/ `c19cbe1`（交付说明）/ 收尾本轮提交（写入路径修复 + 归档）
+
+**前端角色清单改为后端下发** ✅（2026-09-03，WB 派发 / Trae 实现 / Claude 测试 / WB 复验）
+
+> 背景：前端硬编码角色清单（RoleSelector + app.ts 各一份 `type Role` 联合类型 + tokens.css `--role-*` 三变量），与后端 config.yaml roles 段双份靠人工同步；已脱节实锤——本地 config 有 code 角色、前端选不到。
+
+- [x] **后端**（Trae `8946d97`）：新建 `api/roles.py` `GET /api/roles` → `[{key,label,color}]`（顺序=config 书写序，label/color 缺省兜底 label→key / color→#9CA3AF）；`main.py` include_router；`config.example.yaml` 补全 4 角色 + label/color
+- [x] **前端动态化**（8 文件）：`type Role` 联合类型 → `string`；`listRoles()` + `fetchRoles()`（失败兜底 FALLBACK_ROLES）；RoleSelector 从 store 读动态列表；三处颜色引用（AppLayout/MessageList/ToolCallCard）`var(--role-*)` → `currentRoleInfo.color` hex 直用；tokens.css 删 `--role-*` 三变量；ChatView onMounted 拉取
+- [x] **测试**（Claude `0e10537`）：后端 `test_roles_api.py` 5 项（清单顺序/缺省兜底/缺 default/空 roles/鉴权透传）+ 前端 `roles.test.ts` 13 项（listRoles/store 兜底/RoleSelector 动态渲染）
+- [x] **WB 复验**：代码逐行核对（4 验收标准全坐实）+ 后端全套 `2f/160p/3s`（基线 155+5 新增，2 failed 均已知存量：chromadb mock / windows_dir 编码）+ 前端 `58/58` 全绿 + `vue-tsc --noEmit` 通过（Claude 仅 grep，WB 实跑类型检查）
+- **遗留（不阻塞验收）**：本地 `config.yaml` roles 段实为 5 角色（default/code/health/finance/science，science 为老大新增）且均无 label/color → 前端显示英文 key + 灰色兜底；补 label/color 由老大决定
+- 提交：`8946d97`（实现）/ `0e10537`（测试）/ `fe8372d`（交付说明）
