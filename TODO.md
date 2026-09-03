@@ -11,7 +11,7 @@
 
 > 42 项测试绿+ 前端零改动 + Tier0 key 不落日志
 
-- [x] **web_search Tool（Brave 免费层，provider 可插拔）**：对话内 AI 自主发起搜索，实时性问题自动搜并整合，回答标注来源 URL；首版数据源用 Brave 免费层（2000 次/月，需 key），provider 封装可插拔（注：原「后续替换为 SearXNG（VPS 自托管）」方案**已作废**，老大 2026-09-04；后续换 provider 待 `exchange/web-search-design.md` 讨论定案）
+- [x] **web_search Tool（Brave provider，可插拔）**：对话内 AI 自主发起搜索，实时性问题自动搜并整合，回答标注来源 URL；首版数据源用 Brave（**$5/月信用 ≈1,000 次、需绑信用卡**，非免费层——额度口径 2026-09-04 老大实测校正，原记「2000 次/月免费层」有误）；provider 封装可插拔（注：原「后续替换为 SearXNG（VPS 自托管）」方案**已作废**，老大 2026-09-04；后续换 provider 待 `exchange/web-search-design.md` 讨论定案）
 - [x] **Tool 框架底座（与 web_search 同步夯实地基）**：BaseTool 护栏基类统一超时强制 + 错误归一(ToolError) + 执行日志；"访问外部/本地资源"类叠加 SSRF/caller 校验钩子；配置驱动启用（config.yaml 列启用 Tool + 各自参数）；第三方挂载契约先留接口
 - [x] **安全边界**：目标 URL 内网拦截（SSRF，防 169.254.169.254/10.x/192.168.x/localhost）+ 硬性超时，不阻塞 SSE 流
 - [x] **降级策略**：搜索失败/限流 → 指数退避后仍失败 → 降级为正常回答并提示"未能联网核实"，不报错不中断
