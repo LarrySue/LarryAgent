@@ -16,7 +16,7 @@
 
 **讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）：
 
-- `product-positioning.md` — **产品功能边界（8 域 / 29 子项能力树 + 落地方式）**，权威版本；README 仅存指针（`docs/ai-governance.md` 未收录定位内容，勿另立副本）
+- `product-positioning.md` — **产品功能边界（8 域 / 30 子项能力树 + 落地方式）**，权威版本；README 仅存指针。采用**结论区 + 讨论区**两段式（同 `discussion-time-context.md`）：结论区 WB 维护、讨论区各方表态；勿另立副本
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
 - `dsh-migration.md` — DSH（DeepSeek harness）迁移评估（以 `product-positioning.md` 的能力树为基准；旧 14 条编号映射见该稿附录）
