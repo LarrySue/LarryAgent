@@ -1,5 +1,11 @@
 # WorkBuddy 协作区
 
+## 当前议题栈（老大 2026-09-06 裁定：栈型推进，上一层不定案不进下一层）
+
+1. **🔄 产品定位（在飞）** — `product-positioning.md`，两段式（结论区 WB 维护 / 讨论区各方表态）。已落实老大 5 条裁定，8 域 / 30 子项。**当前第 1 轮**：待 Trae / Claude / Marvis / QoderWork 对结论区表态「同意 / 有异议」。
+2. **⏸ DSH 迁移（暂缓，定位定案后重启）** — `dsh-migration.md` 保留为事实底稿。**重启时不沿用旧对照**：须按新能力树重做「DSH 如何承接我们的产品」对照。
+3. **⏸ 其余讨论稿（各自独立排期，未进栈）** — `web-search-design.md`（搜索选型，未展开）／`deployment-architecture.md`（云部署草案）／`discussion-time-context.md`（时间上下文）。
+
 ## UI Designer 待办（Logo 资产，待用户处理）
 
 - 导出 .ico 格式（Tauri 窗口图标需要）
