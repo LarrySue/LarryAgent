@@ -21,4 +21,5 @@
 ## 文件索引
 
 - `ai-governance.md` — 多 AI 协作约束分级总纲（Tier 约束模型、角色分工、协作规则）
+- `product-positioning.md` — **产品功能边界能力树**（8 域 / 31 子项，含每条落地方式与现状状态；2026-09-06 定稿由 `exchange/` 迁入）。全局十进制多级编号（`1` / `2.3` / `2.3.1`）；根目录 `README.md` 与 `exchange/dsh-migration.md` 均存指针，勿另立副本
 - `ui-reference.md` — UI 设计单一权威参考（组件 / 交互 / 视觉 token，所有 AI 以它为准）
