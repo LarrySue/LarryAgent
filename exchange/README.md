@@ -12,11 +12,14 @@
 - `log-claude.md` — Claude Code（代码检查测试）
 - `log-trae.md` — Trae CN（代码具体编写）
 - `log-marvis.md` — Marvis（产品宏观 / 用户代言）
+- `log-other.md` — 编外 AI 区（老大按需点将，不属固定分工、不受各角色约束文件管辖）；各条标注 AI 名与日期，供 WB 整理采纳
 
 **讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）：
 
+- `product-positioning.md` — **产品功能边界（8 域 / 29 子项能力树 + 落地方式）**，权威版本；README 仅存指针（`docs/ai-governance.md` 未收录定位内容，勿另立副本）
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
+- `dsh-migration.md` — DSH（DeepSeek harness）迁移评估（以 `product-positioning.md` 的能力树为基准；旧 14 条编号映射见该稿附录）
 - `web-search-design.md` — 网络搜索技术选型与设计规格（老大 2026-09-04 由 `docs/` 移入：**尚未展开讨论**，停在讨论稿阶段）
 
 ## 协作规则
