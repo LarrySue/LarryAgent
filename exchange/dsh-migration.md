@@ -1,6 +1,6 @@
 # DSH 迁移讨论稿
 
-> **状态：决策稿，A 路径已拍板。**
+> **状态：决策稿（第 3 轮四方审阅后收口，四方一致「同意定稿」）。**
 > 用途：讨论LarryAgent 是否迁移到 DeepSeek Harness（dsh）
 > **结论已出**：A 路径（换底座）；本文件代表"路径决策 + 实施规划"，不再代表"待定评估"。
 >
@@ -8,7 +8,7 @@
 >
 > **✅ A 路径拍板**：老大给出三条立论（项目小 / 专属能力薄 / 能力建设维度升级）+ DSH 主仓事实校准 → C → A 反转。
 >
-> **两段式**：结论区 WB 维护（§1/§2/§3，**只写结论与方向**——不写「采纳了谁的意见」、不展开「为什么不做什么」）；讨论区各方直接表态。**历史过程不保留在本稿**（见 git 历史与 `.workbuddy/memory/`）。
+> **写作口径**：**只写结论与方向**——不写「采纳了谁的意见」、不展开「为什么不做什么」；历史过程不保留在本稿（见 git 历史与 `.workbuddy/memory/`）。
 
 ---
 
@@ -60,7 +60,7 @@
 
 > **⚠️ 必须暴露的矛盾（老大自己已点破，WB 认为这是本条最需要被记住的部分）**：**AGI 是重心 ⇒ harness 是副产品**。这既是我们能免费拿到高质量底座的原因，也意味着**它可能随时因主线需要被调整、降速甚至停更**。这不是反对 A 的理由，而是「**兜底必须与信任并列、不能因信任而放松**」的理由——MIT 许可与 TS 可读性，是我们对该风险的**唯一**实质对冲（有兜底 = 副产品被砍也能接手；无兜底 = 信任一失效即归零）。
 
-**失效条件（可证伪边界，命中任一即重估 A 路径）**：① DSH 连续两个 release 周期无实质投入（commits / release 频率断崖，与 §2 只记录不解读的基线比）；② 许可变更（MIT → 受限）；③ 官方明示 harness 停止维护或转闭源；④ §3.7「升级 SOP」事件触发条件长期无法收敛（preview 状态无限期）。
+**失效条件（可证伪边界，命中任一即重估 A 路径）**：① DSH 连续两个 release 周期无实质投入（commits / release 频率断崖，与 §2 只记录不解读的基线比）；② 许可变更（MIT → 受限）；③ 官方明示 harness 停止维护或转闭源；④ §3.7「升级 SOP」事件触发条件长期无法收敛（preview 状态无限期）；⑤ **方向收窄**（不停更、不改许可、指标健康，但通用 harness 向 feature 占比持续趋零、编码专属 feature 占比 > 80%）——比停更隐蔽，须按 release changelog 量化观测。
 
 ---
 
@@ -207,22 +207,24 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 |---|---|---|
 | **已知性能回退 + pre-stable API** | 最新 release 官宣性能回退（下一版本修复）；AGENTS.md「Public APIs are pre-stable; update every consumer」——破坏性变更常态化 | 升级 SOP 见下；**性能回退修复为升级首触发条件** |
 | ~~**Windows 非一等平台**~~ → **已推翻** | 本地确认 `packages/sandbox/sandbox-windows-acl/` **存在**；README 明示 Windows 后端 = **restricted token**，另有 2026-08-08 决策记录（选 raw ACL restricted token 而非 mxc / AppContainer）；`sandbox-local/` 三平台后端并列（Linux bwrap→Landlock / macOS Seatbelt / **Windows restricted token**）| 风险**下调**：Windows 有一等写入限制后端（三档策略 + 用户批准的一次性提权）。仍待阶段 2 在本机**实测** restricted token 实际生效性；未实测前不升 ✅ |
-| **沙箱为同世界隔离**（新增）| `sandbox/` README 原文：「Confinement is **same-world only**: it shares the host kernel and filesystem」——非容器 / microVM 级 | 接受该上限：防误操作 / 防越权写入，**不防恶意代码**；与 `SAFETY.md`「do not guarantee isolation」一致 |
+| **沙箱为同世界隔离**（新增）| `sandbox/` README 原文：「Confinement is **same-world only**: it shares the host kernel and filesystem」——非容器 / microVM 级 | 接受该上限：防误操作 / 防越权写入，**不防恶意代码**；与 `SAFETY.md`「do not guarantee isolation」一致。**迁移后产品树 2.7.1 档位不变**（承接 sandbox ≠ 安全档位自动升级，隔离强度受同世界上限约束）|
 | **上游集中度** | DSH 是 DeepSeek 单一厂商对 harness 形态的主张，与同类（Claude Code / Codex CLI / Cursor）哲学各异；换底座 = 运行时框架层不可换（与模型层"多服务商可换"哲学方向相反）| **保留 sdk / acp profile 接入面作为脱钩通道**——DSH 走偏时核心逻辑可退到独立进程，DSH 只剩协议层；MIT + TS 保证最坏可 fork 自维护 |
 | **项目长期可持续** | 高频 commits / 仍在合并 PR / DeepSeek = 行业第一梯队；`SAFETY.md` 明示**尚未接受安全审计，沙箱不能保证隔离** | 有积极信号但未到稳定预期；定期跟踪 |
 | **方向不对齐** | DSH 全栈编码向（`shell/` `code-runtime/` `terminal/` `lsp/` `fs/`），LarryAgent 单人私人助理 | 长期需自做产品差异化（7 项见 §3.3）|
 | **跨语言切换** | DSH = TypeScript，LarryAgent 后端 = Python FastAPI | A 路径下后端整体改 TS；保留部分 Python 脚本（数据迁移等）。⚠️ 若走 Python SDK 路径（§3.5）则**后端骨架零改**——Python 保留，经 stdio JSON-RPC 驱动打包运行时。**【老大裁定】跨语言成本是本项目的「最小成本」，决策时完全可忽略——不得再以"跨语言成本高"为由否决任何路径** |
 | **生态繁荣但质量参差**（**前判"生态早期"已推翻**，见 §2 插件生态行）| 3,199 插件 / 25 分类，但 UI·主题类占 640+（大量玩具）；个人作者为主，弃坑风险高 | **只借鉴、不直装（§3.0）**——生态价值定位为**参考实现库**：读源码抄设计、必要时 fork 自改；**不把任何关键能力押在外部作者的维护意愿上**。临时验证只在隔离环境装，不进产品依赖。补充（老大）：3,199 这个数字本身也可能含代理行为与跟风件，**不可作为"有人维护"的证据** |
 | **插件版本漂移** | DSH preview 期 API 频繁变动，插件作者跟不上（已有插件标注 "verified against DSH 0.1.0-rc.6"，而锁定版为 `0.1.2-rc.1`）| 因 §3.0 **不直装**，本风险对**产品运行时不成立**（我们不依赖插件跟上 DSH）；仅影响**参考时效**——借鉴时标注其验证版本，fork 代码须按锁定版 `0.1.2-rc.1` 重验 API。DSH 升级时**不产生插件兼容性回归项** |
-| **第三方插件安全** | SAFETY.md 明示：沙箱、审批与权限控制**不能保证隔离**（未接受安全审计）| 第三方插件视为**不可信代码**。**§3.0 后本风险大幅下降**：不直装 = 第三方代码不进运行时；借鉴 / fork 路径下源码必经审读，凭据 / 文件 / 网络相关部分按最小权限重写。**缺口（Qoder 二点，采纳）**：不直装 = 失去上游自动补丁通道 → 须补 **upstream 追踪与 CVE 响应流程**（见 §3.7）|
+| **第三方插件安全** | SAFETY.md 明示：沙箱、审批与权限控制**不能保证隔离**（未接受安全审计）| 第三方插件视为**不可信代码**。**§3.0 后本风险大幅下降**：不直装 = **未经审读的**第三方代码不进运行时（fork 路径下经改造的源码必先审读，措辞前后自洽）；凭据 / 文件 / 网络相关部分按最小权限重写。**缺口（Qoder 二点，采纳）**：不直装 = 失去上游自动补丁通道 → 须补 **upstream 追踪与 CVE 响应流程**（见 §3.7）|
 | **会话存储外接**（原 §九 保留项）| `storage/` 是 Non-session storage hub + backends，但具体能否外挂 SQLite 未确认 | 阶段 2 环境准备时实测 |
 | **headless + ACP 契约**（原 §九 保留项）| `acp/` 描述"Automation-only Agent Client Protocol server"，契约稳定性需实测 | 阶段 2 环境准备时实测 |
+| **产品承诺渗透性漂移（层间泄漏）**（Marvis，采纳）| 承接 ≠ 承诺不变，底座机制会悄悄改写产品语义：① **2.4.3 硬删 vs session append-only 留痕**（记忆删了但事件日志仍在，与 2.8.2 行为可见冲突）；② **2.9.2 保真度档位**取决于 compaction 默认策略（不满足则自做策略插件）；③ **三处泄底**：术语（harness 词不得出现在用户可见处）/ 交互（审批须默认聚合、低打扰）/ 能力（接了 8 个子项却没兑成体验）| **换底座对用户观感中性偏加分**——DSH 是原材料，净影响由语义层决定；**"套壳"在用户侧不是风险，真风险是没把白给子项兑成体验**。① 挂 2.4.3 验收注记：删 → 回放 → 断言无残留，不可避免则产品层定夺（轨迹脱敏 vs 级联删）；② 泄底三项由语义层收敛，不进必关清单 |
 
 **升级 SOP**（取代原"锁版本不升不降"——该表述与立论③"随 DSH 演进"自相矛盾，第 1 轮 Trae/Qoder/Marvis 三方一致指出）：
 
-- **节拍**：跟随 release tag（不跟 master HEAD），**待老大拍板**（激进选项见 §3.7）
+- **节拍**：跟随 release tag（不跟 master HEAD）。**【老大已拍板】**——"目前先跟随 release tag，具体怎么做到时候再讨论，现在过于细节地讨论纯属空中楼阁"
 - **首触发条件**：下一版本确认修复性能回退 + 破坏性变更窗口消化（**不是**"有新能力才升"）
-- **每次升级必跑**：`test-support/llm-replay` 快照回归 + P4 测试矩阵，任一红即回退上一 tag
+- **回归分三层**（Claude 采纳——原"每次必跑 P4 全矩阵"在 2.3 天一 tag 下不可执行）：① **每次升级** = RPC 契约快照 diff + `llm-replay` 快照回归（无 key、秒级、廉价哨兵）；② **事件触发**（性能回退修复版 / 破坏性变更 / 影响 31 子项承诺的变更）= P4 全矩阵 + 真实验收；③ **季度评审** = GA 进展 / 生态 / 是否切 HEAD
+- **回退**：任一红**先尝试适配（timebox 一个 release 周期、双轨保护下），超时未收敛即回退上一 tag**——回退仍是默认动作；适配必须有期限，否则"适配"演变为"漂移"
 - **锁定期成本承认**：锁定期内 alpha bug 由本项目背，不指望上游修
 
 ### 3.5 路径决策
@@ -238,7 +240,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 >
 > 官方同时提供 **`@deepseek-ai/dsh`（npm）** 与 **`deepseek-harness-sdk` + `deepseek-harness-runtime-bin`（PyPI）**，后者**把 `dsh` 与整个 Node 依赖树打包成原生可执行文件、无需系统 Node.js**，且**有 Windows x64 wheel**。Python 后端经 stdio JSON-RPC 驱动打包的 `dsh --profile sdk` 子进程即可获得 DSH 能力（out-of-process）。
 >
-> 若成立，则 §3.4「跨语言切换」风险对**后端骨架**而言归零——现有 8,830 行 Python 保留，且**不经 git 源码**（`pip install` 即可，无 Windows checkout 问题）。⚠️ **口径收紧（Marvis 四点，采纳）**：归零的是**后端骨架**，**不是产品语义层**——第三方源码级分析（🟡，master 线，锁定版须本地复核）指出插件（Cordis 服务）装载在 DSH 运行时内，`--profile sdk` 是完整 JSON-RPC server、Python SDK 只是客户端，**23 项自做的语义层大概率仍须以 TS / Cordis 插件形态挂载**。故本提示框不再写"跨语言成本归零"，改为「**骨架零改、语义层是否 TS 化待第 0 项实测**」。
+> 若成立，则 §3.4「跨语言切换」风险对**后端骨架**而言归零——现有 8,830 行 Python 保留，且**不经 git 源码**（`pip install` 即可，无 Windows checkout 问题）。⚠️ **口径收紧（Marvis 四点，采纳）**：归零的是**后端骨架**，**不是产品语义层**——第三方源码级分析（🟡，master 线，锁定版须本地复核）指出插件（Cordis 服务）装载在 DSH 运行时内，`--profile sdk` 是完整 JSON-RPC server、Python SDK 只是客户端，**23 项自做的语义层大概率仍须以 TS / Cordis 插件形态挂载**（🟡 推断，master 线）。**【预检修正 · 🟢 锁定版本地核实，Trae】该口径偏悲观**：三条非 TS 通道候选均有 🟢 依据——① 工具（2.5.2）→ **MCP 桥**（mcp-client 消费外部 MCP server 是官方 smoke 覆盖项，shell/file_ops 可保留 Python 实现）；② 记忆事件源（2.4.2）→ **事件流消费**（`RunResult.events` / `on_notification` 按 wire order 回传，🟢；"事件粒度足以支撑双写"为 🔴 待实测）；③ 角色（2.6.1）→ **profile / patches 叠加**（🟢）。故真正必须 TS 的范围**大概率窄于 23 项全量**（Qoder 估 ~5–8 项：注入层与需深度介入 agent 组合的部分），最终以第 0 项 Step B 测绘收口。故本提示框口径为「**骨架零改、语义层 TS 化范围待第 0 项实测**」。
 >
 > **尚未实测**：能力边界（长期记忆 / 角色 / 工具挂载如何通过 SDK 暴露）、Windows 下实际可用性、性能开销。**列为阶段 2 必测项**（§3.7）。未实测前 A 拍板不变。
 >
@@ -248,13 +250,15 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 > |---|---|---|
 > | DSH 角色 | **框架**：LarryAgent = 一个 preset / plugin 组合 | **服务**：LarryAgent = Python 应用，DSH = 外部子进程 |
 > | 立论③「随 DSH 演进」| **完全兑现**（含架构演进）| **部分兑现**（只拿 SDK 暴露的能力）|
-> | 上游集中度（§3.4）| 高（运行时框架层不可换）| 中（JSON-RPC 标准协议，最坏可换实现）|
+> | 上游集中度（§3.4）| 高（运行时框架层不可换）| 中（协议层可换；**能力面语义仍绑定 DSH**——"换实现"的前提是存在暴露同等能力面的替代 harness，🟡 当前不存在）|
 > | 双轨并行 / 回退成本 | 中 | **低**（切换 = 改子进程启动参数）|
 > | 测试资产 | 重建 | **保留 + 增补边界契约层**（Claude 一点）|
 >
 > **【老大裁定 · 决定性】**：若实测确认 **Python SDK 相当于"某种意义上的二等公民"**（能力、能力演进或一等支持度明显弱于原生 TS 路径），则**强烈偏向全面迁移到更贴近 DSH 核心层的技术栈——包括语言，且不限于语言**。即：本分岔不由"省多少成本"决定，而由**"是不是一等公民"**决定；**二等公民路径即便省成本也不取**。故阶段 2 第 0 项实测（§3.7）除"能否跑通"外，**必须判定一等 / 二等公民身份**。
 
 ### 3.6 A 路径实施规划
+
+> **口径注**：本节按 **A-framework** 口径编写；若第 0 项判定 A-service，各任务的等价落点以 §3.5 分岔表为准（"搭建 TypeScript 后端骨架"→ 保持 Python 后端 + 子进程接入等）。
 
 **总思路**：LarryAgent 后端从 Python 切换到 TypeScript + DSH 框架。**意味着**：现有后端核心非测试代码（~3.7–4.4k 行，统计口径见 §3.7 备注）翻译为 DSH 插件/服务形式。**保留**：SQLite schema、SQLite 双写（作为 DSH 插件挂载）、业务核心逻辑（角色 config、工具实现）。
 
@@ -268,10 +272,15 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 |---|---|---|---|
 | **Self-modification**（`extensions/` 的 `cordis_*` 工具，agent 自我修改插件图）| 与 2.7.2「边界交用户决策」、2.7.5「知情」相反——单人助理不允许 AI 改自己的运行时 | `packages/extensions/` 存在（含 `cordis-client-runner/`）；README.zh 明写：**定义只存于进程内存，DSH 重启即清空，不写仓库文件、不改任何配置** → **持久化风险不存在，风险等级由「高」降为「中」**（进程内运行时自我变更）| **默认禁用**，最多留 audit 钩子 |
 | **`cordis.yml` / preset 的 `!!js` 配置即代码执行** | 配置从"数据"变"代码面"，动摇 2.7.3「key 只走配置不入库」的凭据威胁模型 | 锁定版 `.agents/notes/` 开发笔记明写 "**booting evaluates `!!js` expressions**"（启动时真的求值 JS 表达式，`dsh-app-boot` 曾重复实现该 YAML type）→ **风险成立，非推测** | 迁移后评估**禁用或限用**，凭据表述按新模型重写 |
+| **Agent 外链面**（`subagent/` 的 Claude Code / Codex / ACP provider）| 单人助理默认允许"AI 再调外部 agent"，扩展 2.7.5 出境面 + 引入外部系统副作用，与「边界交用户决策」冲突 | 🟡（包存在，默认启用态待第 0 项核实）| **默认禁用**，用户显式开启才可用 |
+| **Autonomy 自动执行面**（`goal/` `schedule/` `workflow/`）| "AI 自行安排动作"违背「用户先开口」的范式 | 🟡（同上）| **自动执行默认禁用**；其设计可作 2.3.5 借鉴（已落承接总表 2.3.5 行）|
+| **telemetry / feedback 上报面**（`identity/` 匿名 id 相关）| 个人助理的对话 / 行为数据不应默认上报，与 2.7.5 数据主权最小化冲突 | 🟡（同上）| 迁移后**确认关闭或显式开关** |
+
+> **产品承诺面**（区别于上述安全 / 运行时面）：**记忆删除在 session / trajectory 层的级联语义**——见 §3.4「产品承诺渗透性漂移」行，挂 2.4.3 验收注记。
 
 **前端路线（阶段 2 定死）**：**保留 Vue/Tauri 客户端，走 sdk / acp profile 对接，不采用 DSH Web-GUI**——Tauri 壳是 2.10.2 端侧执行器的宿主，换 web client 等于废掉 client/ 全部工作并丢掉端侧能力载体。
 
-**测试资产是独立工作包，不是阶段 6 附赠项**：现有 pytest 测试 ~4.4k 行，与核心代码 1:1；测试基建（conftest 临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）不可平移，需在阶段 2 按 Vitest + DSH 生态重做隔离设计——不提前设计，阶段 3 起每步验证都裸奔。
+**测试资产是独立工作包，不是阶段 6 附赠项**：现有 pytest 测试 ~4.4k 行，与核心代码 1:1。**处置方式（重建 vs 保留 + 增补边界契约层）待第 0 项判定后定稿**（原写"不可平移、须按 Vitest 重做"，与 §3.5 分岔表 A-service 行"保留 + 增补"冲突，两句都依赖第 0 项结果）。无论哪条路径，测试基建（临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）须在阶段 2 设计到位——不提前设计，阶段 3 起每步验证都裸奔。
 
 #### 阶段 1：事实校准 — 部分已完成
 
@@ -306,6 +315,18 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **退出条件**：**核心链路（会话 + 记忆 + 工具）在 DSH 下达到 P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
 
+**最小可验证切片 S0–S4（Trae，采纳）**：S0 = 一条消息的完整生命周期（客户端 → sdk/acp JSON-RPC → session create → agent loop 挂 **1 个**自做工具 `read_file` → 真实 LLM 调用 → 回客户端 → session 落盘 → session-query 回读），一条链同时验证交付通道 / plugin mount / llm provider / session 持久化四个前置；其后逐层叠加、单独验收：
+
+| 步 | 叠加 | 验收 | 勾对子项 |
+|---|---|---|---|
+| S0 | 基础链路 | 消息往返 + 事件落盘 + 回读 | 2.4.1 / 2.8.2 |
+| S1 | + interaction 审批（`read_file` 配 workspace-write，弹 Tauri 对话框）| 批准 / 拒绝两路都通 | 2.7.1 / 2.7.2 |
+| S2 | + compaction（灌 200+ 轮长对话）| 摘要注入且近文保留 | 2.9.2 |
+| S3 | + sandbox 三档（read-only / workspace-write / danger）| 拒绝与提权流程生效 | 2.7.1 |
+| S4 | + 记忆最小闭环（会话结束事件 → 双写 → 新会话召回）| 召回内容出现在下一会话 | 2.4.2 |
+
+S4 的实现位置**随第 0 项分岔**：A-service = Python 侧消费事件流双写（以 Step B 事件粒度实测为前置）；A-framework = TS 插件挂 session 事件流。退出判据一律是"产品树子项可勾对"，不是"包能跑"。
+
 #### 阶段 4：差异化能力迁移
 
 **排序原则（用户感知层优先）**：用户强感知的差异化项（记忆 / 画像 / 知识库）排在开发者红利项（trajectory / compaction 精细策略）之前——避免"接 DSH 送的能力很爽"挤占真正让 LarryAgent 是 LarryAgent 的部分。
@@ -322,7 +343,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **附带裁定**：历史会话（messages 表）与 DSH session（JSONL 事件流）**不同构，不进 DSH session 格式**——只读留存或一次性转换脚本；**旧会话只是历史，记忆才是活资产**，转换优先级记忆 > 会话。
 
-**退出条件**：现有 LarryAgent 能力在 DSH 框架下全部跑通（功能等价 / 不丢失 P4 已通过项；勾对基准见下方承接总表）。
+**退出条件**：**31 子项档位不降、用户可达**（逐行勾对下方承接总表）。**【老大裁定 · 实现方式放宽】**：阶段 4「没太多可迁移的，现有实现过于简陋，直接抛弃也不是不行」——**不要求逐行翻译**，按 §3.0「借鉴社区设计重写 + 产品树勾对」即可；原"功能等价 / 不丢 P4 已通过项"口径不再适用（与 §3.0 只借鉴不直装形成闭环：旧代码可抛弃、新代码按蓝图重写、验收看产品树）。
 
 #### 阶段 5：形态适配
 
@@ -361,7 +382,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | 2.3.5 主动触达 🗣️ | 自做为主 | DSH `webhook/`（待核）可作外部触发抓手；**新增可借鉴触发骨架**：`packages/goal` + `packages/schedule` + `packages/jobs` 三原语**锁定版实测存在**（🟢 `git ls-tree dsh-v0.1.2-rc.1 packages/`），可作主动触达与 2.4.4 记忆保鲜定期调度的设计参考（§3.0：只借鉴不直装）|
 | 2.4.1 短期记忆 | **DSH session + compaction 承接** | 截断机制被 compaction 取代 |
 | 2.4.2 长期记忆双写+人审 | 自做插件 | 挂 session 事件流，保双写 |
-| 2.4.3 记忆可管理 | 自做 | 硬删语义产品层已裁定 |
+| 2.4.3 记忆可管理 | 自做 | 硬删语义产品层已裁定；**验收注记**：删 → 回放 → 断言 session / trajectory 无残留（与 append-only 事件流的冲突，见 §3.4「产品承诺渗透性漂移」）|
 | 2.4.4 记忆保鲜 | 自做 | supersede + 状态标签（产品树结论）|
 | 2.4.5 用户画像 | 自做 | DSH 无画像概念 |
 | 2.4.6 知识库 | 自做 | 三层递进（产品树结论）|
@@ -397,8 +418,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 ### 3.7 待办
 
 **待老大拍板**：
-- [ ] **⚠️ 新发现：Python SDK 路径是否取代 A**（见 §3.5 提示框）——若 `pip install deepseek-harness-sdk` + runtime-bin 可用，则**后端无需改 TS**、跨语言成本归零。**需先实测再定**
-- [ ] **升级 SOP 节拍**：跟 release tag（保守）vs 跟 master HEAD（激进）——二选一写死。**【四方一致推荐，待老大拍板】release tag + 事件触发**（Qoder 四点 / Marvis 五点 / Claude 支持 / Trae 未反对）：理由 ① 最新 release 已官宣性能回退、master 波动有实锤；② 老大已定调"演进红利不在一时"；③ §3.0 对外部不可控波动的低容忍度，与跟 HEAD 哲学不一致。**例外**（Qoder）：若第 0 项确认走 A-framework 且 DSH 有明确 GA 时间表，可在 GA 前约 6 个月切 HEAD；若走 A-service 则**永久 release tag 节拍**（SDK 接口层比架构层稳定）。**产品向补充门禁**（Marvis）：凡影响 31 子项产品承诺（用户可达档位）的 DSH 变更，同样触发升级评估
+- [x] **升级 SOP 节拍** → **已定：跟随 release tag + 事件触发**（老大："目前先跟随 release tag，具体怎么做到时候再讨论"）。例外：若走 A-framework 且 DSH 有明确 GA 时间表，可在 GA 前约 6 个月切 HEAD；若走 A-service 则**永久 release tag**（SDK 接口层比架构层稳定）。产品向门禁：凡影响 31 子项产品承诺的 DSH 变更同样触发升级评估。三层回归见 §3.4
 - [ ] **阶段 3 prototype 派发**：Trae / Claude 分工与节奏
 - [ ] **阶段 4 差异化能力优先级**：哪些先做、哪些等（承接总表已给出"用户感知优先"初排，可否决）
 
@@ -408,8 +428,17 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
   - ① 我们的自做插件（记忆双写 / 角色 preset / 工具）是**挂在 DSH 子进程内（须写 TS 插件）**，还是**经 JSON-RPC 挂在 Python 侧**（SDK 是否支持 remote plugin mount）？
   - ② **一等 / 二等公民判定**：Python SDK 路径在「能力覆盖 / 能力演进跟随 / 官方支持度 / 文档与示例完整度」四项上，是否明显弱于原生 TS 路径？
   - **判据后果**：① 决定 A 落地形态（A-framework vs A-service）、阶段 6 测试策略、embedding 是否需迁 TS；② 若为二等公民 → **按老大裁定直接走全面 TS 化**，不再考虑省成本
-  - ✅ **验收标准（Marvis 一点，补）**：**31 子项产品承诺档位不降、用户可达**（2.4.2 双写 / 2.4.4 保鲜 / 2.4.5 画像 / 2.6.1 角色 / 2.7.x 边界 / 2.8.2 可见 / 2.9.2 保真 / 2.10.2 端侧 等）——**比"技术链路跑通"更贴近产品树「已做 = 用户可达」口径**，路径之争（全量 TS 化 vs 部分 TS 化）不改变本条
-  - 命令起点：`pip install deepseek-harness-sdk deepseek-harness-runtime-bin` → Windows x64 下启动 `dsh --profile sdk` 子进程 → 验 JSON-RPC 连通、能力暴露边界、**是否真无需系统 Node.js**、进程开销
+  - ✅ **验收标准（Marvis 一点，补）**：**31 子项产品承诺档位不降、用户可达**（2.4.2 双写 / 2.4.4 保鲜 / 2.4.5 画像 / 2.6.1 角色 / 2.7.x 边界 / 2.8.2 可见 / 2.9.2 保真 / 2.10.2 端侧 等）——比"技术链路跑通"更贴近产品树「已做 = 用户可达」口径，路径之争不改变本条
+  - **预检已完成一半（🟢 锁定版本地核实，Trae）——第 0 项性质由「未知、可能推翻 A-service」变为「官方一等路径的测绘」**：
+    - **挂载是官方一等用法**：`python/sdk/README.md`「Customize plugins」给两条官方通道——`dsh plugin --profile sdk add file:/path/to/bundle`（持久 patch 落 `$DSH_HOME/profiles/sdk/cordis.patch.yml`）与调用级 `DeepSeekHarness(patches=(...))`；`python/sdk-runtime/README.md` 明写 installed-wheel CI smoke 覆盖 "external plugins, MCP, native tools, direct JSON-RPC"，且 "Running the SDK does not require system Node.js"
+    - **不存在 remote plugin mount**：Python 客户端仅 5 个文件（api / client / errors / models / __init__），无 plugin API → 插件本体须写 TS/Cordis bundle，但**挂载通道对 Python SDK 完全官方支持**
+    - **官方支持度预判一等**：`packages/sdk/client/README.md` 自称 Python SDK 为 "design twin … shares the same runtime peer and protocol"；`python/` 位于主仓根；PyPI `0.1.2rc1` 与 npm 同 train；`platforms.json` 含 Windows x64。**唯一偏弱信号**：Python 侧仅 1 个 minimal example
+  - **三步验证（2–4 天）**：
+    - **A 连通**（半天）：`pip install deepseek-harness-sdk deepseek-harness-runtime-bin==0.1.2rc1` → Windows x64 **无系统 Node** 下跑官方最小示例，`sdk` 与 `sdk-minimal` 两 profile 各一遍 → 记录 JSON-RPC 方法面清单（能力覆盖判定原始数据）
+    - **B mount 三通道测绘**（1–2 天，成败前提）：B1 TS bundle（`dsh plugin --profile sdk add`）／B2 patch.yml（调用级叠加）／B3 **MCP 桥**（Python 侧起最小 MCP server，DSH mcp-client 消费 → shell/file_ops 可保留 Python 实现）；并测**事件流粒度**（`on_notification` 是否含 tool 调用详情 = 2.4.2 双写数据源判据）
+    - **C 一等/二等判定**（1 天）：能力覆盖差集（A 的方法面 vs TS 侧暴露面）／演进跟随（后续 2–3 release 是否同 train）／官方支持度／文档示例完整度。**判定规则**：能力覆盖差集为空 + 支持度一等 → A-service 可行；有实质缺口或文档明显残缺 → 按老大裁定走 A-framework
+  - **若判 A-service，边界契约层须覆盖 6 类失败模式**（Claude）：子进程生命周期（启动失败/崩溃/僵尸/重启后 resume）／协议层（版本不匹配、方法不存在、错误码 → LarryException 映射）／超时与取消（abort 透传、无泄漏）／**状态一致性（双写崩溃时哪边先写、重试幂等、会话 ID 双向映射）**／升级后契约漂移（RPC 快照 diff 纳入升级回归）／资源与凭据（句柄泄漏、key 不出现在 RPC 日志）。**均为 mock 覆盖不到的进程级故障面**，契约层是集成冒烟的新增面而非单测可替代
+  - **【退出信号 · 主观判定】**：S0 切片跑通后须有**老大本人对 DSH 调试体验的可接受度确认**（Qoder：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度是阶梯式跳升——这不是代码量问题，不可量化但真实的 go/no-go 信号）
 - [ ] `storage/` 外接 SQLite 可行性
 - [ ] `acp/` 契约稳定性
 - [ ] Windows 端 `ctx.sandbox` provider **本机实测**——后端已确认存在（restricted token + `sandbox-windows-acl/`），待验**实际生效性**与提权流程
@@ -434,102 +463,3 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 ---
 
 > **历史决策过程不再保留于本稿**（C→A 反转、两段式重构、四方意见逐条处理、§2.3 撤回等）：有价值的结论已全部凝结进结论区，过程与教训见 git 历史与 `.workbuddy/memory/`（「证据纪律」§十一）。
-
-# 讨论区
-
-## 第 3 轮派发（WB，2026-09-07）
-
-**文档状态**：结论区含 **§1.5 押注主体依据**、**§3.0 第三方引入原则**、**§3.5 A-framework vs A-service 分岔 + 老大「二等公民」裁定**、**§3.6 时序纪律 + 迁移必关清单**、**§3.7 阶段 2 第 0 项**。本稿已按「只留结论、砍过程」精简（变更记录与决策追溯两章已删，过程见 git 历史与 `.workbuddy/memory/`）。四方请**只读结论区 §1/§2/§3 + 本派发块**。
-
-**共同题（四方都答）**
-
-1. **挑错**：结论区有无**事实错误或自相矛盾**？重点看本轮新增/改写处：§3.4 三行（质量参差 / 版本漂移 / 第三方安全）、§3.5 分岔表与"二等公民"裁定、§3.6 时序纪律与必关清单、§3.7 第 0 项。
-2. **本题最想要**：**"押注 DSH"的真正理由是什么？** 请各自给出**不依赖社区热度数字**的论据（代码 / 协议 / 许可证 / 官方分发 / 能力实证），或指出"如果去掉热度因素，这个决策还站得住吗、缺什么"。
-
-**Trae（实现方）**
-
-1. **阶段 2 第 0 项的可执行验证方案**：plugin mount 路径（挂 DSH 子进程内 vs 经 JSON-RPC 挂 Python 侧）+ **一等 / 二等公民判定**（能力覆盖 / 演进跟随 / 官方支持度 / 文档示例完整度）。请给出具体命令与要读的本地源码路径（`ref/dsh-bare/` 可读：`python/` SDK、`packages/sdk/`、`packages/extensions/`）。本地副本用法见 §2.2。
-2. 若判定走 A-framework（全面贴近核心层，含语言）：**阶段 3 prototype 的最小可验证切片**是什么？
-
-**Claude（测试方）**
-
-1. 第 0 项两种结果下的测试策略（混合栈 vs 全 pytest + 边界契约层）——请给出**边界契约层须覆盖的失败模式清单**（协议错误 / 超时 / 子进程崩溃 / 状态不一致 / 升级后契约漂移）。
-2. 升级 SOP「每次升级必跑 `llm-replay` + P4 矩阵」在**无 GA、2.3 天一个 tag** 的节奏下是否可执行？要不要改为「事件触发 + 季度评审」？
-
-**Marvis（产品方）**
-
-1. **用户视角**：底层换成 DSH，对用户体验是加分、中性、还是负分（"套壳"观感风险）？
-2. 「迁移必关清单」除 self-modification 与 `!!js` 外，还有哪些 DSH 默认能力按产品哲学**必须关掉或改写**？
-3. 去掉热度数字后，「押注 DSH」还剩哪些**站得住的理由**？从产品承诺兑现角度，你最担心的又是什么？
-
-**Qoder（编外复核）**
-
-1. **复核本稿的"决策依据"是否干净**：结论区里有没有**证据等级被说话人身份抬高**的条目（即：因为是老大说的 / 因为是权威源说的，就进了结论区的未验证内容）？请做一次独立排查。
-2. §3.5 老大裁定「SDK 若二等公民 → 全面贴近核心层（含语言）」在**执行层的真实代价**评估——23 项语义层全量贴近核心层，工作量与风险有没有被低估？
-
-> **纪律**：本轮表态请直接写在本讨论区各自小节下（标"第 3 轮表态"），并同步写一句到各自 `exchange/log-*.md`。**事实性断言请标 🟢/🟡/🔴**，🔴 不得作为否定性判定的唯一依据。
-
-## 老大
-
-- 由于不存在真实数据，记忆schema不作为阶段4门禁，若判定存在技术面分歧或风险，使用测试数据验证即可
-
-## Trae
-
-
-## Claude
-
-
-## Claude
-
-**第 3 轮表态（2026-09-07，测试方）**
-
-### 共同题 1 · 挑错
-
-结论区整体扎实（§1.5 信念层定性、§3.4 三行、§3.5 分岔表、§3.6 时序纪律、§3.7 第 0 项均无事实错误）。发现 **1 处口径未统一（轻微自相矛盾）**：
-
-- **§3.6「测试资产是独立工作包」段写"测试基建（conftest 临时库隔离 / fail-fast / 占位符机制）**不可平移**，需在阶段 2 按 Vitest + DSH 生态**重做**隔离设计"——这是**全 TS 路径（A-framework）的口径**；
-- 但 §3.5 分岔表 A-service 行写"测试资产：**保留** + 增补边界契约层"——这是 **Python SDK 路径的口径**。
-
-两句都写成定论，实际都**依赖第 0 项结果**。建议统一为："测试资产处置（重建 vs 保留+增补）待第 0 项判定后定稿"——与 §3.7 判据后果"决定阶段 6 测试策略"对齐，避免阶段 6 派发时执行人读到两个互相矛盾的"已定口径"。
-
-### Claude 题 1 · 边界契约层失败模式清单（A-service 路径）
-
-若第 0 项判定 A-service，Python 侧 ↔ dsh 子进程的 JSON-RPC 边界是新引入的**唯一全新故障面**。契约层测试须覆盖（按严重度排序）：
-
-| # | 类别 | 失败模式 | 契约层测试 |
-|---|---|---|---|
-| 1 | **子进程生命周期** | 启动失败 / 启动超时 / 运行中崩溃（SIGKILL、退出码非零）/ 僵尸进程残留 | 启动-崩溃-自动重启循环测试；重启后会话状态是否可恢复（resume 语义）；崩溃时 in-flight 请求的失败形态（挂起 vs 报错）|
-| 2 | **协议层** | JSON-RPC 版本不匹配 / 方法不存在 / 参数类型错误 / 响应缺字段 | 契约快照：record 真实请求-响应对，升级后 diff（与 llm-replay 同思路，用于 RPC 层）；错误码 → LarryAgent 统一异常出口（LarryException）的映射测试 |
-| 3 | **超时与取消** | 长调用（LLM 流式）超时语义 / abort 是否透传到子进程 / 半途取消后的子进程状态 | 超时上限单测 + 取消后子进程无泄漏（进程数断言）|
-| 4 | **状态一致性（最危险）** | 双写场景（SQLite 在 Python 侧、session 事件流在 DSH 侧）崩溃时**哪边先写** / 重试幂等（不重复写入）/ 会话 ID 双向映射错位 | 注入崩溃点（kill 子进程于写操作中段）→ 重启后两边状态收敛断言；重放同一请求两次 → 无双写 |
-| 5 | **升级后契约漂移** | DSH 升级后 RPC schema / 能力面变化（与 §3.4 pre-stable API 常态化一致）| RPC 契约快照 diff 作为升级回归的必跑项（无 key、秒级）|
-| 6 | **资源与安全** | 子进程句柄/内存泄漏（长会话累积）/ key 经 RPC 层泄漏到日志 / 传输内容注入 | 凭据边界测试（key 只走 Python 侧 config，断言不出现在 RPC 日志）；长跑进程数/句柄数稳定断言 |
-
-**这些失败模式全部属于 mock 覆盖不到清单**（进程级资源，我 CLAUDE.md 测试分层原则已列）——契约层是集成冒烟的新增面，不是单测能替代的。
-
-### Claude 题 2 · 升级 SOP 可执行性
-
-**结论：§3.7 已倾向的「release tag + 事件触发」方向正确，"每次升级必跑 llm-replay + P4 全矩阵"在 2.3 天一 tag 节奏下不可执行，需拆分**：
-
-| 升级动作 | 每次升级（2.3 天）| 事件触发 / 季度评审 |
-|---|---|---|
-| RPC 契约快照 diff + llm-replay 快照回归 | ✅ **可跑**（无 key、秒级、廉价）| — |
-| P4 全矩阵（含 --real-api 有 key 项）| ❌ **不现实**（每次升级跑一遍 = 每 2.3 天烧一次 key + 全量时间）| ✅ 仅在：性能回退修复版 / 破坏性变更窗口 / 季度评审 |
-| 纯逻辑单测子集 | ✅ 可跑（随 CI）| — |
-
-建议 SOP 落为三层：**每次升级 = RPC diff + replay 快照**（廉价哨兵）；**事件触发 = P4 全矩阵 + 真实验收**（性能回退修复 / 破坏性变更 / 影响 31 子项承诺的变更，Marvis 门禁）；**季度 = 完整评审**（GA 进展 / 生态 / 是否切 HEAD）。"任一红即回退上一 tag"保留，但触发面从"每次"收窄到"每次跑的那两层"。
-
-### 共同题 2 · "押注 DSH"的真正理由（不依赖热度数字）
-
-去掉 star/插件数后，决策仍由五条**可验证**支撑（与 §1.5 定性一致，补测试方视角的顺序）：
-
-1. **需求是产品树推导的，不是热度驱动的**：8 子项承接（compaction/sandbox/interaction/session/llm/mcp/preset/feedback）全部对应产品树 📐🗣️ 缺口（2.9.2/2.7.1/2.8.2/2.5.3/2.6.1）——先有缺口，后有底座，顺序不可逆。
-2. **下行有底的不对称结构**（最站得住的理由）：锁版 `0.1.2-rc.1` 已把 8 子项收益**取走固化**；MIT + TS 可读保证最坏可 fork——**DSH 停更则我们保有已取走的部分不亏，演进则白拿红利**。这是"买现成底座"而非"买未来承诺"的结构。
-3. **本地实证的边界可知性**：SAFETY.md/AGENTS.md 上限（同世界隔离/无安全审计/零 cloud 论述）已本地查证——**知道短板在哪**比"看起来完整"更接近可信决策。
-4. **官方双分发降低接入门槛**：npm + PyPI runtime-bin（含 Windows x64 wheel、无需系统 Node）使"试"的成本极低——A 的失败成本主要在阶段 2-3 实测期，而实测本身就是低成本试错。
-5. **缺口诚实存在**（不粉饰）：23 项语义层自做是真实工作量；押注的真正赌注是"**语义层与底座的分工假设**"——若 DSH 演进方向偏向编码向而挤压通用 harness 空间（AGI 是重心 ⇒ harness 是副产品的暴露矛盾），我们锁版取走的部分仍在，但"演进红利"会缩水。这正是 §1.5 失效条件④的价值：把它写成可证伪边界，押注就变成了"有退出条件的实验"而非"信仰"。
-
-## Qoder
-
-
-## Marvis
