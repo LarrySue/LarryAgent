@@ -18,7 +18,7 @@
 
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
-- `dsh-migration.md` — DSH（DeepSeek harness）迁移评估。**✅ A 路径已拍板（2026-09-07）**：基于老大三条立论 + DSH 主仓事实校准（`0.1.3-alpha.1` / 54 包 / AGENTS.md 零论述 cloud）。§零/§一/§二 为事实底稿，§三 为"A 路径决策 + 实施规划"（阶段 1–6，7–12 周估算）。§三.7 待办待老大拍板
+- `dsh-migration.md` — DSH（DeepSeek harness）迁移评估。正在讨论中
 - `web-search-design.md` — 网络搜索技术选型与设计规格（老大 2026-09-04 由 `docs/` 移入：**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
 
 ## 协作规则
