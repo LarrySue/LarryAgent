@@ -74,6 +74,90 @@
 
 - [ ] chat_service token 累计上限（单次对话 tool call 总 token 阈值）：防止单轮读大文件等场景暴增，当前仅轮次限制。优先级很低，不做主动处理；若后续出现相关问题再讨论完善，不静默自动处理。
 
+## DSH 迁移（A-framework · 已定稿，DSH-2 待启动）
+
+> **分区约定（2026-09-08）**：**本区只放待办**。判定依据、行事规则、31 子项承接总表、风险清单一律留在 `docs/dsh/dsh-migration.md`（下文每条标注出处），本区不重复结论。
+> - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P5 主线无关；**完成一个即归档一个**——**DSH-1 事实校准已完成**，全文冷存于 `archive/roadmap-history.md`，本区自 **DSH-2** 起。
+> - **DSH-2 未启动**：任务 0（代码存在形态 A/B/C 案）未判定前，不启动 DSH-2 其余任务。
+> - ⚠️ **启动后本区将取代上方「当前待办」中的多数条目**——A-framework 是全量 TS 化，后端 / 前端 / 测试资产均会重写。此消长关系未定案，待DSH-2 收口时一并处理。
+
+### DSH-2 · 代码形态 + 环境准备
+
+**先决（判定前不启动后续任务）**
+- [ ] **任务 0：判定 LarryAgent 的代码存在形态** —— A 案「独立仓库 + 构建 Cordis bundle 挂载」／B 案「fork DSH 主仓加自有包」／C 案「混合」。**判据**：需触达的 DSH 内部 service 面有多深（Qoder 估 5–8 项需"深度介入 agent 组合"；若这些必须改上游代码则 A 案不成立）。**WB 倾向 A 案**——B1 挂载通道已实测可行，且升级 SOP 在 A 案下最干净；fork = 每次上游发版都要 merge 一个 alpha 框架的破坏性变更，是长期负债。文档 §3.6
+
+**任务**
+- [ ] 配套 TS 工程（pnpm + tsconfig + 首个 Cordis 插件）
+- [ ] 跑通官方 demo（确认环境）
+- [ ] **Vue/Tauri → dsh sdk profile 连通 hello world**（交付通道前提）
+- [ ] 测试隔离基建设计（Vitest 临时库隔离 / 真实库 fail-fast / 占位符注入等价物）
+
+**退出条件（= 待校准实测 5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
+- [ ] ① `storage/` 外接 SQLite 可行性
+- [ ] ② `acp/` 契约稳定性
+- [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，待验实际生效性与提权流程）
+- [ ] ④ Vue/Tauri → sdk profile 连通（同上 hello world）
+- [ ] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）
+
+### DSH-3 · 核心能力 prototype
+
+- [ ] `compaction/` 接入（替代 `max_input_tokens` 截断）→ 2.9.2
+- [ ] `sandbox/` 接入（替代 IP/目录/SSRF 单一拦截）→ 2.7.1（Linux 侧）
+- [ ] `interaction/` 接入（新增高危工具审批流）→ 2.7.1
+- [ ] `session/` 接入（升级 trajectory）→ 2.8.2
+- [ ] **S0–S4 最小可验证切片**（定义与勾对子项见文档 §3.6）：S0 一条消息完整生命周期 → S1 +interaction 审批 → S2 +compaction → S3 +sandbox 三档 → S4 +记忆最小闭环
+- [ ] **首验：跨进程 resume 的 id collision 定性**（Claude 判"可能是 SDK 缺口或姿势问题" vs Qoder/Trae 判"固定 ID 所致"，两说未收敛）→ 影响 2.4.1 / 2.8.2 的 fork / resume 承接叙事
+- [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升——不可量化但真实的 go/no-go 信号。文档 §3.7
+
+**退出条件**：核心链路（会话 + 记忆 + 工具）在 DSH 下达到 **P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
+
+### DSH-4 · 差异化能力迁移
+
+- [ ] 长期记忆双写 + 人审（`memory/archiver.py` + `engine.py` → TS 插件挂 `session/` 事件流，保 SQLite+ChromaDB 双写）
+- [ ] **记忆迁移（活资产，非数据搬运）**：全量重嵌（PyTorch/FP32 与 ONNX/q8 不保证逐维一致）+ 漂移比对 + 召回等价性抽样验收 + 语义字段不降级（`is_active` / `last_hit_at` / `source_role`，ChromaDB 只能重灌、机会只有一次）
+- [ ] **2.7.2 边界透明 → TS answerer 插件**（B1 通道已实测可行；退路 = permission-preset 白名单）
+- [ ] 角色机制（`config.yaml` 5 角色 → `preset/` + `cordis.yml`）
+- [ ] 工具生态（`tools/` 844 行 → DSH 工具插件；**web_search 暂保留自实现 Brave**——不配正文抓取，SSRF/清洗成本是刻意规避的）
+- [ ] 用户画像 📐
+- [ ] 知识库（三层递进 + BM25/FTS 混合检索）
+- [ ] 回收站 / 每会话文件沙盒（DSH `sandbox/` 语义不同，须自定义）
+- [ ] **DSH-4 优先级排序**：哪些先做、哪些等（承接总表已给"用户感知优先"初排，**可否决**）
+
+**退出条件**：**31 子项档位不降、用户可达**（逐行勾对文档 §3.6 承接总表）。**【老大裁定】不要求逐行翻译**——现有实现过于简陋，直接抛弃亦可，按 §3.0「借鉴社区设计重写 + 产品树勾对」即可。
+
+### DSH-5 · 形态适配
+
+- [ ] 本地 `host/` → 上云 server
+- [ ] 客户端 Tauri 适配（保留 PC 端 C/S + 本地 file_ops / shell 能力下沉）
+- [ ] 移动端 B/S 适配
+
+**退出条件**：云端部署可用、移动端可访问。
+
+### DSH-6 · 测试 + 验收
+
+- [ ] 测试资产**按 DSH 四层体系重建**（非翻译）：mock LLM → snapshot record/replay（`test-support/llm-replay`，比手写 mock 更真且免费回归）；降级/异常/护栏单测约五成可平移 Vitest；conftest 隔离 / fail-fast 断言DSH-2 重做。四层对照表见文档 §3.6
+- [ ] 验收五层：① 纯逻辑层翻译全绿 ② 关键路径 snapshot replay 覆盖 ③ 真实 API e2e 冒烟 ④ 数据迁移验证（双写 + 全量重嵌后召回抽样比对）⑤ Windows 端侧执行器验收
+- [ ] 升级回归并入：升级后契约漂移（RPC 快照 diff）+ 资源与凭据（句柄泄漏、key 不进日志）
+- [ ] WB 复验 + 老大最终验收（勾对承接总表）
+
+### 待核（不阻塞拍板）
+
+> 均为 §3.0「只借鉴不直装」的配套，或包归属定位。
+
+- [ ] **插件生态借鉴清单**（§3.3 降级 3 项）：Memory 分类 149 个中筛 3–5 个候选（重点 `dsh-memory-connect` / `dsh-auto-memory` / `dsh-project-memory` / ReMe），产出**可借鉴点清单**（schema / 检索融合 / 时间上下文建模 / 信任模型 / 已知陷阱），**不是"选哪个装"**；评估维度 = 设计可参考性 + 代码可读性 + 语义贴合度 + fork 改造量
+- [ ] **借鉴调研的取样原则**：面对数千插件，产出「设计差异表」+「对方如何验证该设计」列 + 「改造后需补哪些测试」清单；目标是提炼可复用设计模式，不是给单个插件下价值判断
+- [ ] **借鉴 / fork 代码纳入规范**：进库位置（独立 `vendor/` or 按能力模块落地）、upstream 出处与 license 标注格式、改造后须过本项目测试与命名规范、与自研代码的边界标识
+- [ ] **upstream 追踪与 CVE 响应流程**（不直装 = 失去上游自动补丁通道）：CVE 如何得知 → 如何评估是否 backport → **上游弃坑但 CVE 未修时如何自补**
+- [ ] **§3.0 是否升格为项目级原则**（写入 `docs/ai-governance.md`）
+- [ ] **来源标注体系（🟢/🟡/🔴）是否升格**：任何 AI 对外部项目做事实断言须标证据等级，🔴 不入结论区
+- [ ] DSH 搜索 / 抓取能力归属（`web/` 替换 Brave 证据不足）
+- [ ] `webhook/` 包核实（config-catalog 无条目 vs 主仓搜索命中，两源冲突）
+
+### 待派发
+
+- [ ] **DSH-3 prototype 派发**：Trae / Claude 分工与节奏
+- [ ] **DSH-2 任务 0 派发**（代码存在形态判定）
+
 ---
 
 ## 开发路线图
@@ -87,5 +171,8 @@
 - **P2 - 工具调用闭环** ✅（2026-08-11）→ FileOps / ShellTool / Function Calling / `/api/tools` / config。详见 `archive/roadmap-history.md`。
 - **P3 - 流式 + 体验优化** ✅（2026-08-12~15）→ SSE / 重试 / Token / API Key 校验 / 异常类。详见 `archive/roadmap-history.md`。
 - **P4 - PC 客户端可用** ✅（2026-08-15~19）→ Tauri 进程管理 / Vue 前端 / 界面基调 / 会话 API / 聊天界面 / 异常出口统一。详见 `archive/roadmap-history.md`。
+- **DSH-1 - 事实校准** ✅（2026-09-08）→ DSH 迁移线（A-framework）第 1 阶段：packages 盘点 / AGENTS.md / releases / Py SDK 一等二等判定。详见 `archive/roadmap-history.md`。
+
+> **DSH 线**（`DSH-N` 独立序列，与 P0–P5 无关）：DSH 迁移专项，**完成一个归档一个**；在飞阶段见上方「DSH 迁移」区。
 
 > 原 P5（移动端 + 部署）已取消 P 编号，2026-08-20 拆分为「移动端开发」「部署调试试运行」两个普通阶段，列入上方「当前待办」区与记忆系统调优等并列。

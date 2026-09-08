@@ -3,10 +3,10 @@
 ## 当前议题
 
 - **✅ DSH 迁移决策稿：已定稿并迁至 `docs/dsh/`**（第 3 轮四方审阅 + 老大 2026-09-08 终审）。随行含三份实测报告作永久保留的证据
-- **✅ 阶段 2 第 0 项：已终裁（2026-09-08）**——三方并行（Trae 一等 / Claude 一等 / Qoder 二等）→ **WB 判二等、老大确认 → 定 A-framework（全面 TS 化）**。判定与证据见 `../docs/dsh/dsh-migration.md` §3.5；三份报告**永久保留**，不参与柔性清理（老大定）
+- **✅ DSH-1 第 0 项：已终裁（2026-09-08）**——三方并行（Trae 一等 / Claude 一等 / Qoder 二等）→ **WB 判二等、老大确认 → 定 A-framework（全面 TS 化）**。判定与证据见 `../docs/dsh/dsh-migration.md` §3.5；三份报告**永久保留**，不参与柔性清理（老大定）
 - **⏸ 其余讨论稿（各自独立排期）** — `web-search-design.md`（搜索选型，未展开）／`deployment-architecture.md`（云部署草案）／`discussion-time-context.md`（时间上下文）。
 
-**DSH 线待老大拍板的挂件**（第 0 项已终裁，以下为后续）：阶段 3 prototype 派发节奏 / 阶段 4 差异化优先级 / 借鉴 fork 代码进库位置与 license 标注 / §3.0 是否升格进 `docs/ai-governance.md`
+**DSH 线待老大拍板的挂件**（已迁 `TODO.md`「DSH 迁移」区，本处仅留索引）：DSH-3 prototype 派发节奏 / DSH-4 差异化优先级 / 借鉴 fork 代码进库位置与 license 标注 / §3.0 是否升格进 `docs/ai-governance.md`
 
 ## UI Designer 待办（Logo 资产，待用户处理）
 

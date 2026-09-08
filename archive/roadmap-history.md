@@ -374,3 +374,15 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] **搜索服务归属标注（about 弹窗末行已添加"Web Search Powered by Brave"，2026-09-04 老大直接落地）**：Brave 现款「$5/月信用」在**条款上**以公开归属为条件（官方要求标注于 project's website / about pages）。先前拟「待 provider 选型定案再填、不写死 Brave 名」，最终老大决定直接写死——本地应用一行字，换 provider 也就改一个词
 - **未随本段闭环（转出）**：本地计数器软上限**经核实不写**（Brave 后台自带 Usage limits / Spending Limit，平台侧硬限优于代码软限，逃熊不重复造）
 - 提交：实现与测试见 2026-08-20 交付（Trae），逻辑层复验 WB 通过；口径校正与闭环 `795d1ed` / `9969e59` / `2a786d1` / `baaf41c`
+
+---
+
+### DSH-1 - 事实校准 ✅（2026-09-08）
+
+> **DSH 迁移线（A-framework）第 1 阶段**。编号说明：**DSH 线用独立 `DSH-N` 序列，与 P0–P5 主线无关**，与决策稿 `docs/dsh/dsh-migration.md` §3.6 的阶段号一一对应。
+> 背景 / 判定依据 / 后续阶段（DSH-2 ~ DSH-6）见 `docs/dsh/dsh-migration.md`；在飞待办见 `TODO.md`「DSH 迁移」区。
+
+- [x] **DSH 主仓 packages/ 盘点**——本地实测锁定版顶层 **50 个包目录**（另有嵌套子包）。早期"54 个包"/"37 家族 / 72 嵌套包"口径均作废（前者为网页推断，后者为 config-catalog 配置项口径）
+- [x] **AGENTS.md 阅读**（capability seam / session JSONL / LLM provider / 安全性声明）
+- [x] **releases 阅读**（版本线 / 性能回退官宣 / 无 GA 时间表）
+- [x] **第 0 项：Py SDK 一等 / 二等判定** ✅ 2026-09-08 终裁——三方并行实测（Trae / Claude 判一等、Qoder 判二等）→ **判二等，老大确认 → 定 A-framework**。三份实测报告（`dsh-pysdk-probe*.md`）永久保留于 `docs/dsh/`；判定与证据见决策稿 §3.5
