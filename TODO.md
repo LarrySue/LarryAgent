@@ -77,7 +77,7 @@
 ## DSH 迁移（A-framework · 已定稿，DSH-2 待启动）
 
 > **分区约定（2026-09-08）**：**本区只放待办**。判定依据、行事规则、31 子项承接总表、风险清单一律留在 `docs/dsh/dsh-migration.md`（下文每条标注出处），本区不重复结论。
-> - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P5 主线无关；**完成一个即归档一个**——**DSH-1 事实校准已完成**，全文冷存于 `archive/roadmap-history.md`，本区自 **DSH-2** 起。
+> - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P4 主线无关；**完成一个即归档一个**——**DSH-1 事实校准已完成**，全文冷存于 `archive/roadmap-history.md`，本区自 **DSH-2** 起。
 > - **DSH-2 未启动**：任务 0（代码存在形态 A/B/C 案）未判定前，不启动 DSH-2 其余任务。
 > - ⚠️ **启动后本区将取代上方「当前待办」中的多数条目**——A-framework 是全量 TS 化，后端 / 前端 / 测试资产均会重写。此消长关系未定案，待DSH-2 收口时一并处理。
 
@@ -98,6 +98,9 @@
 - [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，待验实际生效性与提权流程）
 - [ ] ④ Vue/Tauri → sdk profile 连通（同上 hello world）
 - [ ] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）
+- [ ] **DSH-2 收口后**：用当时最新 rc 版本做一轮复核（锁定版是否过期、有无影响本阶段结论的变更）。**老大定：不与上游 alpha 节奏绑死，按我们的阶段节拍走**；本轮任务 0 结论一律基于 `dsh-v0.1.2-rc.1` 并显式标注基线
+
+### DSH-2.5 · 如果DSH的新稳定版本发布则进行一轮评估
 
 ### DSH-3 · 核心能力 prototype
 
