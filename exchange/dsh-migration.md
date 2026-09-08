@@ -4,7 +4,7 @@
 > 用途：讨论LarryAgent 是否迁移到 DeepSeek Harness（dsh）
 > **结论已出**：A 路径（换底座）；本文件代表"路径决策 + 实施规划"，不再代表"待定评估"。
 >
-> **老大终审结论（2026-09-08）**：§1.5 基准无问题 / §3.0 维持裁定 / §3.7 计划基本合理（后续按实际推进微调）；**唯一待定 = §3.5 须先明确 Python SDK 成色**（即第 0 项一等 / 二等公民判定，已派发 Trae）。除此之外本稿**已定稿**，不再因讨论而改动。
+> **老大终审结论（2026-09-08）**：§1.5 基准无问题 / §3.0 维持裁定 / §3.7 计划基本合理（后续按实际推进微调）；**唯一待定 = §3.5 须先明确 Python SDK 成色**——第 0 项三方实测已完成（Trae / Claude 判一等、Qoder 判二等），**WB 判定二等，待老大终裁**。除此之外本稿**已定稿**，不再因讨论而改动。
 >
 > 评估基准：`../docs/product-positioning.md`（8 域 / 31 子项能力树）
 >
@@ -239,6 +239,14 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | D 接能力 | ❌ 不推荐 | A 已满足当前诉求；D 仅在"想要 DSH 独家能力"时启用 |
 
 > **⚠️ 新发现（2026-09-07，动摇 A 的一个核心成本项；老大 2026-09-08 终审：不预先拍板，先由第 0 项实测判定 Py SDK 成色）**
+
+> **【第 0 项实测结论 · 2026-09-08 · 三方并行已交付】**：Trae 判**一等**、Claude 判**一等**、**Qoder 判二等**。**WB 判定：二等**（采纳 Qoder），**待老大终裁**。
+>
+> - **决定性事实（🟢 WB 本地锁定版核实，未采信转述）**：SDK JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown` 三个方法（`packages/sdk/protocol/src/types.ts:115-119`，`server.ts:248-253` 只分派这三个，grep approve/answer/respond **零命中**）；原生 `interaction/user-questions`、`user-approval` 有同进程 waterfall answerer；官方设计文档 `2026-07-06-approval-seam.md` 明写「Zero listeners fall through to **unavailable**」→ **2.7.2 的回答侧在 SDK 协议面不可得**。
+> - **分歧根源是 WB 派发稿缺陷（认）**：判据 1「能力覆盖无实质缺口」含**两个不同尺度**——Trae / Claude 按「method 面差集为空」执行（比 SDK client vs TS SDK client，两者同为 design twin 故无差）；Qoder 按「31 子项用户可达」执行。**同一判据两个尺度，必然分叉**；Qoder 的尺度才是本意（老大裁的是"是不是一等公民"，判据应是产品能力可达性）。
+> - **缺口可补，但需写 TS**：B1 通道已由 Claude / Qoder 实测可行（手工放置 cordis 插件，或隔离 pnpm 安装）→ 2.7.2 可经 **TS answerer 插件**或 **permission-preset 白名单**恢复。**不是不可达，是"不能开箱"**。
+> - **为何仍判二等**：①"必须写 TS 才能完成"即 Python 侧不能独立完成全链路，正是"弱于原生 TS 路径"；②**2.7 边界域是核心产品承诺**——把边界决策放进 DSH 内的 TS 插件、Python 只做消息管道，与"保留 Python 主控"的价值主张冲突；③ §3.5 已有「23 项语义层须 TS / Cordis 插件挂载」口径，再加 answerer，"省下的成本"被进一步稀释。
+> - **后果（若老大认可）**：按既有裁定走 **A-framework（全面贴近核心层，含语言）**——本稿本就按 A-framework 口径编写，故改动最小。（若老大改判一等，则转 A-service，§3.6 各阶段落点按 §3.5 分岔表换。）
 >
 > 官方同时提供 **`@deepseek-ai/dsh`（npm）** 与 **`deepseek-harness-sdk` + `deepseek-harness-runtime-bin`（PyPI）**，后者**把 `dsh` 与整个 Node 依赖树打包成原生可执行文件、无需系统 Node.js**，且**有 Windows x64 wheel**。Python 后端经 stdio JSON-RPC 驱动打包的 `dsh --profile sdk` 子进程即可获得 DSH 能力（out-of-process）。
 >
@@ -277,6 +285,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | **Agent 外链面**（`subagent/` 的 Claude Code / Codex / ACP provider）| 单人助理默认允许"AI 再调外部 agent"，扩展 2.7.5 出境面 + 引入外部系统副作用，与「边界交用户决策」冲突 | 🟡（包存在，默认启用态待第 0 项核实）| **默认禁用**，用户显式开启才可用 |
 | **Autonomy 自动执行面**（`goal/` `schedule/` `workflow/`）| "AI 自行安排动作"违背「用户先开口」的范式 | 🟡（同上）| **自动执行默认禁用**；其设计可作 2.3.5 借鉴（已落承接总表 2.3.5 行）|
 | **telemetry / feedback 上报面**（`identity/` 匿名 id 相关）| 个人助理的对话 / 行为数据不应默认上报，与 2.7.5 数据主权最小化冲突 | 🟡（同上）| 迁移后**确认关闭或显式开关** |
+| **`dsh-session-log-deepseek`（会话日志上报）** | 启用后每个携带存活 session id 的请求都会发送**完整、未脱敏**的 `SessionEvent` 对象到所配 baseURL（官方原文 performing no projection or redaction），与 2.7.5 数据主权冲突 | 🟢 锁定版核实：**explicit opt-in（默认关闭）** | **迁移后确认关闭；任何情况下不启用** |
 
 > **产品承诺面**（区别于上述安全 / 运行时面）：**记忆删除在 session / trajectory 层的级联语义**——见 §3.4「产品承诺渗透性漂移」行，挂 2.4.3 验收注记。
 
@@ -394,7 +403,7 @@ S4 的实现位置**随第 0 项分岔**：A-service = Python 侧消费事件流
 | 2.6.1 角色切换 | DSH `preset/` 迁移底座 | cordis.yml 承接 config 角色 |
 | 2.6.2 自动路由 | 自做/待定 | 产品树仍 📐 |
 | 2.7.1 行为安全 | DSH sandbox 升级 | 三平台后端**均存在**（Windows = restricted token）；待阶段 2 本机实测后升 ✅（上限：同世界隔离）|
-| 2.7.2 边界透明 | **DSH interaction 承接** | approval/ask-user 开箱 |
+| 2.7.2 边界透明 | **⚠️ 实测修正：SDK 路径下不承接，须自做** | 🟢 锁定版核实：SDK 请求面无 answer 方法，官方设计文档明写「Zero listeners fall through to **unavailable**」→ A-service 下审批请求降级为 unavailable（工具不执行）。**须自做 TS answerer 插件（B1 已实测可行）或改用 permission-preset 白名单**，非"开箱可得" |
 | 2.7.3 凭据密钥 | **DSH credentials 承接** | 开箱即得 |
 | 2.7.4 成本约束 | 自做 | DSH 无预算/限额概念 |
 | 2.7.5 数据主权出境 | 自评估 | DSH 不改变出境事实 |
@@ -426,7 +435,13 @@ S4 的实现位置**随第 0 项分岔**：A-service = Python 侧消费事件流
 
 **待校准（阶段 2 实测，见 §3.6）**：
 
-- [ ] **【第 0 项 · 最高优先 · 优先于下列全部】plugin mount 路径 + 一等/二等公民判定**——**🔄 已派发（2026-09-08）：Trae（顺位一）/ Claude（顺位二）/ Qoder（顺位三）三方并行独立执行**——**顺位仅用于环境 / 资源冲突时的让行次序，不是优先级、不是串行**；隔离为**可验证**要求（独立 venv + 独立 `DSH_HOME` + 不同端口 + 隔离自检输出 + baseline 快照 diff），各交付「一等 / 二等 / 无法判定」三选一结论（**老大裁定其为分岔判据**）。三方视角分工：Trae = 全量主路径／Claude = 边界契约层 6 类失败模式（测试本职）／Qoder = **反向举证 + 判定阈值审查**。**环境隔离必做**（各自独立 `DSH_HOME`，否则 `dsh plugin --profile sdk add` 的持久 patch 会互相覆盖）。**结论冲突时以可复现实证为准，不以多数票为准**，由 WB 交叉复验：
+- [x] **【第 0 项 · 已完成 2026-09-08】plugin mount 路径 + 一等/二等公民判定**——三方并行交付（Trae = 一等 / Claude = 一等 / Qoder = 二等），**WB 判定二等，待老大终裁**；判定与证据见 §3.5。三方实测的硬发现（已折入各节）：
+  - **Windows 官方 CLI 崩溃**（Claude + Qoder 独立发现 🟢）：`dsh.exe --version` / `--dump-config` 在 Windows 稳定 segfault（0xC0000005）。**不影响 SDK 主路径**（Python SDK 不经该命令），但官方 `dsh plugin` 管理入口在目标平台不可靠 → **B1 不能依赖官方 CLI，须手工放置或用隔离 pnpm**
+  - **长 turn 无超时保护**（Claude 真实 key 实测 + Qoder 源码确认 🟢）：`request_timeout_seconds` 只覆盖单次 JSON-RPC 往返，turn 等待 `subscription.next()` 无 timeout → 子进程挂起时 SDK **无限等待**。**应用层必须自建 watchdog**（A-service / A-framework 皆然）
+  - **B1 安装期仍需 Node / pnpm**（Qoder 🟢）：不带 pnpm 安装失败，隔离装 pnpm 10.17.1 后成功 → **"无需系统 Node"只在运行期成立**，安装 / 升级链路不是纯 Python
+  - **MCP 只证 Tools**（Qoder 🟢）：Resources / Prompts / 任意 Cordis 内部 service 或 hook **未证**可经 MCP 等价桥接，不得外推为"所有 Python 能力均可桥接"
+  - **Python 侧事件多为 `JsonObject`**（Qoder 🟡）：无 TS 判别联合类型与同级运行时校验，升级时更易**静默接受字段漂移**
+  - **⚠️ 待核：跨进程 resume 的 id collision 定性分歧**（Claude 用真实 key 才发现）：Claude 判"可能是 SDK 缺口或姿势问题"（源码 `packages/core/session` 称 cold session 应 resumed on first touch，但 Python SDK `start_session(session_id)` 触发 collision）；Qoder / Trae 判"探针用固定 ID 所致，改 UUID 后成功"。**两种定性未收敛** → 影响 2.4.1 / 2.8.2 的 fork / resume 承接叙事，列为阶段 3 首验项
   - ① 我们的自做插件（记忆双写 / 角色 preset / 工具）是**挂在 DSH 子进程内（须写 TS 插件）**，还是**经 JSON-RPC 挂在 Python 侧**（SDK 是否支持 remote plugin mount）？
   - ② **一等 / 二等公民判定**：Python SDK 路径在「能力覆盖 / 能力演进跟随 / 官方支持度 / 文档与示例完整度」四项上，是否明显弱于原生 TS 路径？
   - **判据后果**：① 决定 A 落地形态（A-framework vs A-service）、阶段 6 测试策略、embedding 是否需迁 TS；② 若为二等公民 → **按老大裁定直接走全面 TS 化**，不再考虑省成本
