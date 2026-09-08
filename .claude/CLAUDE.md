@@ -27,7 +27,7 @@ LarryAgent — 个人 AI Agent，技术栈：Python FastAPI + SQLite + ChromaDB 
 - 改动后跑测试验证（见"测试环境"）
 - 发现架构级问题写入 exchange/log-claude.md 并@WorkBuddy（组长）且暴露给用户
 - 完成任务后在 `exchange/log-claude.md` 更新进展
-- **docs/ 文件夹不可擅动**（2026-09-08 老大定）：我的提交只允许是项目代码文件或交流区内容（`exchange/`）；除非派发稿明确特批写入 docs/，否则不在 docs/ 下新建或修改文件。若派发稿指定 docs/ 路径而本规则冲突，先暴露请老大裁定
+- **docs/archive/.workbuddy 等文件夹不可擅动**（2026-09-08 老大定）：我的提交只允许是项目代码文件或交流区内容（`exchange/`）；除非派发稿明确特批写入其他文件夹，否则不在其他文件夹下新建或修改文件。若派发稿指定其他文件夹路径而本规则冲突，先暴露请老大裁定
 - 发现多 AI 协同冲突（文件锁定、配置分歧、职责重叠等）→ 主动暴露给用户，记录到 exchange/log-claude.md 并 @相关 AI，等待裁定
 - 独立判定与组长派发冲突时的升级路径：派发规格有遗漏或错误时，立即在 exchange/log-claude.md 暴露并停手等裁决，不私自补字段；分析含异议时明确标注异议点及自己的倾向
 - 任务粒度与提交边界：派发规格已细化到字段/函数级时直接实现测试/测试基础设施 + commit；模糊任务先在 exchange/log-claude.md 提方案确认后再做 + commit。修改前先读相关文件，建议通过 exchange 确认目标文件无其他 AI 正在编辑
