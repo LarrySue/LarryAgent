@@ -3,7 +3,9 @@
 ## 当前议题
 
 - **✅ DSH 迁移决策稿：已定稿**（第 3 轮四方审阅 + 老大 2026-09-08 终审）。老大终审结论：§1.5 基准无问题 / §3.0 维持裁定 / §3.7 计划基本合理后续微调；**唯一待定 = §3.5 须先明确 Py SDK 成色**。`exchange/README.md` 索引已同步为「已定稿」
-- **🔄 阶段 2 第 0 项实测（在飞，已派发 Trae 2026-09-08）**：判定 Python SDK 一等 / 二等公民 → 决定 A-framework vs A-service。交付 `exchange/dsh-pysdk-probe.md`；WB 收动作 = 复验（不采信转述，本地锁定版核关键断言）+ 折入 §3.5/§3.7。判「二等」则按老大裁定转全面贴近核心层（含语言）
+- **🔄 阶段 2 第 0 项实测（在飞，2026-09-08 派发）**：判定 Python SDK 一等 / 二等公民 → 决定 A-framework vs A-service。**老大裁定「此事重大」，三方并行独立执行**——Trae（全量主路径）／Claude（边界契约层 6 类失败模式，测试本职）／编外 log-other（**反向举证 + 对我那四条判定阈值的审查**，建议 Qoder 接）。产出 `exchange/dsh-pysdk-probe.md` / `-claude.md` / `-other.md`；**结论冲突时以可复现实证为准，不以多数票为准**。
+  - **环境隔离是硬要求**：三人同机跑，须各自独立 `DSH_HOME`——`dsh plugin --profile sdk add` 写全局 `profiles/sdk/cordis.patch.yml`，共用会互相覆盖 patch 导致结果互相污染
+  - **WB 收动作**：三方报告到齐后交叉比对（不采信转述，本地锁定版核关键断言）→ 折入 §3.5/§3.7。判「二等」则按老大裁定转全面贴近核心层（含语言）
 - **⏸ 其余讨论稿（各自独立排期）** — `web-search-design.md`（搜索选型，未展开）／`deployment-architecture.md`（云部署草案）／`discussion-time-context.md`（时间上下文）。
 
 **DSH 线待老大拍板的挂件**（不阻塞第 0 项）：阶段 3 prototype 派发节奏 / 阶段 4 差异化优先级 / 借鉴 fork 代码进库位置与 license 标注 / §3.0 是否升格进 `docs/ai-governance.md`
