@@ -74,33 +74,62 @@
 
 - [ ] chat_service token 累计上限（单次对话 tool call 总 token 阈值）：防止单轮读大文件等场景暴增，当前仅轮次限制。优先级很低，不做主动处理；若后续出现相关问题再讨论完善，不静默自动处理。
 
-## DSH 迁移（A-framework · 已定稿，DSH-2 待启动）
+## DSH 迁移（A-framework · 已定稿，DSH-2 进行中）
 
 > **分区约定（2026-09-08）**：**本区只放待办**。判定依据、行事规则、31 子项承接总表、风险清单一律留在 `docs/dsh/dsh-migration.md`（下文每条标注出处），本区不重复结论。
 > - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P4 主线无关；**完成一个即归档一个**——**DSH-1 事实校准已完成**，全文冷存于 `archive/roadmap-history.md`，本区自 **DSH-2** 起。
-> - **DSH-2 未启动**：任务 0（代码存在形态 A/B/C 案）未判定前，不启动 DSH-2 其余任务。
+> - **DSH-2 已启动**：任务 0（代码存在形态）已判定 **A 案成立**（DSH-2.0 ✅，2026-09-08）；其余子项 DSH-2.1–2.6 待派发。
 > - ⚠️ **启动后本区将取代上方「当前待办」中的多数条目**——A-framework 是全量 TS 化，后端 / 前端 / 测试资产均会重写。此消长关系未定案，待DSH-2 收口时一并处理。
 
 ### DSH-2 · 代码形态 + 环境准备
 
-**先决（判定前不启动后续任务）**
-- [ ] **任务 0：判定 LarryAgent 的代码存在形态** —— A 案「独立仓库 + 构建 Cordis bundle 挂载」／B 案「fork DSH 主仓加自有包」／C 案「混合」。**判据**：需触达的 DSH 内部 service 面有多深（Qoder 估 5–8 项需"深度介入 agent 组合"；若这些必须改上游代码则 A 案不成立）。**WB 倾向 A 案**——B1 挂载通道已实测可行，且升级 SOP 在 A 案下最干净；fork = 每次上游发版都要 merge 一个 alpha 框架的破坏性变更，是长期负债。文档 §3.6
+> **目标**：在锁定版上建起可挂载的 TS 工程，并实测 5 项关键可行性。
+> **基线**：`dsh-v0.1.2-rc.1`——本阶段所有结论须显式标注基线；源码查阅走 `ref/dsh-bare`（**只读**）。
+> ⚠️ **这是最后一次便宜的回头机会**：本阶段成本仅「环境 + hello world」，DSH-3 起真重写 8830 行后回头代价陡增。值得花时间，不要催。
 
-**任务**
-- [ ] 配套 TS 工程（pnpm + tsconfig + 首个 Cordis 插件）
-- [ ] 跑通官方 demo（确认环境）
-- [ ] **Vue/Tauri → dsh sdk profile 连通 hello world**（交付通道前提）
-- [ ] 测试隔离基建设计（Vitest 临时库隔离 / 真实库 fail-fast / 占位符注入等价物）
+**DSH-2.0 - 代码存在形态判定** ✅
 
-**退出条件（= 待校准实测 5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
+- [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**。8 项必需能力全部可经公开挂载面获得，无一项需改上游。架构根因 = DSH 核心能力层是 Service Definition / Provider / Consumer 三分架构。报告 `docs/dsh/dsh-form-probe-claude.md`；🟢 WB 本地复核（机制 8/8 属实，行号 2 处偏差）。**结论已折入文档 §3.6，本区不重复**
+- [x] 附带确认：`patchReload: startup` → 部署期配置变更需重启（单用户可接受，与 Python 时代改 config 重启同量级）
+
+**DSH-2.1 - 配套 TS 工程**
+
+- [ ] pnpm workspace + tsconfig 搭建（**安装期需 Node + pnpm**——第 0 项实测 B1 通道硬发现，仅运行期免 Node）
+- [ ] 首个自做 Cordis 插件骨架（`export const inject = [...]` + `apply(ctx)`，范式见 `packages/fs/tool-fs/src/index.ts:22`）
+- [ ] 构建产物为可挂载 bundle，经 B1 通道挂进 DSH 并**验证挂载成功**
+- [ ] **工程目录 / 仓库位置 / 包名前缀定案**，并明确与现有 `client/` 的关系
+
+**DSH-2.2 - 跑通官方 demo**
+
+- [ ] 按官方 demo 走通一次完整会话，确认环境可用
+- [ ] ⚠️ **避坑**：Windows 下官方 `dsh.exe` **segfault**（第 0 项实测硬发现，官方 CLI 不可靠）→ 走编程入口 / 打包运行时，不依赖 CLI
+- [ ] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
+
+**DSH-2.3 - Vue/Tauri → sdk profile 连通 hello world**
+
+- [ ] 现有 Vue/Tauri 客户端经 sdk（或 acp）profile 发一条消息并收到回包
+- [ ] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
+- [ ] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
+
+**DSH-2.4 - 测试隔离基建设计**
+
+- [ ] Vitest **临时库隔离**：测试前断言 DB 路径指向临时库，指向真实库直接 fail-fast（等价现有 Python 侧机制，属 Tier0 硬红线，不依赖自觉）
+- [ ] `--real-api` 占位符机制的等价物
+- [ ] ⚠️ **不提前设计 = DSH-3 起每步验证都裸奔**（文档 §3.6 硬要求：本阶段设计到位）
+- [ ] 对照 DSH 四层测试体系设计——测试资产已定稿为**重建**，不是翻译
+
+**DSH-2.5 - 退出条件实测（5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
+
 - [ ] ① `storage/` 外接 SQLite 可行性
 - [ ] ② `acp/` 契约稳定性
-- [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，待验实际生效性与提权流程）
-- [ ] ④ Vue/Tauri → sdk profile 连通（同上 hello world）
-- [ ] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）
-- [ ] **DSH-2 收口后**：用当时最新 rc 版本做一轮复核（锁定版是否过期、有无影响本阶段结论的变更）。**老大定：不与上游 alpha 节奏绑死，按我们的阶段节拍走**；本轮任务 0 结论一律基于 `dsh-v0.1.2-rc.1` 并显式标注基线
+- [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，且 fail-closed——无 runner 时报 `SANDBOX_UNAVAILABLE`、不静默裸跑。待验**实际生效性**与提权流程）
+- [ ] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）
+- [ ] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（决定是否需要全量重嵌，影响 DSH-4 记忆迁移工作量）
 
-### DSH-2.5 · 如果DSH的新稳定版本发布则进行一轮评估
+**DSH-2.6 - 阶段收口复核**
+
+- [ ] DSH-2 全部完成后，用当时**最新 rc** 做一轮复核（锁定版是否过期、有无影响本阶段结论的变更）。**老大定：不与上游 alpha 节奏绑死，按我们的阶段节拍走**
+- [ ] 重跑 DSH-2.0 的形态测绘（纯测绘、成本低）——**不要中途换版本继续**，否则结论混在两个基线上没法用
 
 ### DSH-3 · 核心能力 prototype
 

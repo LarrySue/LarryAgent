@@ -1,13 +1,15 @@
 # DSH 迁移决策区（docs/dsh/）
 
 - `dsh-migration.md` — **决策稿**（已定稿 + 第 0 项终裁 2026-09-08：Py SDK 判 **二等** → 定 **A-framework**，全面 TS 化）
-- `dsh-pysdk-probe.md`（Trae）／`-claude.md`（Claude）／`-qoder.md`（Qoder）— 第 0 项三方实测报告
+- `dsh-pysdk-probe.md`（Trae）／`-claude.md`（Claude）／`-qoder.md`（Qoder）— 第 0 项（Py SDK 成色）三方实测报告
+- `dsh-form-probe-claude.md` — DSH-2 任务 0（代码存在形态 A/B/C 案）Claude 测绘报告，判 **A 案成立**。⚠️ 引用其行号前须看文件头的 WB 复核注记（2 处偏差）
 
-## 三条规则
+## 规则（本目录内一律适用）
 
-1. **三份报告是证据，不是历史**：§3.5 的判定以它们为证据支点，且「跨进程 resume id collision」等待核项仍需回看原始输出。故与决策稿**同目录存放，不拆、不进 `archive/`**（`archive/README.md` 的落位判据是"是否仍被引用"，不是"是否闭环"）。
+1. **四份报告是证据，不是历史**：§3.5（二等）以第 0 项三份为证据支点，§3.6（A 案）以形态测绘报告为支点，且「跨进程 resume id collision」「同会话热切角色」等待核项仍需回看原始输出。故与决策稿**同目录存放，不拆、不进 `archive/`**（`archive/README.md` 的落位判据是"是否仍被引用"，不是"是否闭环"）。
 2. **永久保留**：老大 2026-09-08 定，不参与柔性清理，任何人不得删。
-3. **结论以决策稿为准**：Trae / Claude 两份的「一等」为原始交付，已被 §3.5 覆盖；Qoder 的「二等」即最终口径。引用一律用 `dsh-migration.md` §3.5。
+3. **结论以决策稿为准**：第 0 项 Trae / Claude 两份的「一等」为原始交付，已被 §3.5 覆盖；Qoder 的「二等」即最终口径。引用一律用 `dsh-migration.md` 对应节。
+4. **AI 报告的行号不可全信**：形态测绘报告 8 条中 2 条行号错（机制全对）。**复验一律自己 `git -C ref/dsh-bare show <tag>:<path>` 核，不采信转述**。
 
 ## 源码查阅
 

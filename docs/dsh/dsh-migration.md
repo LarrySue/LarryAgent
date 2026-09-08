@@ -324,7 +324,11 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 > **任务清单与进度见 `TODO.md`「DSH-2」**——本稿不存放待办，本节只放**验收基准与判定依据**。
 
 - **参考源（已完成）**：DSH 主仓 clone 到 **`ref/dsh-bare/`**（项目根独立目录，`.gitignore` 排除、**不入 git**），锁定 `dsh-v0.1.2-rc.1`（裸仓库按 tag 直读，无工作区）。查阅方式见 §2.2
-- **先决 · 任务 0 的判据**（判定前不启动 DSH-2 其余任务）：判的是**需触达的 DSH 内部 service 面有多深**——Qoder 估 5–8 项需"深度介入 agent 组合"；若这些必须改上游代码，则 A 案不成立。**WB 倾向 A 案**：B1 挂载通道已实测可行，且升级 SOP 在 A 案下最干净；fork 意味着每次上游发版都要 merge 一个 alpha 框架的破坏性变更，是长期负债
+- **代码存在形态：A 案已判定成立（DSH-2.0 · 2026-09-08）** —— LarryAgent = **独立仓库 + 构建 Cordis bundle 挂载**，**不 fork**。8 项必需能力**全部可经公开挂载面**（Cordis bundle / preset / patches / 配置 / MCP 桥）获得，**无一项需修改 DSH 上游代码**
+  - **架构根因**：DSH 核心能力层是 **Service Definition / Provider / Consumer** 三分架构（capability seam 设计）——`ctx.approval` / `ctx.compaction` / `ctx.sandbox` / `ctx.fs` / `ctx.tools` 均为**契约**，默认实现只是**一个 Provider**。我们的全部必需能力 = 提供自己的 Provider / answerer / listener，消费者与模型侧不动
+  - **证据**：逐项表见 `docs/dsh/dsh-form-probe-claude.md`。🟢 **WB 本地复核（`git show` 锁定了 `dsh-v0.1.2-rc.1`）：机制 8/8 属实**；行号 2 处偏差（#2 实际 154 行、#3 实际 22 行）——**报告的行号不可全信，机制结论可信**
+  - **不选 B 案的理由**：8 项无一项触及 agent loop / session 内核 / 事件存储；fork 的代价（每次上游发版 merge 一个 alpha 框架的破坏性变更）换不来任何必需收益。升级 SOP 在 A 案下 = 更新依赖版本 + replay 回归
+  - **已知边界（不阻塞 A 案）**：① `patchReload: startup` → 部署期配置变更需重启（单用户可接受，与 Python 时代改 config 重启同量级）；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 
 **退出条件（5 项实测，任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
 1. `storage/` 外接 SQLite 可行性
@@ -415,7 +419,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 2.5.1 多模型切换 | **DSH `llm/` 替换** | 开箱即得 |
 | 2.5.2 工具挂载 | **DSH 工具管道替换** | shell/file_ops 翻 TS 插件 |
 | 2.5.3 扩展性/MCP | **DSH `mcp/` 新增** | 开箱即得 |
-| 2.6.1 角色切换 | DSH `preset/` 迁移底座 | cordis.yml 承接 config 角色 |
+| 2.6.1 角色切换 | DSH `preset/` 迁移底座 | cordis.yml 承接 config 角色。🟢 **复核补强**：官方 `preset/persona` 包本体即 `export const inject = ['systemPrompt']`（`packages/preset/persona/src/index.ts:27`），带 `complete`（完全替换 system prompt）／`includeRuntimeContext` 选项 → **角色机制 = 官方 persona preset，公开面可达** |
 | 2.6.2 自动路由 | 自做/待定 | 产品树仍 📐 |
 | 2.7.1 行为安全 | DSH sandbox 升级 | 三平台后端**均存在**（Windows = restricted token）；待DSH-2 本机实测后升 ✅（上限：同世界隔离）|
 | 2.7.2 边界透明 | **自做（A-framework 下为常规待办，非缺口）** | 🟢 锁定版核实：SDK 请求面无 answer 方法，官方设计文档明写「Zero listeners fall through to **unavailable**」——**此即判二等的核心依据**。**A-framework 下由我们的 TS answerer 插件实现**（B1 通道已实测可行），退路为 permission-preset 白名单。DSH-4 验收项 |
@@ -430,7 +434,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 2.9.2 超长会话一致性 | **DSH compaction 承接** | 机制反向问题获解 |
 | 2.9.3 降级韧性 | 部分 DSH + 自做 | llm-retry/guard 可承接；LarryException 统一出口自做 |
 | 2.10.1 云端部署 | DSH host 上云 + 自做适配 | — |
-| 2.10.2 端侧能力 | 自做下沉 | Windows 沙箱后端**已确认存在**；待DSH-2 实测（同世界隔离为已知上限，非阻塞项）|
+| 2.10.2 端侧能力 | 自做下沉 | Windows 沙箱后端**已确认存在**（restricted token + `sandbox-windows-acl/`）。🟢 **复核补强**：`sandbox-local` README 明示 **fail-closed**——无可用 runner 时 provider 报 `SANDBOX_UNAVAILABLE`，**命令绝不静默裸跑**（对 2.7.1 行为安全同效）。待 DSH-2 实测（同世界隔离为已知上限，非阻塞项）|
 | 2.10.3 单人单实例 | 形态事实 | DSH 无关 |
 
 #### 风险与退出条件
