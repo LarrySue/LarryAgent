@@ -120,7 +120,8 @@
 
 **DSH-2.5 - 退出条件实测（5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
 
-- [ ] ① `storage/` 外接 SQLite 可行性
+- [ ] **前置：准备 Linux 验证环境（WSL2，Win11 自带）** —— S 侧生产在 Linux，① 的 SQLite 文件锁 / WAL / 并发行为与 Windows 有差异，须在 Linux 上取数。⚠️ **用途仅为验证，不是生产环境**（生产环境属 DSH-5 上云）。若 WSL2 不足以复现目标行为，再上 CVM
+- [ ] ① `storage/` 外接 SQLite 可行性（**须在 Linux 环境取数**，见前置）
 - [ ] ② `acp/` 契约稳定性
 - [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，且 fail-closed——无 runner 时报 `SANDBOX_UNAVAILABLE`、不静默裸跑。待验**实际生效性**与提权流程）
 - [ ] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）
