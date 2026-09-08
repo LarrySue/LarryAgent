@@ -126,7 +126,7 @@ B3 MCP 桥可行（决定 shell/file_ops 可留 Python ✅）+ B1、B2 均可行
 |---|---|---|---|
 | 1 | **子进程生命周期** | ✅ | 强杀子进程（taskkill /F /T）→ SDK 检测到退出；杀后请求报 **TransportClosedError**（"Failed to write... exit code: 1"）——**优雅报错非挂起**；close 后新实例 start + 新会话跑通 ✅ |
 | 2 | **协议层** | ✅ | 未知方法 → `JsonRpcError code=-32603`（runtime 自定义码，非标准 -32601，但语义清晰 "unknown method"）；缺参 → `JsonRpcError code=-32603` 参数校验错误——**错误结构含 code/message/data，可映射到 LarryException** ✅ |
-| 3 | **超时与取消** | ⚠️ 部分 | `request_timeout_seconds`/`initialize_timeout_seconds` 参数存在且生效路径可读（超时报错消息明确）；无 LLM 慢请求场景下未实测 abort 透传——标注待补 |
+| 3 | **超时与取消** | ⚠️ 已实测（有发现） | `request_timeout_seconds` **不覆盖长 turn**（见真实补测 §7）：只作用于单次 JSON-RPC 往返；turn 等待 `subscription.next()` 无超时 → 子进程挂起/断流时 SDK 无限等待，**应用层须自建 watchdog** |
 | 4 | **状态一致性** | ⚠️ 部分 | **跨进程 session resume 实测通过**（同 session_id 在进程 2 可用）；DSH session 持久化到 `$DSH_HOME/sessions/`（实测目录生成）。双写崩溃一致性属**我们自做层**（SQLite 在 Python 侧），非 SDK 行为——待 A-service 落地时按我们既有双写设计保障 |
 | 5 | **升级后契约漂移** | ⚠️ 部分 | 方法面清单已固化为 §2 表格 = **契约快照的原始输入**（升级后可 diff）；事件类型清单来自锁定版源码可复现。未实际升级验证 |
 | 6 | **资源与凭据** | ✅ | **key 泄漏扫描**：占位 key `sk-probe-placeholder-9f8e7d6c` 未出现在 events/notifications/stderr——**无完整泄漏**；但错误消息含脱敏尾部 `****7d6c`（DeepSeek API 侧回显，业界惯例，风险可接受）；子进程 stderr 干净（无凭据噪音）✅ |
@@ -137,6 +137,28 @@ B3 MCP 桥可行（决定 shell/file_ops 可留 Python ✅）+ B1、B2 均可行
 2. **runtime 首次启动实体化完整 profile 到 DSH_HOME** 🟢：`profiles/node_modules/`（2.2MB stub 树转发 SEA 快照）+ `profiles/sdk/`（cordis.yml/cordis.patch.yml/package.json/pnpm-workspace）+ `sessions/` `storages/`——DSH_HOME 是可写的完整运行时根，非只读虚拟
 3. **stub 文件暴露 SEA 快照路径** 🟢：`C:/snapshot/deepseek-harness/python/sdk-runtime/...`——打包内部结构可读（对 fork 自维护是利好）
 4. **事件类型含 `session-log-deepseek/delivery-accepted`** 🟡：疑似 DeepSeek 专用会话日志通道，若走 A-service 值得确认是否向 DeepSeek 侧发送数据（出境面相关，与 2.7.5 数据主权联审）
+
+
+### 真实 key 补测结果（2026-09-08，老大提供测试 key，用完即弃）
+
+**测试 1：真实 tool call 事件流形态** 🟢
+- 模型自主调 MCP echo 工具成功：`tool/call` 事件含 `callId` + `name` + `arguments`；`tool/result` 事件含 `message.source.callId`（关联）+ `sourceEventSeqs`（seq 回溯）+ 完整返回内容
+- **事件双向可追溯（callId + seq）** → 2.4.2 记忆双写数据源最终判据 ✅
+- 完整流程：assistant/chunk 流式 → assistant/message → tool/call → tool/result → step/end → 第二轮 step/start（模型消化工具结果）→ assistant/chunk 流式 → turn/end（`finish_reason=completed`）
+- 流式 chunk 真实形态：**每个 delta 一个 assistant/chunk 事件**（长文 100+ chunk 事件），逐增量可消费
+
+**测试 2：跨进程 resume —— ⚠️ 发现 id collision（真实 key 才暴露）**
+- 占位 key 阶段 resume"跑通"是假象（error 会话无持久化内容）
+- 真实 completed 会话持久化后，**跨进程复用同 session_id 报错**：`session "..." already has a persisted log on disk that does not match this live session (id collision)`
+- 源码确认"cold session is resumed on first touch"是预期机制（`packages/core/session/src/index.ts`）——说明同 id 续用本应 resume，但 Python SDK 高层（`start_session(session_id)` → `session/prompt`）触发 collision
+- **定性：发现项待核**——TS client 亦无显式 resume API（grep 无命中），需对照 DSH 正确 resume 姿势（或 subagent 内 resume 机制）才能定性是 SDK 缺口还是姿势问题。**影响**：2.4.1/2.8.2 的"fork/resume"承接叙事需按此核实，但不影响一等判定的四条判据
+
+**测试 3：超时/取消 —— ⚠️ 发现 SDK 长 turn 无超时保护**
+- `request_timeout_seconds=4s` 下 15.9s 的 turn 正常完成——**该超时只作用于单次 JSON-RPC 往返，不覆盖长 turn 生成**
+- 源码确认（`deepseek_harness/api.py:170`）：turn 等待循环 `subscription.next()` **无 timeout 参数**
+- **风险**：若子进程生成中挂起/断流（不推 idle 通知），SDK 会无限等待——**应用层必须自建 watchdog**（这是 A-service 落地时测试计划与运行时设计的硬输入）
+
+**key 卫生**：测试 key 仅通过环境变量传入，未入日志/报告/代码；错误消息回显尾 4 位（`****0201`，API 侧脱敏惯例，与占位 key 测试结论一致）。
 
 ### 阻塞 / 我认为规格可补的点
 
