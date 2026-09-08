@@ -2,7 +2,7 @@
 
 > 产品视角提案与讨论。**设计定案已固化至 `docs/ui-reference.md`（权威）**；本文件保留产品方向源与未决提案，不在此维护第二份设计真相。
 
-- 第 3 轮 DSH 审阅已表态并收口（结论已折入 `exchange/dsh-migration.md` 结论区），无进行中任务
+- 第 3 轮 DSH 审阅已表态并收口（结论已折入 `../docs/dsh/dsh-migration.md` 结论区），无进行中任务
 
 ---
 
