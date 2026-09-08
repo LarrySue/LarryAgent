@@ -22,6 +22,12 @@
 需要考虑建设一些评估类的代码，以服务于本项目的迭代
 需要完善Claude和Trae的T1
 
+DSH方面三条硬发现
+session-log-deepseek：Claude 怀疑它向 DeepSeek 发数据，我去核了——默认关闭（explicit opt-in）​，但一旦开启，会把完整、未脱敏的会话事件发到 baseURL。已列进必关清单（2.7.5 数据主权）。
+长 turn 无超时：request_timeout_seconds 只管单次往返，生成中挂起会无限等。​必须自建 watchdog，两条路径都一样。
+Windows 官方 CLI dsh.exe 段错误（Claude + Qoder 独立发现）：不影响 SDK 主路径，但 dsh plugin 管理入口在目标平台不可靠 → B1 不能依赖官方 CLI。
+这三条不知道放哪儿，先写到这儿避免忘了
+
 ## 一些想法，甚至不算待办（普通，不急，先列着
 生产环境维护手段的问题
 和Marvis交流了名词解释是否需要单开文档以降低沟通成本的问题，已进入Marvis交流区，后面有空再说
