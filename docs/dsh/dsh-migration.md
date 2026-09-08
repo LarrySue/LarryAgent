@@ -81,7 +81,7 @@
 | **口号 / 内核** | Everything is a Plugin（万物皆插件）；内核 = **Cordis** 插件总线（Koishi 生态插件内核）| 🟡 |
 | **主语言 / 规模** | **TypeScript**（Monorepo）。**本地实测：锁定版 `packages/` 顶层 50 个包目录**，另含嵌套子包（如 `sandbox/sandbox-windows-acl/`）；仓库 156 MB / 9,080 文件 | 🟢 |
 | **许可证** | **MIT**（Copyright 2026 DeepSeek，本地 LICENSE 确认）| 🟢 |
-| **锁定版本** | **`dsh-v0.1.2-rc.1`**（0.1.2 线首个 RC，老大裁定锁 release 线）。master 开发线 `dsh-v0.1.3-alpha.1`。**tag 名带 `dsh-` 前缀**；11 个 release **全部 prerelease**，无 GA 时间表 | 🟢 |
+| **锁定版本** | **`dsh-v0.1.2-rc.1`**（0.1.2 线首个 RC，老大裁定锁 release 线）。master 开发线 `dsh-v0.1.3-alpha.2`（2026-09-07，仅 git tag、未进包管理器；较锁定版领先 644 commit）。**tag 名带 `dsh-` 前缀**；11 个 release **全部 prerelease**，无 GA 时间表 | 🟢 |
 | **社区规模（2026-09-07 更新）** | star **215K** / fork **25.3K** / watch **923** / releases **11 tags** / commits **15,210**（老大读数；WB 于 09-07 15:53 用 GitHub API 交叉验证 star 214,526 / fork 25,270，与老大读数一致，24 小时 +612 star）。**天龄 25 天**（仓库创建 2026-08-13）。**只记录，不解读** | 🟡 |
 | **官方状态** | `SAFETY.md` 原文：「experimental developer-preview software. It has **not undergone a security audit** and **must not be treated as secure or production-ready**」；沙箱/审批/权限「do not guarantee isolation」 | 🟢 |
 | **沙箱** | 四子包：`sandbox/` + `sandbox-local/`（Linux bwrap→Landlock / macOS Seatbelt / **Windows restricted token**）+ `sandbox-policy/` + **`sandbox-windows-acl/`**（Windows 写入限制：受限子进程仅可写工作区与私有 temp）。三档策略 `read-only` / `workspace-write` / `danger-full-access`；被策略拒绝的调用可经**用户批准的一次性升权**重试。**同世界隔离**：共享宿主内核与文件系统，非容器 / microVM 级 | 🟢 |
@@ -223,7 +223,10 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **升级 SOP**（取代原"锁版本不升不降"——该表述与立论③"随 DSH 演进"自相矛盾，第 1 轮 Trae/Qoder/Marvis 三方一致指出）：
 
-- **节拍**：跟随 release tag（不跟 master HEAD）。**【老大已拍板】**——"目前先跟随 release tag，具体怎么做到时候再讨论，现在过于细节地讨论纯属空中楼阁"
+- **节拍**：跟随 **rc 及以上** 的 release tag（不跟 master HEAD）；**`alpha` 只作监控信号、不跟随**。
+  - **为何须写明（消歧义，非新增规则）**：DSH 的 rc 与 alpha **同为 `dsh-v*` 前缀的 prerelease tag，形式无差别**（84 行：11 个 release 全部 prerelease），故"跟随 release tag"字面口径**会把 alpha 包含进去**——须按**版本号语义**筛选，而非"有 tag 即跟"。
+  - **双护栏**：① alpha **未进包管理器**（`0.1.3-alpha.1/.2` 仅发 git tag，npm / PyPI latest 仍为 `0.1.2-rc.1`）；② 但我们的锁定源是 **git tag**（§2.2 `ref/dsh-bare`），故①对 `ls-remote --tags` 的查法不成立 → **一律以包管理器已发布版本为准，git tag 仅用于读源码**。
+  - **【老大已拍板】**——"目前先跟随 release tag，具体怎么做到时候再讨论，现在过于细节地讨论纯属空中楼阁"
 - **首触发条件**：下一版本确认修复性能回退 + 破坏性变更窗口消化（**不是**"有新能力才升"）
 - **回归分三层**（Claude 采纳——原"每次必跑 P4 全矩阵"在 2.3 天一 tag 下不可执行）：① **每次升级** = RPC 契约快照 diff + `llm-replay` 快照回归（无 key、秒级、廉价哨兵）；② **事件触发**（性能回退修复版 / 破坏性变更 / 影响 31 子项承诺的变更）= P4 全矩阵 + 真实验收；③ **季度评审** = GA 进展 / 生态 / 是否切 HEAD
 - **回退**：任一红**先尝试适配（timebox 一个 release 周期、双轨保护下），超时未收敛即回退上一 tag**——回退仍是默认动作；适配必须有期限，否则"适配"演变为"漂移"
@@ -429,13 +432,13 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - 阶段 2 五项实测任一不过 → 阶段 3 收益表重估，C 路径回退进入议程
 - 阶段 3 核心链路未达 P4 等价 → 回退旧后端（双轨保障，旧后端全程可用）
 - 阶段 4 任一项差异化能力卡死 → **单独延后，不阻塞主线**（DSH 框架先落地，差异化能力分批做）
-- DSH 发布破坏性变更 → 按升级 SOP（§3.4）：跟 release tag，升级必跑 replay + P4，任一红回退
+- DSH 发布破坏性变更 → 按升级 SOP（§3.4）：跟 rc 及以上 tag（alpha 不跟随），升级必跑 replay + P4，任一红回退
 - 方向不对齐长期化 → §3.3 的 7 项差异化能力同步排进 P 队列
 
 ### 3.7 待办
 
 **待老大拍板**：
-- [x] **升级 SOP 节拍** → **已定：跟随 release tag + 事件触发**（老大："目前先跟随 release tag，具体怎么做到时候再讨论"）。例外：若 DSH 有明确 GA 时间表，可在 GA 前约 6 个月切 HEAD。产品向门禁：凡影响 31 子项产品承诺的 DSH 变更同样触发升级评估。三层回归见 §3.4
+- [x] **升级 SOP 节拍** → **已定：跟随 rc 及以上的 release tag（alpha 只监控不跟随）+ 事件触发**（老大："目前先跟随 release tag，具体怎么做到时候再讨论"）。例外：若 DSH 有明确 GA 时间表，可在 GA 前约 6 个月切 HEAD。产品向门禁：凡影响 31 子项产品承诺的 DSH 变更同样触发升级评估。三层回归见 §3.4
 - [ ] **阶段 3 prototype 派发**：Trae / Claude 分工与节奏
 - [ ] **阶段 4 差异化能力优先级**：哪些先做、哪些等（承接总表已给出"用户感知优先"初排，可否决）
 
