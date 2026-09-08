@@ -18,7 +18,7 @@
 
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
-- `dsh-migration.md` — DSH（DeepSeek harness）迁移决策稿。第 3 轮四方审阅收口（一致同意定稿），待老大终审；下一动作 = 阶段 2 第 0 项实测
+- `dsh-migration.md` — DSH（DeepSeek harness）迁移决策稿。**已定稿**（第 3 轮四方审阅 + 老大 2026-09-08 终审）；唯一待定项 = §3.5 Python SDK 成色，由阶段 2 第 0 项实测收口（已派发 Trae）
 - `web-search-design.md` — 网络搜索技术选型与设计规格（老大 2026-09-04 由 `docs/` 移入：**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
 
 ## 协作规则

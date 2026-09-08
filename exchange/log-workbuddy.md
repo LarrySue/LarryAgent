@@ -2,8 +2,11 @@
 
 ## 当前议题
 
-- **✅ DSH 迁移讨论稿：第 3 轮四方审阅收口（四方一致同意定稿）**——结论已折入结论区，讨论区已清；待老大终审后视为定稿。下一动作 = 阶段 2 第 0 项实测（Python SDK 一等/二等公民判定）
+- **✅ DSH 迁移决策稿：已定稿**（第 3 轮四方审阅 + 老大 2026-09-08 终审）。老大终审结论：§1.5 基准无问题 / §3.0 维持裁定 / §3.7 计划基本合理后续微调；**唯一待定 = §3.5 须先明确 Py SDK 成色**。`exchange/README.md` 索引已同步为「已定稿」
+- **🔄 阶段 2 第 0 项实测（在飞，已派发 Trae 2026-09-08）**：判定 Python SDK 一等 / 二等公民 → 决定 A-framework vs A-service。交付 `exchange/dsh-pysdk-probe.md`；WB 收动作 = 复验（不采信转述，本地锁定版核关键断言）+ 折入 §3.5/§3.7。判「二等」则按老大裁定转全面贴近核心层（含语言）
 - **⏸ 其余讨论稿（各自独立排期）** — `web-search-design.md`（搜索选型，未展开）／`deployment-architecture.md`（云部署草案）／`discussion-time-context.md`（时间上下文）。
+
+**DSH 线待老大拍板的挂件**（不阻塞第 0 项）：阶段 3 prototype 派发节奏 / 阶段 4 差异化优先级 / 借鉴 fork 代码进库位置与 license 标注 / §3.0 是否升格进 `docs/ai-governance.md`
 
 ## UI Designer 待办（Logo 资产，待用户处理）
 
