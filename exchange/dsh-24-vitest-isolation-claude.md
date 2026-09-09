@@ -21,7 +21,7 @@
 
 ```
  FAIL  tests/sentinel-failfast.test.ts > ... > 污染 DSH_HOME 指向真实库时应被隔离守卫拦截
-Error: [test-isolation] FAIL: DSH_HOME 指向真实库 D:\Code\LarryAgent\.dsh-home。测试不得触碰真实 .dsh-home——请勿在测试中覆盖 DSH_HOME 指向真实路径。
+Error: [test-isolation] FAIL: DSH_HOME 解析为 D:\Code\LarryAgent\.dsh-home，不在临时根 D:\Temp\Sys 下。测试必须运行在临时 DSH_HOME 内——请勿覆盖 DSH_HOME 为真实路径或删除该环境变量。
 ```
 
 （正常路径 `tests/guard.test.ts` 同文件全绿——护栏存在且不误伤。）
@@ -69,7 +69,9 @@ cd harness
 pnpm add -D vitest               # 已装
 npx vitest run tests/guard.test.ts           # 正常路径：绿
 npx vitest run tests/sentinel-failfast.test.ts  # 哨兵：红（护栏在）
-npm run test:isolated / test:isolated:sentinel  # package.json 已加脚本
+npx vitest run tests/sentinel-unset.test.ts  # R2 反向哨兵：红（unset 被拦）
+npx vitest run tests/sentinel-key-residue.test.ts  # R1 反向哨兵：绿 + teardown 告警 KEY RESIDUE
+# package.json 已加 test:isolated / test:isolated:sentinel
 ```
 
 **踩坑清单**：
@@ -92,5 +94,8 @@ harness/tests/isolated-setup.ts       # 隔离基建（临时 DSH_HOME + 守卫 
 harness/tests/global-setup.ts         # teardown 兜底
 harness/tests/guard.test.ts           # 哨兵 1：隔离生效（绿）
 harness/tests/sentinel-failfast.test.ts  # 哨兵 2：fail-fast（红=护栏在）
+harness/tests/sentinel-unset.test.ts  # R2 反向哨兵：delete env 必须红
+harness/tests/sentinel-key-residue.test.ts  # R1 反向哨兵：写 sk- 文件 teardown 告警
+harness/tests/global-setup.ts  # R1: 先扫 key 后删目录（主进程 teardown）
 harness/package.json                  # 加 test:isolated 脚本
 ```
