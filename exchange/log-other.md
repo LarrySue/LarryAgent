@@ -123,7 +123,25 @@ sqlite3 t.db "SELECT COUNT(*) FROM t;"
 **两个空间相关的坑**：
 
 1. **WSL2 的 VHDX 只增不减**：在 WSL 内删除文件，**宿主 C 盘空间不会释放**（VHDX 不会自动收缩）。若日后要回收，需 `wsl --shutdown` 后用 `diskpart` compact VHDX，或 `wsl --export` 再 `--import`。
-2. **默认装在 C 盘**：Store / `wsl --install` 装的发行版，其 `ext4.vhdx` 落在 `%LOCALAPPDATA%\Packages\<发行版>\LocalState\`。想放 D 盘需手动 `--export` / `--import` 迁移——**本次不建议折腾**，130 GB 够用。
+2. ⚠️ **必须装在 C 盘（硬要求，不是建议）——绝不要把 WSL 放到 D 盘**：
+   - Store / `wsl --install` 装的发行版，`ext4.vhdx` 默认落在 `%LOCALAPPDATA%\Packages\<发行版>\LocalState\`（C 盘）。**保持默认即可，不要 `--export` / `--import` 迁到 D 盘。**
+   - **理由（老大提出「D 盘是 VHD」后补）**：若 D 盘确为 VHD，则把 WSL 放上去会形成 **VHD 套 VHD**（NVMe → NTFS → VHD(D:NTFS) → `ext4.vhdx` → ext4）。动态扩展 VHD 的写入需分配块、易碎片，**fsync 延迟被显著放大**。
+   - **为什么这条对本项目致命**：DSH-2.5 ① 测的就是 **SQLite WAL + 文件锁的并发行为，它直接受 fsync 延迟影响**。嵌套虚拟层会改变锁竞争的时间窗口 → 测出来的是**存储栈的产物，不是 Linux 的行为**，判定整个作废。**宁可不测，也不能在这种栈上取数。**
+   - **即使 D 盘不是 VHD 也一样别迁**：本机 C / D 同属一块物理 NVMe（见下实测），性能无差别，迁移纯属无收益的复杂度。
+
+**澄清一个容易混淆的点**（与 §1.2 的 `/mnt/c` 禁区**不是一回事**）：
+
+- WSL 访问**自己的 ext4**（`~/` 等）走 **virtio-blk / SCSI 直通**到 `ext4.vhdx` 文件 —— **不是 9P**，性能是「NVMe + WSL 一层 VHD」的正常损耗。
+- WSL 访问 **`/mnt/c`、`/mnt/d`** 才走 **9P / drvfs** —— 慢，且 POSIX 锁与 WAL 语义不对（§1.2 禁区）。
+- → **「`ext4.vhdx` 文件存放在 C 盘」完全没问题；「在 WSL 里读 `/mnt/c` 做验证」才是禁止的。**
+
+**本机存储实测（WB 2026-09-09，`Get-Disk` / `Get-Partition` / CIM `MSFT_Disk`）**：
+
+- 物理磁盘**只有一块**：Disk 0 = `HFS001TEM9X174N`，**NVMe SSD 1 TB**（`Get-PhysicalDisk` MediaType = SSD）。
+- **C = Disk 0 分区 3（366 GB，可用 139 GB）／D = Disk 0 分区 5（657 GB，可用 192 GB）**，`Type` 均为 **Basic**。
+- 三个查询路径**均未列出任何 VHD 挂载的虚拟磁盘**（若 D 为挂载 VHD，应出现 Disk 1 且 FriendlyName = `Microsoft Virtual Disk`）。
+- ⚠️ **与老大「D 盘是 VHD」的描述不符**——**此处存疑，未下结论**。老大可在「磁盘管理」里复核：VHD 挂载盘会显示**蓝色/紫色**图标与 `Microsoft Virtual Disk` 名称。
+- **但该疑点不影响决策**：无论 D 是否为 VHD，**结论都是装 C 盘**（是 VHD → 嵌套层污染数据；不是 VHD → 同盘同性能，迁移无收益）。
 
 ### 6. 配好之后交给谁
 
