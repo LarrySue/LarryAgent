@@ -3,7 +3,10 @@
 > **基线版本**：`dsh-v0.1.2-rc.1`（全链路锁定，装包/源码/tag 三处核对一致）
 > **任务来源**：`exchange/log-trae.md`【在飞 · 2026-09-09 派发】DSH-2.1 / DSH-2.2
 > **性质**：路线级短路点实测报告（对应 docs/dsh/dsh-migration.md §3.6 之后的 A-framework 前置验证）
-> **证据存放**：本报告在 exchange/（讨论稿区，未动 docs/）；挂载产物在 `harness/`（随代码提交）；源码工作树在 `D:\Code\dsh-src`（仓库外，可随时重建/清理）
+> 🔒 **永久保留 · 不参与柔性清理**（老大定）。**结论与最终裁定一致（两个"能"，已采纳）**。
+> 🟢 **WB 独立复验（2026-09-09）**：静态 + 动态证据**均本地复现**——`dsh --profile larry --dump-config` 见 `larry-probe` 插行、`hmr disabled: false`；`dsh --profile larry --help` 输出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)`。**核心结论成立**。
+> ⚠️ **WB 未独立复跑的部分**：§4.1 官方 demo 完整会话（需真实 key 触发 LLM），采信报告的 exit 0 + stdout + 会话产物说明。
+> **证据存放**：挂载产物在 `harness/`（随代码提交）；源码工作树在 `D:\Code\dsh-src`（仓库外，可随时重建/清理）
 
 ---
 

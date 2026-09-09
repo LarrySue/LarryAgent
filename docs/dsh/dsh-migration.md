@@ -301,7 +301,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 | 发现 | 实证 | 处置 / 影响 |
 |---|---|---|
-| **Windows 官方 CLI 崩溃**（Claude + Qoder 独立发现 🟢）| `dsh.exe --version` / `--dump-config` 在 Windows 稳定 segfault（0xC0000005）| 不影响 SDK 主路径（Python SDK 不经该命令），但官方 `dsh plugin` 管理入口在目标平台不可靠 → **B1 不能依赖官方 CLI，须手工放置或用隔离 pnpm** |
+| **Windows 官方 CLI 崩溃 —— ⚠️ 口径已修正**（Claude + Qoder 独立发现 🟢；Trae 2026-09-09 反证 🟢）| 第 0 项：`dsh.exe --version` / `--dump-config` 在 Windows "稳定 segfault（0xC0000005）"。**DSH-2 反证**：npm 全局安装的 `dsh@0.1.2-rc.1` 在 Windows **实测全部可用**——`plugin --profile add` / `--dump-config` / `--help` / 完整会话（demo-ptc）均 exit 0 | **不可用"Windows CLI 崩"作铁律**。崩溃与**入口/安装方式**相关：npm 全局 `dsh` 可用；**源码入口（`bin.ts` + tsx）在 PowerShell 下偶发卡住**（Trae 实测改用 npm 全局后全通）。**默认走 npm 全局 `dsh`，不用源码 tsx 入口**；若复现崩溃须记录具体入口与安装方式再定性 |
 | **长 turn 无超时保护**（Claude 真实 key 实测 + Qoder 源码确认 🟢）| `request_timeout_seconds` 只覆盖单次 JSON-RPC 往返，turn 等待 `subscription.next()` 无 timeout → 子进程挂起时 SDK **无限等待** | **应用层必须自建 watchdog**（A-framework 下同样需要）|
 | **B1 安装期仍需 Node / pnpm**（Qoder 🟢）| 不带 pnpm 安装失败，隔离装 pnpm 10.17.1 后成功 | "无需系统 Node"**只在运行期成立**，安装 / 升级链路不是纯 Python |
 | **MCP 只证 Tools**（Qoder 🟢）| Resources / Prompts / 任意 Cordis 内部 service 或 hook **未证**可经 MCP 等价桥接 | 不得外推为"所有能力均可经 MCP 桥接" |
@@ -328,7 +328,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
   - **架构根因**：DSH 核心能力层是 **Service Definition / Provider / Consumer** 三分架构（capability seam 设计）——`ctx.approval` / `ctx.compaction` / `ctx.sandbox` / `ctx.fs` / `ctx.tools` 均为**契约**，默认实现只是**一个 Provider**。我们的全部必需能力 = 提供自己的 Provider / answerer / listener，消费者与模型侧不动
   - **证据**：逐项表见 `docs/dsh/dsh-form-probe-claude.md`。🟢 **WB 本地复核（`git show` 锁定了 `dsh-v0.1.2-rc.1`）：机制 8/8 属实**；行号 2 处偏差（#2 实际 154 行、#3 实际 22 行）——**报告的行号不可全信，机制结论可信**
   - **不选 B 案的理由**：8 项无一项触及 agent loop / session 内核 / 事件存储；fork 的代价（每次上游发版 merge 一个 alpha 框架的破坏性变更）换不来任何必需收益。升级 SOP 在 A 案下 = 更新依赖版本 + replay 回归
-  - **已知边界（不阻塞 A 案）**：① `patchReload: startup` → 部署期配置变更需重启（单用户可接受，与 Python 时代改 config 重启同量级）；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
+  - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 
 **退出条件（5 项实测，任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
 1. `storage/` 外接 SQLite 可行性

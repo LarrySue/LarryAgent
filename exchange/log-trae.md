@@ -79,7 +79,7 @@
 1. **DSH-2.2**（官方 demo 一次完整会话）：**能** —— demo-ptc exit 0，输出 `hello from dsh`（deepseek-official 真实回复），sessions 产物落盘
 2. **DSH-2.1**（自做插件经 B1 挂进 DSH 并被 cordis 实际加载）：**能** —— `[B1-PROBE] external bundle loaded by cordis (tag=v1)`（cordis apply 实执行）+ LLM 回复 `probe loaded`，exit 0
 
-**交付物**：`exchange/dsh-b1-plugin-probe.md`（5 块齐全，含复跑步骤+踩坑清单+隔离自检原始输出）；代码 `harness/`（pnpm workspace + tsconfig + `@larryagent/plugin-probe` 空骨架，无任何业务逻辑）。报告放 exchange/（讨论稿区），**未动 docs/ archive/ .workbuddy/**。
+**交付物**：`docs/dsh/dsh-b1-plugin-probe-trae.md`（5 块齐全，含复跑步骤+踩坑清单+隔离自检原始输出；报告已由 WB 从 `exchange/` 迁入证据区——含环境复现步骤，后续阶段仍要引用）；代码 `harness/`（pnpm workspace + tsconfig + `@larryagent/plugin-probe` 空骨架，无任何业务逻辑）。报告放 exchange/（讨论稿区），**未动 docs/ archive/ .workbuddy/**。
 
 **HMR 可选项结论**：模块级 HMR 开关**可开**（profile 用户层 `- id: hmr; disabled: false` 覆盖 base 默认，dump-config 证实覆盖生效），开启后 headless boot 回归正常无副作用；同进程动态观察需长驻 profile（web/tui），headless one-shot 无窗口，留 DSH-2.3 一并做，不阻塞。
 

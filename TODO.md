@@ -94,16 +94,16 @@
 
 **DSH-2.1 - 配套 TS 工程**（已派发 Trae 2026-09-09）
 
-- [ ] pnpm workspace + tsconfig 搭建（**安装期需 Node + pnpm**——第 0 项实测 B1 通道硬发现，仅运行期免 Node）
-- [ ] 首个自做 Cordis 插件骨架（`export const inject = [...]` + `apply(ctx)`，范式见 `packages/fs/tool-fs/src/index.ts:22`）
-- [ ] 构建产物为可挂载 bundle，经 B1 通道挂进 DSH 并**验证挂载成功**
-- [ ] **工程目录 / 仓库位置 / 包名前缀定案**，并明确与现有 `client/` 的关系
+- [x] pnpm workspace + tsconfig 搭建（**安装期需 Node + pnpm**——第 0 项实测 B1 通道硬发现，仅运行期免 Node）
+- [x] 首个自做 Cordis 插件骨架（`export const inject = [...]` + `apply(ctx)`，范式见 `packages/fs/tool-fs/src/index.ts:22`）
+- [x] 构建产物为可挂载 bundle，经 B1 通道挂进 DSH 并**验证挂载成功**
+- [x] **工程目录 / 仓库位置 / 包名前缀定案**，并明确与现有 `client/` 的关系
 
 **DSH-2.2 - 跑通官方 demo**（已派发 Trae 2026-09-09，作为短路点先做）
 
-- [ ] 按官方 demo 走通一次完整会话，确认环境可用
-- [ ] ⚠️ **避坑**：Windows 下官方 `dsh.exe` **segfault**（第 0 项实测硬发现，官方 CLI 不可靠）→ 走编程入口 / 打包运行时，不依赖 CLI
-- [ ] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
+- [x] 按官方 demo 走通一次完整会话，确认环境可用
+- [x] ⚠️ **避坑**：Windows 下官方 `dsh.exe` **segfault**（第 0 项实测硬发现，官方 CLI 不可靠）→ 走编程入口 / 打包运行时，不依赖 CLI
+- [x] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
 
 **DSH-2.3 - Vue/Tauri → sdk profile 连通 hello world**
 
