@@ -70,7 +70,7 @@
 
 **连通方式**：profile = `sdk`（base + sdk-app）；传输 = stdio JSON-RPC（官方 TS SDK `@deepseek-ai/dsh-sdk-client` 驱动同版本 dsh runtime）；Tauri 侧**新写** `dsh_prompt` IPC（spawn `node harness/scripts/dsh-prompt.mjs`，一次性调用，非 P4 uvicorn 管理）；GUI 入口 = 主窗口顶栏「DSH」按钮（`DshProbe.vue`）。
 
-**交付物**：报告 `exchange/dsh-23-vue-tauri-connect.md`（5 块齐全：结论/连通方式/原始输出/可复跑+踩坑/⭐能力边界观察）；代码见报告 §7（client 4 文件 + harness scripts 2 个 + deps）。GUI 按钮为人工点验项；WB 零 GUI 独立复验走 §4.2 两条 CLI 命令（同通道）。
+**交付物**：报告 `exchange/dsh-23-vue-tauri-connect.md`（5 块齐全：结论/连通方式/原始输出/可复跑+踩坑/⭐能力边界观察）；代码见报告 §7（client 4 文件 + harness scripts 2 个 + deps）。**GUI 已人工点验通过（老大 2026-09-09 实测：顶栏「DSH」按钮 → 自定义消息 → 真实模型回包，session events=318/notifications=320，exit 正常；记录见报告 §3.4）。** WB 零 GUI 独立复验走 §4.2 两条 CLI 命令（同通道）。
 
 **⭐ 能力边界观察要点（选型输入）**：sdk 面能做 = 完整会话 + **事件流粒度足够**（19 events/次含 turn·step·assistant/chunk·request/context·session/title·agent/inbox，记忆双写/流式 UI 信号齐备）+ 会话持久（session.jsonl）+ base 全套 agent 能力可达。受限 = stdout 归协议、wire 方法面窄（initialize/session.prompt 为主）、runtime 生命周期归 SDK（模块 HMR 动态观察仍待 web/tui 长驻载体）、无 HTTP/浏览器面。
 
