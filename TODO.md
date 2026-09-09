@@ -78,7 +78,7 @@
 
 > **分区约定（2026-09-08）**：**本区只放待办**。判定依据、行事规则、31 子项承接总表、风险清单一律留在 `docs/dsh/dsh-migration.md`（下文每条标注出处），本区不重复结论。
 > - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P4 主线无关；**完成一个即归档一个**——**DSH-1 事实校准已完成**，全文冷存于 `archive/roadmap-history.md`，本区自 **DSH-2** 起。
-> - **DSH-2 已启动**：任务 0（代码存在形态）已判定 **A 案成立**（DSH-2.0 ✅，2026-09-08）；其余子项 DSH-2.1–2.6 待派发。
+> - **DSH-2 进行中**：2.0 ✅（A 案成立）／2.1 ✅／2.2 ✅（**路线级短路点已过**）／2.3 已派发 Trae（2026-09-09）／2.4–2.6 待派。
 > - ⚠️ **启动后本区将取代上方「当前待办」中的多数条目**——A-framework 是全量 TS 化，后端 / 前端 / 测试资产均会重写。此消长关系未定案，待DSH-2 收口时一并处理。
 
 ### DSH-2 · 代码形态 + 环境准备
@@ -90,7 +90,7 @@
 **DSH-2.0 - 代码存在形态判定** ✅
 
 - [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**。8 项必需能力全部可经公开挂载面获得，无一项需改上游。架构根因 = DSH 核心能力层是 Service Definition / Provider / Consumer 三分架构。报告 `docs/dsh/dsh-form-probe-claude.md`；🟢 WB 本地复核（机制 8/8 属实，行号 2 处偏差）。**结论已折入文档 §3.6，本区不重复**
-- [x] 附带确认：`patchReload: startup` → 部署期配置变更需重启（单用户可接受，与 Python 时代改 config 重启同量级）
+- [x] 附带确认：~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2.1 实测推翻**：我们采用的 `larry` profile（dsh-base + dsh-headless）manifest 为 **`patchReload: live`** 🟢 → **配置热重载默认已开，不用 hmr 插件、不必按"改配置必重启"规划**。第 0 项判的 `startup` 出自 sdk-app bundle，不适用我们（决策稿 §3.6 已同步）
 
 **DSH-2.1 - 配套 TS 工程**（已派发 Trae 2026-09-09）
 
@@ -102,7 +102,7 @@
 **DSH-2.2 - 跑通官方 demo**（已派发 Trae 2026-09-09，作为短路点先做）
 
 - [x] 按官方 demo 走通一次完整会话，确认环境可用
-- [x] ⚠️ **避坑**：Windows 下官方 `dsh.exe` **segfault**（第 0 项实测硬发现，官方 CLI 不可靠）→ 走编程入口 / 打包运行时，不依赖 CLI
+- [x] ⚠️ ~~**避坑**：Windows 下官方 `dsh.exe` segfault → 走编程入口不依赖 CLI~~ **⚠️ 该避坑已推翻（DSH-2.2 反证）**：npm 全局 `dsh@0.1.2-rc.1` 在 Windows **全部可用**（plugin add / --dump-config / --help / 完整会话均 exit 0）。**卡住的只有源码入口（`bin.ts` + tsx）在 PowerShell 下偶发**。→ **默认走 npm 全局 `dsh`，不用源码 tsx 入口**（决策稿 §3.4 已同步）
 - [x] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
 
 **DSH-2.3 - Vue/Tauri → DSH 连通 hello world**（已派发 Trae 2026-09-09）

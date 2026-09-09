@@ -312,6 +312,9 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **前端路线（DSH-2 定死）**：**保留 Vue/Tauri 客户端，走 sdk / acp profile 对接，不采用 DSH Web-GUI**——Tauri 壳是 2.10.2 端侧执行器的宿主，换 web client 等于废掉 client/ 全部工作并丢掉端侧能力载体。
 
+> ⚠️ **未收敛的张力（DSH-2.3 提出，待实测后定型）**：本条写死"走 sdk / acp"，但 **sdk 面的 JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown`——这正是不判二等的同一个窄面**（§3.5）。若 client 长期经 sdk 通信，则客户端一侧被永久限制在该窄面内，与 A-framework「贴近核心层」的初衷存在张力。
+> **当前处置**：DSH-2.3 派发稿**刻意未锁死通信面**，只要求验通 + 报告该面"能做 / 明显做不了什么"。**本条结论待 2.3 实测后可能修订**——可选方向含「在 DSH 进程内自做 HTTP 网关，通信面自定」。**2.3 交付前不作定论。**
+
 **测试资产是独立工作包，不是DSH-6 附赠项**：现有 pytest 测试 ~4.4k 行，与核心代码 1:1。**第 0 项判 A-framework → 处置方式定稿：按 DSH 四层测试体系重建**（原"保留 + 增补边界契约层"是分岔表 A-service 行的口径，已随分岔作废）。无论哪条路径，测试基建（临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）须在**DSH-2** 设计到位——不提前设计，DSH-3 起每步验证都裸奔。
 
 #### DSH-1：事实校准 ✅（已归档 2026-09-08）
@@ -336,6 +339,19 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 3. **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）
 4. Vue/Tauri → sdk profile 连通
 5. **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）
+
+**本阶段已定案的环境规格（后续阶段沿用，勿各自另起一套）** 🟢 DSH-2.1/2.2：
+
+| 项 | 取值 | 依据 |
+|---|---|---|
+| 工程目录 | `harness/`（仓库内，pnpm workspace） | DSH-2.1 定案 |
+| 包名前缀 | `@larryagent/` | 同上 |
+| profile 名 | `larry`（= `dsh-base` + `dsh-headless`） | 同上。⚠️ **manifest 因 bundle 而异**——`patchReload` / 可用命令等结论**不可跨 profile 外推**（第 0 项的 `startup` 即出自 sdk-app） |
+| `DSH_HOME` | `.dsh-home/`（仓库内，已 gitignore——含凭据与会话产物） | 同上 |
+| DSH 入口 | **npm 全局 `dsh@0.1.2-rc.1`**；不用源码 `bin.ts` + tsx | DSH-2.2 反证：源码入口在 PowerShell 下偶发卡住 |
+| DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
+
+> **零成本复验法（🟢 WB 独立跑出，可复用）**：`dsh --profile larry --help` **即触发 cordis apply，不需要 LLM key**。凡要验"插件到底加载没加载"，先用这条，不必跑完整会话。
 
 #### DSH-3：核心能力 prototype
 
@@ -422,7 +438,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 2.6.1 角色切换 | DSH `preset/` 迁移底座 | cordis.yml 承接 config 角色。🟢 **复核补强**：官方 `preset/persona` 包本体即 `export const inject = ['systemPrompt']`（`packages/preset/persona/src/index.ts:27`），带 `complete`（完全替换 system prompt）／`includeRuntimeContext` 选项 → **角色机制 = 官方 persona preset，公开面可达** |
 | 2.6.2 自动路由 | 自做/待定 | 产品树仍 📐 |
 | 2.7.1 行为安全 | DSH sandbox 升级 | 三平台后端**均存在**（Windows = restricted token）；待DSH-2 本机实测后升 ✅（上限：同世界隔离）|
-| 2.7.2 边界透明 | **自做（A-framework 下为常规待办，非缺口）** | 🟢 锁定版核实：SDK 请求面无 answer 方法，官方设计文档明写「Zero listeners fall through to **unavailable**」——**此即判二等的核心依据**。**A-framework 下由我们的 TS answerer 插件实现**（B1 通道已实测可行），退路为 permission-preset 白名单。DSH-4 验收项 |
+| 2.7.2 边界透明 | **自做（A-framework 下为常规待办，非缺口）** | 🟢 锁定版核实：SDK 请求面无 answer 方法，官方设计文档明写「Zero listeners fall through to **unavailable**」——**此即判二等的核心依据**。**A-framework 下由我们的 TS answerer 插件实现**——**挂载通道本身已由 DSH-2.1 我方自验 🟢**（`plugin-probe` 经 B1 被 cordis 实际加载），退路为 permission-preset 白名单。DSH-4 验收项 |
 | 2.7.3 凭据密钥 | **DSH credentials 承接** | 开箱即得 |
 | 2.7.4 成本约束 | 自做 | DSH 无预算/限额概念 |
 | 2.7.5 数据主权出境 | 自评估 | DSH 不改变出境事实 |
