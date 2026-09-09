@@ -110,26 +110,22 @@
 - [x] 现有 Vue/Tauri 客户端经 sdk profile（stdio JSON-RPC + 官方 TS SDK）发消息并收到真实回包
 - [x] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
 - [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
-- [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`；⭐ 能力边界观察 = 通信面定型输入（**事件面宽、方法面窄**）
-- [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**
-  - 🟢 **已完成源码级选型分析（2026-09-09，见决策稿 §3.6「通信面选型分析」）**，要点：① **sdk 与 acp 都是 stdio 本地子进程 → DSH host 上云则天然出局**（2.3 的 Tauri 连通是同机开发形态，不可外推）；② acp 明写"不暴露 DSH 私有数据/方法"、无 fork/replay → 只适合作子代理/测试集成；③ **唯一「跨网络 + 宽面」官方方案 = Typert/Gateway（HTTP `/api` + WS `/api/remote.mux`）**，补的正是 sdk 窄面缺口；④ 主要代价 = 前端非 Cordis 环境，须自实现协议客户端（工作量未估）
-  - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
-  - 🔴 **2026-09-09 二次测绘推翻其中两条**：**官方 `dsh-web-app` = browser-surface bundle**（`dsh --profile web` 开箱启动、自动开浏览器），依赖含 **30+ `dsh-client-ui-*`**（chat/conversation/sidebar/settings/plan/approval/permission-presets/model-selection…）→ 官方**已有完整 Web UI 组件层**；**鉴权已内置**（启动 URL 带 token → 换签名 cookie；实测 `curl 127.0.0.1:8123/` → **401**）；**`dsh-api-gateway` 在 base 默认启用**（`cordis.patch.yml:45`）→ DSH 侧装配成本 **0**。故"前端须自实现协议客户端""鉴权须自做"两条**均作废**
-  - 🟡 **新增硬约束（影响上云）**：web surface **不支持绑定全部网卡**（README 原话："binding all network interfaces is intentionally not supported"），只能 `--host` / `--trusted-host` 白名单 → 云端部署须按此设计（反向代理或白名单）
-  - ✅ **可复用性已确认（推翻一小时前的"未知"）**：**41 个 `dsh-client-*` 包全部随 npm 分发**（`0.1.2-rc.1`），含 connection / ui-chat / ui-theme / ui-brand-official。形态为**双面包**（`lib/index.js` node half + `lib/client.js` browser half），且 **exports 含 `./src/*` → 源码随包分发** → **可直接依赖复用 + 读源码参照**。此前"不在 .pnpm"是检索方法错误（pnpm 用哈希截断目录名，完整包名匹配必然落空）
-  - 🎨 **UI 自由度边界已定界（见决策稿 §3.6 小节）**：机制=浏览器插件**运行时加载**（`/plugins/<id>/client.js`）+ UI 是**插件 roster 组合**+ brand 是**显式插槽**（官方自称 occupant）。三层自由度：**L1 换皮**（theme+brand slot）/**L2 换部件**（roster 换单个 `client-ui-*`，可增删）/**L3 换整个前端**（自做前端直连 `/api`，HTTP unary + **SSE**）。
-  - **硬边界**：① 前端 shell dist **不作为用户配置**开放（"never user config"、dist 缺失即停、无 source-serving fallback），**能否整体换 dist 待验**；② **鉴权必须过**（token→签名 cookie，实测 401）；③ 传输是 **HTTP + SSE**（非 WS）→ 自做客户端成本低于预期；④ L2 反向工具执行仍须自做
-  - 💡 **对 A-framework 的意义**：业务插件可带 **browser half 自动注入官方前端 shell** → **「自做前端 vs 复用官方」不再是二选一**，可渐进：先用官方 shell + 自写部件，必要时整体换壳
-  - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
-  - **WB 倾向**：Gateway 为主 + sdk 降级为测试/自动化通道；"前端怎么来"由"必然自做"降级为"取决于官方资产可复用性"
-  - ⭐ **建议下一步（成本最低、且不需 key）**：**「web surface 开箱实测」**——`dsh --profile web --no-open --port <p>`，记录 ① 前端 dist 来源与可否被第三方引用/替换 ② 401 之后的合法访问姿势（token 从哪取）③ 页面能力面（会话树/审批/设置是否齐全）④ `--trusted-host` 能否放开非 loopback 访问。**起服务 / 看页面 / 建会话均不触模型 → 不需要 API key**，仅"发消息"才需要
-- [x] ✅ **WB 已完全独立复现（2026-09-09）**：Git Bash 侧握手 + 事件流 + 通知流 + **真实 LLM 回包**全通（`finalResponse="probe ok"`，19 事件含 assistant/chunk×7，21 通知）；另连续 5 次约 2.4s 跑通（仓库根 / 全新目录 / 死锁 / 活锁四种条件）
-  - 注入姿势：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，只走环境变量不落文件
-- [x] ⚠️ **根因已定位**：此前「initialize 恒超时、无输出」**不是 DSH 问题** —— WB 的 **PowerShell 工具未启用 ConPTY，原生 exe（`node.exe`）不执行、无输出**（`node -v` 返回空，纯 cmdlet 正常）。→ **WB 侧一律用 Git Bash 工具跑 node/npm/pnpm**。见决策稿 §3.6
-- [x] ⚠️ **残留锁结论二次修正（2026-09-09）**：旧措辞「已证伪」是**过度声明**。正确表述为**路径敏感，不得跨路径外推**：**SDK 握手路径不争锁**（死/活 PID 锁均不阻塞，2.4s 正常）；**profile 安装/修复路径（`healProfilesModuleFallback`）确实争锁**，锁残留即 `atomic-write: timed out waiting for the writer lock` 失败（实测 `--profile web` 首次启动被 `timeout` 强杀 → 留锁 → 后续同点失败，移锁后恢复）。锁在**全局 home** `C:\Users\SuLarry\.dsh\profiles\node_modules.lock`（非仓库根 `.dsh-home/`），且**不检测持有者存活**。
-  - **行事规则**：① 见该报错 → 移走锁重试（**同设备 rename，C:→D: 会 EXDEV**）；② **勿用 `timeout` 强杀正在装依赖的 dsh**（会留锁）
+- [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`
+- [x] ⭐ **能力边界结论（= 通信面定型输入）**：**上行事件面宽（19 类）/ 下行方法面窄**（`initialize` · `session.prompt` · `shutdown`）—— 记忆双写 / 流式 UI / 会话标题**可行**；会话树浏览 / 子代理管理 / 配置读写**不可行**
 
-**DSH-2.4 - 测试隔离基建（设计 + 可运行骨架，已派发 Claude 2026-09-09；✅ 串行已解除，可开工）**
+> **过程记录已闭环，此处不留副本**：WB 独立复现（含真实 LLM 回包）／「initialize 恒超时」根因（WB 的 PowerShell 工具无 ConPTY → 一律用 Git Bash）／残留锁「路径敏感」结论与行事规则 —— **均收口于决策稿 §3.6**。
+
+**⭐ 通信面定型（DSH-2.3 产出 · 待老大拍 · DSH-3 直接输入）**
+
+> **完整分析与定界见决策稿 §3.6「通信面选型分析」+「UI 自由度边界」**；本节只留**待决策项与下一步**，结论不重复。
+
+- [ ] **选型结论**：**Typert/Gateway 为主**（HTTP `/api` + 流），**sdk 降级为测试/自动化通道**——sdk 与 acp 均为 **stdio 本地子进程**，DSH host 上云则天然出局
+- [ ] **待老大拍的两个前提**：① 前端**直连** DSH host 还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
+- [ ] **下一步（成本最低，且不需 key）——「web surface 开箱实测」**：`dsh --profile web --no-open --port <p>`，记录 ① **前端 dist 来源与可否被第三方引用/替换**（唯一未验项）② 401 之后的合法访问姿势（token 从哪取）③ 页面能力面（会话树/审批/设置是否齐全）④ `--trusted-host` 能否放开非 loopback 访问
+  - **起服务 / 看页面 / 建会话均不触模型 → 不需要 API key**，仅"发消息"才需要
+  - **已定界要点**（供执行参照）：前端**可渐进**——官方 shell + 自写部件（browser half 自动注入 `/plugins/<id>/client.js`）→ 必要时整体换壳（自做前端直连 `/api`，**HTTP + SSE**）；硬约束 = **不支持绑定 0.0.0.0**（上云须白名单或反代）、**鉴权须过**（token → 签名 cookie）、**L2 反向工具执行须自做**
+
+**DSH-2.4 - 测试隔离基建（设计 + 可运行骨架 · 已派发 Claude 2026-09-09 · 串行锁已解除，可开工）**
 
 > **可开工条件已满足（2026-09-09）**：① DSH-2.3 已交付落盘（原串行阻塞解除）② 老大已开 `DSH-2.4` 专用测试 key（在 `exchange/log-claude.md` 末尾）③ 隔离对象落点已由 WB 实测（见下「先查清隔离对象」）。→ **派发稿可直接贴给 Claude 开工。**
 
