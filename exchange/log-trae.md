@@ -59,3 +59,21 @@
 
 
 【老大注：sk-6f42002aa5b84499bdbf931de7fa048a，DSH2.3的测试Key，依然按需取用】
+
+---
+
+## 【Trae 交付回写 · 2026-09-09】DSH-2.3 Vue/Tauri ↔ DSH 连通
+
+**状态：✅ 已交付**（与代码一并提交，基线 `dsh-v0.1.2-rc.1`）。
+
+**结论（一行）**：**能。** Vue/Tauri 经 DSH `sdk` profile（stdio JSON-RPC）发消息并收到真实模型回包；GUI 与复跑路径同通道。
+
+**连通方式**：profile = `sdk`（base + sdk-app）；传输 = stdio JSON-RPC（官方 TS SDK `@deepseek-ai/dsh-sdk-client` 驱动同版本 dsh runtime）；Tauri 侧**新写** `dsh_prompt` IPC（spawn `node harness/scripts/dsh-prompt.mjs`，一次性调用，非 P4 uvicorn 管理）；GUI 入口 = 主窗口顶栏「DSH」按钮（`DshProbe.vue`）。
+
+**交付物**：报告 `exchange/dsh-23-vue-tauri-connect.md`（5 块齐全：结论/连通方式/原始输出/可复跑+踩坑/⭐能力边界观察）；代码见报告 §7（client 4 文件 + harness scripts 2 个 + deps）。GUI 按钮为人工点验项；WB 零 GUI 独立复验走 §4.2 两条 CLI 命令（同通道）。
+
+**⭐ 能力边界观察要点（选型输入）**：sdk 面能做 = 完整会话 + **事件流粒度足够**（19 events/次含 turn·step·assistant/chunk·request/context·session/title·agent/inbox，记忆双写/流式 UI 信号齐备）+ 会话持久（session.jsonl）+ base 全套 agent 能力可达。受限 = stdout 归协议、wire 方法面窄（initialize/session.prompt 为主）、runtime 生命周期归 SDK（模块 HMR 动态观察仍待 web/tui 长驻载体）、无 HTTP/浏览器面。
+
+**附带修复**：`tauri.conf.json` 删废弃 `plugins.shell.scope`（tauri-plugin-shell v2.3.5 schema 已移除该字段，导致 dev 启动 panic）——恢复现有 app 可运行，非新增破坏。`Cargo.toml` 仅被工具去 BOM、已还原不在改动集。
+
+**隔离自检**：改动仅报告 §7 清单；`.dsh-home/` 排除未入 git；`ref/dsh-bare` 只读；key 仅环境变量未落盘；tauri dev 验证后已清理进程。

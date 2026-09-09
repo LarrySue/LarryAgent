@@ -10,6 +10,7 @@ import {
   archiveSessionOnly,
 } from "@/api";
 import RoleSelector from "@/components/RoleSelector.vue";
+import DshProbe from "@/components/DshProbe.vue";
 import ConnectionToast from "@/components/ConnectionToast.vue";
 import BrandText from "@/components/BrandText.vue";
 import logoUrl from "@/assets/logo.svg";
@@ -290,6 +291,7 @@ function startNewChat() {
         </div>
         <div class="topbar-right">
           <RoleSelector :model-value="appStore.currentRole" @update:model-value="onRoleChange" />
+          <DshProbe />
         </div>
       </header>
 

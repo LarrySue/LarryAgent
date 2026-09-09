@@ -26,16 +26,7 @@
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": [
-        {
-          "name": "start-agent",
-          "cmd": "uvicorn",
-          "args": [
-            { "validator": ".*" }
-          ]
-        }
-      ]
+      "open": true
     }
   }
 }

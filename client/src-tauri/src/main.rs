@@ -258,6 +258,56 @@ async fn restart_agent(
 }
 
 // ====================================================================
+// DSH-2.3 连通验证：经 DSH sdk profile 发消息收回复（hello world）
+// ====================================================================
+
+/// `dsh_prompt` 的一次性结果。
+#[derive(serde::Serialize)]
+struct DshPromptOutput {
+    stdout: String,
+    stderr: String,
+    exit_code: Option<i32>,
+}
+
+/// 经 DSH 通道跑一次 prompt 并返回回复（DSH-2.3 连通验证）。
+///
+/// 直接 spawn `node harness/scripts/dsh-prompt.mjs`（官方 TS SDK 驱动
+/// `--profile sdk` runtime，stdio JSON-RPC）。DSH_HOME 固定指向项目
+/// `.dsh-home`；模型凭据继承本进程 env（由启动环境注入 DEEPSEEK_API_KEY）。
+/// 一次性调用，不持有长驻句柄；message 作为单参数传给 node，不经 shell。
+#[tauri::command]
+async fn dsh_prompt(message: String) -> Result<DshPromptOutput, String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent() // client/
+        .expect("invalid manifest dir")
+        .parent() // 项目根
+        .expect("invalid manifest dir");
+    let script = root.join("harness").join("scripts").join("dsh-prompt.mjs");
+    let dsh_home = root.join(".dsh-home");
+
+    let child = Command::new("node")
+        .arg(&script)
+        .arg(&message)
+        .env("DSH_HOME", &dsh_home)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("启动 DSH 驱动进程失败: {e}"))?;
+
+    let output = tauri::async_runtime::spawn_blocking(move || child.wait_with_output())
+        .await
+        .map_err(|e| format!("等待 DSH 驱动进程失败: {e}"))?
+        .map_err(|e| format!("读取 DSH 输出失败: {e}"))?;
+
+    Ok(DshPromptOutput {
+        stdout: String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        exit_code: output.status.code(),
+    })
+}
+
+// ====================================================================
 // main
 // ====================================================================
 
@@ -265,7 +315,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(AgentProcess(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![restart_agent])
+        .invoke_handler(tauri::generate_handler![restart_agent, dsh_prompt])
         .setup(|app| {
             println!("LarryAgent client starting...");
             match ensure_backend() {
