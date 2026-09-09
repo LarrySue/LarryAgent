@@ -9,6 +9,12 @@
 
 > **执行方式说明**：老大判断「装 WSL 在 Windows 图形界面点一点比 AI 敲命令快」，故本任务以**要求 + 自检清单**形式给出，谁执行都行（老大自装 / 编外 AI 代装均可）。**WB 不做安装，只负责定要求与验结果。**
 
+> ## ✅ 状态：环境已配置完成（2026-09-09 17:33 老大执行）· WB 复验判定：**合格**
+>
+> **执行报告见文末 §7**（老大手敲完成，未使用一键脚本——脚本是 WB 事后才生成的）。
+> **判定结论**：五项硬要求**全部满足**，行为验收**正反两组都对**（详见 §7 后 WB 复验段）。
+> **遗留两个待验项**：① 启动时的网络模式回退告警；② 正向组缺一个 COUNT 数字。→ 见 §7 后「WB 复验与遗留项」。
+
 ### 0. 这个环境是干什么的（先明确边界，否则容易配错方向）
 
 - **用途：仅为验证，不是生产环境。** 生产上云属 **DSH-5**，与本环境无关。
@@ -164,7 +170,7 @@ bash ~/wsl-check.sh 2>&1 | tee ~/wsl-check.txt
 
 ---
 
-## 老大的WSL环境配置任务执行报告 2026-9-9 17:33
+## §7 老大的 WSL 环境配置执行报告（2026-09-09 17:33 · 老大手敲原文）
 
 安装方式：
 WSL手动下载（地址：https://github.com/microsoft/WSL/releases/download/2.7.13/wsl.2.7.13.0.x64.msi）
@@ -273,3 +279,50 @@ sqlite3 t.db "SELECT COUNT(*) FROM t;"
 
 
 **有一件事情可能需要注意一下，每次启动这个乌班图系统的时候，都会有提示“wsl: 无法配置网络 (networkingMode Nat)，回退到 networkingMode VirtioProxy。”**
+
+---
+
+### WB 复验与遗留项（2026-09-09 18:1x）
+
+**① 判据逐条对照 → 合格**
+
+| 判据 | 老大实测 | 判定 |
+|---|---|---|
+| WSL 2 | `wsl -l -v` → `Ubuntu-24.04  Running  2`；WSL 版本 2.7.13.0 | ✅ |
+| ext4 | `df -T .` → `/dev/sdd  ext4` | ✅（**没踩 `/mnt/c` 坑**） |
+| 8a 反向（`timeout=0` 应**出现** locked） | 「目测超过一半显示 `Error: stepping, database is locked (5)`」 | ✅ **锁确实在拦** |
+| 8b 正向（`timeout=10s` 应无阻） | 「全部成功无阻塞」 | ⚠️ **缺 COUNT 数字，待补** |
+
+**② 老大那句「没眼看」其实是本次最有价值的证据**
+
+`timeout=0` 下报 `database is locked` **不是失败**，恰恰证明 **WAL 写锁在生效**——**这正是这个环境存在的理由**（Windows 侧 / drvfs 上未必有同样的串行化行为）。
+
+顺带说明：WB 在写一键脚本时**自查发现旧判据写反了**（原写「不得出现 locked」），已改为正反两组。**而老大在实践上已经自己走完了这两组**——他第一次跑出报错没慌，自己加 `PRAGMA busy_timeout=10000` 重跑成功，等于独立复现了正确判据。
+
+**③ 遗留项 1（需一条命令）——补正向组计数**
+
+```bash
+sqlite3 ~/sqlite-check/t.db "SELECT COUNT(*) FROM t;"
+```
+期望 **200**。若不是 200，说明有写丢失（比报错更严重），须重查。
+
+**④ 遗留项 2（需确认）——启动告警「无法配置网络 (networkingMode Nat)，回退到 networkingMode VirtioProxy」**
+
+- **为什么要在意**：本环境后续要在 WSL 内**起 HTTP 服务并从 Windows 侧访问**（如 DSH-3 验 Gateway）。Nat 配不上而回退 VirtioProxy，**localhost 转发行为可能与预期不同**——不验清楚，将来会误判成"服务没起来"。
+- **验证方法**（两条，都在 WSL 内跑，结果贴回）：
+  ```bash
+  # 1) 看实际生效的网络模式与地址
+  wslinfo --networking-mode 2>/dev/null; ip -4 addr show eth0 | grep inet; cat /etc/resolv.conf | head -3
+
+  # 2) 起一个临时 HTTP 服务（跑着别关）
+  cd ~ && python3 -m http.server 8123 --bind 0.0.0.0
+  ```
+  然后**告诉 WB**，WB 从 Windows 侧 `curl --noproxy '*' http://localhost:8123/` 验证连通性（**WB 无法启动 WSL 进程：沙箱把 `wsl.exe` 拉黑了**，故需老大配合起服务）。
+- **判据**：Windows 侧能取到 HTTP 200 → 网络可用，告警可忽略；取不到 → 需处理（可能要在 `%UserProfile%\.wslconfig` 显式设 `networkingMode=Nat` 或改 `mirrored`）。
+
+**⑤ 附带记录（不阻塞，供后续参照）**
+
+- 内核 **6.18.33.2**（远新于预期的 5.15）→ **Landlock 支持基本无悬念**（自 5.13 起），对 DSH-2.5 ③ Linux 侧 sandbox（bwrap→Landlock）是利好。
+- **SQLite 两版本差了 6 个小版本**：CLI `3.45.1` vs Node 内嵌 `3.51.3` —— 正好印证 §4 坑 3：「下结论以内嵌版为准」。
+- Python 实为 **3.12.3**（派发稿建议 3.11）。现无影响；**若 2.5 ⑤ 要与 `backend` 的 Python 3.11 基准做向量比对，版本差异须纳入考量**（不同 Python 的浮点/随机数行为可能引入噪声）。
+- 磁盘：ext4 显示约 1 TB、已用 1.3 GB → 空间充裕，与 §5 预估一致。

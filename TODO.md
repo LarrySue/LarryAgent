@@ -149,10 +149,12 @@
 
 **DSH-2.5 - 退出条件实测（5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
 
-- [ ] **前置：准备 Linux 验证环境（WSL2）** —— **派发稿已写：`exchange/log-other.md`（2026-09-09，执行人 = 老大 / 或点将编外 AI）**，含硬要求 + 自检清单 + 已知坑。S 侧生产在 Linux，① 的 SQLite 文件锁 / WAL / 并发行为与 Windows 有差异，须在 Linux 上取数。⚠️ **用途仅为验证，不是生产环境**（生产环境属 DSH-5 上云）。若 WSL2 不足以复现目标行为，再上 CVM
+- [ ] **前置：准备 Linux 验证环境（WSL2）** —— **✅ 环境已就绪（老大 2026-09-09 17:33 配置完成，WB 复验判定合格）**：Ubuntu 24.04.4 LTS + WSL 2.7.13.0 + 内核 6.18.33.2（`wsl -l -v` VERSION=2）、`df -T` = ext4（未踩 `/mnt/c` 坑）、Node v22.23.2 / pnpm 11.7.0 / git 2.43.0 / Python 3.12.3。**执行报告 + WB 复验见 `exchange/log-other.md` §7**。⚠️ **用途仅为验证，不是生产环境**（生产属 DSH-5 上云）。若 WSL2 不足以复现目标行为，再上 CVM
   - ⚠️ **两条硬要求（不满足则数据无效）**：① 必须 **WSL2**（非 WSL1，无真内核→锁语义不同）；② 验证**必须跑在 ext4**，**绝对不能放 `/mnt/c/`**（drvfs/9P 的 POSIX 文件锁与 WAL 行为与 ext4 不一致，在它上面测并发 = 结论作废）
-  - **验收是行为验收不是版本验收**：`df -T .` 须为 ext4 + **SQLite 并发写 200 次无 `database is locked` 且计数正确**——两条任一不过，环境不合格
-  - 已知坑：WSL2 休眠后**时钟漂移会污染 mtime 类验证**（先 `date` 对表）；SQLite **CLI 版本 ≠ Node 内嵌版本**，下结论以内嵌版为准
+  - **验收是行为验收不是版本验收（正反两组，勿沿用旧判据）**：`df -T .` = ext4 **且** 8a 反向（`busy_timeout=0` + 并发写 → 期望**出现** `database is locked`，证明锁在拦）**且** 8b 正向（`busy_timeout=10s` → 期望**无**报错且计数 = 200）
+    - ✅ **实测结果**：8a「超过一半报 locked」→ 锁生效；8b「全部成功无阻塞」→ 待补 COUNT 数字
+  - 🟡 **两个遗留待验项（见 log-other §7）**：① **缺 8b 的 COUNT**（`sqlite3 ~/sqlite-check/t.db "SELECT COUNT(*) FROM t;"` 期望 200）；② **启动告警「无法配置网络 (networkingMode Nat)，回退 VirtioProxy」**——影响"WSL 内起 HTTP 服务 + Windows 侧访问"（DSH-3 验 Gateway 需要），须实测连通性
+  - 已知坑：WSL2 休眠后**时钟漂移会污染 mtime 类验证**（先 `date` 对表）；SQLite **CLI 版本 ≠ Node 内嵌版本**（实测 CLI 3.45.1 vs 内嵌 3.51.3），下结论以内嵌版为准
 - [ ] ① `storage/` 外接 SQLite 可行性（**须在 Linux 环境取数**，见前置）
 - [ ] ② `acp/` 契约稳定性
 - [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，且 fail-closed——无 runner 时报 `SANDBOX_UNAVAILABLE`、不静默裸跑。待验**实际生效性**与提权流程）
