@@ -8,7 +8,8 @@
 
 ## 【在飞 · 2026-09-09 派发】DSH-2.4 测试隔离基建（Vitest）
 
-> **与 DSH-2.3 并行**：Trae 在做 Vue/Tauri 连通（2.3），本任务不依赖它、也不碰 `client/`，可独立推进。
+> **⚠️ 与 DSH-2.3 串行，不要同时跑**（老大 2026-09-09 定）：Trae 在做 Vue/Tauri 连通（2.3），会改动 `harness/package.json` / `pnpm-workspace.yaml` / `pnpm-lock.yaml`，并占用 `.dsh-home`。**等 2.3 交付落盘后再开工本任务**——并发 `pnpm install` 会互相抹除对方依赖，共享 `DSH_HOME` 会让硬验收第 2 条（真实库未被触碰）失真。
+> **开工前**：确认 `harness/` 已是 Trae 交付后的最新状态（`git status` + `git log -1`），再动手。
 > **环境**：沿用 DSH-2.1 已验证的 `harness/`（pnpm workspace + `@larryagent/plugin-probe`）、`.dsh-home/profiles/larry`。基线 `dsh-v0.1.2-rc.1`。
 
 ### 任务性质
