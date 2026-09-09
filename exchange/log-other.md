@@ -291,7 +291,7 @@ sqlite3 t.db "SELECT COUNT(*) FROM t;"
 | WSL 2 | `wsl -l -v` → `Ubuntu-24.04  Running  2`；WSL 版本 2.7.13.0 | ✅ |
 | ext4 | `df -T .` → `/dev/sdd  ext4` | ✅（**没踩 `/mnt/c` 坑**） |
 | 8a 反向（`timeout=0` 应**出现** locked） | 「目测超过一半显示 `Error: stepping, database is locked (5)`」 | ✅ **锁确实在拦** |
-| 8b 正向（`timeout=10s` 应无阻） | 「全部成功无阻塞」 | ⚠️ **缺 COUNT 数字，待补** |
+| 8b 正向（`timeout=10s` 应无阻） | 「全部成功无阻塞」 + **老大确认 COUNT = 200**（2026-09-09 18:1x） | ✅（计数正确 = 无写丢失） |
 
 **② 老大那句「没眼看」其实是本次最有价值的证据**
 
@@ -299,26 +299,30 @@ sqlite3 t.db "SELECT COUNT(*) FROM t;"
 
 顺带说明：WB 在写一键脚本时**自查发现旧判据写反了**（原写「不得出现 locked」），已改为正反两组。**而老大在实践上已经自己走完了这两组**——他第一次跑出报错没慌，自己加 `PRAGMA busy_timeout=10000` 重跑成功，等于独立复现了正确判据。
 
-**③ 遗留项 1（需一条命令）——补正向组计数**
+**③ 遗留项 1 ——已闭合**
 
-```bash
-sqlite3 ~/sqlite-check/t.db "SELECT COUNT(*) FROM t;"
-```
-期望 **200**。若不是 200，说明有写丢失（比报错更严重），须重查。
+老大确认 8b 正向组 `COUNT = 200`（**🟡 口头确认，未见命令输出**）。计数正确 = **并发写无丢失**，这比"无报错"更关键（写丢失是静默的，报错反而显性）。四项判据至此全部合格。
 
-**④ 遗留项 2（需确认）——启动告警「无法配置网络 (networkingMode Nat)，回退到 networkingMode VirtioProxy」**
+> 若后续想补 🟢 级证据，一条命令即可：`sqlite3 ~/sqlite-check/t.db "SELECT COUNT(*) FROM t;"`，把输出贴回本节。
 
-- **为什么要在意**：本环境后续要在 WSL 内**起 HTTP 服务并从 Windows 侧访问**（如 DSH-3 验 Gateway）。Nat 配不上而回退 VirtioProxy，**localhost 转发行为可能与预期不同**——不验清楚，将来会误判成"服务没起来"。
-- **验证方法**（两条，都在 WSL 内跑，结果贴回）：
-  ```bash
-  # 1) 看实际生效的网络模式与地址
-  wslinfo --networking-mode 2>/dev/null; ip -4 addr show eth0 | grep inet; cat /etc/resolv.conf | head -3
+**④ 遗留项 2 ——核心目标已验证通过（告警可忽略）**
 
-  # 2) 起一个临时 HTTP 服务（跑着别关）
-  cd ~ && python3 -m http.server 8123 --bind 0.0.0.0
-  ```
-  然后**告诉 WB**，WB 从 Windows 侧 `curl --noproxy '*' http://localhost:8123/` 验证连通性（**WB 无法启动 WSL 进程：沙箱把 `wsl.exe` 拉黑了**，故需老大配合起服务）。
-- **判据**：Windows 侧能取到 HTTP 200 → 网络可用，告警可忽略；取不到 → 需处理（可能要在 `%UserProfile%\.wslconfig` 显式设 `networkingMode=Nat` 或改 `mirrored`）。
+老大在 WSL 内起了 `python3 -m http.server 8123 --bind 0.0.0.0`，WB 从 Windows 侧实测（2026-09-09 18:1x）：
+
+| 目标地址 | 结果 |
+|---|---|
+| `http://127.0.0.1:8123/` | ✅ **HTTP 200**，5 ms，`Server: SimpleHTTP/0.6 Python/3.12.3`，body 是 WSL home 目录列表（含 `.bash_history`） |
+| `http://localhost:8123/` | ✅ HTTP 200，207 ms（**IPv6 优先解析回落，比 127.0.0.1 慢 40 倍**） |
+
+**结论**：**DSH-2.5 所需的「WSL 内起服务 → Windows 侧访问」成立，`networkingMode Nat` 回退告警不影响 localhost 转发，可忽略。**
+
+**行事规则**：后续测 WSL 内服务一律用 **`127.0.0.1` 而非 `localhost`**（避开 IPv6 回落）。
+
+**⑤ 局域网侧（非阻塞，已停止探测）**
+
+主机 WiFi 为 `WLAN: 172.16.30.87/23`，但从 Windows 侧访问 `172.16.30.87:8123` 超时。WB 排查到两条线索：① 8123 的 Windows 侧监听者是 **`dllhost.exe`**（WSL 端口代理宿主，**不是 python.exe**，故 python 的防火墙入站规则管不到它）；② `WLAN` 网络类别为 **Public**，该 profile 默认阻止入站。
+
+→ **老大指示：当前网络环境非常特殊，不要再测；他换网络环境后另行处理。** 故**不下定论**（可能是防火墙，也可能是该网络的隔离策略），**未做任何防火墙 / 网络配置改动**（老大明示其网络环境安全性无需顾虑，WB 不再就此置喙）。待换网后视需要再验。
 
 **⑤ 附带记录（不阻塞，供后续参照）**
 
