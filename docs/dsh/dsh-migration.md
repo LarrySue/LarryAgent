@@ -310,10 +310,10 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 > **产品承诺面**（区别于上述安全 / 运行时面）：**记忆删除在 session / trajectory 层的级联语义**——见 §3.4「产品承诺渗透性漂移」行，挂 2.4.3 验收注记。
 
-**前端路线（DSH-2 定死）**：**保留 Vue/Tauri 客户端，走 sdk / acp profile 对接，不采用 DSH Web-GUI**——Tauri 壳是 2.10.2 端侧执行器的宿主，换 web client 等于废掉 client/ 全部工作并丢掉端侧能力载体。
+**前端路线（DSH-2 定死）**：**保留 Vue/Tauri 客户端**、**不采用 DSH Web-GUI**——Tauri 壳是 2.10.2 端侧执行器的宿主，换 web client 等于废掉 client/ 全部工作并丢掉端侧能力载体。**通信面（sdk / acp / 自做网关）暂取 sdk / acp，待 DSH-2.3 实测后定型**。
 
-> ⚠️ **未收敛的张力（DSH-2.3 提出，待实测后定型）**：本条写死"走 sdk / acp"，但 **sdk 面的 JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown`——这正是不判二等的同一个窄面**（§3.5）。若 client 长期经 sdk 通信，则客户端一侧被永久限制在该窄面内，与 A-framework「贴近核心层」的初衷存在张力。
-> **当前处置**：DSH-2.3 派发稿**刻意未锁死通信面**，只要求验通 + 报告该面"能做 / 明显做不了什么"。**本条结论待 2.3 实测后可能修订**——可选方向含「在 DSH 进程内自做 HTTP 网关，通信面自定」。**2.3 交付前不作定论。**
+> ⚠️ **未收敛项（DSH-2.3 提出，待实测后定型）**：通信面暂取 sdk / acp，但 **sdk 面的 JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown`——这正是不判二等的同一个窄面**（§3.5）。若 client 长期经 sdk 通信，则客户端一侧被永久限制在该窄面内，与 A-framework「贴近核心层」的初衷存在张力。
+> **当前处置**：DSH-2.3 派发稿**刻意未锁死通信面**，只要求验通 + 报告该面"能做 / 明显做不了什么"。可选方向含「在 DSH 进程内自做 HTTP 网关，通信面自定」。**2.3 交付前不作定论；TODO 侧与该判断保持同步、不先行按 sdk 面设计。**
 
 **测试资产是独立工作包，不是DSH-6 附赠项**：现有 pytest 测试 ~4.4k 行，与核心代码 1:1。**第 0 项判 A-framework → 处置方式定稿：按 DSH 四层测试体系重建**（原"保留 + 增补边界契约层"是分岔表 A-service 行的口径，已随分岔作废）。无论哪条路径，测试基建（临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）须在**DSH-2** 设计到位——不提前设计，DSH-3 起每步验证都裸奔。
 
