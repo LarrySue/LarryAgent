@@ -9,7 +9,9 @@
     "build": "pnpm --filter @larryagent/plugin-probe run build",
     "build:probe": "pnpm --filter @larryagent/plugin-probe run build",
     "test:isolated": "vitest run tests/guard.test.ts",
-    "test:isolated:sentinel": "vitest run tests/sentinel-failfast.test.ts"
+    "test:isolated:sentinel": "vitest run tests/sentinel-failfast.test.ts",
+    "test:isolated:sentinel-key": "vitest run tests/sentinel-key-residue.test.ts",
+    "test:isolated:sentinel-unset": "vitest run tests/sentinel-unset.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

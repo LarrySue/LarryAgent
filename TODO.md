@@ -129,20 +129,23 @@
 - [ ] **T2 触发线相关待验（低优先级）**：官方 web surface 经**反向代理**对外是否可行（`--trusted-host` 白名单为唯一已知障碍，未实测）
 - [x] ~~web surface 开箱实测 ①②③~~ **价值随定型下调**（我们不承载官方 shell）；**官方 UI 组件仍可复用**——41 个 `dsh-client-*` 包可 `pnpm add`（exports 含 `./src/*`，源码随包分发）→ 自做前端 = **用官方组件拼**，非从零写
 
-**DSH-2.4 - 测试隔离基建（已交付 Claude 2026-09-09 `8796b0c` · WB 复验：硬验收 ①② 通过、③ 未生效 · 3 条待回写）**
+**DSH-2.4 - 测试隔离基建（返工完成 `fb30d77` · WB 复验 5/5 通过 · 遗留 1 项见下）**
 
-> **WB 复验结论（2026-09-09 独立实跑）**：① 哨兵 `pnpm test:isolated:sentinel` → **fail**，且失败原因**正是守卫拦截**（非其他原因）；② 正常用例 `pnpm test:isolated` → **绿**；③ **key 残留扫描实测不生效**（见下发现 1）。Claude 提交信息称"三条硬验收达成"，**第 3 条不成立**。
+> **WB 复验结论（2026-09-09 独立实跑，未采信声明）**：① `pnpm test:isolated:sentinel` → **fail**，且失败原因正是白名单 throw；② `pnpm test:isolated` → **绿**；③ **R1 反向哨兵**：人为写 key 明文 → teardown **确实告警**（输出 `KEY RESIDUE` + `creds.txt` 路径）；④ **R2 反向哨兵**：`delete DSH_HOME` → **fail**（解析为 cwd 不在 tmpdir 下）；⑤ 真实库零触碰（`.dsh-home` mtime 停在 10:31、`larry.db` 停在 08-30）。
+> **关键判据（可复用）**：首版是「**结论对、机制不存在**」——结论（真实库无残留）成立，但自检挂在 `process.on('exit')`，该钩子在 Vitest worker 下**不触发**（即便触发也是先删后扫）。→ **护栏类验收必须加反向哨兵：人为制造违规、看是否报警**，只查"结果达标"会放过从未运行的护栏。
+> 报告 `exchange/dsh-24-vitest-isolation-claude.md`（结论段已由 WB 补「首版缺陷勿回退」）。
 
 - [x] Vitest **临时库隔离**（实测通过：临时 DSH_HOME + beforeEach 全局断言）
 - [x] **fail-fast 哨兵测试**（实测通过：故意指回真实库 → fail，且由 `assertIsolated` throw 触发）
-- [ ] **先查清隔离对象**：迁移后真实数据落在哪（现有 `backend/data/larry.db`；DSH 侧在 `.dsh-home/`），可能不止一处
-  - 🟢 **WB 已实测落点（2026-09-09，交接 Claude 用）**：未设 `DSH_HOME` 时数据落在**仓库根 `.dsh-home/`**（已 gitignore），下有 `sessions/` `storages/` `profiles/` `.anonymous-user-id`；`sessions/` **按 cwd 分子目录**（如 `--D-Code-LarryAgent-harness--`）。**从 `harness/` 子目录跑时不会在其下新建 `.dsh-home`，而是写入仓库根那份**（推测为向上查找，**机制待 Claude 确认**——隔离设计依赖这个行为，别只凭观察定案）
-- [ ] 🔴 **复验发现 1（待回写 Claude）— key 残留扫描是死代码**：`isolated-setup.ts` 两个 `process.on('exit')` **按注册顺序执行**，第一个先 `rmSync` 删掉临时目录 → 第二个 `scanForKeys` 再读必然 ENOENT 进 catch → **扫描永不生效**。**修法：先扫描再删**（或同一监听器内先扫后删）
-- [ ] 🟡 **复验发现 2 — 守卫盲区是 `DSH_HOME` unset（比"指向真实库"更常见）**：断言为 `current === REAL_DSH_HOME`（**精确相等**）；unset 时 `resolve(process.env.DSH_HOME ?? '')` = **cwd**，不等于真实库 → **放行**。而 dsh 实际会向上查找到仓库根 `.dsh-home` 并写入真实数据（WB 已实测该行为）。测试里 `delete process.env.DSH_HOME` 模拟默认行为的写法很常见 → **语义应改为"在真实库之内或等于"**
-- [ ] 🟡 **复验发现 3 — 声明过度**：文件头注释列**两个**隔离对象（`backend/data/larry.db` + `.dsh-home/`）并称"两者均不因本基建被触碰"，但 `assertIsolated` **只覆盖 DSH_HOME**，对 `larry.db` 无任何程序化断言。→ 措辞改为"第二对象待 DSH-4 接入时补断言"，或现在补
-- [ ] `--real-api` 占位符机制的等价物（默认跳过真实 API 用例；开启才注入 key，且该模式残留含 key 明文）
+- [x] **先查清隔离对象**：迁移后真实数据落在哪（现有 `backend/data/larry.db`；DSH 侧在 `.dsh-home/`），可能不止一处
+  - 🟢 **WB 已实测落点（2026-09-09）**：未设 `DSH_HOME` 时数据落在**仓库根 `.dsh-home/`**（已 gitignore），下有 `sessions/` `storages/` `profiles/` `.anonymous-user-id`；`sessions/` **按 cwd 分子目录**。从 `harness/` 子目录跑时写入仓库根那份（**向上查找**）
+  - ✅ **"向上查找"机制未确认已不再阻塞**：R2 改用**正向白名单**（必须位于 `tmpdir()` 之下）后，守卫**不依赖**该机制的成立与否——无论 dsh 向上查找到哪，只要解析结果不在临时根下就拦。**这是白名单相对黑名单的额外收益：把未确认行为从依赖项里摘掉了。**（若日后仍需该机制的事实答案，另立项）
+- [x] 🔴 **复验发现 1 — key 残留扫描是死代码 → 已修**：`scanForKeys` 迁入 `global-setup.ts` 主进程 teardown，**先扫后删**（顺序写死并注释"勿调回"）。原位置 `process.on('exit')` 在 worker 下不触发，已移除
+- [x] 🟡 **复验发现 2 — 守卫盲区 `DSH_HOME` unset → 已修**：断言由精确相等改为**正向白名单** `resolve(DSH_HOME).startsWith(tmpdir())`，一次覆盖「等于真实库 / 位于库内 / unset 落 cwd」三种漏法
+- [x] 🟡 **复验发现 3 — 声明过度 → 已修**：注释改为「`backend/data/larry.db` 待 DSH-4 接入时补断言」，并注明「勿将"均已覆盖"当已实现」
+- [x] 对照 DSH 四层测试体系设计——测试资产已定稿为**重建**，不是翻译；参照物 = `backend/tests/conftest.py` 的七条设计原则（平移原则不平移代码）。**已完成七原则平移对照表**（见 Claude 报告 §3；P1/P2/P5/P7 有程序化实现，P6 即 R1 已修，P3/P4 本阶段无对应路径）
+- [ ] `--real-api` 占位符机制的等价物（默认跳过真实 API 用例；开启才注入 key，且该模式残留含 key 明文）——**本阶段未做**，DSH-3 引入真实 API 用例前须补
 - [ ] ⚠️ **不提前设计 = DSH-3 起每步验证都裸奔**（文档 §3.6 硬要求：本阶段设计到位）
-- [ ] 对照 DSH 四层测试体系设计——测试资产已定稿为**重建**，不是翻译；参照物 = `backend/tests/conftest.py` 的七条设计原则（平移原则不平移代码）
 
 **DSH-2.5 - 退出条件实测（5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
 
