@@ -21,6 +21,6 @@
 ## 文件索引
 
 - `ai-governance.md` — 多 AI 协作约束分级总纲（Tier 约束模型、角色分工、协作规则）
-- `dsh/` — **DSH 迁移决策区**（2026-09-08 由 `exchange/` 迁入）：`dsh-migration.md` 为决策稿（已定稿 + 第 0 项终裁：判二等 → A-framework），另含三份实测报告作**永久保留的证据**。细则见 `dsh/README.md`
+- `dsh/` — **DSH 迁移决策区**：`dsh-migration.md` 为决策稿（已定稿 + 第 0 项终裁：判二等 → A-framework），另含实测报告作**永久保留的证据**。细则见 `dsh/README.md`
 - `product-positioning.md` — **产品功能边界能力树**（8 域 / 31 子项，含每条落地方式与现状状态；2026-09-06 定稿由 `exchange/` 迁入）。全局十进制多级编号（`1` / `2.3` / `2.3.1`）；根目录 `README.md` 与 `dsh/dsh-migration.md` 均存指针，勿另立副本
 - `ui-reference.md` — UI 设计单一权威参考（组件 / 交互 / 视觉 token，所有 AI 以它为准）

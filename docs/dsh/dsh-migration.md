@@ -245,7 +245,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 > **⚠️ 第 0 项（Py SDK 成色）—— 已终裁 2026-09-08**
 
-> **【第 0 项实测结论 · 2026-09-08 · 已终裁】**：Trae 判**一等**、Claude 判**一等**、**Qoder 判二等**。**WB 判定二等（采纳 Qoder）；老大 2026-09-08 确认** → **定 A-framework（全面贴近核心层，含语言）**，本分岔关闭。三份实测报告（`dsh-pysdk-probe.md` / `-claude.md` / `-qoder.md`）**永久保留作可复现证据**，引用口径以本节为准（Trae / Claude 两份的「一等」为原始交付，已被本节覆盖）。
+> **【第 0 项实测结论 · 2026-09-08 · 已终裁】**：Trae 判**一等**、Claude 判**一等**、**Qoder 判二等**。**WB 判定二等（采纳 Qoder）；老大 2026-09-08 确认** → **定 A-framework（全面贴近核心层，含语言）**，本分岔关闭。三份实测报告（`dsh-pysdk-probe-trae.md` / `-claude.md` / `-qoder.md`）**永久保留作可复现证据**，引用口径以本节为准（Trae / Claude 两份的「一等」为原始交付，已被本节覆盖）。
 >
 > - **决定性事实（🟢 WB 本地锁定版核实，未采信转述）**：SDK JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown` 三个方法（`packages/sdk/protocol/src/types.ts:115-119`，`server.ts:248-253` 只分派这三个，grep approve/answer/respond **零命中**）；原生 `interaction/user-questions`、`user-approval` 有同进程 waterfall answerer；官方设计文档 `2026-07-06-approval-seam.md` 明写「Zero listeners fall through to **unavailable**」→ **2.7.2 的回答侧在 SDK 协议面不可得**。
 > - **分歧根源是 WB 派发稿缺陷（认）**：判据 1「能力覆盖无实质缺口」含**两个不同尺度**——Trae / Claude 按「method 面差集为空」执行（比 SDK client vs TS SDK client，两者同为 design twin 故无差）；Qoder 按「31 子项用户可达」执行。**同一判据两个尺度，必然分叉**；Qoder 的尺度才是本意（老大裁的是"是不是一等公民"，判据应是产品能力可达性）。
