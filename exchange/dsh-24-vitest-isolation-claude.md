@@ -4,6 +4,8 @@
 > **日期**：2026-09-09
 > **基线**：`dsh-v0.1.2-rc.1`（锁定）；harness/ 为 Trae DSH-2.1~2.3 交付后状态
 > **参照物**：`backend/tests/conftest.py`（七条设计原则平移，非代码平移）
+>
+> 🔄 **2026-09-09 返工版（R1/R2/R3）**：原交付 `8796b0c` 经 WB 复验，硬验收 ①② 通过、③ 结论成立但机制从未执行（key 扫描挂在 worker 下不触发的 exit 钩子）。返工修复 R1（扫描迁主进程 teardown 先扫后删）/ R2（断言改正向白名单堵 unset 盲区）/ R3（注释措辞），并补 2 组反向哨兵。返工提交 `fb30d77`。
 
 ---
 
@@ -32,24 +34,31 @@ Error: [test-isolation] FAIL: DSH_HOME 指向真实库 D:\Code\LarryAgent\.dsh-h
 .dsh-home/sessions/ 子目录数：3（Trae DSH-2.x 产物，本次零新增）
 ```
 
-### 2.3 无 key 残留（硬验收 3）
+### 2.3 无 key 残留（硬验收 3，返工后——机制存在性已证明）
+
+**R1 反向哨兵输出**（人为写 `sk-abcdefghijklmnopqrstuvwxyz123456` 到临时目录，teardown 必须告警）：
 
 ```
-测试后 /tmp/larry-test-* 残留：0（global teardown 清理）
-真实 .dsh-home/profiles/larry/ grep sk-{16,}：零命中（key 走环境变量，profile 配置无 key 明文）
+[test-isolation] ⚠️ KEY RESIDUE: 临时目录残留疑似 key 明文（1 处）——可能 --real-api 模式泄漏，须人工检查: ...larry-test-VpPXZI
+[test-isolation]   at ...larry-test-VpPXZI\simulated-leak\creds.txt
+[test-isolation] global teardown 清理: ...larry-test-VpPXZI
 ```
+
+告警先于清理行（先扫后删顺序生效）；干净路径（guard）0 告警；真实 .dsh-home grep sk-{16,} 零命中。
 
 ## 3 设计说明：七原则 Vitest 等价对照
+
+> **R3 措辞修正**：原注释宣称隔离对象含 `backend/data/larry.db` + `.dsh-home/` 且均不被触碰——机制只对 DSH_HOME 有程序化断言。已改措辞：**larry.db 待 DSH-4 接入时补断言**（A-framework 下 harness 纯 TS、无 Python 运行路径，larry.db 不可能被触碰，现仅靠约定；DSH-4 引入真实业务模块时须补 mtime/size 断言），注释不再声称"均已覆盖"。
 
 | # | Python 原则 | Vitest 等价实现 | 状态 |
 |---|---|---|---|
 | 1 | 会话级临时配置（真配置为基底只换持久化路径） | `isolated-setup.ts`：mkdtemp 临时 `DSH_HOME`（sessions/storages 全落临时）；**平移说明**：A-framework 下配置源是 profile 而非单一 yaml，本阶段隔离对象 = `DSH_HOME`（数据落点），配置基底平移推迟到 DSH-4 有真实 config 时 | ✅ 等价 |
 | 2 | 环境变量时序（conftest 先于收集） | **setupFiles 先于测试文件静态 import**——已实测（时序探针：setupFiles 设的 env 在 import 时可见） | ✅ 实测确认 |
-| 3 | key 一律占位符 | 基建不注入任何 key（DSH key 走环境变量，测试路径无 key）；key 残留自检在清理前扫描临时目录（`sk-{16,}` 命中即高警） | ✅ |
+| 3 | key 一律占位符 | 基建不注入任何 key（DSH key 走环境变量）；**key 残留自检在主进程 teardown 内、rmSync 之前**（R1 修复：原挂在 worker exit 钩子从未触发；先扫后删顺序写死，命中高警） | ✅ R1 |
 | 4 | 密钥判定模式匹配（`endswith("_api_key")` 禁子串） | 平移说明：本阶段基建无密钥字段替换需求（不生成配置）；**该原则在 DSH-4 生成临时 config 时生效**——已记录为后续实现的硬约束（勿用 `"token" in k` 子串） | 📌 推迟生效（原因：本阶段无配置生成） |
-| 5 | 断言"行为"非"动作" | `assertIsolated()`：resolve 当前 `process.env.DSH_HOME` 后与真实路径比对（**解析后比对**，不比对"设过哪个变量"）；全局 `beforeEach` 注册 = 每测试前自动断言（等价 Python autouse fixture） | ✅ |
+| 5 | 断言"行为"非"动作" | `assertIsolated()`：**正向白名单**——resolve(DSH_HOME) 必须位于临时根（tmpdir）之下（R2 修复：原"≠真实库"精确比对有 unset 盲区——resolve('')=cwd 被放行，而 unset 时 dsh 向上查找写仓库根 .dsh-home；白名单一次覆盖：指向真实库 / 位于真实库内 / unset 落 cwd） | ✅ R2 |
 | 6 | `--real-api` 开关 | 平移说明：本阶段无真实 API 用例（无 LLM 测试）；开关语义在 DSH-6 接 e2e 时实现（默认跳过 + 显式开注入 key + 残留高警） | 📌 推迟（无真实 API 用例故无开关需求） |
-| 7 | 清理失败告警不静默 | 双层：setupFiles `process.on('exit')`（**实测 worker 下不触发**——Vitest 线程模式 exit 钩子失效，曾残留 3 目录）+ **globalSetup 返回 teardown 函数**（主进程跑完所有 worker 后删全部 `larry-test-*`，可靠兜底，失败打 stderr） | ✅（含踩坑修正） |
+| 7 | 清理失败告警不静默 | **globalSetup 返回 teardown 函数**（主进程，唯一可靠位）：先扫 key 残留（命中高警）后删全部 `larry-test-*`，删除失败打 stderr。（原 setupFiles 的 `process.on('exit')` 在 worker 下不触发——实测失效已移除，isolated-setup.ts 不再注册 exit 钩子） | ✅ |
 
 **关键时序发现（原则 2 的实测答案）**：setupFiles 先于测试文件静态 import 执行（Vitest 保证）——等价 conftest 先于 pytest 收集。**但 process.on('exit') 清理钩子在 Vitest worker 下不触发**（线程/子进程模式差异），必须用 globalSetup 返回值做 teardown——这是 Python conftest 的 atexit 平移时**不成立**的一条，已用 globalSetup 兜底。
 
