@@ -84,17 +84,30 @@ node -v ; pnpm -v ; git --version ; python3 --version
 sqlite3 --version                                  # CLI 版本（仅供观察）
 node -e "console.log(process.versions.sqlite)" 2>/dev/null || echo "node 未内建 sqlite，以 better-sqlite3 编译版本为准"
 
-# 5) 【行为验收，不是版本验收】SQLite WAL 并发锁是否真的生效
-#    目的：证明「这个环境能真实反映 Linux 的 WAL/锁行为」——这才是本环境存在的理由
-cd ~ && mkdir -p sqlite-check && cd sqlite-check
-sqlite3 t.db "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS t(id INTEGER PRIMARY KEY, v TEXT);"
-# 开两个终端并发写，或用一条命令模拟并发写 200 次：
-for i in $(seq 1 200); do sqlite3 t.db "INSERT INTO t(v) VALUES('row-$i');" & done; wait
-sqlite3 t.db "SELECT COUNT(*) FROM t;"
-# 期望：无 "database is locked" 报错，且计数 = 200（并发写被正确串行化）
+# 5) 【行为验收，不是版本验收】SQLite WAL 并发锁是否真的生效 —— 见下方「一键脚本」
 ```
 
-**判定标准**：第 2 项必须是 ext4；第 5 项必须无锁报错且计数正确。**这两条任一不过，环境不合格**，测出来的数据 DSH-2.5 不能用。
+#### 一键脚本（推荐，WB 已写入 WSL：`~/wsl-check.sh`）
+
+在 WSL 内执行一条即可，输出同时打到屏幕和文件（WB 直接读文件，不用你粘）：
+
+```bash
+bash ~/wsl-check.sh 2>&1 | tee ~/wsl-check.txt
+```
+
+**判定标准**：
+
+| 项 | 判据 |
+|---|---|
+| 第 2 项 | `df -T .` 的 Type **必须是 ext4 / overlay**（9p / drvfs = 不合格） |
+| 第 8a 项【反向】 | `busy_timeout=0` + 并发 100 写 → 期望**出现** `database is locked` |
+| 第 8b 项【正向】 | `busy_timeout=5s` + 并发 100 写 → 期望**无**报错，且总计数 = 200 |
+
+> ⚠️ **判据修正（WB 2026-09-09 自查发现，勿沿用旧版）**：旧版写的是「无 `database is locked` 报错且计数=200」——**这条是错的**。
+> WAL 下并发写，`busy_timeout=0` 时**必然**返回 `SQLITE_BUSY`：这恰恰**证明锁在生效**。若此时反而"零报错"，只说明**压根没竞争上**（并发没起来，或锁没工作）。
+> → 因此改为**正反两组**：反向组要看到锁拦人，正向组要看到等待后全部成功。**只有两组都对，才说明这个环境真实反映了 Linux 的锁语义。**
+
+**上表三项任一不过 → 环境不合格**，测出来的数据 DSH-2.5 不能用。
 
 ### 4. 已知坑（前人经验，别踩）
 
@@ -150,3 +163,113 @@ sqlite3 t.db "SELECT COUNT(*) FROM t;"
 - 若 WSL2 不足以复现目标行为（自检第 5 项过不了，或目标内核特性缺失），**再上 CVM**——决策稿已留此退路，不硬撑。
 
 ---
+
+## 老大的WSL环境配置任务执行报告 2026-9-9 17:33
+
+安装方式：
+WSL手动下载（地址：https://github.com/microsoft/WSL/releases/download/2.7.13/wsl.2.7.13.0.x64.msi）
+镜像手动下载（地址：https://mirrors.ustc.edu.cn/ubuntu-releases/noble/ubuntu-24.04.4-wsl-amd64.wsl）
+手动运行WSL安装包，手动在控制面板启用“适用于 Linux 的 Windows 子系统”，并重启
+执行镜像安装命令：wsl --install --from-file D:\Download\ubuntu-24.04.4-wsl-amd64.wsl
+安装成功并创建用户成功
+
+WSL和系统检查如下：
+
+命令：cat /proc/version
+运行效果：Linux version 6.18.33.2-microsoft-standard-WSL2 (root@f1bbfb02316b) (gcc (GCC) 13.2.0, GNU ld (GNU Binutils) 2.41) #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026
+
+命令：uname -r
+运行效果：6.18.33.2-microsoft-standard-WSL2
+
+命令：cat /etc/os-release | head -3
+运行效果：PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+
+命令：wsl -l -v
+运行效果：  NAME            STATE           VERSION
+* Ubuntu-24.04    Running         2
+
+命令：wsl --version
+运行效果：WSL 版本: 2.7.13.0
+内核版本: 6.18.33.2-2
+WSLg 版本: 1.0.73.2
+MSRDC 版本: 1.2.7214
+Direct3D 版本: 1.611.1-81528511
+DXCore 版本: 10.0.26100.1-240331-1435.ge-release
+Windows: 10.0.26200.9445
+
+命令：cd ~ && df -T . | tail -2
+运行效果：Filesystem     Type  1K-blocks    Used  Available Use% Mounted on
+/dev/sdd       ext4 1055762868 1368104 1000691292   1% /
+
+然后切换中科大镜像地址成功
+grep -rn "mirrors.ustc.edu.cn" /etc/apt/sources.list.d/ /etc/apt/sources.list 2>/dev/null
+/etc/apt/sources.list.d/ubuntu.sources:33:URIs: https://mirrors.ustc.edu.cn/ubuntu/
+/etc/apt/sources.list.d/ubuntu.sources:41:URIs: https://mirrors.ustc.edu.cn/ubuntu/
+
+命令：sudo apt update
+运行效果：更新成功
+
+命令：sudo apt install -y curl git sqlite3 build-essential ca-certificates
+运行效果：安装成功
+
+命令：curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+运行效果：失败，开了梯子成功
+
+命令：nvm --version
+运行效果：0.40.7
+
+命令： export NVM_NODEJS_ORG_MIRROR=https://npmmirror.com/mirrors/node
+nvm install 22
+运行效果：v22.23.2
+
+命令：npm config set registry https://registry.npmmirror.com
+npm i -g pnpm@11.7.0
+运行效果：added 1 package in 1s
+1 package is looking for funding
+  run `npm fund` for details
+
+命令：git config --global core.autocrlf input
+运行效果：无显示（推测为成功，没理由失败）
+
+命令：配置git身份
+运行效果：无显示（推测为成功，没理由失败）
+
+命令：node -v ; pnpm -v ; git --version ; python3 --version
+运行效果：v22.23.2
+11.7.0
+git version 2.43.0
+Python 3.12.3
+
+命令：sqlite3 --version
+node -e "console.log(process.versions.sqlite)" 2>/dev/null || echo "node 未内建 sqlite，以 better-sqlite3 编译版本为准"
+运行效果：3.45.1 2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1 (64-bit)
+3.51.3
+
+命令：cd ~ && mkdir -p sqlite-check && cd sqlite-check
+sqlite3 t.db "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS t(id INTEGER PRIMARY KEY, v TEXT);"
+for i in $(seq 1 200); do sqlite3 t.db "INSERT INTO t(v) VALUES('row-$i');" & done; wait
+sqlite3 t.db "SELECT COUNT(*) FROM t;"
+运行效果：没眼看，目测超过一半显示“Error: stepping, database is locked (5)”，
+
+再试
+
+命令：sqlite3 t.db "PRAGMA journal_mode;"
+ls -la
+运行效果：wal
+total 16
+drwxr-xr-x 2 sularry sularry 4096 Sep  9 17:59 .
+drwxr-x--- 6 sularry sularry 4096 Sep  9 17:56 ..
+-rw-r--r-- 1 sularry sularry 8192 Sep  9 17:56 t.db
+
+命令：cd ~/sqlite-check
+rm -f t.db t.db-wal t.db-shm
+sqlite3 t.db "PRAGMA journal_mode=WAL;"
+sqlite3 t.db "CREATE TABLE IF NOT EXISTS t(id INTEGER PRIMARY KEY, v TEXT);"
+for i in $(seq 1 200); do sqlite3 t.db "PRAGMA busy_timeout=10000; INSERT INTO t(v) VALUES('row-$i');" & done; wait
+sqlite3 t.db "SELECT COUNT(*) FROM t;"
+运行效果：全部成功无阻塞
+
+
+**有一件事情可能需要注意一下，每次启动这个乌班图系统的时候，都会有提示“wsl: 无法配置网络 (networkingMode Nat)，回退到 networkingMode VirtioProxy。”**
