@@ -114,10 +114,17 @@
 - [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**
   - 🟢 **已完成源码级选型分析（2026-09-09，见决策稿 §3.6「通信面选型分析」）**，要点：① **sdk 与 acp 都是 stdio 本地子进程 → DSH host 上云则天然出局**（2.3 的 Tauri 连通是同机开发形态，不可外推）；② acp 明写"不暴露 DSH 私有数据/方法"、无 fork/replay → 只适合作子代理/测试集成；③ **唯一「跨网络 + 宽面」官方方案 = Typert/Gateway（HTTP `/api` + WS `/api/remote.mux`）**，补的正是 sdk 窄面缺口；④ 主要代价 = 前端非 Cordis 环境，须自实现协议客户端（工作量未估）
   - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
-  - **WB 倾向**：Gateway 为主 + sdk 降级为测试/自动化通道；但不锁死，建议并入 **DSH-3 S0 切片实测**
+  - 🔴 **2026-09-09 二次测绘推翻其中两条**：**官方 `dsh-web-app` = browser-surface bundle**（`dsh --profile web` 开箱启动、自动开浏览器），依赖含 **30+ `dsh-client-ui-*`**（chat/conversation/sidebar/settings/plan/approval/permission-presets/model-selection…）→ 官方**已有完整 Web UI 组件层**；**鉴权已内置**（启动 URL 带 token → 换签名 cookie；实测 `curl 127.0.0.1:8123/` → **401**）；**`dsh-api-gateway` 在 base 默认启用**（`cordis.patch.yml:45`）→ DSH 侧装配成本 **0**。故"前端须自实现协议客户端""鉴权须自做"两条**均作废**
+  - 🟡 **新增硬约束（影响上云）**：web surface **不支持绑定全部网卡**（README 原话："binding all network interfaces is intentionally not supported"），只能 `--host` / `--trusted-host` 白名单 → 云端部署须按此设计（反向代理或白名单）
+  - ⚠️ **关键未验项 = 本选型最大成本变量**：`dsh-client-connection` 与 `dsh-client-ui-*` **未出现在 `node_modules/.pnpm`**（前端资产未随 npm 包分发）→ **第三方能否复用官方前端组件 / Typert 客户端库，未知**。它决定「自做前端」是**自做全部**还是**只做外壳**
+  - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
+  - **WB 倾向**：Gateway 为主 + sdk 降级为测试/自动化通道；"前端怎么来"由"必然自做"降级为"取决于官方资产可复用性"
+  - ⭐ **建议下一步（成本最低、且不需 key）**：**「web surface 开箱实测」**——`dsh --profile web --no-open --port <p>`，记录 ① 前端 dist 来源与可否被第三方引用/替换 ② 401 之后的合法访问姿势（token 从哪取）③ 页面能力面（会话树/审批/设置是否齐全）④ `--trusted-host` 能否放开非 loopback 访问。**起服务 / 看页面 / 建会话均不触模型 → 不需要 API key**，仅"发消息"才需要
 - [x] ✅ **WB 已完全独立复现（2026-09-09）**：Git Bash 侧握手 + 事件流 + 通知流 + **真实 LLM 回包**全通（`finalResponse="probe ok"`，19 事件含 assistant/chunk×7，21 通知）；另连续 5 次约 2.4s 跑通（仓库根 / 全新目录 / 死锁 / 活锁四种条件）
   - 注入姿势：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，只走环境变量不落文件
-- [x] ⚠️ **根因已定位**：此前「initialize 恒超时、无输出」**不是 DSH 问题** —— WB 的 **PowerShell 工具未启用 ConPTY，原生 exe（`node.exe`）不执行、无输出**（`node -v` 返回空，纯 cmdlet 正常）。→ **WB 侧一律用 Git Bash 工具跑 node/npm/pnpm**；残留锁经对照实验证伪（死/活 PID 锁均不阻塞），不得再当作超时原因。见决策稿 §3.6
+- [x] ⚠️ **根因已定位**：此前「initialize 恒超时、无输出」**不是 DSH 问题** —— WB 的 **PowerShell 工具未启用 ConPTY，原生 exe（`node.exe`）不执行、无输出**（`node -v` 返回空，纯 cmdlet 正常）。→ **WB 侧一律用 Git Bash 工具跑 node/npm/pnpm**。见决策稿 §3.6
+- [x] ⚠️ **残留锁结论二次修正（2026-09-09）**：旧措辞「已证伪」是**过度声明**。正确表述为**路径敏感，不得跨路径外推**：**SDK 握手路径不争锁**（死/活 PID 锁均不阻塞，2.4s 正常）；**profile 安装/修复路径（`healProfilesModuleFallback`）确实争锁**，锁残留即 `atomic-write: timed out waiting for the writer lock` 失败（实测 `--profile web` 首次启动被 `timeout` 强杀 → 留锁 → 后续同点失败，移锁后恢复）。锁在**全局 home** `C:\Users\SuLarry\.dsh\profiles\node_modules.lock`（非仓库根 `.dsh-home/`），且**不检测持有者存活**。
+  - **行事规则**：① 见该报错 → 移走锁重试（**同设备 rename，C:→D: 会 EXDEV**）；② **勿用 `timeout` 强杀正在装依赖的 dsh**（会留锁）
 
 **DSH-2.4 - 测试隔离基建（设计 + 可运行骨架，已派发 Claude 2026-09-09；✅ 串行已解除，可开工）**
 

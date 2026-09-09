@@ -334,11 +334,20 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 1. **sdk 与 acp 都不是"跨网络前端面"的候选**——两者都是 **stdio 本地子进程**。若 DSH host 上云（§2.10.1 既定），前端与它跨网络，**这两个面天然出局**。2.3 的"Tauri 经 sdk 连通"成立，但那是**同机开发形态**，不可外推到目标架构。
 2. **acp 额外出局一条**：它明写"不暴露 DSH 私有展示数据与方法""避免用于需要 DSH 特定 UI 的场景"，且无 fork/replay → 连"宽面"都不算。**它的正确用途是子代理/测试集成，不是前端。**
 3. **唯一同时满足「跨网络 + 宽面」的官方方案是 Typert/Gateway**，且它补的正是 sdk 窄面的缺口（会话树、历史分页、fork、取消、取消感知、重连）。**与 A-framework 同向**：我们的业务是 DSH 进程内插件，Gateway 是它对外暴露的标准出口。
-4. **主要代价**：前端不是 Cordis 环境 → 官方 `ctx.remote`（Client 侧）**用不了**，须自实现 Typert 协议客户端（HTTP unary + WS mux）。**工作量未估，是选型的主要成本项。**
+5. 🔴 **修正昨日两条判断（2026-09-09 二次测绘，源码级）**：昨日判「前端须自实现 Typert 客户端」「鉴权须自做」——**两条均被推翻**：
+   - 官方 **`dsh-web-app@0.1.2-rc.1`** = *"The dsh **browser-surface bundle**: the web patch layer over dsh-base plus the runtime glue plugin (frontend dist serving…)"*，`dsh --profile web` **开箱启动**、自动开浏览器。
+   - 其依赖含 **30+ `dsh-client-ui-*`**：chat / conversation / sidebar / settings / plan / schedule / **approval** / **permission-presets** / model-selection / goal / commands / session / brand-official …→ **官方已有完整 Web UI 组件层**，不是"只给协议"。
+   - **鉴权已内置**：启动 URL 带 process token → 浏览器换签名 cookie → 重定向干净 root。**实测 `curl http://127.0.0.1:8123/` → `HTTP 401`**（未带 token 被拦），与 README 一致。
+   - `dsh-api-gateway` 在 **base 默认启用**（`dsh-base/cordis.patch.yml:45` `- id: typert-gateway`），非可选附加 → DSH 侧装配成本为 **0**。
+6. 🟡 **新增硬约束（对上云有直接影响）**：web surface **不支持绑定全部网卡**——README 原话 *"binding all network interfaces is intentionally not supported"*，只能经 `--host` / `--trusted-host` 白名单放开。**上云部署形态须按此约束设计**（反向代理或显式白名单）。
 
-**风险（须记住，勿当已解决）**：① preview 期 API 漂移（锁定 0.1.2-rc.1，社区已有插件标 "verified against 0.1.0-rc.6" 的先例）；② 鉴权与租户隔离**须自做**（§3.3：DSH 内核对 cloud / multi-user / tenant **零论述**）；③ 浏览器侧可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，但未实测；④ **L2 反向工具执行须自做**（可走：事件流下发指令 + unary 回传结果）。
+**风险（修订）**：① preview 期 API 漂移（锁定 0.1.2-rc.1）；② **鉴权已内置**（token→签名 cookie），但**多用户 / 租户隔离仍须自做**（§3.3：DSH 内核对 cloud / multi-user / tenant 零论述）；③ 浏览器侧 WS 可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，未实测；④ **L2 反向工具执行仍须自做**（事件流下发指令 + unary 回传结果），此缺口三个官方面都没有。
 
-**WB 倾向**：**Typert/Gateway 为主，sdk 降级为测试/自动化通道**（等价 acp 定位）。但**不建议现在锁死**——建议并入 **DSH-3 的 S0 切片实测**（S0 本就要验"客户端 → 通信面 → session create → 工具回传"，正是天然验证点），用一个切片的成本换确定性。
+> ⚠️ **关键未验项——决定真实成本，必须实测**：`dsh-client-connection` 与 `dsh-client-ui-*` **未出现在 `node_modules/.pnpm`**（前端资产未随 npm 包分发）。**第三方能否复用官方前端组件与 Typert 客户端库，目前未知**。它直接决定「自做前端」是**自做全部**还是**只自做外壳**——这是本选型最大的成本变量，**昨日"工作量未估"的缺口今天仍在，只是从"协议层"移到了"可复用性"这一层**。
+
+**WB 倾向（修订）**：**Typert/Gateway 为主**不变，但**"前端怎么来"从"必然自做"降级为"取决于官方资产可复用性"**。sdk 仍降级为测试/自动化通道。
+
+**建议动作（成本最低的下一步）**：做一次 **「web surface 开箱实测」**——`dsh --profile web --no-open --port <p>`，记录：① 前端 dist 从哪来、能否被第三方引用/替换；② **401 之后的合法访问姿势**（token 在哪取）；③ 页面能力面（会话树/审批/设置是否齐全）；④ `--trusted-host` 能否放开非 loopback 访问（上云可行性）。**该实测不需要 API key**（起服务、看页面、建会话均不触模型），仅"发消息"才需 key。
 
 > ⚠️ **待老大拍的两个前提（不拍则选型无法定）**：
 > **① 部署形态**：前端**直连** DSH host，还是经**自做云端服务**中转？（若中转，则前端↔服务是我们自定协议，与 DSH 无关，DSH 侧同机用 sdk 即可——两种前提结论不同。）
@@ -395,14 +404,21 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 >
 > **注入姿势（可复用）**：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，**只走环境变量、不落任何文件**（与既有报告口径一致）。
 >
-> **④ 已排除的假说（均有对照实验，勿再重提）**：node 版本（内置 22 与系统 24 解析结果一致）／tsx 源码回退（built bin 存在，未触发）／首次运行安装耗时（全新目录 2.4s 完成）／profile 安装锁（**死 PID 锁与活 PID 锁均不阻塞**）。
+> **④ 已排除的假说（均有对照实验，勿再重提）**：node 版本（内置 22 与系统 24 解析结果一致）／tsx 源码回退（built bin 存在，未触发）／首次运行安装耗时（全新目录 2.4s 完成）。
 >
-> ⚠️ **残留锁：现象存在，但与超时无因果关系（2026-09-09 证伪）**：WB 执行环境下 dsh 异常退出后会在 `.dsh-home/profiles/node_modules.lock` 留下**持有者已死的锁**（该现象 WB 环境 100% 复现、Trae 三阶段零复现）。曾据此断言「后续调用全部超时」，**该断言已被对照实验推翻**：
-> - 写入**死 PID**（`999999`）的锁 → probe 正常返回（2.4s），**不阻塞**；
-> - 写入**真实存活进程 PID** 的锁 → probe 同样正常返回（2.4s），**不阻塞**；
-> - 正常退出时锁会**自动清理**（实测退出后无残留）。
+> ⚠️ **残留锁：路径敏感，不得跨路径外推（2026-09-09 二次修正）**
 >
-> → 结论：锁是**异常终止的痕迹**，不是后续超时的原因。此前「initialize 恒超时」的真实原因见上方『WB 复验边界①』（**PowerShell 工具无 ConPTY**）。**残留锁仍不得当作 DSH 缺陷**，但也不得再当作超时原因引用。
+> **此前断言「锁与超时无因果关系」是过度声明**——该断言只在 **SDK 握手路径**上成立，被我外推到了全部路径。实测结论应精确表述为：
+>
+> | 路径 | 是否争用 `node_modules.lock` | 实测结果 |
+> |---|---|---|
+> | **SDK 握手**（`initialize` / `session.prompt`） | ❌ 不争用 | 死 PID 锁、活 PID 锁均**不阻塞**（各 2.4s 正常返回） |
+> | **profile 安装/修复**（`healProfilesModuleFallback`） | ✅ **争用** | 锁残留即失败：`atomic-write: timed out waiting for the writer lock` |
+>
+> - **复现记录**：`dsh --profile web`（首次，需装依赖）被 `timeout` 强杀 → 锁残留 → 后续启动同点超时失败，移除锁后恢复。锁位于**全局 home** `C:\Users\SuLarry\.dsh\profiles\node_modules.lock`（**不是**仓库根的 `.dsh-home/`）。
+> - **写入规则**：`healProfilesModuleFallback` 走 `dsh-atomic-write` 的 `withFileLock`，该实现**不检测持有者存活**（死 PID 锁同样阻塞）。
+>
+> → **行事规则**：① 见到 `atomic-write: timed out waiting for the writer lock` → 移走该锁后重试（**同设备 rename，勿跨盘**——C:→D: 会 `EXDEV`）；② **不要用 `timeout` 强杀正在装依赖的 dsh**，它会留下锁；③ 锁仍是**异常终止的痕迹**，不是 DSH 缺陷，但也**不得再引用「锁已证伪」的旧说法**。
 
 #### DSH-3：核心能力 prototype
 
