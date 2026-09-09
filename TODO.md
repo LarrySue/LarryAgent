@@ -112,13 +112,15 @@
 - [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
 - [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`；⭐ 能力边界观察 = 通信面定型输入（**事件面宽、方法面窄**）
 - [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**，需 base 内插件扩展或自做 HTTP 桥
-- [ ] ⚠️ **WB 未独立复现**（执行环境下 SDK `initialize` 恒超时，根因未定位）——结论以 Trae 原始输出 + 老大 GUI 点验为证，见决策稿 §3.6「WB 复验边界」
+- [x] ✅ **WB 复现状态修订（2026-09-09）**：**Git Bash 侧已独立复现** SDK 通道握手 + 事件流 + 通知流（连续 5 次约 2.4s；含仓库根 / 全新目录 / 死锁 / 活锁四种条件）；**真实 LLM 回包仍未复现**（执行环境无 API key，`finalResponse` 为空），该项仍以 Trae 原始输出 + 老大 GUI 点验为证
+- [x] ⚠️ **根因已定位**：此前「initialize 恒超时、无输出」**不是 DSH 问题** —— WB 的 **PowerShell 工具未启用 ConPTY，原生 exe（`node.exe`）不执行、无输出**（`node -v` 返回空，纯 cmdlet 正常）。→ **WB 侧一律用 Git Bash 工具跑 node/npm/pnpm**；残留锁经对照实验证伪（死/活 PID 锁均不阻塞），不得再当作超时原因。见决策稿 §3.6
 
 **DSH-2.4 - 测试隔离基建（设计 + 可运行骨架，已派发 Claude 2026-09-09；⚠️ 与 2.3 串行，待其交付后开工）**
 
 - [ ] Vitest **临时库隔离**：测试前断言 DB 路径指向临时库，指向真实库直接 fail-fast（等价现有 Python 侧机制，属 Tier0 硬红线，不依赖自觉）
 - [ ] **fail-fast 哨兵测试**：写一条**故意**把 DB 路径指回真实库的用例，跑它**必须 fail**——「正常用例全绿」不足以证明护栏存在，这是唯一能证明"不依赖自觉"的方式
-- [ ] **先查清隔离对象**：迁移后真实数据落在哪（现有 `backend/data/larry.db`；DSH 侧可能在 `.dsh-home/` 或 `storage/`），可能不止一处
+- [ ] **先查清隔离对象**：迁移后真实数据落在哪（现有 `backend/data/larry.db`；DSH 侧在 `.dsh-home/`），可能不止一处
+  - 🟢 **WB 已实测落点（2026-09-09，交接 Claude 用）**：未设 `DSH_HOME` 时数据落在**仓库根 `.dsh-home/`**（已 gitignore），下有 `sessions/` `storages/` `profiles/` `.anonymous-user-id`；`sessions/` **按 cwd 分子目录**（如 `--D-Code-LarryAgent-harness--`）。**从 `harness/` 子目录跑时不会在其下新建 `.dsh-home`，而是写入仓库根那份**（推测为向上查找，**机制待 Claude 确认**——隔离设计依赖这个行为，别只凭观察定案）
 - [ ] `--real-api` 占位符机制的等价物（默认跳过真实 API 用例；开启才注入 key，且该模式残留含 key 明文）
 - [ ] ⚠️ **不提前设计 = DSH-3 起每步验证都裸奔**（文档 §3.6 硬要求：本阶段设计到位）
 - [ ] 对照 DSH 四层测试体系设计——测试资产已定稿为**重建**，不是翻译；参照物 = `backend/tests/conftest.py` 的七条设计原则（平移原则不平移代码）

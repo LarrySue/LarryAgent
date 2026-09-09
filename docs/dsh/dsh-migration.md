@@ -351,13 +351,27 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | DSH 入口 | **npm 全局 `dsh@0.1.2-rc.1`**；不用源码 `bin.ts` + tsx | DSH-2.2 反证：源码入口在 PowerShell 下偶发卡住 |
 | DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
 | sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC） | DSH-2.3 连通验证用；注意与 `larry` 是两个 profile，结论不可互推 |
-| **端到端动态验证** | **须在 PowerShell 执行**（Trae / 老大侧） | DSH-2.3 复验：WB 环境（Git Bash）下 SDK 通道 `initialize` 恒超时，根因未定位 |
+| **端到端动态验证** | **须在真实终端执行（Trae / 老大侧）**；WB 侧可用 **Git Bash** 复现握手与事件流 | 2026-09-09 复测定案，见下方「WB 复验边界（修订）」 |
+| **WB 的 PowerShell 工具** | **不可用**：未启用 ConPTY，原生 exe（`node.exe`）无输出、等同于不执行 | 🟢 WB 实测：`node -v` 返回空、纯 cmdlet（`Set-Content`）正常 |
 
 > **零成本复验法（🟢 WB 独立跑出，可复用）**：`dsh --profile larry --help` **即触发 cordis apply，不需要 LLM key**。凡要验"插件到底加载没加载"，先用这条，不必跑完整会话。
 >
-> ⚠️ **WB 复验边界（2026-09-09 立）**：WB 只能做**静态复核**（源码、配置、版本、`--help` / `--dump-config` 类零成本命令）与**证据链审查**；**涉及真实 LLM 调用 / stdio 通道的端到端验证，WB 执行环境下不可用**（Git Bash 下 SDK `initialize` 恒 20s 超时，PowerShell 侧同命令由 Trae 跑通）。此类结论须以**执行方原始输出 + 老大一手点验**为证，WB 在复验记录中明确标注「未独立复现」，不得默认勾选。
+> ⚠️ **WB 复验边界（2026-09-09 立，同日修订）**：
 >
-> ⚠️ **一条未定位的现象（不得当作 DSH 缺陷）**：WB 执行环境下 dsh 异常退出后会在 `.dsh-home/profiles/node_modules.lock` 留下**持有者已死的锁**，且 dsh 不检测持有者存活 → 后续调用全部超时（清锁即恢复）。**该现象在 WB 环境 100% 复现、在 Trae 三阶段（2.1/2.2/2.3）零复现**，故归因为**执行环境/方式相关**，**不是 DSH 的普适缺陷**；根因未定位（已排除：MSYS 路径转换、`| head` 截断管道）。若后续 PowerShell 侧也复现，再重新定性。
+> **① 工具层（已定位）**：WB 的 **PowerShell 工具未启用 ConPTY** → 原生 exe（`node.exe`）**不执行、无输出**（`node -v` 返回空），而纯 cmdlet 正常。此前「PowerShell 侧 initialize 恒超时、无输出」是**工具假象，不是 DSH 失败**。→ **WB 一律用 Git Bash 工具跑命令；不要用 PowerShell 工具跑任何 node/npm/pnpm。**
+>
+> **② 能力层（已实测放宽）**：Git Bash 侧**已可独立复现** SDK 通道 —— `initialize` + `session.prompt` + 事件流 + 通知流全部跑通（🟢 连续 5 次：仓库根 ×2 / 全新目录 ×1 / 死锁 ×1 / 活锁 ×1，单次约 2.4s）。故「WB 完全不能端到端」**作废**。
+>
+> **③ 仍受限的部分**：**真实 LLM 回包**（`finalResponse` 非空）WB **仍未复现** —— 执行环境无 API key，握手能过、模型不回。此项仍以**执行方原始输出 + 老大一手点验**为证。
+>
+> **④ 已排除的假说（均有对照实验，勿再重提）**：node 版本（内置 22 与系统 24 解析结果一致）／tsx 源码回退（built bin 存在，未触发）／首次运行安装耗时（全新目录 2.4s 完成）／profile 安装锁（**死 PID 锁与活 PID 锁均不阻塞**）。
+>
+> ⚠️ **残留锁：现象存在，但与超时无因果关系（2026-09-09 证伪）**：WB 执行环境下 dsh 异常退出后会在 `.dsh-home/profiles/node_modules.lock` 留下**持有者已死的锁**（该现象 WB 环境 100% 复现、Trae 三阶段零复现）。曾据此断言「后续调用全部超时」，**该断言已被对照实验推翻**：
+> - 写入**死 PID**（`999999`）的锁 → probe 正常返回（2.4s），**不阻塞**；
+> - 写入**真实存活进程 PID** 的锁 → probe 同样正常返回（2.4s），**不阻塞**；
+> - 正常退出时锁会**自动清理**（实测退出后无残留）。
+>
+> → 结论：锁是**异常终止的痕迹**，不是后续超时的原因。此前「initialize 恒超时」的真实原因见上方『WB 复验边界①』（**PowerShell 工具无 ConPTY**）。**残留锁仍不得当作 DSH 缺陷**，但也不得再当作超时原因引用。
 
 #### DSH-3：核心能力 prototype
 
