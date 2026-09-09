@@ -104,7 +104,28 @@ sqlite3 t.db "SELECT COUNT(*) FROM t;"
 4. **CRLF 污染**：Windows 侧编辑 Linux 里的仓库文件容易引入 CRLF。仓库统一 LF，建议 `git config core.autocrlf input`（Linux 侧）或直接只在 WSL 内编辑。
 5. **WSL2 内存占用**：默认可用到宿主 50% 内存，跑完不用了可 `wsl --shutdown` 释放（不删任何东西）。
 
-### 5. 配好之后交给谁
+### 5. 空间预估（**实测基准，非拍脑袋**）
+
+> 基准来源（Windows 侧 2026-09-09 实测）：`harness/node_modules` **313 MB**／dsh CLI 全局包 **274 MB**／`.dsh-home` 运行时数据 **226 MB**。
+
+| 项 | 预估 | 备注 |
+|---|---|---|
+| Ubuntu 24.04 根文件系统（VHDX 初始） | **1.2–1.5 GB** | 动态扩展 VHDX，起步即可用 |
+| apt 包（sqlite3 / git / curl + **build-essential**） | **0.4–0.6 GB** | build-essential 是大头；若确认无需编译原生模块可省，但建议装（pnpm 可能源码构建） |
+| Node 22 LTS（含 npm）+ pnpm | **~0.25 GB** | |
+| **我们的 S 侧**：`harness/node_modules` + dsh CLI + 运行时数据 | **0.8–1.0 GB** | ⚠️ **不能从 Windows 侧拷贝复用**（跨 OS，原生模块不通用），须在 WSL 内 `pnpm install` 重装 |
+| 测试临时数据 | ~0.1 GB | |
+| **小计（本次必需，不装 Python）** | **≈ 3–3.5 GB** | |
+| 若加 Python 3.11 + PyTorch CPU + bge-small-zh 模型 | **再 +2.5–3.5 GB** | **仅 2.5 ⑤ embedding 漂移比对才需要，本次可跳过** |
+
+**建议预留 8–10 GB**（含下面两个坑的余量）。本机 C 盘实测可用 **130 GB**，D 盘 179 GB —— 空间不是问题。
+
+**两个空间相关的坑**：
+
+1. **WSL2 的 VHDX 只增不减**：在 WSL 内删除文件，**宿主 C 盘空间不会释放**（VHDX 不会自动收缩）。若日后要回收，需 `wsl --shutdown` 后用 `diskpart` compact VHDX，或 `wsl --export` 再 `--import`。
+2. **默认装在 C 盘**：Store / `wsl --install` 装的发行版，其 `ext4.vhdx` 落在 `%LOCALAPPDATA%\Packages\<发行版>\LocalState\`。想放 D 盘需手动 `--export` / `--import` 迁移——**本次不建议折腾**，130 GB 够用。
+
+### 6. 配好之后交给谁
 
 - 把 §3 的输出贴回**本文件**（或发给 WB），WB 据此判定环境是否合格。
 - 环境合格后，**DSH-2.5 ① 的实测**由 WB 另派（Trae 或 Claude，届时定），执行方会在**这个环境里**跑，不在 Windows 上跑。
