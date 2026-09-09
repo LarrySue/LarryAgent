@@ -129,14 +129,17 @@
 - [ ] **T2 触发线相关待验（低优先级）**：官方 web surface 经**反向代理**对外是否可行（`--trusted-host` 白名单为唯一已知障碍，未实测）
 - [x] ~~web surface 开箱实测 ①②③~~ **价值随定型下调**（我们不承载官方 shell）；**官方 UI 组件仍可复用**——41 个 `dsh-client-*` 包可 `pnpm add`（exports 含 `./src/*`，源码随包分发）→ 自做前端 = **用官方组件拼**，非从零写
 
-**DSH-2.4 - 测试隔离基建（设计 + 可运行骨架 · 已派发 Claude 2026-09-09 · 串行锁已解除，可开工）**
+**DSH-2.4 - 测试隔离基建（已交付 Claude 2026-09-09 `8796b0c` · WB 复验：硬验收 ①② 通过、③ 未生效 · 3 条待回写）**
 
-> **可开工条件已满足（2026-09-09）**：① DSH-2.3 已交付落盘（原串行阻塞解除）② 老大已开 `DSH-2.4` 专用测试 key（在 `exchange/log-claude.md` 末尾）③ 隔离对象落点已由 WB 实测（见下「先查清隔离对象」）。→ **派发稿可直接贴给 Claude 开工。**
+> **WB 复验结论（2026-09-09 独立实跑）**：① 哨兵 `pnpm test:isolated:sentinel` → **fail**，且失败原因**正是守卫拦截**（非其他原因）；② 正常用例 `pnpm test:isolated` → **绿**；③ **key 残留扫描实测不生效**（见下发现 1）。Claude 提交信息称"三条硬验收达成"，**第 3 条不成立**。
 
-- [ ] Vitest **临时库隔离**：测试前断言 DB 路径指向临时库，指向真实库直接 fail-fast（等价现有 Python 侧机制，属 Tier0 硬红线，不依赖自觉）
-- [ ] **fail-fast 哨兵测试**：写一条**故意**把 DB 路径指回真实库的用例，跑它**必须 fail**——「正常用例全绿」不足以证明护栏存在，这是唯一能证明"不依赖自觉"的方式
+- [x] Vitest **临时库隔离**（实测通过：临时 DSH_HOME + beforeEach 全局断言）
+- [x] **fail-fast 哨兵测试**（实测通过：故意指回真实库 → fail，且由 `assertIsolated` throw 触发）
 - [ ] **先查清隔离对象**：迁移后真实数据落在哪（现有 `backend/data/larry.db`；DSH 侧在 `.dsh-home/`），可能不止一处
   - 🟢 **WB 已实测落点（2026-09-09，交接 Claude 用）**：未设 `DSH_HOME` 时数据落在**仓库根 `.dsh-home/`**（已 gitignore），下有 `sessions/` `storages/` `profiles/` `.anonymous-user-id`；`sessions/` **按 cwd 分子目录**（如 `--D-Code-LarryAgent-harness--`）。**从 `harness/` 子目录跑时不会在其下新建 `.dsh-home`，而是写入仓库根那份**（推测为向上查找，**机制待 Claude 确认**——隔离设计依赖这个行为，别只凭观察定案）
+- [ ] 🔴 **复验发现 1（待回写 Claude）— key 残留扫描是死代码**：`isolated-setup.ts` 两个 `process.on('exit')` **按注册顺序执行**，第一个先 `rmSync` 删掉临时目录 → 第二个 `scanForKeys` 再读必然 ENOENT 进 catch → **扫描永不生效**。**修法：先扫描再删**（或同一监听器内先扫后删）
+- [ ] 🟡 **复验发现 2 — 守卫盲区是 `DSH_HOME` unset（比"指向真实库"更常见）**：断言为 `current === REAL_DSH_HOME`（**精确相等**）；unset 时 `resolve(process.env.DSH_HOME ?? '')` = **cwd**，不等于真实库 → **放行**。而 dsh 实际会向上查找到仓库根 `.dsh-home` 并写入真实数据（WB 已实测该行为）。测试里 `delete process.env.DSH_HOME` 模拟默认行为的写法很常见 → **语义应改为"在真实库之内或等于"**
+- [ ] 🟡 **复验发现 3 — 声明过度**：文件头注释列**两个**隔离对象（`backend/data/larry.db` + `.dsh-home/`）并称"两者均不因本基建被触碰"，但 `assertIsolated` **只覆盖 DSH_HOME**，对 `larry.db` 无任何程序化断言。→ 措辞改为"第二对象待 DSH-4 接入时补断言"，或现在补
 - [ ] `--real-api` 占位符机制的等价物（默认跳过真实 API 用例；开启才注入 key，且该模式残留含 key 明文）
 - [ ] ⚠️ **不提前设计 = DSH-3 起每步验证都裸奔**（文档 §3.6 硬要求：本阶段设计到位）
 - [ ] 对照 DSH 四层测试体系设计——测试资产已定稿为**重建**，不是翻译；参照物 = `backend/tests/conftest.py` 的七条设计原则（平移原则不平移代码）
