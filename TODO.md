@@ -111,9 +111,11 @@
 - [x] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
 - [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
 - [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`；⭐ 能力边界观察 = 通信面定型输入（**事件面宽、方法面窄**）
-- [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**，需 base 内插件扩展或自做 HTTP 桥
+- [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**
+  - 🟢 **已完成源码级选型分析（2026-09-09，见决策稿 §3.6「通信面选型分析」）**，要点：① **sdk 与 acp 都是 stdio 本地子进程 → DSH host 上云则天然出局**（2.3 的 Tauri 连通是同机开发形态，不可外推）；② acp 明写"不暴露 DSH 私有数据/方法"、无 fork/replay → 只适合作子代理/测试集成；③ **唯一「跨网络 + 宽面」官方方案 = Typert/Gateway（HTTP `/api` + WS `/api/remote.mux`）**，补的正是 sdk 窄面缺口；④ 主要代价 = 前端非 Cordis 环境，须自实现协议客户端（工作量未估）
+  - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
+  - **WB 倾向**：Gateway 为主 + sdk 降级为测试/自动化通道；但不锁死，建议并入 **DSH-3 S0 切片实测**
 - [x] ✅ **WB 已完全独立复现（2026-09-09）**：Git Bash 侧握手 + 事件流 + 通知流 + **真实 LLM 回包**全通（`finalResponse="probe ok"`，19 事件含 assistant/chunk×7，21 通知）；另连续 5 次约 2.4s 跑通（仓库根 / 全新目录 / 死锁 / 活锁四种条件）
-  - ⚠️ **订正**：此前写「执行环境无 API key」是错的——**不是没 key，是 WB 没注入**。老大每阶段开专用测试 key 且已授权明文取用（`docs/ai-governance.md` §1 豁免条款）。**声明"做不到"前须分清：环境限制 vs 自己没做。**
   - 注入姿势：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，只走环境变量不落文件
 - [x] ⚠️ **根因已定位**：此前「initialize 恒超时、无输出」**不是 DSH 问题** —— WB 的 **PowerShell 工具未启用 ConPTY，原生 exe（`node.exe`）不执行、无输出**（`node -v` 返回空，纯 cmdlet 正常）。→ **WB 侧一律用 Git Bash 工具跑 node/npm/pnpm**；残留锁经对照实验证伪（死/活 PID 锁均不阻塞），不得再当作超时原因。见决策稿 §3.6
 

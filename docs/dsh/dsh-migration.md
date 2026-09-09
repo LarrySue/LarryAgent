@@ -315,6 +315,35 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 > ⚠️ **未收敛项（DSH-2.3 提出，待实测后定型）**：通信面暂取 sdk / acp，但 **sdk 面的 JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown`——这正是不判二等的同一个窄面**（§3.5）。若 client 长期经 sdk 通信，则客户端一侧被永久限制在该窄面内，与 A-framework「贴近核心层」的初衷存在张力。
 > **当前处置**：DSH-2.3 派发稿**刻意未锁死通信面**，只要求验通 + 报告该面"能做 / 明显做不了什么"。可选方向含「在 DSH 进程内自做 HTTP 网关，通信面自定」。**2.3 交付前不作定论；TODO 侧与该判断保持同步、不先行按 sdk 面设计。**
 
+#### 通信面选型分析（🟢 2026-09-09 源码级实测，**待老大拍板**）
+
+> **先厘清一回事**：「通信面」其实是**两层**，混在一起讨论会得出错误结论——
+> **L1 前端（Vue/Tauri / 移动版浏览器）↔ DSH host**：是否跨网络，取决于 DSH host 跑在哪；
+> **L2 C 侧本地副作用工具（file_ops / shell）的反向驱动**：Host 令 Client 执行并回传结果。
+> **L2 三个官方面都没有现成语义，必须自做**（可架在任一面的流通道上），与选型**正交**。
+
+| 选项 | 传输 | 跨网络 | 能力面（源码/文档实证） | 官方定位 |
+|---|---|---|---|---|
+| **sdk**（`dsh-sdk-client`） | **stdio 本地子进程** | ❌ 同机 | 下行仅 `initialize`/`session.prompt`/`shutdown`；上行 19 类事件 | 编程驱动**一次**会话 |
+| **acp**（`dsh-acp`） | **stdio JSON-RPC** | ❌ 同机 | ACP v1 标准面：create/resume/list/MCP/选模型/prompt/cancel；**不支持 delete / fork / transcript replay**；**"never private DSH presentation data or methods"** | **自动化**——子代理、测试运行器、脚本控制器；明确**不适合 UI** |
+| **Typert/Gateway**（`dsh-api-gateway` + `*-controller`） | **HTTP `/api` + WebSocket `/api/remote.mux`** | ✅ | **宽面**：会话全生命周期、历史分页、事件流（`RemoteJournalStream`）、快照流（`RemoteSnapshotStream`）、**fork / cancel / rename / prompt**、skills 发现、模型目录、文件引用、subagent；含**重连追赶 + gap 修复 + 2s 心跳** | **官方 Client↔Host 通道**（Host `ctx.typertGateway` / Client `ctx.remote`） |
+| 自做 HTTP 桥 | 自定 | ✅ | 自定，流/重连/取消/分页全部自实现 | 兜底 |
+
+**判定**：
+
+1. **sdk 与 acp 都不是"跨网络前端面"的候选**——两者都是 **stdio 本地子进程**。若 DSH host 上云（§2.10.1 既定），前端与它跨网络，**这两个面天然出局**。2.3 的"Tauri 经 sdk 连通"成立，但那是**同机开发形态**，不可外推到目标架构。
+2. **acp 额外出局一条**：它明写"不暴露 DSH 私有展示数据与方法""避免用于需要 DSH 特定 UI 的场景"，且无 fork/replay → 连"宽面"都不算。**它的正确用途是子代理/测试集成，不是前端。**
+3. **唯一同时满足「跨网络 + 宽面」的官方方案是 Typert/Gateway**，且它补的正是 sdk 窄面的缺口（会话树、历史分页、fork、取消、取消感知、重连）。**与 A-framework 同向**：我们的业务是 DSH 进程内插件，Gateway 是它对外暴露的标准出口。
+4. **主要代价**：前端不是 Cordis 环境 → 官方 `ctx.remote`（Client 侧）**用不了**，须自实现 Typert 协议客户端（HTTP unary + WS mux）。**工作量未估，是选型的主要成本项。**
+
+**风险（须记住，勿当已解决）**：① preview 期 API 漂移（锁定 0.1.2-rc.1，社区已有插件标 "verified against 0.1.0-rc.6" 的先例）；② 鉴权与租户隔离**须自做**（§3.3：DSH 内核对 cloud / multi-user / tenant **零论述**）；③ 浏览器侧可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，但未实测；④ **L2 反向工具执行须自做**（可走：事件流下发指令 + unary 回传结果）。
+
+**WB 倾向**：**Typert/Gateway 为主，sdk 降级为测试/自动化通道**（等价 acp 定位）。但**不建议现在锁死**——建议并入 **DSH-3 的 S0 切片实测**（S0 本就要验"客户端 → 通信面 → session create → 工具回传"，正是天然验证点），用一个切片的成本换确定性。
+
+> ⚠️ **待老大拍的两个前提（不拍则选型无法定）**：
+> **① 部署形态**：前端**直连** DSH host，还是经**自做云端服务**中转？（若中转，则前端↔服务是我们自定协议，与 DSH 无关，DSH 侧同机用 sdk 即可——两种前提结论不同。）
+> **② L2 反向通道**：确认"C 侧执行本地工具"由我们自做，且接受它不属于任何官方面。
+
 **测试资产是独立工作包，不是DSH-6 附赠项**：现有 pytest 测试 ~4.4k 行，与核心代码 1:1。**第 0 项判 A-framework → 处置方式定稿：按 DSH 四层测试体系重建**（原"保留 + 增补边界契约层"是分岔表 A-service 行的口径，已随分岔作废）。无论哪条路径，测试基建（临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）须在**DSH-2** 设计到位——不提前设计，DSH-3 起每步验证都裸奔。
 
 #### DSH-1：事实校准 ✅（已归档 2026-09-08）
@@ -363,8 +392,6 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 > **② 能力层（已实测放宽）**：Git Bash 侧**已可独立复现** SDK 通道 —— `initialize` + `session.prompt` + 事件流 + 通知流全部跑通（🟢 连续 5 次：仓库根 ×2 / 全新目录 ×1 / 死锁 ×1 / 活锁 ×1，单次约 2.4s）。故「WB 完全不能端到端」**作废**。
 >
 > **③ 真实 LLM 回包：WB 已独立复现（2026-09-09 二次修订）**：注入测试 key 后 `finalResponse` 正常返回（🟢 `"probe ok"`，19 事件含 `assistant/chunk`×7 + `assistant/message`×1，21 通知）。
->
-> ⚠️ **订正**：此前本条写「执行环境无 API key」是**错误表述**——**不是没有 key，是 WB 未注入**。老大每阶段都开专用测试 key 并已授权明文取用（`docs/ai-governance.md` §1 已加豁免条款）。**把"自己的选择"写成"环境限制"属归错对象**，与把工具故障归给被测对象是同一类错误。**凡声明"做不到"，须先分清是环境限制还是自己没做。**
 >
 > **注入姿势（可复用）**：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，**只走环境变量、不落任何文件**（与既有报告口径一致）。
 >
