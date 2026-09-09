@@ -351,7 +351,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | DSH 入口 | **npm 全局 `dsh@0.1.2-rc.1`**；不用源码 `bin.ts` + tsx | DSH-2.2 反证：源码入口在 PowerShell 下偶发卡住 |
 | DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
 | sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC） | DSH-2.3 连通验证用；注意与 `larry` 是两个 profile，结论不可互推 |
-| **端到端动态验证** | **须在真实终端执行（Trae / 老大侧）**；WB 侧可用 **Git Bash** 复现握手与事件流 | 2026-09-09 复测定案，见下方「WB 复验边界（修订）」 |
+| **端到端动态验证** | **WB 侧可独立完成**：Git Bash 工具 + 环境变量注入测试 key | 🟢 2026-09-09 复测：握手 / 事件流 / **真实 LLM 回包**全部跑通，见下方「WB 复验边界（修订）」 |
 | **WB 的 PowerShell 工具** | **不可用**：未启用 ConPTY，原生 exe（`node.exe`）无输出、等同于不执行 | 🟢 WB 实测：`node -v` 返回空、纯 cmdlet（`Set-Content`）正常 |
 
 > **零成本复验法（🟢 WB 独立跑出，可复用）**：`dsh --profile larry --help` **即触发 cordis apply，不需要 LLM key**。凡要验"插件到底加载没加载"，先用这条，不必跑完整会话。
@@ -362,7 +362,11 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 >
 > **② 能力层（已实测放宽）**：Git Bash 侧**已可独立复现** SDK 通道 —— `initialize` + `session.prompt` + 事件流 + 通知流全部跑通（🟢 连续 5 次：仓库根 ×2 / 全新目录 ×1 / 死锁 ×1 / 活锁 ×1，单次约 2.4s）。故「WB 完全不能端到端」**作废**。
 >
-> **③ 仍受限的部分**：**真实 LLM 回包**（`finalResponse` 非空）WB **仍未复现** —— 执行环境无 API key，握手能过、模型不回。此项仍以**执行方原始输出 + 老大一手点验**为证。
+> **③ 真实 LLM 回包：WB 已独立复现（2026-09-09 二次修订）**：注入测试 key 后 `finalResponse` 正常返回（🟢 `"probe ok"`，19 事件含 `assistant/chunk`×7 + `assistant/message`×1，21 通知）。
+>
+> ⚠️ **订正**：此前本条写「执行环境无 API key」是**错误表述**——**不是没有 key，是 WB 未注入**。老大每阶段都开专用测试 key 并已授权明文取用（`docs/ai-governance.md` §1 已加豁免条款）。**把"自己的选择"写成"环境限制"属归错对象**，与把工具故障归给被测对象是同一类错误。**凡声明"做不到"，须先分清是环境限制还是自己没做。**
+>
+> **注入姿势（可复用）**：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，**只走环境变量、不落任何文件**（与既有报告口径一致）。
 >
 > **④ 已排除的假说（均有对照实验，勿再重提）**：node 版本（内置 22 与系统 24 解析结果一致）／tsx 源码回退（built bin 存在，未触发）／首次运行安装耗时（全新目录 2.4s 完成）／profile 安装锁（**死 PID 锁与活 PID 锁均不阻塞**）。
 >

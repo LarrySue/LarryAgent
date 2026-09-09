@@ -112,10 +112,14 @@
 - [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
 - [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`；⭐ 能力边界观察 = 通信面定型输入（**事件面宽、方法面窄**）
 - [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**，需 base 内插件扩展或自做 HTTP 桥
-- [x] ✅ **WB 复现状态修订（2026-09-09）**：**Git Bash 侧已独立复现** SDK 通道握手 + 事件流 + 通知流（连续 5 次约 2.4s；含仓库根 / 全新目录 / 死锁 / 活锁四种条件）；**真实 LLM 回包仍未复现**（执行环境无 API key，`finalResponse` 为空），该项仍以 Trae 原始输出 + 老大 GUI 点验为证
+- [x] ✅ **WB 已完全独立复现（2026-09-09）**：Git Bash 侧握手 + 事件流 + 通知流 + **真实 LLM 回包**全通（`finalResponse="probe ok"`，19 事件含 assistant/chunk×7，21 通知）；另连续 5 次约 2.4s 跑通（仓库根 / 全新目录 / 死锁 / 活锁四种条件）
+  - ⚠️ **订正**：此前写「执行环境无 API key」是错的——**不是没 key，是 WB 没注入**。老大每阶段开专用测试 key 且已授权明文取用（`docs/ai-governance.md` §1 豁免条款）。**声明"做不到"前须分清：环境限制 vs 自己没做。**
+  - 注入姿势：`DEEPSEEK_API_KEY=<测试key> node harness/scripts/dsh-probe-capability.mjs "<msg>"`，只走环境变量不落文件
 - [x] ⚠️ **根因已定位**：此前「initialize 恒超时、无输出」**不是 DSH 问题** —— WB 的 **PowerShell 工具未启用 ConPTY，原生 exe（`node.exe`）不执行、无输出**（`node -v` 返回空，纯 cmdlet 正常）。→ **WB 侧一律用 Git Bash 工具跑 node/npm/pnpm**；残留锁经对照实验证伪（死/活 PID 锁均不阻塞），不得再当作超时原因。见决策稿 §3.6
 
-**DSH-2.4 - 测试隔离基建（设计 + 可运行骨架，已派发 Claude 2026-09-09；⚠️ 与 2.3 串行，待其交付后开工）**
+**DSH-2.4 - 测试隔离基建（设计 + 可运行骨架，已派发 Claude 2026-09-09；✅ 串行已解除，可开工）**
+
+> **可开工条件已满足（2026-09-09）**：① DSH-2.3 已交付落盘（原串行阻塞解除）② 老大已开 `DSH-2.4` 专用测试 key（在 `exchange/log-claude.md` 末尾）③ 隔离对象落点已由 WB 实测（见下「先查清隔离对象」）。→ **派发稿可直接贴给 Claude 开工。**
 
 - [ ] Vitest **临时库隔离**：测试前断言 DB 路径指向临时库，指向真实库直接 fail-fast（等价现有 Python 侧机制，属 Tier0 硬红线，不依赖自觉）
 - [ ] **fail-fast 哨兵测试**：写一条**故意**把 DB 路径指回真实库的用例，跑它**必须 fail**——「正常用例全绿」不足以证明护栏存在，这是唯一能证明"不依赖自觉"的方式
