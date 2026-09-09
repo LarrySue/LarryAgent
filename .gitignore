@@ -25,6 +25,9 @@ backend/data/*.db-shm
 # 外部参考代码（供 AI 查阅，不入 git）
 ref/
 
+# DSH 运行时装配点（可随时重建，含凭据/会话产物，不入 git）
+.dsh-home/
+
 # IDE
 .vscode/
 .idea/

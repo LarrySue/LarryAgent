@@ -92,14 +92,14 @@
 - [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**。8 项必需能力全部可经公开挂载面获得，无一项需改上游。架构根因 = DSH 核心能力层是 Service Definition / Provider / Consumer 三分架构。报告 `docs/dsh/dsh-form-probe-claude.md`；🟢 WB 本地复核（机制 8/8 属实，行号 2 处偏差）。**结论已折入文档 §3.6，本区不重复**
 - [x] 附带确认：`patchReload: startup` → 部署期配置变更需重启（单用户可接受，与 Python 时代改 config 重启同量级）
 
-**DSH-2.1 - 配套 TS 工程**
+**DSH-2.1 - 配套 TS 工程**（已派发 Trae 2026-09-09）
 
 - [ ] pnpm workspace + tsconfig 搭建（**安装期需 Node + pnpm**——第 0 项实测 B1 通道硬发现，仅运行期免 Node）
 - [ ] 首个自做 Cordis 插件骨架（`export const inject = [...]` + `apply(ctx)`，范式见 `packages/fs/tool-fs/src/index.ts:22`）
 - [ ] 构建产物为可挂载 bundle，经 B1 通道挂进 DSH 并**验证挂载成功**
 - [ ] **工程目录 / 仓库位置 / 包名前缀定案**，并明确与现有 `client/` 的关系
 
-**DSH-2.2 - 跑通官方 demo**
+**DSH-2.2 - 跑通官方 demo**（已派发 Trae 2026-09-09，作为短路点先做）
 
 - [ ] 按官方 demo 走通一次完整会话，确认环境可用
 - [ ] ⚠️ **避坑**：Windows 下官方 `dsh.exe` **segfault**（第 0 项实测硬发现，官方 CLI 不可靠）→ 走编程入口 / 打包运行时，不依赖 CLI
