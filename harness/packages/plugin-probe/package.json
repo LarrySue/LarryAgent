@@ -1,0 +1,40 @@
+{
+  "name": "@larryagent/plugin-probe",
+  "version": "0.0.0",
+  "description": "LarryAgent Cordis bundle probe — an empty skeleton that proves a self-made bundle mounts via the B1 channel and is actually loaded by cordis.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

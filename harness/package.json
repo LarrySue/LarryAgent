@@ -1,0 +1,16 @@
+{
+  "name": "@larryagent/harness",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "LarryAgent DSH integration workspace: Cordis bundle plugins mounted into dsh profiles.",
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "build": "pnpm --filter @larryagent/plugin-probe run build",
+    "build:probe": "pnpm --filter @larryagent/plugin-probe run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^6.0.3"
+  }
+}

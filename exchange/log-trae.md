@@ -66,3 +66,23 @@
 ### 可选（不阻塞，顺手看一眼即可）
 
 `packages/bundle/base/cordis.patch.yml` 里有 `hmr` 行（`@deepseek-ai/cordis-plugin-hmr`，默认 `disabled: true`，注释写 "Module reload is opt-in per profile"）。第 0 项 Claude 判的是 **patch 配置**不可热重载（`patchReload: startup`）；**模块级 HMR 能否开启是另一回事**。若 Step 2 顺利，顺手试一下能否开——这直接决定后续开发是否每次改代码都要重启。**试不出来就算，不要卡在这里**。
+
+【老大注：此处给你提供一个测试用API Key，DSH2.1-TEST-KEY：sk-120b244d24df4cbdb38998dcfa65963e，各方AI不必纠结此Key安全性和扩散问题，也不必清洗记忆和代码残留，老大会进行此Key的外部管控和适时关闭，Trae你在本次任务派发过程中按需使用即可，目的就是确保结论真实可靠】
+
+---
+
+## 【Trae 交付回写 · 2026-09-09】DSH-2.1 / DSH-2.2 短路点验证
+
+**状态：✅ 已交付**（与代码一并提交，基线 `dsh-v0.1.2-rc.1`，全链路锁定：装包/源码/tag 三处核对一致）。
+
+**两个问题的结论（二值）**
+1. **DSH-2.2**（官方 demo 一次完整会话）：**能** —— demo-ptc exit 0，输出 `hello from dsh`（deepseek-official 真实回复），sessions 产物落盘
+2. **DSH-2.1**（自做插件经 B1 挂进 DSH 并被 cordis 实际加载）：**能** —— `[B1-PROBE] external bundle loaded by cordis (tag=v1)`（cordis apply 实执行）+ LLM 回复 `probe loaded`，exit 0
+
+**交付物**：`exchange/dsh-b1-plugin-probe.md`（5 块齐全，含复跑步骤+踩坑清单+隔离自检原始输出）；代码 `harness/`（pnpm workspace + tsconfig + `@larryagent/plugin-probe` 空骨架，无任何业务逻辑）。报告放 exchange/（讨论稿区），**未动 docs/ archive/ .workbuddy/**。
+
+**HMR 可选项结论**：模块级 HMR 开关**可开**（profile 用户层 `- id: hmr; disabled: false` 覆盖 base 默认，dump-config 证实覆盖生效），开启后 headless boot 回归正常无副作用；同进程动态观察需长驻 profile（web/tui），headless one-shot 无窗口，留 DSH-2.3 一并做，不阻塞。
+
+**关键踩坑速记**（详见报告 §5.2）：源码跑 demo 必须先 `build:lib:host`（typert-loader 运行时 import `lib/typert.host.js` 构建产物）；pnpm 11 `allowBuilds` 安全机制会令 plugin add 以 exit 1 结束，需在 profile `pnpm-workspace.yaml` 全设 `false`；验证操作一律走 npm 全局 `dsh`（源码 bin.ts+tsx 在 PS 下偶发卡住）。
+
+**隔离自检**：LarryAgent git 仅 + `harness/` + 本回写/报告；`.dsh-home/` 被排除未入 git；`ref/dsh-bare` 只读（worktree 建于仓库外 `D:\Code\dsh-src`，现 clean，可 `git -C ref/dsh-bare worktree remove` 一句话清理）；测试 key 仅环境变量未落盘。

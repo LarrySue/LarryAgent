@@ -1,0 +1,10 @@
+# LarryAgent probe bundle: inserts our empty plugin into the profile so cordis
+# loads it as an external layer. The `tag` config lets us re-apply the plugin
+# (and re-run its breadcrumb) after a patch change — the smoke target for
+# module-level HMR. apply() emits a stderr breadcrumb proving the bundle was
+# mounted and activated.
+- insert:
+    - id: larry-probe
+      name: '@larryagent/plugin-probe'
+      config:
+        tag: 'v1'
