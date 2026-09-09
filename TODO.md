@@ -116,7 +116,10 @@
   - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
   - 🔴 **2026-09-09 二次测绘推翻其中两条**：**官方 `dsh-web-app` = browser-surface bundle**（`dsh --profile web` 开箱启动、自动开浏览器），依赖含 **30+ `dsh-client-ui-*`**（chat/conversation/sidebar/settings/plan/approval/permission-presets/model-selection…）→ 官方**已有完整 Web UI 组件层**；**鉴权已内置**（启动 URL 带 token → 换签名 cookie；实测 `curl 127.0.0.1:8123/` → **401**）；**`dsh-api-gateway` 在 base 默认启用**（`cordis.patch.yml:45`）→ DSH 侧装配成本 **0**。故"前端须自实现协议客户端""鉴权须自做"两条**均作废**
   - 🟡 **新增硬约束（影响上云）**：web surface **不支持绑定全部网卡**（README 原话："binding all network interfaces is intentionally not supported"），只能 `--host` / `--trusted-host` 白名单 → 云端部署须按此设计（反向代理或白名单）
-  - ⚠️ **关键未验项 = 本选型最大成本变量**：`dsh-client-connection` 与 `dsh-client-ui-*` **未出现在 `node_modules/.pnpm`**（前端资产未随 npm 包分发）→ **第三方能否复用官方前端组件 / Typert 客户端库，未知**。它决定「自做前端」是**自做全部**还是**只做外壳**
+  - ✅ **可复用性已确认（推翻一小时前的"未知"）**：**41 个 `dsh-client-*` 包全部随 npm 分发**（`0.1.2-rc.1`），含 connection / ui-chat / ui-theme / ui-brand-official。形态为**双面包**（`lib/index.js` node half + `lib/client.js` browser half），且 **exports 含 `./src/*` → 源码随包分发** → **可直接依赖复用 + 读源码参照**。此前"不在 .pnpm"是检索方法错误（pnpm 用哈希截断目录名，完整包名匹配必然落空）
+  - 🎨 **UI 自由度边界已定界（见决策稿 §3.6 小节）**：机制=浏览器插件**运行时加载**（`/plugins/<id>/client.js`）+ UI 是**插件 roster 组合**+ brand 是**显式插槽**（官方自称 occupant）。三层自由度：**L1 换皮**（theme+brand slot）/**L2 换部件**（roster 换单个 `client-ui-*`，可增删）/**L3 换整个前端**（自做前端直连 `/api`，HTTP unary + **SSE**）。
+  - **硬边界**：① 前端 shell dist **不作为用户配置**开放（"never user config"、dist 缺失即停、无 source-serving fallback），**能否整体换 dist 待验**；② **鉴权必须过**（token→签名 cookie，实测 401）；③ 传输是 **HTTP + SSE**（非 WS）→ 自做客户端成本低于预期；④ L2 反向工具执行仍须自做
+  - 💡 **对 A-framework 的意义**：业务插件可带 **browser half 自动注入官方前端 shell** → **「自做前端 vs 复用官方」不再是二选一**，可渐进：先用官方 shell + 自写部件，必要时整体换壳
   - **待老大拍的两个前提**：① 前端**直连** DSH host，还是经**自做云端服务**中转（两种前提结论不同）；② 「C 侧执行本地工具」的**反向通道**确认自做（三个官方面均无此语义，与选型正交）
   - **WB 倾向**：Gateway 为主 + sdk 降级为测试/自动化通道；"前端怎么来"由"必然自做"降级为"取决于官方资产可复用性"
   - ⭐ **建议下一步（成本最低、且不需 key）**：**「web surface 开箱实测」**——`dsh --profile web --no-open --port <p>`，记录 ① 前端 dist 来源与可否被第三方引用/替换 ② 401 之后的合法访问姿势（token 从哪取）③ 页面能力面（会话树/审批/设置是否齐全）④ `--trusted-host` 能否放开非 loopback 访问。**起服务 / 看页面 / 建会话均不触模型 → 不需要 API key**，仅"发消息"才需要

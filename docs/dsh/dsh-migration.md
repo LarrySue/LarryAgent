@@ -343,7 +343,36 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **风险（修订）**：① preview 期 API 漂移（锁定 0.1.2-rc.1）；② **鉴权已内置**（token→签名 cookie），但**多用户 / 租户隔离仍须自做**（§3.3：DSH 内核对 cloud / multi-user / tenant 零论述）；③ 浏览器侧 WS 可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，未实测；④ **L2 反向工具执行仍须自做**（事件流下发指令 + unary 回传结果），此缺口三个官方面都没有。
 
-> ⚠️ **关键未验项——决定真实成本，必须实测**：`dsh-client-connection` 与 `dsh-client-ui-*` **未出现在 `node_modules/.pnpm`**（前端资产未随 npm 包分发）。**第三方能否复用官方前端组件与 Typert 客户端库，目前未知**。它直接决定「自做前端」是**自做全部**还是**只自做外壳**——这是本选型最大的成本变量，**昨日"工作量未估"的缺口今天仍在，只是从"协议层"移到了"可复用性"这一层**。
+> ✅ **可复用性已确认（2026-09-09，推翻一小时前"未知"的判词）**：`dsh-client-connection`、`dsh-client-ui-*` **全部随 npm 分发**（实测 **41 个 `dsh-client-*` 包均为 `0.1.2-rc.1`**，含 chat / theme / brand-official / connection）。以 `dsh-client-ui-chat` 为例，其形态为**双面包**：
+> - `lib/index.js` = **node half**；`lib/client.js` = **browser half**（exports 里对应 `"."` 与 `"./client"`）；
+> - exports 另含 **`"./src/*"`** → **源码随包分发**，可直接读源码作参考实现。
+>
+> → **可直接 `pnpm add` 依赖官方前端组件，不必从零自做。** 此前"未出现在 `.pnpm` → 可复用性未知"是**检索方法错误**（pnpm 目录为哈希截断名，用完整包名匹配必然落空），不是事实。
+
+#### UI 自由度边界（🟢 2026-09-09 源码级定界）
+
+> **老大问的极限问题：能不能全部重写、自由替换？边界在哪？——能，且边界可精确划定。**
+
+**机制基础（三条源码事实）**：
+1. **浏览器端插件是运行时加载的**：`dsh-client-modules` 的 node half **扫描 cordis 插件树** → 组合 `window.__DSH_BOOT__` → 对外服务 **`/plugins/<id>/client.js`**。→ **我们自己的插件只要带 browser half，就会被自动装配进前端 shell。**
+2. **UI 是插件 roster 组合出来的，不是单体**：web-app 的 `cordis.patch.yml` 里 30+ 个 `client-ui-*` 各占一行（theme / layout / renderer / session / sidebar / settings / chat / approval / plan / goal / brand…）→ **改 roster = 改 UI**。
+3. **品牌是显式插槽**：装配文件原话 *"Official occupants for the generic sidebar and conversation **brand slots**"* —— 官方包只是 slot 的**占用者（occupant）**，第三方可占位。
+
+**三层自由度**：
+
+| 层级 | 做法 | 成本 | 证据 |
+|---|---|---|---|
+| **L1 换皮** | 换 `ui-theme` + 占位 brand slot | 最低 | `ui-theme` 独立插件；brand 为通用插槽 |
+| **L2 换/增删部件** | roster 里替换单个 `client-ui-*`（如自写 chat 替换官方 chat） | 中 | 每部件独立插件行；`dsh-client-ui-chat` 可依赖可参照 |
+| **L3 换整个前端** | 自做前端**直连 `/api`** | 最高但可行 | connection 的 node half **把 gateway 挂在 webserver 的 `/api` 下**；browser half 是 **fetch / SSE** 客户端 |
+
+**边界（硬限制，须记住）**：
+1. **前端 shell kernel（dist）不作为用户配置开放**——装配文件原话 *"an assembly fact of dsh-web-app, never user config"*。dist 缺失时启动即停（*no source-serving fallback*）。**能否整体替换 dist 仍待验**（测试文件提到 "fallback seat"，可能是替换位）。
+2. **鉴权必须过**：token → 签名 cookie（实测未带 token 的 `curl` 返回 **401**）。
+3. **传输是 HTTP unary + SSE**（不是 WebSocket）→ 自做客户端成本低于预期，但须遵循该协议。
+4. **L2 反向工具执行仍须自做**（三个官方面均无此语义）。
+
+> **对 A-framework 的意义**：这套机制与我们的路线**天然契合**——业务插件写在 DSH 进程内（node half），同时可带 browser half 自动注入官方前端 shell；既不必自做整套 UI，也不必被官方 UI 绑死。**「自做前端 vs 复用官方」不再是二选一，而是可以渐进：先用官方 shell + 自写部件，必要时再整体换壳。**
 
 **WB 倾向（修订）**：**Typert/Gateway 为主**不变，但**"前端怎么来"从"必然自做"降级为"取决于官方资产可复用性"**。sdk 仍降级为测试/自动化通道。
 
