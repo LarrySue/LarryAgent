@@ -18,14 +18,22 @@
   - DSH-3 的 `sandbox/` **Linux 侧**（bwrap → Landlock）：WSL2 内核通常 5.15+，支持 Landlock 与 unprivileged user namespace，**理论上可验**——但本任务不要求验证，只要求环境别把它堵死。
 - **不服务**：Windows 端 `ctx.sandbox`（DSH-2.5 ③）必须在真 Windows 上测，与 WSL 无关。
 
+> **起点状态（WB 2026-09-09 15:4x 实测）**：本机 **WSL 尚未安装**（`wsl -l -v` / `wsl --status` 均返回"未安装适用于 Linux 的 Windows 子系统"）。→ 从零开始，执行 `wsl --install -d Ubuntu-24.04` 或 Store 装 Ubuntu 24.04 LTS 即可（会自动启用所需 Windows 功能，安装后需重启一次）。
+
 ### 1. 硬要求（**不满足则取到的数据无效，宁可不测**）
 
 1. **必须是 WSL 2，不能是 WSL 1** —— WSL1 没有真实 Linux 内核，文件锁语义与生产 Linux 不同，测了等于没测。
 2. **验证必须跑在 Linux 原生文件系统（ext4）上，**绝对不要**放在 `/mnt/c/` 或 `/mnt/d/` 下**。
    - 原因：`/mnt/c` 是 drvfs（9P 协议）挂载，**POSIX 文件锁 / WAL 行为与 ext4 不一致**。在它上面测 SQLite 并发，结论**不可信**——这会让 DSH-2.5 ① 的判定整个作废。
    - 做法：代码与数据放 `~/`（如 `~/larry/`）或 `/opt/` 等 ext4 路径。**从 Windows 资源管理器访问请用 `\\wsl$\<发行版名>\` 而不是直接编辑 `/mnt/c` 下的副本。**
-3. **发行版与生产目标对齐**（若已定）：DSH-5 上云若已定发行版/大版本，**就按那个装**；未定则取 **Ubuntu 24.04 LTS**（内核更新、Landlock 支持更好）。
-4. **版本必须记录下来**（见 §3 自检，要贴回）：WSL 版本、内核版本、发行版、Node、pnpm、SQLite（**两处**，见 §4 坑 3）、Python。
+3. **WSL2 内核必须更新到最新**（**常被漏掉，且比发行版选择重要得多**）：
+   - ⚠️ **WSL2 的内核不来自发行版**——它由微软统一提供（`wsl --update` 安装，所有发行版共用同一个内核镜像）。**换 Ubuntu 22.04 / Debian / 24.04 都不会改变内核版本。**
+   - 而本环境要验的**文件锁 / WAL / user namespace / Landlock 全部由内核决定** → **内核版本才是真变量**。
+   - 做法（Windows 侧，装完发行版后执行）：`wsl --update`，然后 `wsl --shutdown` 重启生效。自检项 `uname -r` 见 §3。
+4. **发行版：不纠结**（**对本次验证目标不敏感**）：DSH-5 上云若已定发行版/大版本就按那个装；**未定则取 Ubuntu 24.04 LTS**（glibc 2.39、支持周期长、Store 里有官方镜像）。
+   - 理由澄清：发行版影响的只是 **glibc 与用户态工具版本**（bwrap / sqlite3 CLI / 编译器），**不是内核行为**。对「SQLite 锁与 WAL」这个验证目标，22.04 与 24.04 的**结论差异可以忽略**——**别在这个选择上耗时间**。
+5. **版本必须记录下来**（见 §3 自检，要贴回）：WSL 版本、内核版本、发行版、Node、pnpm、SQLite（**两处**，见 §4 坑 3）、Python。
+6. **确认是 v2 不是 v1**（Store 或 `wsl --install` 装完一般是 v2，但值得确认）：Windows 侧 `wsl -l -v`，**VERSION 列必须是 `2`**。若是 1 → `wsl --set-version <发行版名> 2` 转换后再继续。
 
 ### 2. 建议配置（非硬要求，按需要取舍）
 
@@ -58,8 +66,12 @@ localhostForwarding=true
 ```bash
 # 1) 确认是 WSL2 + 内核/发行版
 cat /proc/version
-uname -r
+uname -r                  # ← 内核版本：来自 wsl --update，与装的哪个发行版无关
 cat /etc/os-release | head -3
+
+# 另在 Windows 侧（PowerShell/CMD，非 WSL 内）执行一次并贴回：
+#   wsl -l -v              # VERSION 列须为 2
+#   wsl --version          # WSL 版本 + 内核版本
 
 # 2) 【最关键】确认当前目录在 ext4 上，不是 9p/drvfs
 cd ~ && df -T . | tail -2
