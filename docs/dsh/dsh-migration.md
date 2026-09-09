@@ -350,8 +350,14 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | `DSH_HOME` | `.dsh-home/`（仓库内，已 gitignore——含凭据与会话产物） | 同上 |
 | DSH 入口 | **npm 全局 `dsh@0.1.2-rc.1`**；不用源码 `bin.ts` + tsx | DSH-2.2 反证：源码入口在 PowerShell 下偶发卡住 |
 | DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
+| sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC） | DSH-2.3 连通验证用；注意与 `larry` 是两个 profile，结论不可互推 |
+| **端到端动态验证** | **须在 PowerShell 执行**（Trae / 老大侧） | DSH-2.3 复验：WB 环境（Git Bash）下 SDK 通道 `initialize` 恒超时，根因未定位 |
 
 > **零成本复验法（🟢 WB 独立跑出，可复用）**：`dsh --profile larry --help` **即触发 cordis apply，不需要 LLM key**。凡要验"插件到底加载没加载"，先用这条，不必跑完整会话。
+>
+> ⚠️ **WB 复验边界（2026-09-09 立）**：WB 只能做**静态复核**（源码、配置、版本、`--help` / `--dump-config` 类零成本命令）与**证据链审查**；**涉及真实 LLM 调用 / stdio 通道的端到端验证，WB 执行环境下不可用**（Git Bash 下 SDK `initialize` 恒 20s 超时，PowerShell 侧同命令由 Trae 跑通）。此类结论须以**执行方原始输出 + 老大一手点验**为证，WB 在复验记录中明确标注「未独立复现」，不得默认勾选。
+>
+> ⚠️ **一条未定位的现象（不得当作 DSH 缺陷）**：WB 执行环境下 dsh 异常退出后会在 `.dsh-home/profiles/node_modules.lock` 留下**持有者已死的锁**，且 dsh 不检测持有者存活 → 后续调用全部超时（清锁即恢复）。**该现象在 WB 环境 100% 复现、在 Trae 三阶段（2.1/2.2/2.3）零复现**，故归因为**执行环境/方式相关**，**不是 DSH 的普适缺陷**；根因未定位（已排除：MSYS 路径转换、`| head` 截断管道）。若后续 PowerShell 侧也复现，再重新定性。
 
 #### DSH-3：核心能力 prototype
 

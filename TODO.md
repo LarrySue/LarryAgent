@@ -105,11 +105,14 @@
 - [x] ⚠️ ~~**避坑**：Windows 下官方 `dsh.exe` segfault → 走编程入口不依赖 CLI~~ **⚠️ 该避坑已推翻（DSH-2.2 反证）**：npm 全局 `dsh@0.1.2-rc.1` 在 Windows **全部可用**（plugin add / --dump-config / --help / 完整会话均 exit 0）。**卡住的只有源码入口（`bin.ts` + tsx）在 PowerShell 下偶发**。→ **默认走 npm 全局 `dsh`，不用源码 tsx 入口**（决策稿 §3.4 已同步）
 - [x] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
 
-**DSH-2.3 - Vue/Tauri → DSH 连通 hello world**（已派发 Trae 2026-09-09）
+**DSH-2.3 - Vue/Tauri → DSH 连通 hello world** ✅（2026-09-09 交付 + 老大 GUI 一手点验）
 
-- [ ] 现有 Vue/Tauri 客户端经 sdk（或 acp）profile 发一条消息并收到回包
-- [ ] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
-- [ ] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
+- [x] 现有 Vue/Tauri 客户端经 sdk profile（stdio JSON-RPC + 官方 TS SDK）发消息并收到真实回包
+- [x] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
+- [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
+- [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`；⭐ 能力边界观察 = 通信面定型输入（**事件面宽、方法面窄**）
+- [ ] **⭐ 通信面定型（本项产出，待老大拍）**：sdk 面「**下行方法面窄**（initialize/session.prompt/shutdown）/ **上行事件面宽**（19 类事件含 turn/step/assistant/chunk/request-context/session-title）」——记忆双写 / 流式 UI / 会话标题靠事件面**可行**；会话树浏览 / 子代理管理 / 配置读写靠方法面**不可行**，需 base 内插件扩展或自做 HTTP 桥
+- [ ] ⚠️ **WB 未独立复现**（执行环境下 SDK `initialize` 恒超时，根因未定位）——结论以 Trae 原始输出 + 老大 GUI 点验为证，见决策稿 §3.6「WB 复验边界」
 
 **DSH-2.4 - 测试隔离基建（设计 + 可运行骨架，已派发 Claude 2026-09-09；⚠️ 与 2.3 串行，待其交付后开工）**
 
