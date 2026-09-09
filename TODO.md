@@ -105,7 +105,7 @@
 - [x] ⚠️ **避坑**：Windows 下官方 `dsh.exe` **segfault**（第 0 项实测硬发现，官方 CLI 不可靠）→ 走编程入口 / 打包运行时，不依赖 CLI
 - [x] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
 
-**DSH-2.3 - Vue/Tauri → sdk profile 连通 hello world**
+**DSH-2.3 - Vue/Tauri → DSH 连通 hello world**（已派发 Trae 2026-09-09）
 
 - [ ] 现有 Vue/Tauri 客户端经 sdk（或 acp）profile 发一条消息并收到回包
 - [ ] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
