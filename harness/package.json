@@ -7,11 +7,14 @@
   "packageManager": "pnpm@11.7.0",
   "scripts": {
     "build": "pnpm --filter @larryagent/plugin-probe run build",
-    "build:probe": "pnpm --filter @larryagent/plugin-probe run build"
+    "build:probe": "pnpm --filter @larryagent/plugin-probe run build",
+    "test:isolated": "vitest run tests/guard.test.ts",
+    "test:isolated:sentinel": "vitest run tests/sentinel-failfast.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.2-rc.1",
