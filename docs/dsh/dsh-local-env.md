@@ -109,6 +109,29 @@ const DENIAL_SIGNATURES = {
 
 ⚠️ **② 比 ① 更硬**：不要把它整体归因为"中文 Windows 的问题"，那是把跨语言的缺陷降级成了本地化问题。
 
+### 4.1 ⭐ 第 ③ 层：编码层（决定 ① 层能否生效，比 ① ② 都更前置）
+
+**机制**（🟢 源码 `packages/subprocess/subprocess-local/src/spawn.ts:213/246`）：子进程输出**一律按 UTF-8 解码**（`Buffer.concat(chunks).toString('utf8')`）。
+
+**官方自述**（🟢 `packages/shell/pwsh-local/src/index.ts:40-49` 注释逐字）：
+
+> "The subprocess collector decodes output bytes as UTF-8, but Windows PowerShell 5.1 **writes the console/OEM code page by default, which garbles non-ASCII output**"
+
+对应解法是 `ENCODING_PREAMBLE`（`[Console]::OutputEncoding = UTF8; …`），**钉在每个命令前面**。
+
+**关键**：沙箱版 `pwsh-sandbox/src/index.ts:28` **复用** `PwshLocalExecutor`（即带 preamble）→ 真实链路下 PS 输出 **UTF-8 中文**，可被 utf8 正确解码 → **中文签名有效**。
+
+**实测矩阵**（🟢 2026-09-10 WB，runner `--mode workspace-write`，同一命令仅变 preamble）：
+
+| 场景 | stderr 真实编码 | 官方签名 | 含中文的签名 |
+|---|---|---|---|
+| 裸 spawn（探针姿势） | **GBK/OEM** → utf8 解码成乱码 | false | **false** ❌ |
+| 带 preamble（真实链路姿势） | **UTF-8** | false | **true** ✅ |
+
+→ **判据纪律**：验证 ① 层**必须带 preamble 跑**；用裸 `spawn` 会得到**假阴性**（看起来"中文签名没用"，实为探针姿势与真实链路不符）。这与 §7「判据必须取自真实运行时」同源。
+
+⬛ **未测**：`--mode read-only` 下 PS 进入 ConstrainedLanguage，官方 README 提示 preamble 的 `[Console]::` 赋值**可能被拒**、非 ASCII 输出会退回主机代码页 → 该模式下 ① 层是否仍有效**未验**。
+
 ---
 
 ## 5. 环境噪声：WorkBuddy 的批量删除保护会污染沙箱探针输出

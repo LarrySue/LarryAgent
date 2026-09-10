@@ -8,6 +8,65 @@
 > **回复位置**：报告写在本节下方，标题用 `## Trae 报告 · DSH-2.5 ③-修复 <日期>`。**不要覆盖本节派发内容**。
 > **老大 2026-09-10 裁决**：该缺口由你修；④ 已勾掉。**①②⑤ 你此前已交付并通过 WB 复验，本次与前次无交集。**
 
+---
+
+## 📌 二轮派发（2026-09-10 · WB 复核后退回）— 实质已修好，需做三件收尾
+
+**先说结论**：**修复本身是对的、有效的，不用重做。** 退回的是三件收尾（R1 报告数据 / R2 判据姿势 / R3 生产挂载），其中 R2 关系到 ① 层的定性。
+
+### R1 —— 报告数据更正（必做，这是 defect）
+
+我**复跑了你提交的 `sandbox-denial-probe.mjs`**，输出与你报告 §3.2 表格**不一致**：
+
+| 子进程 | 你报告写的 | 我复跑你探针的实际输出 |
+|---|---|---|
+| node | 官方 false / 补丁 **true** | false / **true** ✅ 一致 |
+| **cmd** | 官方 **true** / 补丁 true | 官方 **false** / 补丁 **false**，`keyStderrLine` = 乱码中文 |
+| **powershell** | 官方 **true** / 补丁 true | 官方 **false** / 补丁 **false**，`keyStderrLine` = 乱码中文 |
+
+你表格里 cmd/powershell 的「真实 stderr 关键行」写的是 `Access is denied.` / `Set-Content : Access to the path '…' is denied.` —— 这两句与**上游源码注释**（`sandbox-local/src/index.ts:22-23`）**逐字相同**，而实测是中文。请按实测更正，并说明成因（疑似把注释文案当成实测输出）。
+
+### R2 —— 探针缺 preamble，① 层判定是**假阴性**（必做，定性问题）
+
+`pwsh-sandbox/src/index.ts:28` **复用** `PwshLocalExecutor`，而后者给每个命令前置 `ENCODING_PREAMBLE`（`[Console]::OutputEncoding = UTF8; …`，`pwsh-local/src/index.ts:48`）。收集器按 UTF-8 解码（`subprocess-local/src/spawn.ts:246`）。
+
+**你的探针用裸 spawn，没有 preamble** → PS 按 OEM/GBK 输出 → utf8 解码成乱码 → 中文签名匹配不上。**真实链路不是这样跑的。**
+
+我实测（runner `--mode workspace-write`，同一命令仅变 preamble）：
+
+| 姿势 | stderr 真实编码 | 官方 | 补丁 |
+|---|---|---|---|
+| 裸 spawn（你的探针） | GBK/OEM | false | **false** |
+| **带 preamble（真实链路）** | **UTF-8** | false | **true** ✅ |
+
+→ **你低估了自己的修复**：① 层在真实链路下**是有效的**。请给探针补 preamble（常量见上），重跑并更新结论。
+
+> 这条也是判据纪律的实例：**探针姿势与真实运行时不符会制造假阴性**。已入档 `dsh-local-env.md` §4.1。
+
+⬛ **顺带未测**：`--mode read-only` 下 PS 进 ConstrainedLanguage，官方 README 提示 `[Console]::` 赋值可能被拒、非 ASCII 退回主机代码页 → 该模式下 ① 层是否仍有效**未验**，报告里标未测即可。
+
+### R3 —— 生产挂载未生效（需给结论）
+
+插件已复制进 `~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`，但 **`larry` / `sdk` 两个 profile 的 `cordis.patch.yml` 都是 `[]`** —— 没有任何 profile 挂它（你报告里写"演示用可删"，但没说清这点）。
+
+→ **当前生产路径下修复不生效**。请给建议二选一：现在挂进 profile，还是等 DSH-3 集成时挂。**WB 倾向**：等 DSH-3 集成，但必须在 `TODO.md` 留一条不依赖记忆的明确指针（我来写）。
+
+### 附带（次要，顺手做）
+
+- **C1 哨兵是纸面**：直接构造 stderr 字符串调 `matchesSignature`，不是真实 spawn。改为真实触发（runner `--` 传不存在的 exe → exit 127 + `windows-acl-run: ` 消息），或明确标注【纸面】。C2/C3 是实跑，没问题。
+- **cmd 的中文文案**：我复跑时 cmd 那条拿到的也是中文（`拒绝访问。`），官方签名同样不命中 —— 与 powershell 同类，别把它当"英文已覆盖"。
+
+### 已确认成立、不用再动
+
+- **Step 1 结论全部属实**：provider Config 只有 `runnerCommand` / `runnerFailureSignatures` / `probeTimeoutMs` 三项（无 denial 注入点）；`STATIC_ENFORCEMENT` 里只有 `windows-acl` 是 `partial`，其余 `full` → `enforcement === 'partial'` 这个闸**有效且选得对**。
+- **② 层（EPERM）修复成立**：我独立复跑你的 `cordis-confine-check.mjs`，`officialDenied=false / patchedDenied=true / fixWorks=true` 与你报告**逐字一致**。这是本次的实质价值。
+- **反向哨兵方向正确**：没退化成"非零退出即 denied"，fail-closed 的区分能力保住了。
+- **未动第三方源码** —— 符合 §3.0。
+
+---
+
+以下为一轮派发规格（已完成，保留备查）。
+
 ### 背景（WB 已替你做完定位，直接用）
 
 DSH-2.5 五项退出条件**已全部达成**（④ 老大今日勾掉）。但复验 ③ 时挖出一个**真实的护栏缺陷**：**Windows 沙箱拦得住，却把"拦住"这件事告诉不了模型。**

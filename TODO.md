@@ -170,7 +170,10 @@
   - **WB 复验路径（未采信声明，且绕开 dsh profile）**：直接 spawn `windows-acl` runner（法子见 `docs/dsh/dsh-local-env.md` §3）→ **P1 工作区内落盘=true**（整轮锚点）／**P2 工作区外落盘=false**／**P3 read-only 下工作区内落盘=false**；另**首轮误用参数触发 runner 故障时落盘=false 且未裸跑** → fail-closed 独立印证。判定分层（拒绝 vs runner 故障）与 S0/S1/S2 哨兵经读探针源码确认成立
   - **无需 UAC、无需预装**；`enforcement = partial`（Everyone 可写目录 / 工作区外硬链接 两条边界属实）→ **2.10.2 按 partial 规划，不得按 full 宣传**
   - ⚠️ **新缺口（WB 独立发现，比 Claude 报告更进一步）**：拒绝方言缺口**分两层** —— ①本地化层（中文 Windows 输出中文，英文签名命中不了）；②**错误码类别层：node 报 `EPERM: operation not permitted`，签名备的是 `permission denied`（EACCES 文案）→ 英文 Windows 同样不命中**。② 跨语言成立、优先级更高。详见 `docs/dsh/dsh-local-env.md` §4
-  - ✅ **老大 2026-09-10 裁决：派 Trae 修** → 规格见 `exchange/log-trae.md` 顶部。**Step 1 须先判定改装点**（优先我们自己的消费层，不动第三方包源码；若结论为必须改上游 → 停下回报）
+  - ✅ **老大 2026-09-10 裁决：派 Trae 修** → **Trae 已交（提交 `4d6c5cc`）+ WB 独立复验通过**：修复落在我们自己的 provider 插件 `harness/packages/plugin-sandbox-dialect/`（**未动第三方源码**），`enforcement==='partial'` 闸选得对（已核实 `STATIC_ENFORCEMENT` 中仅 windows-acl 为 partial）。**② 层（EPERM）修复🟢成立**：独立复跑其 `cordis-confine-check.mjs` → `officialDenied=false / patchedDenied=true`，逐字一致
+  - 🔄 **二轮收尾已退回 Trae**（规格见 `exchange/log-trae.md` 顶部「二轮派发」）：R1 报告 §3.2 表格数据与其探针实测输出不符（cmd/powershell 官方在我复跑下为 false，非其报告所写 true）；R2 探针缺 `ENCODING_PREAMBLE` → ① 层判定为**假阴性**（真实链路 `pwsh-sandbox` 复用带 preamble 的 `PwshLocalExecutor`，带 preamble 实测补丁 true）；R3 生产挂载结论（profile patch 均为空 → 当前不生效）
+  - ⬛ **生产挂载未生效（不依赖记忆的指针）**：插件已复制进 `~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`，但 `larry` / `sdk` 的 `cordis.patch.yml` **均为 `[]`** → **DSH-3 集成时必须显式挂载，否则修复=没做**。挂载语法见 `exchange/log-trae.md` 一轮派发 Step 2 第 2 步
+  - ⭐ **第 ③ 层：编码层（WB 复验新发现，比 ① ② 更前置）**：子进程输出**一律按 UTF-8 解码**（`subprocess-local/src/spawn.ts:246`），而 PS 5.1 默认写 OEM 代码页 → **中文签名只在输出为 UTF-8 时命中**。详见 `docs/dsh/dsh-local-env.md` §4.1
 - [x] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）—— **老大 2026-09-10 确认勾掉**
   - 🟢 **Claude 判为与 DSH-2.3 同一件事的重申**（证据：2.3 用的就是真实 `client/` 工程非 demo，改动已提交 `d8108c6`）；WB 复核判定依据成立。
   - 🟢 **WB 已补做「真实模型回包」独立复验**（2026-09-10，临时测试 Key 用完即关）：sdk profile + stdio 实跑 → **`finalResponse = "PROBE-OK-2026"`**、`assistant/message` 事件存在、23 事件 / 25 通知、耗时 106.2s。
