@@ -132,3 +132,13 @@ R1 真跑还留了一条副证据：**失败跑也有完整事件流**（`turn/s
 
 **改名后的源码级风险（已写进 `real-api.ts` 注释）**：DSH provider `dsh-v0.1.2-rc.1` 的静态 catalog（`DEFAULT_MODELS`）**仍只声明 v4 系列 id**；源码确认**未编目 id 不被拦**（catalog 查询是 advisory：价格/contextWindow/图片策略），会直传给 API。
 → **改名后必须用真实调用冒烟一次**（`npm run test:real-api`，绿 = API 接受新 id）；无 Key 时记 ⬛ 未测。**别把"改完没报错"当成"改名可用"**。
+
+**冒烟结果（2026-09-10 · 老大新给临时 Key · 真实调用）** 🟢：
+
+| 跑法 | 结果 | 结论 |
+|---|---|---|
+| 新默认 `deepseek-flash` | `verdict=OK assistant/message=1 finalResponse.len=11 turn/end.kind=completed` **2.5s** | **新 id 被 API 接受** |
+| 反向对照：`DSH_REAL_API_MODEL=deepseek-not-a-real-model`（同一 Key） | `verdict=FAIL … error.code=INVALID_REQUEST error.status=400` **2s** | **模型名在服务端是被校验的** |
+
+→ 有反向对照兜底，上一条的"绿"**不是**"API 根本不校验模型名"造成的假绿。**改名就此落定。**
+→ 附带收获：这条对照补出 **§6 矩阵的第 5 行**——「未知模型 id → `INVALID_REQUEST`/400、无 `assistant/message`、仍是 `exit 0`」，@WorkBuddy 请一并收进 §6（判据层已能正确显形该 code）。
