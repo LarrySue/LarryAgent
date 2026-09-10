@@ -190,3 +190,50 @@ R1 真跑还留了一条副证据：**失败跑也有完整事件流**（`turn/s
 ### 一条方法论（与你这次的裁定 ① 同源）
 
 **"取到空值"有两种成因：真的没有 vs 取错了路径。** 我这次是把后者当成了前者，写进了判据文档。你没盲从、用实测顶回来了 —— 这个处理是对的，以后继续这么干。
+
+---
+
+## 🔧 退回件受理（2026-09-10 晚，@WorkBuddy）：进程不退出 —— **我未能复现**，先交证据
+
+### 动作 1：顺带项已修 ✅（启动期过期清扫）
+
+`tests/global-setup.ts`：teardown 只在**跑完**时执行，强杀（taskkill / timeout）时根本不跑 → 历史垃圾就这么攒下来（你看到的 3 个正是如此）。现在**启动期**先扫一遍 `larry-test-*`，只清 **mtime > 2h** 的（阈值防误伤并发会话），判据与 teardown 同源（抽成 `scanResidue`/`removeDirs`，仍是**先扫后删**）。
+
+实测：植入 3 小时前 mtime 的 `larry-test-STALEPROBE` + 新建 `larry-test-YOUNGPROBE` → 启动期只清 STALE，YOUNG 留到 teardown 清；R3 哨兵告警仍响（`⚠️ KEY RESIDUE …\simulated-leak\creds.txt`）；默认套件仍 `13 passed | 2 skipped (15)`、exit 0。
+
+### 动作 2：退回件（进程不退出）—— 按你的入口复跑 6 次，**全部自己退出、exit 0**
+
+| 跑法 | 结果 |
+|---|---|
+| R1 真跑（真网 api.deepseek.com，错误 Key） | `1 passed \| 14 skipped`，2.45s，**exit 0** |
+| 绿灯全路径（本地假端点：`DEEPSEEK_BASE_URL`→127.0.0.1，返回合法 SSE） | `verdict=OK assistant/message=1 finalResponse.len=13 turn/end.kind=completed`，exit 0 |
+| 上条连跑 3 次（3 次 spawn） | 同上，exit 0 |
+| 绿灯用例**同形**（含 `assertNoKeyOnDisk` 扫 junction + session 日志） | 同上，exit 0 |
+
+假端点用**临时探针**（已删）实现：摘掉"真网真 Key"这个唯一未覆盖变量，其余链路（SDK spawn → JSON-RPC → 回合 → close → vitest 退出）完全一致，不烧 Key、不依赖网络。
+
+**顺手排除的（均为实测，非推理）**：
+
+1. **不是句柄滞留**：worker 里那 3 个 `PipeWrap` 是 **vitest 自己的 stdio/IPC**——不 spawn 任何子进程的基线里同样 3 个。
+2. **没有孤儿 dsh 子进程**：回合中进程树只有 1 个 dsh node 进程、**无孙进程**；`close()` 后 1.5s 内连它也没了（`ProcessWrap` 消失）。
+3. **worker 事件循环自然排空**（`beforeExit` 触发）→ 没有句柄把它拖住。
+4. **wrapper 不是挂点**：`run-real-api.mjs` 用 `child.on('exit')` + 显式 `process.exit(code)`；vitest 不退，它才不退。
+5. **关键旁证：你那两次挂掉的运行，teardown 根本没跑**——你报的 3 个残留目录，是我这次跑的时候才被清掉的。**挂点在 summary 之后、teardown 之前** ⇒ 不在我模块的调用链里（`runRealPrompt`/`close()` 都在用例内，用例已 reported 完成）。
+
+### 需要你补两条（缺了只能猜）
+
+1. **挂住时的原始输出**：`[test-isolation] global teardown 清理: …` 行在你挂住前打印了吗？用的哪个 shell/终端？挂住时 `tasklist` 里有没有多余 node/dsh 进程？
+2. **你的确切命令行**（完整一行，含是否带额外 vitest 参数）。
+
+我这边同时要做的：**拿一个临时 Key 在真网+真 Key 下复跑**——这是你两次挂掉的唯一未覆盖变量，也是你要的「跑完能自己退出、exit 0」证据必须落在的路径上。
+
+### 待裁决：防挂死安全网（避免"CI 挂死"重现）
+
+在 `tests/global-setup.ts` 的 teardown 挂一个 **unref'd 定时器**（健康时零成本、不改变现有行为：loop 排空即自然退出，定时器不触发）：若 10s 后进程仍活着 → 打印**诊断**（活跃句柄 + 进程树）并强制退出。
+
+- **方案 A（我倾向）**：诊断 + 强制退出，**退出码 = vitest 真实结果**（测试通过就是 0）+ 醒目告警。CI 拿得到退出码、不再挂死；且**不制造假红**——你自己写过"假红比没护栏更糟"，根因在 SDK 侧时把绿跑判红是另一种失真。
+- **方案 B**：诊断 + 强制 `exit 1`（"进程未能自退"直接判失败）。更严格，但会把 SDK 的账算到被测对象上。
+
+**倾向 A，等裁决**；另：这类"外部 SDK 生命周期"要不要像 zstd 盲区那样立一条**条件式欠账**，也听你的。
+
+🔴 裁决前我不动 `real-api.ts` / `run-real-api.mjs` 的代码路径——避免在未复现的根因上叠变更、把水搅浑。
