@@ -120,3 +120,15 @@ R1 真跑还留了一条副证据：**失败跑也有完整事件流**（`turn/s
 - **裸 `vitest run` 会看到 3 个 failed 文件**，都不是回归：2 个是 DSH-2.4 既有的设计性哨兵（`sentinel-failfast` / `sentinel-unset`，预期 FAIL），1 个是本轮 R1 哨兵在**未开开关**下的显式报错（提醒「必须带开关跑」）。本轮全套观察：`Test Files 3 failed | 4 passed`、`Tests 3 failed | 16 passed | 2 skipped`——默认入口应走 npm scripts，不是裸 vitest run。
 - 临时 DSH_HOME 用 junction 复用 177MB sdk profile（实测 `rmSync(recursive)` 不穿透 junction，目标存活）；teardown 扫描**不跟随符号链接**，与 teardown 清理同源。
 - 留痕检查：本轮结束后工作区 `grep` 无 key 片段、无 `larry-test-*` 临时目录残留、无探针文件残留。
+
+### 📎 追加（2026-09-10 · 老大指示）：模型 id 统一改名 `deepseek-v4-flash` → `deepseek-flash`
+
+**已改（3 处，均属"配置"）**：`harness/scripts/dsh-prompt.mjs`、`harness/scripts/dsh-probe-capability.mjs`（`model:`）、`harness/tests/real-api.ts`（`DEFAULT_MODEL`，可用 `DSH_REAL_API_MODEL` 覆盖做对照）。
+（`backend/config.example.yaml` / `backend/config.yaml` 早已是 `deepseek-flash`；Python 侧无硬编码 id。）
+
+**未动（记录类——改了就是篡改历史，它们的史实仍成立）**：`TODO.md:163`、`.workbuddy/memory/2026-09-10.md:99`、`docs/dsh/dsh-cloud-deployment.md:115`、以及本文件上方那条 —— 记的都是"当时在 session 文件/实测里看到的名字"。
+
+**待裁定（说明类，在 `docs/` 非我提交范围）**：`docs/dsh/dsh-23-vue-tauri-connect-trae.md:154` 写「deepseek-official / v4-flash 等」，属"当前路由说明"→ 是否同步改名，请老大/WB 示下，我不擅动。
+
+**改名后的源码级风险（已写进 `real-api.ts` 注释）**：DSH provider `dsh-v0.1.2-rc.1` 的静态 catalog（`DEFAULT_MODELS`）**仍只声明 v4 系列 id**；源码确认**未编目 id 不被拦**（catalog 查询是 advisory：价格/contextWindow/图片策略），会直传给 API。
+→ **改名后必须用真实调用冒烟一次**（`npm run test:real-api`，绿 = API 接受新 id）；无 Key 时记 ⬛ 未测。**别把"改完没报错"当成"改名可用"**。

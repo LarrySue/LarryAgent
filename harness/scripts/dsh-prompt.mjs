@@ -24,7 +24,9 @@ if (!message) {
 const harness = new DeepSeekHarness({
   profile: 'sdk',
   provider: 'deepseek-official',
-  model: 'deepseek-v4-flash',
+  // 2026-09-10 由 'deepseek-v4-flash' 更名（DeepSeek API 文档变更，老大指示统一）；
+  // 改回前先读 exchange/log-claude.md：旧名是历史记录里的名字，不是当前配置
+  model: 'deepseek-flash',
   initializeTimeoutMs: 20_000,
 })
 

@@ -64,7 +64,13 @@ export const BAD_KEY_ENV = 'DSH_REAL_API_BAD_KEY'
 /** sdk profile 源目录覆盖位（默认仓库根 .dsh-home/profiles） */
 export const PROFILE_HOME_ENV = 'DSH_REAL_API_PROFILE_HOME'
 
-export const DEFAULT_MODEL = 'deepseek-v4-flash'
+/**
+ * 默认模型 id。2026-09-10 由 `deepseek-v4-flash` 更名（DeepSeek API 文档变更，老大指示统一）。
+ * ⚠️ DSH provider（dsh-v0.1.2-rc.1）的静态 catalog 仍只声明 v4 系列 id——源码级确认未编目 id
+ * 只是**查不到价格/contextWindow**（advisory 查询不拦、不抛），可直传给 API。
+ * 故更名后**必须用真实调用冒烟一次**（`npm run test:real-api`）：绿 = 新 id 被 API 接受。
+ */
+export const DEFAULT_MODEL = 'deepseek-flash'
 export const DEFAULT_BAD_KEY = 'sk-invalid-0000000000000000000000000000'
 
 export const INITIALIZE_TIMEOUT_MS = 120_000

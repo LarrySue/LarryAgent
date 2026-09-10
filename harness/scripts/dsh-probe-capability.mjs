@@ -14,7 +14,8 @@ const message = process.argv[2] ?? 'Reply with exactly: probe ok'
 const harness = new DeepSeekHarness({
   profile: 'sdk',
   provider: 'deepseek-official',
-  model: 'deepseek-v4-flash',
+  // 2026-09-10 由 'deepseek-v4-flash' 更名（DeepSeek API 文档变更，老大指示统一）
+  model: 'deepseek-flash',
   initializeTimeoutMs: 20_000,
 })
 
