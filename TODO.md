@@ -161,7 +161,7 @@
   - 🟢 **Trae 已交 + WB 独立复验通过**（2026-09-10）：官方 `dsh-storage-sqlite` backend 仅需配置，`path` 可指任意绝对路径（脱离 `.dsh-home`）；外部库 `/home/ubuntu/larry-data/larry.db` 当日落盘、`SQLite format 3` header、`units` 含 `larry_probe`、**我们写入的 `mem-1` 行可读出**；**反向哨兵**：json 侧 `storages/session_projcache` 两处均 1 文件未增长 → 数据确实走 SQLite 而非默认 json
   - ✅ **Step 0（CVM 冷启动 PoC）已完成并复验**：**自做服务经 stdio 驱动 DSH 跑通真实会话**（`finalResponse="probe ok"`）。WB 独立补了他自陈的判据弱点——`zstd -d` 解开 session 文件，内含 `deepseek-v4-flash` + `usage/inputTokens/outputTokens` 且 `grep -c mock = 0` → **真实 provider 调用，非 mock 顶替**
   - 🟢 **副产品（填掉 2G/4G 最后一个空位）**：联合 RSS 峰值 **192MB**（默认 DSH_HOME 189MB），冷启动 3190/2359 ms → 详见 `docs/dsh/dsh-cloud-deployment.md` §2
-- [ ] ② `acp/` 契约稳定性
+- [x] ② `acp/` 契约稳定性
   - 🟢 **WB 已独立复验通过**（2026-09-10，`~/harness/wb-acp-fork-verify.mjs`，CVM 跑 Trae 的 `acp` profile，**不采信其声明**）：`initialize` OK（protocolVersion=1）/ `session/new` OK / `session/list` OK(6) / `session/close` OK
   - **⭐ 复验关键在反向对照（Trae 未做）**：`fork` / `load` / `delete` → **-32601 Method not found**；对照 `session/resume` → **-32602 Invalid params（session is already active）**。→ **两个不同错误码证明 -32601 是精确的方法缺失，不是"整体被鉴权挡住"**，判据有效
   - 🟡 **跨进程 resume 成功**一项仍为 Trae 单方声明（WB 本轮未复现该场景，因同进程内 resume 命中"已活跃"）
@@ -201,6 +201,16 @@
 - [ ] 重跑 DSH-2.0 的形态测绘（纯测绘、成本低）——**不要中途换版本继续**，否则结论混在两个基线上没法用
 
 ### DSH-3 · 核心能力 prototype
+
+> **进入前的前置件（2026-09-10 WB 梳理，按此顺序派发）**
+
+- [ ] 🔴 **前置件 1 — `--real-api` 等价物（真实调用断言机制）**：**未做，但是 DSH-3 的硬门禁**。文档 §3.6 原话：「测试基建（临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）须在 **DSH-2** 设计到位——**不提前设计，DSH-3 起每步验证都裸奔**」。
+  - ⭐ **为什么现在必须补**：DSH-2.5 ④ 已实证——**无 key 时 `exit 0` + session 建立 + 12 条事件，与成功完全一致**，只有断言 `assistant/message` 存在 + 回包非空 + 无 `turn/end.reason` 才能区分。S0 的验收是"消息往返 + 事件落盘 + 回读"，**每一项都可能在这种假绿灯下通过**。
+  - → **派 Claude**（角色即测试，正对口）。规格复用 `docs/dsh/dsh-local-env.md` §6 的四组对照判据。
+- [ ] ⬜ **S0 跑哪个环境（待老大拍）**：① **CVM（Linux，与生产形态一致，顺带回答"云上跑 DSH + 自做工具"这个上云核心未知）**；② 本机 Windows；③ 双跑互为对照。
+  - ⚠️ **时间窗**：CVM 有效期至 **2026-10-09**（约 29 天）→ 若 S0 要在上面取数，须现在排期。
+  - **WB 倾向：CVM 主 + 本机对照**（成本增量小，且 Linux 是 S3 sandbox 接入的判定环境 —— 2.7.1 标的也是 Linux 侧）。
+- [ ] ⬜ **首验：跨进程 resume 的 id collision 定性**（两说未收敛）→ 与 S0 **可并行、不阻塞**（派 Trae 或 Claude 均可，WB 倾向 Trae：他此前判"改 UUID 后成功"，让他自己验证自己的判据）
 
 - [ ] `compaction/` 接入（替代 `max_input_tokens` 截断）→ 2.9.2
 - [ ] `sandbox/` 接入（替代 IP/目录/SSRF 单一拦截）→ 2.7.1（Linux 侧）
@@ -258,7 +268,7 @@
 ### 待派发
 
 - [ ] **DSH-3 prototype 派发**：Trae / Claude 分工与节奏
-- [ ] **DSH-2 任务 0 派发**（代码存在形态判定）
+- [x] ~~DSH-2 任务 0 派发~~ **已完成**（Claude 2026-09-08，报告 `docs/dsh/dsh-form-probe-claude.md`：A 案成立、8/8 机制属实，WB 复核订正 2 处行号）
 
 ---
 
