@@ -1,0 +1,4 @@
+# 沙箱探针插入行：apply 时执行正反两组 confine 探测并打印结果。
+- insert:
+    - id: larry-sandbox-probe
+      name: '@larryagent/plugin-sandbox-probe'

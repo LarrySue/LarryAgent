@@ -1,0 +1,36 @@
+{
+  "name": "@larryagent/plugin-sandbox-probe",
+  "version": "0.0.0",
+  "description": "DSH-2.5 ③ 沙箱探针：直接经 ctx.sandbox confine 验证 Windows ACL restricted-token runner 的实际生效性（正反两组 + 反向对照），不依赖 LLM。",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/index.d.ts", "cordis.patch.yml"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

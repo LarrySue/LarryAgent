@@ -8,6 +8,7 @@
   "scripts": {
     "build": "pnpm --filter @larryagent/plugin-probe run build",
     "build:probe": "pnpm --filter @larryagent/plugin-probe run build",
+    "build:sandbox-probe": "pnpm --filter @larryagent/plugin-sandbox-probe run build",
     "test:isolated": "vitest run tests/guard.test.ts",
     "test:isolated:sentinel": "vitest run tests/sentinel-failfast.test.ts",
     "test:isolated:sentinel-key": "vitest run tests/sentinel-key-residue.test.ts",
