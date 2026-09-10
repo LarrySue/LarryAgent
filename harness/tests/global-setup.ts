@@ -13,31 +13,12 @@
  * 为什么在这：globalSetup 跑在主进程、所有 worker 结束后执行其返回值
  * （teardown）——主进程上下文才有文件系统可靠访问与稳定执行时序。
  */
-import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-
-/** 扫描目录内疑似 key 明文（sk- 前缀 + 16 位以上字母数字） */
-function scanForKeys(dir: string): string[] {
-  const hits: string[] = []
-  const walk = (d: string) => {
-    for (const name of readdirSync(d)) {
-      const p = join(d, name)
-      const s = statSync(p)
-      if (s.isDirectory()) walk(p)
-      else if (s.size < 1_000_000) {
-        try {
-          const content = readFileSync(p, 'utf-8')
-          if (/sk-[A-Za-z0-9]{16,}/.test(content)) hits.push(p)
-        } catch {
-          /* 跳过二进制 */
-        }
-      }
-    }
-  }
-  walk(dir)
-  return hits
-}
+// 扫描判据与 real-api.ts 的自查**必须同源**（DSH-3 前置件 1 抽取为共享模块；
+// 原实现逐字保留在 scan-keys.ts，勿在此处内联回副本）
+import { scanForKeys } from './scan-keys'
 
 export default function setup(): () => void {
   return () => {

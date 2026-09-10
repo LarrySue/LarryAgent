@@ -12,7 +12,10 @@
     "test:isolated": "vitest run tests/guard.test.ts",
     "test:isolated:sentinel": "vitest run tests/sentinel-failfast.test.ts",
     "test:isolated:sentinel-key": "vitest run tests/sentinel-key-residue.test.ts",
-    "test:isolated:sentinel-unset": "vitest run tests/sentinel-unset.test.ts"
+    "test:isolated:sentinel-unset": "vitest run tests/sentinel-unset.test.ts",
+    "test:real-api": "node scripts/run-real-api.mjs",
+    "test:real-api:sentinel-r1": "node scripts/run-real-api.mjs tests/sentinel-realapi-r1.test.ts",
+    "test:real-api:sentinel-r3": "node scripts/run-real-api.mjs tests/sentinel-realapi-key-residue.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
