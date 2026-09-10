@@ -43,6 +43,12 @@ const DENIAL_SIGNATURES = {
 
 ---
 
+### Step 0（跑之前先做，别浪费时间排查）—— 环境前置
+
+⚠️ **每次运行 `dsh` 都会留下 profile 启动锁**（`$DSH_HOME/profiles/node_modules.lock`，**连 `--dump-config` 也留**），且**孤儿锁永不自动回收**。表现是 `initialize timed out` / `JSON-RPC input closed`——**极易误判成 profile 启动慢或网络问题**，我本轮连撞三次才确认。
+
+→ **每次实跑前先删 `node_modules.lock`**。详见 `docs/dsh/dsh-local-env.md` §1。
+
 ### Step 1（必做，先别动手改）—— 判定改装点
 
 这是本次唯一的**架构判断题**，先给我结论再动手：
