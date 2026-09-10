@@ -3,7 +3,94 @@
 > 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写于其他文件）
 ---
 
-## 📌 当前派发（2026-09-10 · DSH-2.5 ①②⑤）— 待接
+## 📌 当前派发（2026-09-10 · DSH-2.5 ③-修复：Windows 沙箱拒绝方言缺口）— 待接
+
+> **回复位置**：报告写在本节下方，标题用 `## Trae 报告 · DSH-2.5 ③-修复 <日期>`。**不要覆盖本节派发内容**。
+> **老大 2026-09-10 裁决**：该缺口由你修；④ 已勾掉。**①②⑤ 你此前已交付并通过 WB 复验，本次与前次无交集。**
+
+### 背景（WB 已替你做完定位，直接用）
+
+DSH-2.5 五项退出条件**已全部达成**（④ 老大今日勾掉）。但复验 ③ 时挖出一个**真实的护栏缺陷**：**Windows 沙箱拦得住，却把"拦住"这件事告诉不了模型。**
+
+**根**（🟢 源码 `packages/sandbox/sandbox-local/src/index.ts:205-213`，tag `dsh-v0.1.2-rc.1`）：
+
+```js
+const DENIAL_SIGNATURES = {
+  bwrap:    ['read-only file system'],
+  landlock: ['permission denied'],
+  seatbelt: ['operation not permitted'],
+  // pwsh/.NET: "Access to the path '...' is denied."; cmd: "Access is denied.";
+  // node EACCES: "permission denied".
+  'windows-acl': ['access is denied', 'access to the path', 'permission denied'],
+  runnerCommand: ['read-only file system', 'permission denied'],
+}
+```
+
+> ⚠️ **关键认知**：`denialSignatures` 由 **provider `sandbox-local`** 组装，**不是**后端 `sandbox-windows-acl`（后者 `lib/` 里一个相关字符串都没有）。**别去改后端，改错地方会白做。**
+
+**缺口分两层，第 ② 层更硬：**
+
+| 层 | 现象 | 是否跨语言 |
+|---|---|---|
+| ① 本地化层 | 中文 Windows：cmd 输出 `拒绝访问。`、powershell 输出 `对路径"…"的访问被拒绝。` → 英文签名命中不了 | ❌ 仅非英文系统 |
+| ② **错误码类别层** | **node 写失败报 `EPERM: operation not permitted`，而签名备的是 `permission denied`（那是 EACCES 的文案，源码注释就是这么写的）** | ✅ **英文 Windows 同样不命中，与语言无关** |
+
+**② 优先级高于 ①** —— 不要把它整体当成"中文 Windows 本地化问题"处理掉。
+
+**后果**（读了消费方代码）：`denied=false` → 模型只当普通命令失败，**既看不到 `[sandbox: file access denied]` 标记，也拿不到升权提示**，只能自己瞎猜。
+
+完整事实见 **`docs/dsh/dsh-local-env.md` §4**（唯一真相源）。
+
+---
+
+### Step 1（必做，先别动手改）—— 判定改装点
+
+这是本次唯一的**架构判断题**，先给我结论再动手：
+
+- provider 的 `DENIAL_SIGNATURES` 是**硬编码常量**。请查明：
+  1. 它**有没有配置注入点**（cordis patch / config 能否覆盖 provider 的签名列表）？
+  2. 若改不了上游，我们**自己的消费层**在哪里接管 `denied` 判定？（`pwsh-sandbox` / `bash-sandbox` 工具层用 `matchesSignature(...)` 得出 `denied`，再决定模型看到什么）
+- **倾向（采纳前先说明你的理由）**：**优先在我们自己的层做兼容，不动第三方包源码**（`'permission denied'` 这类常量改在 node_modules 里，上游一升级就没了）。
+- ⚠️ **若你的结论是必须改第三方源码** → **停下先回报 WB**，按 `docs/dsh/dsh-migration.md` §3.0 第三方引入原则处置，不要自行 fork/patch。
+
+### Step 2 —— 修
+
+目标：**node / cmd / powershell 三个子进程在各自被拒时，`denied` 都必须为 true**（中文 Windows 下）。建议方向：补 `operation not permitted`（对应 EPERM）+ 本地化串或按 locale 的正则。
+
+### Step 3 —— 验收（正反两组 + 反向哨兵，缺一不可）
+
+**复跑判据**（三条独立证据链才定性）：① 无沙箱写同一目标成功；② 沙箱内写授权路径成功；③ 沙箱内写未授权路径失败且文件确实没出现。
+
+三个子进程各跑一次被拒场景，逐个确认 `denied=true`。
+
+**反向哨兵（必须做，否则会放过从未生效的护栏）**：
+
+- **不得**出现"任何非零退出都判 denied" —— 那样会把 **runner 故障**（windows-acl：`exit 127` + stderr 含 `windows-acl-run: `）误读成"拦截成功"，**fail-closed 的区分能力会丧失**。这条边界不许改坏。
+- **正向对照**：让受限子进程主动打印 `Access is denied.` → 应仍判 denied（证明匹配逻辑没坏）。
+
+**本机直调 runner 的法子**（不经 dsh profile，最快）：
+
+```
+node <...>/dsh-sandbox-windows-acl/lib/runner.js \
+  --workspace <已存在目录> --temp <目录> --mode <read-only|workspace-write> \
+  -- <可执行文件绝对路径> <args...>
+```
+
+⚠️ `--` 后第一个必须是可执行文件（传 `-e ...` 会报 `CreateProcessAsUserW failed (Win32 2)`，不是沙箱问题）。
+
+### 边界（不外推）
+
+- 只判"当前 `dsh-v0.1.2-rc.1` + 本机 zh-CN 区域设置下修复生效"。
+- ⬛ 英文 Windows / 其它语言 / pwsh 7 —— 本机未装，**不要求你测**，报告里标未测即可。
+- ② 层（EPERM）应当在语言无关的意义上被修复，但**别把 ① 的本地化串当成 ② 的解法**。
+
+### 卡点
+
+Step 1 卡住半天以上，或结论是"必须改第三方源码" → 立刻回报，别闷头 fork。
+
+---
+
+## 📌 上一轮派发（2026-09-10 · DSH-2.5 ①②⑤）— 已交付并通过 WB 复验，待清理
 
 > **回复位置**：本报告完成后写在本节下方，标题用 `## Trae 报告 · DSH-2.5 <日期>`。**不要覆盖本节派发内容**（WB 确认完成后会清理）。
 

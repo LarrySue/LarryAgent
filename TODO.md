@@ -170,11 +170,21 @@
   - **WB 复验路径（未采信声明，且绕开 dsh profile）**：直接 spawn `windows-acl` runner（法子见 `docs/dsh/dsh-local-env.md` §3）→ **P1 工作区内落盘=true**（整轮锚点）／**P2 工作区外落盘=false**／**P3 read-only 下工作区内落盘=false**；另**首轮误用参数触发 runner 故障时落盘=false 且未裸跑** → fail-closed 独立印证。判定分层（拒绝 vs runner 故障）与 S0/S1/S2 哨兵经读探针源码确认成立
   - **无需 UAC、无需预装**；`enforcement = partial`（Everyone 可写目录 / 工作区外硬链接 两条边界属实）→ **2.10.2 按 partial 规划，不得按 full 宣传**
   - ⚠️ **新缺口（WB 独立发现，比 Claude 报告更进一步）**：拒绝方言缺口**分两层** —— ①本地化层（中文 Windows 输出中文，英文签名命中不了）；②**错误码类别层：node 报 `EPERM: operation not permitted`，签名备的是 `permission denied`（EACCES 文案）→ 英文 Windows 同样不命中**。② 跨语言成立、优先级更高。详见 `docs/dsh/dsh-local-env.md` §4
-  - 🔴 **待老大裁决**：方言缺口是否转派 Trae 修（改点在 provider `sandbox-local/src/index.ts`，非后端）
-- [ ] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）
-  - 🟢 **Claude 判为与 DSH-2.3 同一件事的重申**（证据：2.3 用的就是真实 `client/` 工程非 demo，改动已提交 `d8108c6`）。WB 复核判定依据成立 → **待老大一句话确认后即可勾掉，不重跑全流程**
-  - ⭐ **顺带判据（建议纳入 DSH-6 测试体系）**：**无 key 时 `exit 0` + session 建立 + 12 条事件，但 `finalResponse` 为空且缺 `assistant/message` 事件** → 只看「exit 0 / 有 session / 有事件」会把「没 key」读成「连得上」。**连通性回归必须有「模型回包非空」断言，否则绿灯无意义**
-  - ⬛ **④ 的「真实模型回包」未经 WB/Claude 独立复验**（本机无 key）→ 若要补验需给临时测试 key（只经环境变量、不落盘）
+  - ✅ **老大 2026-09-10 裁决：派 Trae 修** → 规格见 `exchange/log-trae.md` 顶部。**Step 1 须先判定改装点**（优先我们自己的消费层，不动第三方包源码；若结论为必须改上游 → 停下回报）
+- [x] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）—— **老大 2026-09-10 确认勾掉**
+  - 🟢 **Claude 判为与 DSH-2.3 同一件事的重申**（证据：2.3 用的就是真实 `client/` 工程非 demo，改动已提交 `d8108c6`）；WB 复核判定依据成立。
+  - 🟢 **WB 已补做「真实模型回包」独立复验**（2026-09-10，临时测试 Key 用完即关）：sdk profile + stdio 实跑 → **`finalResponse = "PROBE-OK-2026"`**、`assistant/message` 事件存在、23 事件 / 25 通知、耗时 106.2s。
+  - ⭐ **四组对照判据（WB 实跑，须写进 DSH-6 断言）** —— 详见 `docs/dsh/dsh-local-env.md` §6：
+    | 场景 | exit | 回包 | `assistant/message` | `turn/end.reason.code` |
+    |---|---|---|---|---|
+    | 有效 Key | 0 | `PROBE-OK-2026` | ✅ 有 | （无 = 正常） |
+    | 无 Key | 0 | 空 | ❌ | `MISSING_CREDENTIAL` |
+    | 错误 Key | 0 | 空 | ❌ | `AUTH` / 401 |
+    | 已关闭 Key | 0 | 空 | ❌ | `AUTH` / 401 |
+    - → **成功信号 = `assistant/message` 存在 + 回包非空 + 无 `turn/end.reason`**；**`exit 0` / 有 session / 有事件流三项全部不能作判据**（三种失败在上面三项都与成功一致）。
+    - → **错误 Key 与已关闭 Key 不可区分**（同为 AUTH/401）→ 用户报"AI 不回话"时须回查平台，不能靠输出判因。
+  - ⬛ **边界（不外推）**：本轮覆盖到 **`scripts/dsh-prompt.mjs` 这一层**（Tauri 壳底层就是同一脚本），**未经 Vue → Tauri IPC → node 完整链路**；该完整链路目前仅有 2.3 的老大 GUI 一手点验，**无自动化覆盖**。将来 Tauri 侧改动可能悄悄断链而无人察觉 —— 若要自动化，需补一个 GUI 冒烟。
+  - ⚠️ **实跑前置**：每次跑前必须清 profile 孤儿锁，否则表现为 `initialize timed out` / `JSON-RPC input closed`，会被误判成"profile 启动慢"。真实调用耗时 ~106s，`dsh-prompt.mjs` 内置 20s 超时，**超时 ≠ 失败**。
 - [x] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（决定是否需要全量重嵌，影响 DSH-4 记忆迁移工作量）
   - 🟢 **Trae 已交 + WB 独立复算通过**（2026-09-10）：WB **未重跑他的脚本**，而是用自己写的算法对同一对产物（`D:\Code\embed-probe\{python,ts}-vectors.json`）重算，结果**逐位一致**——`maxAbsDiff 2.2285e-7` / `maxL2Diff 1.3887e-6` / `cosine min 0.999999999999` / `top-1·3·5 = 14/14`
   - 🟢 **WB 加做的反向对照（他未做）**：把两侧**错位一格**比对 → cosine 跌到 **0.23–0.47**、maxAbsDiff **0.193** → 证明该判据**对文本错位敏感**，对齐组的高分不是"比对脚本自指"造成的假象
