@@ -14,6 +14,7 @@ machine_id: "desktop-01"
 models:
   deepseek:
     api_key: ""
+    model: "deepseek-flash" #2026/09/10 该模型名称指向 DeepSeek-V4.1-Flash
     base_url: "https://api.deepseek.com"
     # 可用模型列表由 API 返回，此处仅配置连接信息
 
