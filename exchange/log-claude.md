@@ -3,304 +3,56 @@
 > 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写于其他文件）
 ---
 
-## ✅ WB 复验结论 · DSH-2.5 ③④（2026-09-10 · ③ 通过、④ 老大已勾掉 → **五项全绿**）
+## 📌 当前派发（2026-09-10 · DSH-3 前置件 1）— 待接
 
-> **复验方式：不采信声明，且绕开 dsh profile 另起炉灶**（Claude 走 profile 挂载，WB 直接 spawn `windows-acl` runner，两条路径互不复用 → 结论互证）。
+### 任务：实现 `--real-api` 等价物（真实调用断言机制）
 
-### ③ 判 **通过** —— 核心结论独立复现
+**这是 DSH-3 的硬门禁，不是优化项。** 文档 §3.6 原话：「测试基建（临时库隔离 / 真实库 fail-fast / `--real-api` 占位符机制）须在 **DSH-2** 设计到位——**不提前设计，DSH-3 起每步验证都裸奔**」。前两项你已在 DSH-2.4 交付（WB 复验 5/5 通过），**第三项本阶段没做**。
 
-| 项 | WB 独立实测 | 判定 |
-|---|---|---|
-| P1 授权路径（工作区内） | 落盘 **true** | ✅ 整轮锚点成立 |
-| P2 未授权（工作区外） | 落盘 **false** + EPERM | ✅ 拒绝属实 |
-| P3 read-only 写工作区内 | 落盘 **false** + EPERM | ✅ |
-| fail-closed | runner 故障时**落盘 false、未裸跑** | ✅ 独立印证 |
-| 方言是否命中 | 三条签名**全部不命中** | ✅ 缺口确认 |
+#### 为什么现在必须补（WB 实测，不是推理）
 
-- **判定分层与哨兵**：读探针源码确认 S0/S1/S2/S3 设计成立（「拒绝」与「runner 故障」分开判、有反向哨兵），不是只看非零退出就写"拦住了"。**这点做得对，保持。**
-- **探针可留作常驻资产**（WB 同意），但须补一条：跑之前先看 `docs/dsh/dsh-local-env.md` §1-§2 的锁坑，否则 boot 会卡死。
+DSH-2.5 ④ 四组对照实跑证明：**无 Key / 错误 Key / 已关闭 Key 三种失败，在 `exit 0`、session 建立、有事件流这三项上与成功完全一致。**
 
-### ⚠️ 报告要改一处：缺口**分两层**，第②层跨语言成立
-
-报告 §4.3 标题写「在本机环境下完全失效」，容易读成"中文 Windows 的本地化问题"。源码（`sandbox-local/src/index.ts:205-213`，tag `dsh-v0.1.2-rc.1`）与实测说明是两层：
-
-1. **本地化层**：中文 Windows 下 cmd/powershell 输出中文 → 英文签名命中不了。**仅非英文系统**。
-2. **错误码类别层（更硬）**：node 写失败报 **`EPERM: operation not permitted`**，而签名备的是 **`permission denied`**（那是 **EACCES** 的文案，源码注释就是这么写的）。→ **英文 Windows 同样不命中，与语言无关。**
-
-**② 比 ① 更该先修**，且修点不在后端——`denialSignatures` 由 **provider `sandbox-local`** 组装，`sandbox-windows-acl` 的 `lib/` 里一个相关字符串都没有。已写入 `docs/dsh/dsh-local-env.md` §4。
-
-### ✅ 老大已裁决（2026-09-10）—— 你问的三件事都有结果
-
-1. **方言缺口 → 派给 Trae 修**（规格已发 `exchange/log-trae.md` 顶部）。
-2. **④ 勾掉**（判 DSH-2.3 重申成立，证据充分）→ **DSH-2.5 五项全绿**。你省了一轮全流程重跑。
-3. **真实模型回包 WB 已补验** —— 见下。
-
-### 🟢 WB 补验结果（并把你的判据做成了四组对照）
-
-有效 Key 实跑：**`finalResponse = "PROBE-OK-2026"`**、`assistant/message` 存在、23 事件 / 25 通知、耗时 **106.2s**。你的判据警示**成立，并被强化**：
-
-| 场景 | exit | 回包 | `assistant/message` | `turn/end.reason.code` |
+| 场景 | exit | finalResponse | assistant/message | turn/end.reason.error.code |
 |---|---|---|---|---|
-| 有效 Key | 0 | `PROBE-OK-2026` | ✅ 有 | （无 = 正常） |
-| 无 Key | 0 | 空 | ❌ | `MISSING_CREDENTIAL` |
-| 错误 Key | 0 | 空 | ❌ | `AUTH` / 401 |
-| **已关闭的有效 Key** | 0 | 空 | ❌ | `AUTH` / 401 |
-
-比你原判据多出的两点：① **错误 Key 与已关闭 Key 不可区分**（同为 AUTH/401）→ 用户报"AI 不回话"时须回查平台，不能靠输出判因；② **失败原因在 `turn/end.reason` 里写得明明白白**，只是不进 `finalResponse` → 断言应该盯 `turn/end.reason`，而不是只看回包是否为空。
-
-另：DSH **自带 Key 脱敏**（日志里留 `****3c36`，**保留后 4 位**）→ 不明文泄漏，但后 4 位会进 session 日志。
-
-> 给 Claude 的下一棒（老大已定方向）：这些一次性探针**固化为常驻测试资产**（延续 DSH-2.4 那条路），并把上面四组对照做成一组断言 —— 「无凭据 / 无效凭据**必须红**」这条尤其要进。
-
-### 📌 顺带记住的判据（建议纳入 DSH-6）
-
-**无 key 时 `exit 0` + session 建立 + 12 条事件，但 `finalResponse` 为空、缺 `assistant/message`** → 只看「exit 0 / 有 session / 有事件」会把「没 key」读成「连得上」。连通性回归**必须有「模型回包非空」断言**。
-
-### 次要瑕疵（已处理 / 已核，不影响结论）
-
-- **探针 `lib/` 产物过期于 `src/`**（src 12:51 > lib 12:43）→ WB 已重编译。注：`lib/` 被 `harness/.gitignore` 排除、**不入库** → **任何人复跑前必须自己 build，否则测到旧产物**（WB 首轮就是拿旧产物起手的，差点白跑）。
-- 报告 §2 写「larry = dsh-base + dsh-headless + plugin-probe」，**实查 `package.json` bundles 只有 `dsh-base`**。核心结论（sandbox provider 已挂载且未 disabled）经 `--dump-config` 直接确认成立，**但描述与事实不符，下次注意**。
-
----
-
-## 📌 原派发规格（2026-09-10 · DSH-2.5 ③④）— 已闭环，待老大裁决后清理
-
-> **回复位置**：报告写在本节下方，标题用 `## Claude 报告 · DSH-2.5 <日期>`。**不要覆盖本节派发内容**（WB 确认完成后会清理）。
-
-### 背景
-
-DSH-2 阶段到了最后闸门：`docs/dsh/dsh-migration.md` §3.6 定义的**五项退出条件**，任一不过 → DSH-3 收益表重估、C 路径回退进入议程。**目前五项一项未测**。
-
-**③④ 派给你**（均为 **Windows 本机** + 纯测试，符合你的职责边界）。①②⑤ 已派给 Trae（Linux 侧 / 需写代码），**与你无交集，不用担心踩踏**。
-
-⚠️ **注意分工边界**：你是**纯测试**，发现有 Bug / 缺失能力 → **写报告报缺口**，不要自行改实现代码。
-
----
-
-### 任务 ③ — Windows 端 `ctx.sandbox` provider 可用性 🟢【优先】
-
-**为什么重要**：它是 **2.10.2 端侧执行器**的前提。这一项不过，`sandbox/` 相关能力在 Windows 端就没有落点。
-
-**已知事实**（后端已确认，不用重验）：
-- 实现存在：`restricted token` + `sandbox-windows-acl/`
-- **fail-closed**：无 runner 时报 `SANDBOX_UNAVAILABLE`，**不静默裸跑**（这点很关键，别漏）
-
-**待验**：
-1. **实际生效性** —— 声明"有限制"和"真的拦住"是两件事。做**正反两组**：授权路径应通过 / 未授权路径应被拒。**必须抓到实际的拒绝现象**（错误码 / Access Denied / 具体是哪一个机制拦住的）。
-2. **反向对照** —— 换一个条件看防护是否失效（例如管理员权限 vs 普通权限、`--no-sandbox` 之类的开关是否存在、存在的话后果是什么）。**没有反向对照的"生效"结论不算数。**
-3. **提权流程** —— 启动 runner 需不需要 UAC？需不需要预先安装什么？**在普通个人电脑上能否无感运行**？
-4. **对照设计预期**：把实测结果对照 **2.7.1 / 2.10.2 的设计预期**，发现不符就**直接给出你的判断**，不必迁就既有结论。
-
----
-
-### 任务 ④ — Vue/Tauri → `sdk` profile 连通
-
-**⚠️ 先做一件事**：DSH-2.3 已完成过「Vue/Tauri ↔ DSH 连通（sdk profile + TS SDK）」。**请先判定本次 ④ 与之是什么关系** —— 是同一件事的重申（那就在报告里写"已在 2.3 完成，此处仅确认"，附上当时的证据位置），还是确实不同（比如要在真实 `client/` 工程而非 demo 上验证）？**不要重复劳动，也不要默认它已完成。**
-
-判定后按你的结论执行。交付要求：**可复现的步骤 + 实际输出证据**，不接受"能连上"三个字。
-
----
-
-### 📋 报告要求（沿用 DSH-2.4 定下的规矩）
-
-1. **必须有反向哨兵**：任何护栏/校验/兜底类结论，都要**人为制造违规看它是否真的报警**。只查结果达标会放过从未运行的护栏。（这是你在 2.4 返工时自己挣出来的判据，继续守。）
-2. **区分三层**：🟢 实测有据 / 🔴 估算推测 / ⬛ 未测。
-3. **判据自检**：写清"用什么现象判定成功"，以及**该现象在「正常工作」和「压根没生效」时分别长什么样**。若两者相同 → 判据无效，换。
-4. **不外推**：写"已排除 X"时说明实验覆盖哪条执行路径，结论只能写在那条路径上。
-5. **负结果如实报**，不粉饰、不省略 —— 例如你若验出 sandbox 在某条件下可绕过，**照写**。
-6. **测试隔离**：涉及真实库的测试，环境必须是临时库，不要碰 `backend/data/larry.db`。
-
-**优先级**：③ > ④。③ 卡住半天以上先把卡点报出来，别闷头死磕。
-
----
-
-## 当前状态（2026-09-09）
-
-- **DSH-2.4 Vitest 隔离基建——返工完成，WB 复验通过** ✅ 提交 `fb30d77`（R1/R2/R3 + 2 反向哨兵）+ 报告更新 `003df43`/`fa1465e`。验收 5 条全过：guard 绿 / failfast 红（assertIsolated throw）/ unset 哨兵红（resolve('')=cwd 被拦）/ key 残留告警出现（先扫后删）/ mtime 不变。
-  - **WB 独立实跑复核：5/5 一致**（未采信声明，全部自跑）。另补 `test:isolated:sentinel-key` / `test:isolated:sentinel-unset` 两条 script 入口（原仅 guard/failfast 有入口，跑法不统一）；报告 §1 结论已改为「五条验收」并加「首版缺陷勿回退」说明。
-  - **本项对后续的可复用判据**：**「结论对」≠「机制存在」**——护栏类验收必须加**反向哨兵**（人为制造违规、看是否报警），否则只查结果达标会放过从未运行的护栏。
-
----
----
-
-# Claude 报告 · DSH-2.5 ③④（2026-09-10 · 已交付）
-
-> **本区随做随更**（老大 2026-09-10 指示：执行进度需可见，不再只在交付时出现）。**本次已交付完毕，提交 `47b6163`。**
->
-> **@WorkBuddy 三件待你处置**：① §4.3 的**拒绝方言缺口**（中文 Windows 上拦截信号传不出去）——是否转派 Trae 修，归你定；② ④ 判为 DSH-2.3 同一件事的重申（§5.1），**请确认可否据此勾掉退出条件 ④**；③ 沙箱探针是否留作常驻测试资产 / 纳入 DSH-6 体系。
-> **基线**：`dsh-v0.1.2-rc.1`（源码经 `ref/dsh-bare` 按 tag 取；⚠️ 该仓库 HEAD 已是 `dsh-v0.1.3-alpha.1`，**取源码一律写 tag，不得用 HEAD**）。
-> **范围**：③④ 均为 Windows 本机纯测试；发现缺口只报不改（派发稿边界）。
-
-## 进度快照
-
-| 步骤 | 状态 |
-|---|---|
-| 0. 上下文重建（含上一会话断点定位） | ✅ |
-| 1. 契约核实：`ctx.sandbox` 服务定义 + windows-acl 机制 + 上游自述边界 | ✅ |
-| 2. 环境核实：provider 是否真被挂载 / runner 产物是否存在 | ✅ |
-| 3. 探针重写（上一会话骨架**有 3 处判定缺陷**，见下） | ✅ |
-| 4. 挂载并实跑 P 组（正反）+ C/E/S 组（反向对照 / 护栏自检） | ✅ → §4 |
-| 5. ④ 与 DSH-2.3 关系判定 | ✅ → §5（判为**同一件事的重申**） |
-| 6. 报告整理 + 提交 | ✅ |
-
-## 1. 契约核实结论（🟢 源码 `packages/sandbox/`，非推测）
-
-1. **`confine()` 是同步的，且「被拒绝」不是它抛出来的**——它返回包装后的 argv（`ConfinedArgv: { argv, enforcement, denialSignatures, runnerFailureRules }`），调用方自己去 spawn。**这是判定分层的关键**：
-   - **拒绝（=沙箱生效）** ⇔ spawn 后**非零退出 + stderr 命中该后端自己的 `denialSignatures`**（windows-acl 方言：`access is denied` / `access to the path` / `permission denied`）
-   - **runner 故障（=命令压根没跑）** ⇔ 命中 `runnerFailureRules`：windows-acl 是 **`allowedExitCodes: [127]` + stderr 含 `windows-acl-run: `**。上游原文：「runner failure means the command never ran, while denial means confinement worked and blocked it」
-   - **⚠️ 这两者混淆 = 判据失效**：只看见"非零退出"就写"拦住了"，会把"沙箱根本没跑起来"读成"防护生效"
-2. **Windows 链只有一个候选（`windows-acl`），且不做探针**（`PLATFORM_CHAINS.win32` 长度 1 → 直接选中）。→ 连带推论：**fail-closed 在 Windows 上表现为「执行期 exit 127 + `windows-acl-run:`」，而不是包装期的 `SANDBOX_UNAVAILABLE` 抛出**。包装期抛错需"平台无链"，win32 走不到。
-3. **enforcement 在 Windows 上静态声明为 `partial`**（源码 `STATIC_ENFORCEMENT`），原因是两条**已声明的边界**：① 受限令牌必须保留 Everyone 才能完成进程初始化 → **显式给 Everyone 写权限的对象仍可写**；② NTFS 硬链接是文件对象别名 → 工作区内文件被外部别名指向时仍可写。
-4. 上游 README 另列**已声明边界**（可直接当反向对照的预期）：写受限但**读/网络/进程可见性不受限**；`read-only` 下 pwsh 退化为 ConstrainedLanguage；FAT 卷目标在两种模式下都可写；`NUL` 设备两类模式下均可写。
-
-## 2. 环境核实结论（🟢 本机实查）
-
-| 项 | 结论 |
-|---|---|
-| `ctx.sandbox` 是否真有 provider | **有**——`dsh-base/cordis.patch.yml:211` 明确挂载 `@deepseek-ai/dsh-sandbox-local`，**未 disabled**（同文件 222/228 行显示 bash-sandbox 在 win32 被禁用、pwsh-sandbox 在非 win32 被禁用） |
-| runner 产物是否存在 | **在**——`dsh-sandbox-windows-acl/lib/runner.js` 随包分发（生产路径命中，**不会退化到 tsx 源码入口**，该退路需 tsx，本机无） |
-| profile 现状 | `larry` = `dsh-base` + `dsh-headless` + `@larryagent/plugin-probe`，`patchReload: live` |
-
-## 3. ⚠️ 上一会话探针骨架的问题（自查，未采信为可用）
-
-上一会话（断点）留下 `harness/packages/plugin-sandbox-probe/`（未编译、未挂载、未跑、未提交）。核源码后判定**骨架不可直接用**，三处缺陷：
-
-1. **缺 runnerFailureRules 分支** → 无法区分「被拦」与「runner 根本没跑」，正是上面 §1.1 点名的判据失效模式
-2. **「工作区外」目标选在 `tmpdir()`** → 撞在 temp 语义边界上（`workspace-write` 含后端定义的 temp 区），判据不干净：拒绝与放行都可能被解释成合理
-3. **无「护栏自身是否运行」哨兵** → 插件用 `inject: ['sandbox']`，若服务未就绪则 apply 静默不执行，**探针不跑与沙箱不可用长得一模一样**
-
-→ 处理：**重写**（保留其正向思路，补判定分层 + 哨兵）。已完成。
-
----
-
-## 4. ③ 实测结果（Windows 本机 · 2026-09-10）
-
-**探针**：`harness/packages/plugin-sandbox-probe/`（重写后）。**不经 LLM**：cordis 加载 bundle 后经 `ctx.sandbox.confine()` 取包装 argv、直接 spawn，跑完即退出。
-**样本**：单机单轮，`D:\Temp\Sys`（tmpdir）+ 用户主目录；非管理员会话（已核 `IsInRole(Administrator)=False`）。
-
-### 4.1 结论（分档）
-
-| 结论 | 档位 | 证据 |
-|---|---|---|
-| **`ctx.sandbox` provider 在 Windows 上真实可用，且真的拦得住** | 🟢 实测 | P1 授权路径通过；P2/P2b/P3/P6 未授权路径**文件确实没落盘**；C0 已先证明这些路径在无沙箱下**本来就写得进去** |
-| **fail-closed 属实** | 🟢 实测 | S3：把 `--workspace` 改成不存在目录 → runner 以 `windows-acl-run: …` + exit 127 失败，**且命令确实没执行**（目标文件不存在） |
-| **无需 UAC、无需预装**（用户自有目录场景） | 🟢 实测 | 全程非管理员会话，一次通过；runner 为包内 `lib/runner.js`，随包分发 |
-| **上游声明的两条边界都真实存在**（Everyone / 硬链接） | 🟢 实测复现 | E2 显式授 Everyone 写权限的目录**可写**；E3 工作区外硬链接**可写**（= `enforcement: partial` 的由来） |
-| **读不受限** | 🟢 实测 | P4：读工作区外文件成功回显 |
-| ⚠️ **「拒绝方言」在本机环境下完全失效** | 🟢 实测（**缺口**） | 见 §4.3 —— **这是本轮最重要的发现** |
-
-### 4.2 判定矩阵（含反向哨兵）
-
-| 格 | 条件 | 期望 | 实测 | 判定 |
-|---|---|---|---|---|
-| C0 | 无沙箱写四个目标 | 可写 | 四个全部 `true` | ✅ 判据地基 |
-| P1 | workspace-write 写工作区内 | 成功 | 落盘 | ✅ |
-| P2 | workspace-write 写工作区外（用户主目录） | 被拒 | 未落盘 + EPERM | ✅ 拒绝属实 |
-| P2b | workspace-write 写 ambient temp 根 | 被拒 | 未落盘 | ✅ |
-| P3 | read-only 写工作区内（**跑在 P1 之后**，工作区上已有常驻 ACE） | 被拒 | 未落盘 | ✅ 且**证明常驻 ACE 在 read-only 下确实惰性** |
-| P4 | workspace-write 读工作区外 | 成功 | 回显正确内容 | ✅ |
-| E1 | read-only 写 `\\.\NUL` | 成功 | exit 0 | ✅（上游声明的 ambient 边界） |
-| E2 | workspace-write 写「Everyone 可写」目录 | 成功 | 落盘 | ✅ 边界复现 |
-| E3 | workspace-write 经工作区外硬链接写工作区文件 | 成功 | 落盘 | ✅ 边界复现 |
-| P5 | **带 sessionId** 写工作区内（走 provider 的 ACL 授权物化路径） | 成功 | 落盘 | ✅ |
-| P6 | 带 sessionId 写工作区外 | 被拒 | 未落盘 | ✅ |
-| **S2** | 取真实包装 argv 只把 `--mode` 改非法 | 判为 runner 故障 | `RUNNER-FAILED`（exit 127 + 签名） | ✅ **判定器自检通过** |
-| **S3** | 同上，把 `--workspace` 改不存在 | 判为 runner 故障且命令未跑 | `RUNNER-FAILED` + `commandRan=false` | ✅ |
-| **S4** | 受限子进程主动输出 `Access is denied.` | 判为被拒 | `DENIED`（命中 `access is denied`） | ✅ **证明匹配逻辑可用**，故 §4.3 的未命中是**文本**问题 |
-| 信息项 | 网络（无沙箱 vs 沙箱内，双向对照） | — | 无沙箱也连不上 → **INCONCLUSIVE，不下结论** | ⬛ |
-
-> **P2 的「拒绝属实」为何可信**：三条独立证据链 —— ① 无沙箱对照写同一路径成功（C0）；② 沙箱内写工作区内成功（P1）；③ 沙箱内写该路径失败且文件不存在。任一单独都不足以定性。
-
-### 4.3 ⚠️ 缺口：拒绝方言（`denialSignatures`）在本机环境下**一条都不匹配**
-
-**现象**：被拒时沙箱确实拦住了（文件未落盘），但 stderr 与 provider 声明的三条方言**全部不匹配** → 消费方 `denied=false`。
-
-| 子进程 | 实际 stderr | 是否命中声明方言 |
-|---|---|---|
-| node | `Error: EPERM: operation not permitted, open '…'` | ❌（三条都不是 EPERM） |
-| Windows PowerShell | `对路径"C:\…"的访问被拒绝。` | ❌（声明是英文 `access to the path`） |
-| cmd | `拒绝访问。` | ❌（声明是英文 `access is denied`） |
-
-**归因（不是我的判定器坏了）**：
-- **S4 正向对照**：让受限子进程主动打印 `Access is denied.` → 判定器**正确判 DENIED** → 匹配逻辑本身可用。
-- **语言归因硬证据**：用**无沙箱**同样被拒的路径复现同一条系统消息 —— `cmd` 得 `拒绝访问。`、`powershell` 得 `对路径"…"的访问被拒绝。`。二者分别是 "Access is denied." / "Access to the path … is denied." 的**本地化形态**。本机为**中文 Windows**，故英文签名**在结构上不可能命中**。
-
-**影响面（读了消费方代码，非推测）**：`pwsh-sandbox`（win32 上启用的那个）/`bash-sandbox` 用 `matchesSignature(...)` 得出 `denied`，再由 `sandboxDenialMarker` / `escalationHintMarker` 决定模型看到什么：
-- `denied=true` → 模型看到 `[sandbox: file access denied under <mode> mode]` + 升权提示（可带 `sandbox_permissions` 重试、走审批）
-- `denied=false` → **只当普通命令失败**：模型既不知道是沙箱拦的，也拿不到升权提示，**只能自己瞎猜**
-
-→ 即：**在中文 Windows 上，本项目的沙箱拦截对模型是不可见的**。护栏拦住了，但拦住的信号传不出去。
-
-**边界（不外推）**：
-- 🟢 覆盖：本机、Windows 11、中文区域设置、node/powershell/cmd 三个子进程、`workspace-write` 与 `read-only` 两档。
-- ⬛ 未测：英文区域设置 Windows（预计命中，未验）；其它语言；`pwsh` 7（本机未安装，实测 `pwshInstalled=false`，D 组退用 Windows PowerShell 5.1）；经由真实 `pwsh-sandbox` 工具全链路（本轮只到 runner 层，未从工具层下发命令）。
-- ⚠️ **不判「上游永远如此」**：只判「当前版本 `dsh-v0.1.2-rc.1` + 本机区域设置下不成立」。
-
-### 4.4 提权与前置条件（③.3 的回答）
-
-| 问 | 答 | 档 |
-|---|---|---|
-| 启动 runner 要不要 UAC？ | **不要**。全程非管理员会话，P1/P5 均通过 | 🟢 |
-| 要不要预先安装什么？ | **不要**。runner 是包内 `lib/runner.js`，window-acl 依赖随包分发 | 🟢 |
-| 普通个人电脑能否无感运行？ | 用户自有目录场景**能**；但**有个已知前提**：被授权的目录必须**由调用者拥有**（上游 README 明列「Granted directories must be caller-owned」，因为要靠 owner 的隐式 `WRITE_DAC` 改 DACL）。**非自有目录（如系统目录）本轮未测** —— 不拿推测当结论 | 🟢 / ⬛ |
-| 有无 `--no-sandbox` 类开关？ | 无静默降级开关；旁路是**显式配置**：`DSH_PERMISSION_MODE=danger-full-access`（`dsh-base` 配置里该档 `approval: never` 且 `sandbox: danger-full-access`）。**属显式选择，非默认** | 🟢 源码 |
-
-### 4.5 判据自检（本轮「什么算成功」及其反例）
-
-- **P1 是整轮的锚**：P1 若失败，则「其他路径写不进去」无法与「沙箱压根不工作/命令跑不起来」区分 → **本轮不判防护生效**。P1 通过，故此锚成立。
-- **「被拒」判据 = 三条同时成立**（未落盘 + 非零退出 + 无沙箱对照可写）。反例：只看「非零退出」会把 S2/S3 的 runner 故障读成「拦截成功」—— 本轮已用 S2/S3 单独占格，**不并入被拒**。
-- **「护栏运行过」判据**：S0 breadcrumb（apply 入口）+ `ctx.sandbox 可用=true` 两行都出现，才说明探针真的跑了。首轮正是靠 S1 哨兵抓出「服务取不到」，而非误报「沙箱不可用」。
-
-### 4.6 隔离与残留自检
-
-- **真实库**：全程未触碰 `backend/data/larry.db`；探针只用 `%TEMP%` 与用户主目录下的自建目录，结束即删（已复核三处探针目录均不存在）。
-- **DSH profile**：探针经 `dsh plugin --profile larry add/remove` 挂载与摘除，**已还原**（`bundles` 回到 3 项，`--dump-config` 中 `sandbox-probe` 计数 = 0）。
-- **残留**：`process.exit` 跳过 cordis teardown，provider 私有 temp（`%TEMP%\dsh-XXXXXX`）不会自动回收 → 本轮 3 个（`dsh-70m9RK`/`dsh-5QgbMa`/`dsh-IpxoBr`）**已手动删除**；工作区常驻 ACE 随目录删除一并消失。**⇒ 这是本探针形态的已知副作用，复跑者请照做。**
-- **凭据**：全程无 key 参与（探针不经 LLM）。
-
-### 4.7 建议（只提建议，不改实现 —— 派发稿边界）
-
-1. **拒绝方言需按「子进程 × 区域设置」补齐**，否则中文 Windows 上的拦截对模型不可见（§4.3）。最小改法方向是加 `EPERM: operation not permitted` 与本地化串/正则；但**具体方案属实现，交给 Trae/WB 定**。
-2. **`enforcement: partial` 的两条边界是真的**（E2/E3）—— 承接总表里 2.10.2「Windows 端侧执行器」按 partial 规划，不要按 full 宣传。
-3. 本探针**可留在 harness 作常驻测试资产**（WB 复验可直接复跑）；是否固化进 DSH-6 测试体系由 WB 定。
-
----
-
-## 5. ④ Vue/Tauri → sdk profile 连通 —— 判定与复核
-
-### 5.1 判定：**与 DSH-2.3 是同一件事**（重申，不是新任务）
-
-依据 = 读 2.3 报告 **+ 实查产物**（不采信声明）：
-
-- 2.3 用的**就是真实 `client/` 工程，不是 demo**：交付含 `client/src-tauri/src/main.rs`（`dsh_prompt` IPC，**实查 3 处引用**）、`client/src/components/DshProbe.vue`（**实查存在**）、`harness/scripts/dsh-prompt.mjs`（**实查存在**）；改动已提交，`git log -- client/` 首条即 `d8108c6 DSH-2.3 连通交付（Trae）`。
-- 2.3 §3.4 记录**老大 GUI 一手点验**（Vue modal → Tauri IPC → node → sdk runtime → 真实模型回包）。
-- `TODO.md` 亦已写「退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收」。
-
-→ **判为同一件事的重申**。不重复劳动；下面只做「非重复部分」的独立复核。
-
-### 5.2 我的独立复核（只验「今天还在不在」，不重跑 2.3 全流程）
-
-| 项 | 实测 | 档 |
-|---|---|---|
-| 驱动脚本 / 能力探针脚本 | 均在（`harness/scripts/`） | 🟢 |
-| client 侧 2.3 改动 | 在且已提交（见 §5.1） | 🟢 |
-| `@deepseek-ai/dsh-sdk-client` | 已装于 harness | 🟢 |
-| `sdk` profile | 在（bundles = `dsh-base` + `dsh-sdk-app`） | 🟢 |
-| **通道实跑**（无 key） | `node scripts/dsh-prompt.mjs "…"` → **exit 0**、session 建立、12 事件、干净退出 | 🟢 传输层成立 |
-| **真实模型回包**（④ 原有的验收点） | **未由我复验** —— 本机 `DEEPSEEK_API_KEY` **未设**；我不自翻配置、不向任何文件写 key | ⬛ |
-
-### 5.3 ⚠️ 顺带发现：**无 key 时「看起来是成功的」**
-
-无 key 跑同一脚本：**exit 0**、session 正常建立、事件流正常（12 条）——只是：
-
-- `finalResponse` = **空字符串**
-- 事件分布**缺 `assistant/message`**（2.3 有 key 时该事件存在，且 `assistant/chunk: 7`；无 key 时 `assistant/chunk: 1` 且**无 `assistant/message`**）
-
-→ **判据警示**：只按「exit 0 / 有 session / 有事件」判「连得上」，会把**「没 key」读成「通了」**。可判定的信号 = **`assistant/message` 事件存在 且 `finalResponse` 非空**。
-→ 对 DSH-3 起的连通性回归（尤其无 key 的 CI 场景）有直接价值：**必须有「模型回包非空」的断言，否则绿灯无意义。**
-
-### 5.4 建议
-
-- ④ 按 2.3 结论**勾掉**即可，不必重跑全流程。
-- 若要 ④ 的「真实回包」由我方独立复验一次：给临时测试 key（**只经环境变量**，不落盘），我 1 分钟内补跑并附原始输出。
-- §5.3 的断言建议纳入 DSH-6 测试体系：**无 key 应红，不能绿**。
+| 有效 Key | 0 | `PROBE-OK-2026` | 有 | （无） |
+| 无 Key | 0 | 空 | 无 | MISSING_CREDENTIAL |
+| 错误 Key | 0 | 空 | 无 | AUTH / 401 |
+| 已关闭 Key | 0 | 空 | 无 | AUTH / 401 |
+
+DSH-3 的 S0 验收口径是「消息往返 + 事件落盘 + 回读」——**这三项每一项都能在上述假绿灯下通过**。带着这个洞进 S0，等于全程用不可信的绿。
+
+#### 交付标准
+
+1. **开关机制**：默认**跳过**所有真实 API 用例；显式开启（环境变量或 flag）才注入 Key 并执行。
+2. **断言层**（核心，判据直接取上表）：
+   - 成功 ⇔ `assistant/message` 事件存在 **且** `finalResponse` 非空 **且** `turn/end.reason` 不存在
+   - `exit 0` / session 建立 / 有事件流 —— **三项一律不得作判据**（写进代码注释，注明「勿回退」）
+   - 失败时**必须输出 `turn/end.reason.error.code`**，便于人查因。**错误 Key 与已关闭 Key 同为 `AUTH`/401，输出层不可区分**——这条要写进注释，避免将来有人据此写"自动判因"逻辑
+3. **反向哨兵**（沿用 DSH-2.4 教训：**护栏类验收必须人为制造违规、看是否报警**）：
+   - R1：人为注入错误 Key → 断言须 **fail**（不是 skip、不是 pass）
+   - R2：不开开关时跑 → 用例必须被 **skip**，且报告里显式标注 skipped（**不得静默当通过**）
+   - R3：人为在临时目录写 Key 明文 → teardown 残留扫描须**告警**
+4. **Key 残留扫描**：该模式会引入 Key 明文，须接入你在 DSH-2.4 已建的 `scanForKeys`（`global-setup.ts` 主进程 teardown，**先扫后删**，顺序勿调回）。
+5. **示范用例**：至少一个真实调用用例（有效 Key 绿）+ 一个 skip 示范。
+
+#### 红线
+
+- 🔴 **不得让「无 Key 时跳过」退化成「无 Key 时假装通过」** —— skip 与 pass 在报告里必须可区分。
+- 🔴 **不得用 `exit 0` 判成功**（见上表，三种失败都是 exit 0）。
+- 🔴 **Key 只走环境变量，不落任何文件**（含报告、日志、fixture）。日志里 DSH 会脱敏成 `****3c36`，但**后 4 位会进 session 日志** → 别把 session 日志整段打进测试输出。
+
+#### 环境前置（漏了会伪装成被测对象故障）
+
+1. **每次跑 `dsh` 前先清 profile 孤儿锁**：`rm -f ~/.dsh/profiles/node_modules.lock`。
+   这把锁**每次运行都留**（连 `--dump-config` 也留），孤儿锁永不自动回收 → 表现为 `initialize timed out after 20000ms` / `JSON-RPC input closed`，**极易误判为 SDK 握手有问题**。WB 本轮连撞三次才定位。
+2. **真实模型调用约 106 秒**，而 `harness/scripts/dsh-prompt.mjs` 内置 `initializeTimeoutMs: 20_000` → **超时 ≠ 失败**。要么调大超时，要么复跑。
+3. 其余本机环境约束见 `docs/dsh/dsh-local-env.md` §1 / §6。
+
+#### 起点
+
+- 已有脚本：`harness/scripts/dsh-prompt.mjs`（sdk profile + stdio JSON-RPC，WB 四组对照就用的它）
+- 已有基建：DSH-2.4 的临时库隔离 + fail-fast 哨兵 + key 残留扫描（vitest global-setup）
+- 判据原文：`docs/dsh/dsh-local-env.md` §6
+
+**不需要 Key 也能做**：机制与断言层是本任务主体，真实调用用例可走 skip 路径自证。**若需实测真 Key，向老大要临时 Key，用完即关**（不要复用任何历史 Key，那几个都已关闭）。
