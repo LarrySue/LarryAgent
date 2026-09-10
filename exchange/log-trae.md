@@ -3,6 +3,72 @@
 > 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写于其他文件）
 ---
 
+## 📌 当前派发（2026-09-10 · config.example.yaml 与正式版结构同步）— 待接
+
+> **回复位置**：报告写在本节下方，标题用 `## Trae 报告 · config 同步 <日期>`。**不要覆盖本节派发内容**。
+> **⚠️ 本节与下方 DSH-2.5 ③-修复无交集，两件事分开做。** ③-修复在前，本件在其后。
+
+### 背景（WB 已完成排查，直接用，不用重新对比）
+
+老大发现 `backend/config.example.yaml`（模板，入库）与 `backend/config.yaml`（正式版，`.gitignore` 保护）**结构偏移较大**。WB 逐项比对，结论如下：
+
+| 项 | example | 正式版 | 差异性质 |
+|---|---|---|---|
+| `tools.enabled_tools` | **整段缺失** | `[file_ops, shell, web_search]` | 缺项，但**无功能差异**（见下） |
+| `search:` 整段 | **完全缺失**（5 键全无） | 有 provider/brave_api_key/timeout/max_retries/max_results | ❌ 真缺项 |
+| 段序 | `roles` 在 `logging` **前** | `roles` 在 `logging` **后** | 顺序不一致 |
+| `database.path` 注释 | 旧版"相对 backend/ 目录" | "相对**配置文件**目录"（修双库问题的口径） | ❌ 注释过期 |
+| `vector_store.enabled` 注释 | "P1.4 接通时改 true" | 已接通（`true`） | ❌ 注释过期 |
+| `models.deepseek.model` | 有（今日 WB 刚补） | 有 | 见 Step 2 —— **这是死配置** |
+| `roles` 内容 | 4 个占位角色 | default = 完整人格 + 多 `science` | ✅ **预期差异，不要同步** |
+
+**「无功能差异」的依据（已读源码，勿重复查）**：`enabled_tools` 缺失时，`registry.py:73-88` 走**空列表分支 = 全部注册**，与正式版显式列 3 个**等效**。所以补它不是为了修 bug，是为了**显式优于隐式**。
+
+**⚠️ 最重要的一条：本件不是"格式对齐"，先要定一个设计问题（Step 1）。**
+
+### Step 1（先做，先给结论再动手）—— `model` 字段怎么处理
+
+**事实**：`models.<name>.model` 这个字段**全项目没有任何消费点**。
+
+- `config.py:139-142` 的 `ModelConfig` 只收 `api_key` / `base_url`，**`model` 被直接丢弃**
+- 实际模型名的来源是两条：① `llm.py:56` 的 `_MODEL_PROVIDER_MAP`（硬编码 7 个模型名，只用于**解析 provider**）② 请求体的 `model` 字段（`chat_service.py:49` 默认 `deepseek-chat`）
+- 前端下拉列表来自 `GET /api/models` = `_MODEL_PROVIDER_MAP.keys()`（`main.py:151`）
+- → 写进 config 的 `model: "deepseek-flash"` **没人读**；且 `deepseek-flash` **不在** `_MODEL_PROVIDER_MAP` 里，前端根本选不到
+
+**WB 倾向（采纳前先说明你的理由，可否决）**：**删掉两边的 `model` 字段**，不做接线。理由：`llm.py:55` 注释明说"新增模型时在此处添加一行即可，无需修改解析逻辑"——**"模型名硬编码 + config 只管连接信息"是既有架构的有意设计**，`model` 字段是后来加的、与该设计不一致的东西，删掉比接线更合原意。
+
+**若你结论是"应当接线"（让 config 的 model 真正生效）** → **停下先回报 WB**，这属架构变更（要动 `_MODEL_PROVIDER_MAP` 的设计、多 provider 下"默认模型"的语义），不在本件授权范围。
+
+### Step 2 —— 改 example（在 Step 1 结论基础上）
+
+目标：让 `cp backend/config.example.yaml backend/config.yaml` 这条 README 第 99 行的路径**开箱可用且不带误导**。
+
+1. **补 `search:` 整段**（照正式版结构，`brave_api_key` 置空占位），并加注释说明"需自备 Brave key，否则 web_search 不可用"
+2. **补 `tools.enabled_tools`**，显式列出 `[file_ops, shell, web_search]`
+3. **订正两处过期注释**：`database.path` 改为"相对**本配置文件所在目录**解析"；`vector_store.enabled` 去掉"P1.4 接通时改 true"（已接通）
+4. **统一段序**为与正式版一致（对齐顺序即可，不影响功能，但避免下次再漂移）
+5. **`model` 字段**按 Step 1 结论处置
+6. ⚠️ **`roles` 段保持占位，不要抄正式版人格**——example 是给用户看的模板，不该带老大的个人角色设定（"苏苏"等）
+
+### Step 3 —— 验收（缺一不可）
+
+1. **跑一次"照 README 复制"的真实路径**：`cp backend/config.example.yaml <临时目录>/config.yaml`，用 `LARRY_CONFIG` 指向它启动后端，确认**能正常起来**（这一步是本件的核心验收，不是"看着差不多"）
+2. **逐项核对**：`get_config()` 读出的 `tools.enabled_tools` / `search.*` / `vector_store.enabled` 与文件内容一致（可写个小脚本打印，别只看文件）
+3. **`model` 字段**：若删，确认删后无任何代码路径引用它（grep 复核）；若留，见 Step 1——本件不授权接线
+4. **报告里附上"改后 example 的完整段落清单"**（段名 + 键），供 WB 一眼比对
+
+### 边界（不外推）
+
+- **只改 `backend/config.example.yaml`**。`backend/config.yaml`（正式版，含真实 key）**不入库、不要动**——唯一例外是若 Step 1 结论为"删 `model`"，需**在报告里说明**正式版也应同步删，由老大自行执行（**你不要改它，避免误提交 key**）。
+- 不改 `config.py` / `llm.py` 等代码（除非 Step 1 结论明确授权，而按上文那需要先回报）。
+- 补 `search` 段时**不要写入任何真实 key**。
+
+### 卡点
+
+Step 1 若结论是"应当接线" → 立刻回报，不要自行动 `_MODEL_PROVIDER_MAP`。
+
+---
+
 ## 📌 当前派发（2026-09-10 · DSH-2.5 ③-修复：Windows 沙箱拒绝方言缺口）— 待接
 
 > **回复位置**：报告写在本节下方，标题用 `## Trae 报告 · DSH-2.5 ③-修复 <日期>`。**不要覆盖本节派发内容**。
