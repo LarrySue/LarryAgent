@@ -1,0 +1,21 @@
+{
+  "name": "@larryagent/plugin-storage-probe",
+  "version": "0.0.0",
+  "description": "LarryAgent storage probe — declares a custom storage-domain and writes one record, proving our data lands in the externally pinned SQLite file.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-storage-domain": "*",
+    "zod": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": { "optional": true },
+    "@deepseek-ai/dsh-storage-domain": { "optional": true },
+    "zod": { "optional": true }
+  }
+}
