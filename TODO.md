@@ -173,8 +173,8 @@
   - **无需 UAC、无需预装**；`enforcement = partial`（Everyone 可写目录 / 工作区外硬链接 两条边界属实）→ **2.10.2 按 partial 规划，不得按 full 宣传**
   - ⚠️ **新缺口（WB 独立发现，比 Claude 报告更进一步）**：拒绝方言缺口**分两层** —— ①本地化层（中文 Windows 输出中文，英文签名命中不了）；②**错误码类别层：node 报 `EPERM: operation not permitted`，签名备的是 `permission denied`（EACCES 文案）→ 英文 Windows 同样不命中**。② 跨语言成立、优先级更高。详见 `docs/dsh/dsh-local-env.md` §4
   - ✅ **老大 2026-09-10 裁决：派 Trae 修** → **Trae 已交（提交 `4d6c5cc`）+ WB 独立复验通过**：修复落在我们自己的 provider 插件 `harness/packages/plugin-sandbox-dialect/`（**未动第三方源码**），`enforcement==='partial'` 闸选得对（已核实 `STATIC_ENFORCEMENT` 中仅 windows-acl 为 partial）。**② 层（EPERM）修复🟢成立**：独立复跑其 `cordis-confine-check.mjs` → `officialDenied=false / patchedDenied=true`，逐字一致
-  - 🔄 **二轮收尾已退回 Trae**（规格见 `exchange/log-trae.md` 顶部「二轮派发」）：R1 报告 §3.2 表格数据与其探针实测输出不符（cmd/powershell 官方在我复跑下为 false，非其报告所写 true）；R2 探针缺 `ENCODING_PREAMBLE` → ① 层判定为**假阴性**（真实链路 `pwsh-sandbox` 复用带 preamble 的 `PwshLocalExecutor`，带 preamble 实测补丁 true）；R3 生产挂载结论（profile patch 均为空 → 当前不生效）
-  - ⬛ **生产挂载未生效（不依赖记忆的指针）**：插件已复制进 `~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`，但 `larry` / `sdk` 的 `cordis.patch.yml` **均为 `[]`** → **DSH-3 集成时必须显式挂载，否则修复=没做**。挂载语法见 `exchange/log-trae.md` 一轮派发 Step 2 第 2 步
+  - 🔄 **二轮收尾已退回 Trae**（规格见 `exchange/log-trae.md`「二轮收尾」段）：R1 报告 §3.2 表格数据与其探针实测输出不符（cmd/powershell 官方在我复跑下为 false，非其报告所写 true）；R2 探针缺 `ENCODING_PREAMBLE` → ① 层判定为**假阴性**（真实链路 `pwsh-sandbox` 复用带 preamble 的 `PwshLocalExecutor`，带 preamble 实测补丁 true）；R3 生产挂载结论（profile patch 均为空 → 当前不生效）
+  - ⬛ **生产挂载未生效（不依赖记忆的指针）**：插件已复制进 `~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`，但 `larry` / `sdk` 的 `cordis.patch.yml` **均为 `[]`** → **DSH-3 集成时必须显式挂载，否则修复=没做**。挂载语法见 `exchange/log-trae.md`「二轮收尾」R3 段
   - ⭐ **第 ③ 层：编码层（WB 复验新发现，比 ① ② 更前置）**：子进程输出**一律按 UTF-8 解码**（`subprocess-local/src/spawn.ts:246`），而 PS 5.1 默认写 OEM 代码页 → **中文签名只在输出为 UTF-8 时命中**。详见 `docs/dsh/dsh-local-env.md` §4.1
 - [x] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）—— **老大 2026-09-10 确认勾掉**
   - 🟢 **Claude 判为与 DSH-2.3 同一件事的重申**（证据：2.3 用的就是真实 `client/` 工程非 demo，改动已提交 `d8108c6`）；WB 复核判定依据成立。
@@ -215,7 +215,7 @@
 >
 > 1. 🔴 **沙箱方言插件生产挂载未生效** —— 插件已进 profile `node_modules`，但 `larry`/`sdk` 的 `cordis.patch.yml` **均为 `[]`**（2026-09-10 复核仍为 `[]`）→ **DSH-3 集成时必须显式挂载，否则 Trae 的修复等于没做**
 >    - 🟢 **挂载语法已 WB 实测（2026-09-10）**：**`- id: sandbox` + `name:` 覆盖不生效**（sandbox 行仍是官方包）→ 插件源码注释说的"改 sandbox 行 name"**字面走不通**；**`disabled: true` + `insert` 新 id** 配置层成立，**但新行插在最末尾、id 为 `sandbox-dialect` ≠ 消费方期望的 `sandbox`** → **运行时能否被正确提供/消费仍未实跑验证** ⬛。详见 `log-trae.md` R3 补充，Trae 须补端到端
-> 2. 🔄 **Trae 二轮 R1/R2/R3 未回**（规格在 `exchange/log-trae.md` 顶部「二轮派发」）
+> 2. 🔄 **Trae 二轮 R1/R2/R3 未回**（规格在 `exchange/log-trae.md`「二轮收尾」段）
 > 3. ⚠️ **parentId 建议未拍**（会话事件按树记 or 线性链表，待老大一句话）
 > 4. 🟡 **②「跨进程 resume 成功」仍为 Trae 单方声明** → 已并入 DSH-3「首验 id collision 定性」，在那边收敛
 > 5. ⬛ **Vue → Tauri IPC → node 完整链路无自动化覆盖** —— 老大已定：后续推进中慢慢补（现仅 2.3 GUI 一手点验）
