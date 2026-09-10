@@ -151,7 +151,9 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 - **JSON-RPC 方法面窄**：wire 面实际就是 `initialize` / `session/prompt`（+ `session`/`shutdown` 生命周期）——**client 若要对话之外的操面（会话树浏览、子代理管理、设置/配置读写等）不在此协议内**，需借 base 内插件扩展或换 web profile
 - **runtime 子进程生命周期归 SDK**：每次 `run()` 由调用方起停；改 profile 插件代码需重启 runtime（**模块级 HMR 动态观察仍未落地**，需 web/tui 类长驻载体——与 DSH-2.1 结论一致，非本通道能力）
 - **无 HTTP / 无浏览器面**：GUI 直连需走进程（Tauri Rust spawn）；浏览器环境不能直接用 TS SDK（无子进程能力）
-- **模型路由固定**：sdk profile 下 agent 由 `llm-deepseek` 路由（deepseek-official / v4-flash 等）；要接 LarryAgent 的多模型/角色路由需在 base 层扩展（属后续业务，本任务未做）
+- **模型路由固定**：sdk profile 下 agent 由 `llm-deepseek` 路由（deepseek-official / `deepseek-flash` 等）；要接 LarryAgent 的多模型/角色路由需在 base 层扩展（属后续业务，本任务未做）
+  - ⚠️ **2026-09-10 改名（老大指示）**：项目脚本里的模型 id 已统一 `deepseek-v4-flash` → `deepseek-flash`（真实调用冒烟通过 + 反向对照：换成不存在的 id 即 `INVALID_REQUEST`/400 → 证明服务端确实校验，非假绿）。
+  - ⚠️ **但官方 catalog 没跟上**：DSH `dsh-v0.1.2-rc.1` 的静态 catalog（`DEFAULT_MODELS`）**仍只声明 v4 系列 id**；源码确认**未编目 id 不被拦**（catalog 查询是 advisory：价格 / contextWindow / 图片策略），会直传给 API。→ **改名后必须真实调用冒烟一次才算数，「改完没报错」≠「改名可用」**。
 
 **一句话**：sdk profile + TS SDK 是"客户端驱动完整 agent 会话"的合格通道（流式+事件+持久全有），窄在 wire 方法面与无自带传输/UI——若最终 client 需要 HTTP 或对话外的扩展操面，是上 web profile 或自做 HTTP 桥的加分项，非本通道硬伤。
 

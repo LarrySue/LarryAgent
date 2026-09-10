@@ -44,8 +44,10 @@ DSH-3 的 S0 验收口径是「消息往返 + 事件落盘 + 回读」——**�
 
 #### 环境前置（漏了会伪装成被测对象故障）
 
-1. **每次跑 `dsh` 前先清 profile 孤儿锁**：`rm -f ~/.dsh/profiles/node_modules.lock`。
-   这把锁**每次运行都留**（连 `--dump-config` 也留），孤儿锁永不自动回收 → 表现为 `initialize timed out after 20000ms` / `JSON-RPC input closed`，**极易误判为 SDK 握手有问题**。WB 本轮连撞三次才定位。
+1. **每次跑 `dsh` 前先清 profile 孤儿锁** —— ⚠️ **此处原写 `rm -f` 是错的，已订正**：
+   - ❌ `rm -f ~/.dsh/profiles/node_modules.lock` 会**误删活跃锁**，制造真实并发故障（§1 明说「孤儿回收是 operator 动作」）。
+   - ✅ 正确做法（你实现的就是对的，**按你的来**）：**只清死 PID 的锁** —— 读 PID → `process.kill(pid, 0)` → **ESRCH 才重命名备份**（`node_modules.lock.bak.<ms>`，不删除）；活跃或内容不可解析 → **停手报错**。
+   - 背景：这把锁**每次运行都留**（连 `--dump-config` 也留），孤儿锁永不自动回收 → 表现为 `initialize timed out after 20000ms` / `JSON-RPC input closed`，**极易误判为 SDK 握手有问题**。WB 曾连撞三次才定位。
 2. **真实模型调用约 106 秒**，而 `harness/scripts/dsh-prompt.mjs` 内置 `initializeTimeoutMs: 20_000` → **超时 ≠ 失败**。要么调大超时，要么复跑。
 3. 其余本机环境约束见 `docs/dsh/dsh-local-env.md` §1 / §6。
 
@@ -142,3 +144,49 @@ R1 真跑还留了一条副证据：**失败跑也有完整事件流**（`turn/s
 
 → 有反向对照兜底，上一条的"绿"**不是**"API 根本不校验模型名"造成的假绿。**改名就此落定。**
 → 附带收获：这条对照补出 **§6 矩阵的第 5 行**——「未知模型 id → `INVALID_REQUEST`/400、无 `assistant/message`、仍是 `exit 0`」，@WorkBuddy 请一并收进 §6（判据层已能正确显形该 code）。
+
+---
+
+## 🔍 WB 独立复验结论（2026-09-10）
+
+**判：通过。** 我用老大新给的临时 Key 独立实跑，不采信你的声明 —— 绿红两侧都复现了：
+
+| 组 | 我的实测 | 结论 |
+|---|---|---|
+| 有效 Key（真跑） | `verdict=OK assistant/message=1 finalResponse.len=11 turn/end.kind=completed`，3s | 🟢 **绿灯是真的** |
+| R1 错误 Key | `verdict=FAIL assistant/message=0 turn/end.kind=error error.code=AUTH error.status=401` | 🟢 **红灯也是真的** |
+
+你的判据实现（`real-api.ts:133-172`）我逐条读过，**三条 hard-fail + `kind !== 'completed'` 判红 + 非 completed 收尾（max-tokens/aborted/blocked/interrupted）全红**，方向正确、没有退化。这份活质量在你以往之上。
+
+### 四项裁定
+
+**① 判据口径 —— 你对，我的文档错了，已订正。**
+实证：成功时 `turn/end.data.reason = { kind: 'completed' }` **确实存在**。我 §6 原写「`turn/end.reason` 不存在」，那个"无"是**我取错了字段路径**（取成了 `turn/end.reason` 而非 `turn/end.data.reason`）→ 不是真没有。
+→ **照字面实现会假红**，而假红比没护栏更糟（逼人习惯性忽略红灯）。已在 §6 加订正说明并把成功行改为 `completed`。**这个教训值得你记住：我写的判据文档也会错，取到"无"先怀疑路径。**
+
+**② zstd 压缩盲区 —— 本轮不做，但记为条件式欠账。**
+同意你的判断。理由：环境变量注入**不落 session 日志**（你已解压核对 0 命中）→ 该路径下盲区无实害，**无收益不扩围**。
+但已写进 §6：**一旦改用 credentials service 落盘路径，必须先补解压扫描** —— 这是**条件式欠账**，不是"已知无害"，别让后人读成"扫过了没问题"。
+
+**③ 锁的处理 —— 你对，我认账。**
+我派发稿里写 `rm -f` 是错的（会误删活跃锁、制造真实并发故障）。你的"只清死 PID（ESRCH 才重命名备份）+ 活跃则停手报错"是正确做法，**按你的来**。派发稿已订正。
+
+**④ 模型 id —— 你的"改配置不改记录"分界正确。**
+历史记录类（`TODO:163` / `2026-09-10.md:99` / `dsh-cloud-deployment.md:115`）不动，判断对。
+`docs/dsh/dsh-23-vue-tauri-connect-trae.md:154` 属**当前路由说明** → **应同步改名**（我来处理，不占你时间）。改名后冒烟 + 反向对照都做了，改名就此落定。
+
+### 🔴 退回一件（我复验新发现，你没报）
+
+**测试跑完后进程不退出 —— 必现，两次都挂。**
+
+- 完整跑：`Tests 14 passed | 1 skipped`、`Duration 7.08s` → 之后**进程挂到 480s 被杀**（`vitest 退出码 143`）
+- 单条跑（`-t "有效 Key"`）：`1 passed`、`Duration 5.22s` → 之后**挂到 150s 被杀**（退出码 143 / EXIT=124）
+
+→ **CI 里会直接挂死**，永远拿不到退出码。怀疑是 dsh 子进程或 stdio 句柄未释放（你的 teardown 只清了临时目录，没关子进程）。
+请定位并修：**要么是 `run-real-api.mjs` 没等子进程关闭，要么是 SDK client 没 `shutdown()`**。修完请给出「跑完能自己退出、exit 0」的实测证据。
+
+**顺带（次要）**：`D:\Temp\Sys\` 下留了 3 个 `larry-test-*` 目录（`VlPfkc` / `realapi-XTo34Z` / `realapi-tLBXX7`）—— teardown 只清了当次那个，历史残留没管。不算 bug，但会攒垃圾，顺手加个过期清理更好。
+
+### 一条方法论（与你这次的裁定 ① 同源）
+
+**"取到空值"有两种成因：真的没有 vs 取错了路径。** 我这次是把后者当成了前者，写进了判据文档。你没盲从、用实测顶回来了 —— 这个处理是对的，以后继续这么干。

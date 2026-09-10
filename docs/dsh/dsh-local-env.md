@@ -168,14 +168,19 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 | 场景 | exit | `finalResponse` | `assistant/message` 事件 | `turn/end.reason.kind` | `error.code` | status | 耗时 |
 |---|---|---|---|---|---|---|---|
-| **有效 Key** | 0 | `PROBE-OK-2026` | ✅ **有** | （无 = 正常完成） | — | — | **106.2s** |
+| **有效 Key** | 0 | `PROBE-OK-2026` | ✅ **有** | **`completed`** | — | — | 106.2s（冷跑）/ **1.9–3s（暖跑）** |
 | **无 Key** | 0 | 空 | ❌ 无 | error | `MISSING_CREDENTIAL` | — | 2.9s |
 | **错误 Key** | 0 | 空 | ❌ 无 | error | `AUTH` | 401 | 3.0s |
 | **已关闭的有效 Key** | 0 | 空 | ❌ 无 | error | `AUTH` | 401 | 2.6s |
+| **未知模型 id** | 0 | 空 | ❌ 无 | error | `INVALID_REQUEST` | 400 | 2s |
+
+> 末行🟢 Claude 2026-09-10 补（含反向对照：同一 Key 下把模型名换成 `deepseek-not-a-real-model` 即现此行 → 证明模型名在服务端被校验，故"改名后冒烟绿"不是假绿）。
 
 ### 由此定出的判据（可直接写进 DSH-6 断言）
 
-- **成功 ⇔ `assistant/message` 事件存在 且 `finalResponse` 非空 且 `turn/end.reason` 不存在。**
+- **成功 ⇔ `assistant/message` 事件存在 且 `finalResponse` 非空 且 `turn/end.reason.kind === 'completed'`。**
+  - 🔴 **此处早期写作「`turn/end.reason` 不存在」是错的**（2026-09-10 订正）：当时成功组取到的"无"是**字段路径取错**（实际在 `turn/end.data.reason`），**不是真的没有**。照字面实现 → **有效 Key 也被判红 = 假红**，而假红会逼人习惯性忽略红灯，比没有护栏更糟。
+  - **非 `completed` 的收尾一律判红**：`error` / `max-tokens` / `aborted` / `blocked` / `interrupted`。
 - **`exit 0` / session 建立 / 有事件流 —— 三项全部无效**：三种失败场景在这三项上都与成功一致。
 - **要区分失败原因，读 `turn/end.reason.error.code`**：`MISSING_CREDENTIAL` = 没配；`AUTH`+401 = 配了但无效/已关。
 - ⚠️ **错误 Key 与已关闭 Key 不可区分**（同为 `AUTH`/401）→ 用户报"AI 不回话"时，从输出**无法**判断是配错还是被关，只能凭 Key 后 4 位回查平台。
@@ -185,11 +190,19 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 - DSH **自带 Key 脱敏**：日志里呈现为 `****3c36`（**保留后 4 位**）→ 不会明文泄漏，但**后 4 位会进 session 日志**，涉及凭据时须知悉。
 - **环境变量方式不落盘**：跑完再无 Key 复现同一脚本，仍得 `MISSING_CREDENTIAL`（未从环境变量偷偷持久化）。credentials service（web Models 页面）那条落盘路径**未测** ⬛。
 
+### ⬛ 残留扫描的已知盲区：压缩
+
+`scanForKeys` 只扫**明文**文件，而 session 日志是 `session.jsonl.zstd`（**多帧 zstd**）→ 结构上扫不进去，**压缩是残留扫描的盲区**。
+
+- **现状可接受**：环境变量注入**不落 session 日志**（已解压核对，连脱敏形态都无）→ 该路径下盲区无实害，**本轮不补解压扫描**（裁定 ②：无收益不扩围）。
+- 🔴 **触发条件（届时必须补）**：一旦改用 **credentials service 那条落盘路径**，Key 可能以明文进 session 日志 → **必须先补"解压后扫描"**（多帧魔数切帧，约 30 行），否则残留扫描形同虚设。**此为条件式欠账，不是"已知无害"。**
+
 ### ⚠️ 实跑前置（漏了会伪装成别的故障）
 
 1. **先清 profile 锁**（见 §1）——任何一次 dsh 运行（含 `--dump-config`）都会留下孤儿锁。
    不清的表现是 `initialize timed out after 20000ms` 或 `JSON-RPC input closed`，**极易误判为"profile 启动慢 / SDK 握手有问题"**。
-2. **真实模型调用耗时长**：本轮成功那次 **106 秒**。`dsh-prompt.mjs` 内置 `initializeTimeoutMs: 20_000`，冷跑容易超时 → **超时 ≠ 失败**，复跑前先确认锁。
+2. **真实模型调用耗时两极**：**冷跑**（含 profile boot / pnpm heal / 首次 SDK 握手）可到 **106 秒**；**暖跑**（同进程 SDK、profile 已热）**1.9–3 秒**。`dsh-prompt.mjs` 内置 `initializeTimeoutMs: 20_000`，冷跑容易超时 → **超时 ≠ 失败**，复跑前先确认锁。
+   → 超时预算**别一律按 106s 设**（会拖慢正常用例）。建议 `initializeTimeoutMs=120s / requestTimeoutMs=240s`，取宽松侧防冷跑误杀。
 
 ---
 
