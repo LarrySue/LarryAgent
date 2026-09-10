@@ -117,5 +117,6 @@ R1 真跑还留了一条副证据：**失败跑也有完整事件流**（`turn/s
 ### 未做 / 边界
 
 - 真实调用**不进默认套件**（默认跑永远 skip）→ 不烧 key、不依赖网络。
+- **裸 `vitest run` 会看到 3 个 failed 文件**，都不是回归：2 个是 DSH-2.4 既有的设计性哨兵（`sentinel-failfast` / `sentinel-unset`，预期 FAIL），1 个是本轮 R1 哨兵在**未开开关**下的显式报错（提醒「必须带开关跑」）。本轮全套观察：`Test Files 3 failed | 4 passed`、`Tests 3 failed | 16 passed | 2 skipped`——默认入口应走 npm scripts，不是裸 vitest run。
 - 临时 DSH_HOME 用 junction 复用 177MB sdk profile（实测 `rmSync(recursive)` 不穿透 junction，目标存活）；teardown 扫描**不跟随符号链接**，与 teardown 清理同源。
 - 留痕检查：本轮结束后工作区 `grep` 无 key 片段、无 `larry-test-*` 临时目录残留、无探针文件残留。
