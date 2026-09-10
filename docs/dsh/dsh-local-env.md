@@ -132,6 +132,21 @@ const DENIAL_SIGNATURES = {
 
 ⬛ **未测**：`--mode read-only` 下 PS 进入 ConstrainedLanguage，官方 README 提示 preamble 的 `[Console]::` 赋值**可能被拒**、非 ASCII 输出会退回主机代码页 → 该模式下 ① 层是否仍有效**未验**。
 
+### 4.2 「一劳永逸解决编码」的四条路径（🟢 源码 + 实测，2026-09-10 WB）
+
+老大提问：前置 preamble 这种事，有没有配置能一劳永逸？——**分层看，四条的结论完全不同。**
+
+| 层 | 机制 | 有没有 | 结论 |
+|---|---|---|---|
+| **DSH** | 配置项覆盖 preamble | ❌ **无**（`ENCODING_PREAMBLE` 是 `export const`，与 `DENIAL_SIGNATURES` 同构，拼死在 `index.ts:220` 的 argv 里） | **不需要**：dsh 默认就给每条命令前置，我们这条链路已"自动一劳永逸" |
+| **PowerShell** | `$PROFILE`（`profile.ps1`，四作用域含 AllUsers* 可全局下发） | ⚠️ **有但被禁用** | dsh 一律 `-NoProfile` 启动 → **profile 不加载**。⚠️ **用 `-NoProfile` 等于放弃所有 profile 级治理手段**，这条有普适价值 |
+| **Windows 系统** | ① `HKCU\Console\CodePage=65001`（可按 host 子键）<br>② 系统级 UTF-8 Beta（`HKLM\...\Nls\CodePage\ACP=65001`）<br>③ 装 PowerShell 7 | ① 存在<br>② 存在<br>③ 存在 | ① **配置在受限令牌下可见**（实测：受限进程读到 `HKCU\Environment\TEMP`、`LocaleName=zh-CN`），但**能否影响被管道捕获的 PS 5.1 输出未实测** ⬛；副作用是本机所有新建控制台窗口<br>② 本机 `ACP=936`（未开）；**影响所有非 Unicode 老程序，不建议为这一件事开**<br>③ **最干净**：dsh 解析顺序 **PS7 优先**（`resolve.ts`：`$ProgramFiles\PowerShell\7\pwsh.exe` → PATH 中的 `pwsh` → 5.1 兜底），且官方注释明说 **"pwsh 7 defaults to UTF-8 and is unaffected"**。本机**尚未装 PS7** |
+| **我们自己的代码** | 保留 buffer 做 UTF-8/GBK 双解 | ✅ | ⭐ **必做**：第三方收集器一旦 `toString('utf8')`，GBK 字节**不可逆**（变 U+FFFD，还原不回来）。将来我们自己 spawn 子进程，必须**留 buffer 再解码**，别直接吃 `text` |
+
+**实测基线**（直连 / 受限两种跑法**逐值相同**）：`[Console]::OutputEncoding=936`、`ACP=936`、`HKCU` 可读、`HKCU\Console\CodePage` **未设置**、`locale=zh-CN`、`USERPROFILE` 正常。
+
+→ **当前建议：什么都不用改**（dsh 自带 preamble 已生效）。把「装 PS7」记为**备用手段**——仅当 read-only 模式下 preamble 被 ConstrainedLanguage 拒、① 层失效时才需要它。
+
 ---
 
 ## 5. 环境噪声：WorkBuddy 的批量删除保护会污染沙箱探针输出
