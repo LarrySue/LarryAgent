@@ -5,6 +5,8 @@
 - `dsh-form-probe-claude.md` — DSH-2.0（代码存在形态 A/B/C 案）Claude 测绘报告，判 **A 案成立**。
 - `dsh-b1-plugin-probe-trae.md` — DSH-2.1 / 2.2 短路点实测（自做插件经 B1 挂载 + 官方 demo 完整会话，两个"能"）。**含环境复现步骤**（源码树 `build:lib:host` / pnpm 11 `allowBuilds` / worktree 用法），后续阶段仍要引用
 - `dsh-23-vue-tauri-connect-trae.md` — DSH-2.3 Vue/Tauri ↔ DSH 连通（sdk profile + TS SDK，判"能"）。**含 ⭐ 通信面能力边界观察（事件面宽 / 方法面窄）**，是通信面定型的直接输入
+- `dsh-local-env.md` — **本机（Windows）环境约束唯一真相源**：profile 启动锁（wx/2s/孤儿不回收）、`--patch` 引本地包触发 heal 撞锁、windows-acl runner 直调格式、**⭐ 拒绝方言缺口（分本地化层与错误码类别层，后者跨语言成立）**、safe-delete 噪声
+- `dsh-cloud-deployment.md` — **云部署（CVM）唯一真相源**：环境资产、规格判定（4C8G 非硬需求）、DSH 拒绝 0.0.0.0（官方 RCE 理由）、landlock sandbox 正反实测、node:sqlite 判据、部署坑清单。**跨 AI 共享的部署事实一律放此**，交流区/TODO/AI 记忆只留指针
 
 ## 规则（本目录内一律适用）
 

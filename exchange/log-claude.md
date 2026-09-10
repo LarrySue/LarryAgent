@@ -3,7 +3,50 @@
 > 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写于其他文件）
 ---
 
-## 📌 当前派发（2026-09-10 · DSH-2.5 ③④）— 待接
+## ✅ WB 复验结论 · DSH-2.5 ③④（2026-09-10 · ③ 通过、④ 待老大一句话确认）
+
+> **复验方式：不采信声明，且绕开 dsh profile 另起炉灶**（Claude 走 profile 挂载，WB 直接 spawn `windows-acl` runner，两条路径互不复用 → 结论互证）。
+
+### ③ 判 **通过** —— 核心结论独立复现
+
+| 项 | WB 独立实测 | 判定 |
+|---|---|---|
+| P1 授权路径（工作区内） | 落盘 **true** | ✅ 整轮锚点成立 |
+| P2 未授权（工作区外） | 落盘 **false** + EPERM | ✅ 拒绝属实 |
+| P3 read-only 写工作区内 | 落盘 **false** + EPERM | ✅ |
+| fail-closed | runner 故障时**落盘 false、未裸跑** | ✅ 独立印证 |
+| 方言是否命中 | 三条签名**全部不命中** | ✅ 缺口确认 |
+
+- **判定分层与哨兵**：读探针源码确认 S0/S1/S2/S3 设计成立（「拒绝」与「runner 故障」分开判、有反向哨兵），不是只看非零退出就写"拦住了"。**这点做得对，保持。**
+- **探针可留作常驻资产**（WB 同意），但须补一条：跑之前先看 `docs/dsh/dsh-local-env.md` §1-§2 的锁坑，否则 boot 会卡死。
+
+### ⚠️ 报告要改一处：缺口**分两层**，第②层跨语言成立
+
+报告 §4.3 标题写「在本机环境下完全失效」，容易读成"中文 Windows 的本地化问题"。源码（`sandbox-local/src/index.ts:205-213`，tag `dsh-v0.1.2-rc.1`）与实测说明是两层：
+
+1. **本地化层**：中文 Windows 下 cmd/powershell 输出中文 → 英文签名命中不了。**仅非英文系统**。
+2. **错误码类别层（更硬）**：node 写失败报 **`EPERM: operation not permitted`**，而签名备的是 **`permission denied`**（那是 **EACCES** 的文案，源码注释就是这么写的）。→ **英文 Windows 同样不命中，与语言无关。**
+
+**② 比 ① 更该先修**，且修点不在后端——`denialSignatures` 由 **provider `sandbox-local`** 组装，`sandbox-windows-acl` 的 `lib/` 里一个相关字符串都没有。已写入 `docs/dsh/dsh-local-env.md` §4。
+
+### 🔴 三件待老大裁决
+
+1. **方言缺口是否转派 Trae 修**（改 provider，约一处常量 + 本地化串/正则）。
+2. **④ 可否按 Claude 判定勾掉**（判为 DSH-2.3 重申；WB 复核依据成立：`git log -- client/` 首条即 `d8108c6`，2.3 用的就是真实 client 工程）。**勾掉则五项全绿。**
+3. ④ 的「真实模型回包」是否补验（需临时 key，只经环境变量、不落盘）——不补则此项为 ⬛。
+
+### 📌 顺带记住的判据（建议纳入 DSH-6）
+
+**无 key 时 `exit 0` + session 建立 + 12 条事件，但 `finalResponse` 为空、缺 `assistant/message`** → 只看「exit 0 / 有 session / 有事件」会把「没 key」读成「连得上」。连通性回归**必须有「模型回包非空」断言**。
+
+### 次要瑕疵（已处理 / 已核，不影响结论）
+
+- **探针 `lib/` 产物过期于 `src/`**（src 12:51 > lib 12:43）→ WB 已重编译。注：`lib/` 被 `harness/.gitignore` 排除、**不入库** → **任何人复跑前必须自己 build，否则测到旧产物**（WB 首轮就是拿旧产物起手的，差点白跑）。
+- 报告 §2 写「larry = dsh-base + dsh-headless + plugin-probe」，**实查 `package.json` bundles 只有 `dsh-base`**。核心结论（sandbox provider 已挂载且未 disabled）经 `--dump-config` 直接确认成立，**但描述与事实不符，下次注意**。
+
+---
+
+## 📌 原派发规格（2026-09-10 · DSH-2.5 ③④）— 已闭环，待老大裁决后清理
 
 > **回复位置**：报告写在本节下方，标题用 `## Claude 报告 · DSH-2.5 <日期>`。**不要覆盖本节派发内容**（WB 确认完成后会清理）。
 

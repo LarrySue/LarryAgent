@@ -121,11 +121,16 @@
 
 - [x] **前提① 已拍：经自做云端服务中转** → 链路切三段：**A** 前端↔自做服务（**自定协议，与 DSH 无关**）/ **B** 服务↔DSH host（**同机**）/ **C** DSH⇢C 侧本地工具反向驱动（**自做**）
 - [x] **前提② 已拍**：C 段反向工具执行由我们自做，接受其不属于任何官方面（**在中转架构下反而变简单**——指令走"我们的服务↔C 侧"，**不经 DSH**）
-- [ ] **⚠️ B 段选型未锁（新子决策，勿默认 sdk）**：中转**不等于**能力降级——B 段同机，sdk 与 Gateway **都可用**
-  - **sdk 路线**：多会话 = 多子进程（单人低频可接受）；**无会话树/历史分页/fork**；`resume id collision` 未收敛是隐患
-  - **Gateway 路线（WB 倾向）**：单进程多会话 + 官方会话树 / fork / cancel / 历史分页 / **重连追赶 + gap 修复 + 2s 心跳**——**这些恰是中转下我们本要自做的部分**
-  - ⚠️ **待验**：Gateway 在 **`larry`（headless）profile** 下能否起 HTTP（已实测 8123 / 401 属 **web profile**，**不可跨 profile 外推**）→ **并入 DSH-3 S0 切片实测**
+- [x] ✅ **B 段选型已定：只能走 SDK（stdio）**（2026-09-10 实测，**推翻下方 Gateway 倾向**）→ 论据见决策稿 §3.6【B 段 Gateway 路线实测判定】，TODO 不复制
+  - **连带硬约束**：stdio 不可跨机 → **自做服务与 DSH 必须同机部署**（`docs/dsh/dsh-cloud-deployment.md` §7.1）
+  - ~~Gateway 路线~~ 🔴 **已推翻**：7 条实测证据（最硬一条：55 个声明 `dsh` 字段的包里，**能起 HTTP 的 bundle 仅 `dsh-web-app` 一个**；`dsh-api-gateway` / `dsh-host-webserver` 均未声明 bundle）。**边界：只判"当前版本不成立"，不判"官方永不做"**
+  - **sdk 路线已知代价**：**无会话树 / 历史分页 / fork**；`resume id collision` 未收敛（→ DSH-3 首验项）
+  - 🟢 **2026-09-10 实测修正（原"多会话 = 多子进程"系误述，已推翻）**：sdk **单进程多会话**——20 个 session 句柄 RSS 增量 **0.00 MB**、进程恒为 1；真实 prompt 边际 **2.24 MB/会话**，外推 20 会话 ≈ **182 MB**；单会话 18 轮内存有界（存在回收）。**→ 2G/4G 之争收口：2C2G 够**。数据见 `docs/dsh/dsh-cloud-deployment.md` §2.4 / §2.4.1 / §2.4.2
 - [ ] **新增派生工作项（A 段，属 DSH-3 输入）**：**自定协议设计**——流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧**全部自实现**。**这是中转方案的主要成本项**，官方 Gateway 白送的恰是这部分
+  - ⭐ **换回官方的成本须现在压住**（老大 2026-09-10：第三方框架常态，将来官方补齐再评估要不要换）：① **B 段藏在适配器接口后面**，业务代码不直接碰 SDK 细节；② **A 段自定协议以 Gateway 语义为镜**（**历史分页 / cancel / 重连追赶**的形状对齐），将来官方 bundle 可用时**只换 B 段适配器、A 段不动**。此为设计约束，非实现顺序
+  - ⭐ **【会话状态策略】已拍板**（老大洞察"侧栏二十个会话不算并发" → 授权 WB 拍板）→ **决策见 `docs/dsh/dsh-migration.md` §3.6 第 3 条**，TODO 不复制。要点：① 元数据/历史/runtime 三态分离，**侧栏 N 个会话几乎零内存**；② **不设激进 LRU**（20 会话仅 ≈182MB，为省内存牺牲"顺手查历史"不划算）；③ **真约束是 token 成本不是内存**；④ **A 段协议须能区分"打开看看"与"真的发一条"**——前者不得触发 LLM 调用
+  - ✅ **fork 已裁决放弃**（老大 2026-09-10：触发可能性极低，问题不大）：**一期不做 fork 实现**。两条可能的供给路径**均已堵死**——ACP 面实测 `session/fork` = **-32601**；Gateway 面已判不可用。将来若要做只能自做（会话快照 + 重放）
+    - ⚠️ **WB 建议（未拍，待一句话裁决）**：不为 fork 留实现与 UI，但**会话事件结构建议带 `parentId`**（按树形记，而非线性链表）—— 现阶段的额外成本≈0，将来加 fork 就只是"加实现"而非"重构数据流"。**不采纳也行，回一句"线性即可"即可**
 - [ ] **T2 触发线相关待验（低优先级）**：官方 web surface 经**反向代理**对外是否可行（`--trusted-host` 白名单为唯一已知障碍，未实测）
 - [x] ~~web surface 开箱实测 ①②③~~ **价值随定型下调**（我们不承载官方 shell）；**官方 UI 组件仍可复用**——41 个 `dsh-client-*` 包可 `pnpm add`（exports 含 `./src/*`，源码随包分发）→ 自做前端 = **用官方组件拼**，非从零写
 
@@ -149,16 +154,33 @@
 
 **DSH-2.5 - 退出条件实测（5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
 
-- [x] **WSL2 环境已就绪并验收合格**（老大 2026-09-09 17:33 配置，WB 复验）：Ubuntu 24.04.4 + WSL 2.7.13.0 + 内核 6.18.33.2 + ext4；**正反两组并发判据均对**（8a 反向出现 locked = 锁生效；8b 正向 COUNT=200 = 无写丢失）。执行报告与复验见 `exchange/log-other.md` §7
-- [ ] **⭐ 主验证环境改为 CVM**（老大 2026-09-09 决定；**规格与选型见 `exchange/log-other.md` §8**）—— **2.5 起结论以 CVM 为准**；WSL 保留作本地快速对照，**不再作为判定依据**
-  - **切换的两条实质理由**：① **与生产同构**——DSH-5 上云目标就是 CVM，在 CVM 取数即生产同构数据，**免去"WSL 近似度"的论证负担**；② **WB 可自主验证**——`wsl.exe` 被沙箱拉黑（WB 无法在 WSL 内执行命令，只能靠他人代跑），CVM 是独立远程主机，**WB 可 ssh 自主跑命令与迭代** → 协作模式质变
-  - ⚠️ **选型硬要求（不满足则 ① 的数据不可外推）**：**盘型须与生产目标一致**——云盘是分布式网络存储，fsync 延迟与本地 NVMe 不同，**会改变锁竞争时间窗口**，进而影响 2.5 ① 结论
-  - **验收判据可直接复用** WSL 那套正反两组（ext4 + 反向应出现 locked + 正向 COUNT=200），不另起炉灶
-- [ ] ① `storage/` 外接 SQLite 可行性（**须在 Linux 环境取数**，见前置）
+- [x] **WSL2 环境已就绪并验收合格**（老大 2026-09-09 配置，WB 复验）：正反两组并发判据均对。**不再作为判定依据**。执行报告与复验见 `exchange/log-other.md` §7
+- [x] **⭐ 主验证环境改为 CVM**（老大 2026-09-09 决定）—— **2.5 起结论以 CVM 为准**；WSL 保留作本地快速对照
+  - **环境资产 / 规格判定（4C8G 非硬需求）/ 部署约束 / 验收判据 → `docs/dsh/dsh-cloud-deployment.md`**（TODO 不复制内容）
+- [x] ① `storage/` 外接 SQLite 可行性（**须在 Linux 环境取数**，见前置）
+  - 🟢 **Trae 已交 + WB 独立复验通过**（2026-09-10）：官方 `dsh-storage-sqlite` backend 仅需配置，`path` 可指任意绝对路径（脱离 `.dsh-home`）；外部库 `/home/ubuntu/larry-data/larry.db` 当日落盘、`SQLite format 3` header、`units` 含 `larry_probe`、**我们写入的 `mem-1` 行可读出**；**反向哨兵**：json 侧 `storages/session_projcache` 两处均 1 文件未增长 → 数据确实走 SQLite 而非默认 json
+  - ✅ **Step 0（CVM 冷启动 PoC）已完成并复验**：**自做服务经 stdio 驱动 DSH 跑通真实会话**（`finalResponse="probe ok"`）。WB 独立补了他自陈的判据弱点——`zstd -d` 解开 session 文件，内含 `deepseek-v4-flash` + `usage/inputTokens/outputTokens` 且 `grep -c mock = 0` → **真实 provider 调用，非 mock 顶替**
+  - 🟢 **副产品（填掉 2G/4G 最后一个空位）**：联合 RSS 峰值 **192MB**（默认 DSH_HOME 189MB），冷启动 3190/2359 ms → 详见 `docs/dsh/dsh-cloud-deployment.md` §2
 - [ ] ② `acp/` 契约稳定性
-- [ ] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提；后端已确认存在 = restricted token + `sandbox-windows-acl/`，且 fail-closed——无 runner 时报 `SANDBOX_UNAVAILABLE`、不静默裸跑。待验**实际生效性**与提权流程）
+  - 🟢 **WB 已独立复验通过**（2026-09-10，`~/harness/wb-acp-fork-verify.mjs`，CVM 跑 Trae 的 `acp` profile，**不采信其声明**）：`initialize` OK（protocolVersion=1）/ `session/new` OK / `session/list` OK(6) / `session/close` OK
+  - **⭐ 复验关键在反向对照（Trae 未做）**：`fork` / `load` / `delete` → **-32601 Method not found**；对照 `session/resume` → **-32602 Invalid params（session is already active）**。→ **两个不同错误码证明 -32601 是精确的方法缺失，不是"整体被鉴权挡住"**，判据有效
+  - 🟡 **跨进程 resume 成功**一项仍为 Trae 单方声明（WB 本轮未复现该场景，因同进程内 resume 命中"已活跃"）
+- [x] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）
+  - 🟢 **Claude 已交（提交 `47b6163`）+ WB 独立复验通过**（2026-09-10）
+  - **WB 复验路径（未采信声明，且绕开 dsh profile）**：直接 spawn `windows-acl` runner（法子见 `docs/dsh/dsh-local-env.md` §3）→ **P1 工作区内落盘=true**（整轮锚点）／**P2 工作区外落盘=false**／**P3 read-only 下工作区内落盘=false**；另**首轮误用参数触发 runner 故障时落盘=false 且未裸跑** → fail-closed 独立印证。判定分层（拒绝 vs runner 故障）与 S0/S1/S2 哨兵经读探针源码确认成立
+  - **无需 UAC、无需预装**；`enforcement = partial`（Everyone 可写目录 / 工作区外硬链接 两条边界属实）→ **2.10.2 按 partial 规划，不得按 full 宣传**
+  - ⚠️ **新缺口（WB 独立发现，比 Claude 报告更进一步）**：拒绝方言缺口**分两层** —— ①本地化层（中文 Windows 输出中文，英文签名命中不了）；②**错误码类别层：node 报 `EPERM: operation not permitted`，签名备的是 `permission denied`（EACCES 文案）→ 英文 Windows 同样不命中**。② 跨语言成立、优先级更高。详见 `docs/dsh/dsh-local-env.md` §4
+  - 🔴 **待老大裁决**：方言缺口是否转派 Trae 修（改点在 provider `sandbox-local/src/index.ts`，非后端）
 - [ ] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）
-- [ ] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（决定是否需要全量重嵌，影响 DSH-4 记忆迁移工作量）
+  - 🟢 **Claude 判为与 DSH-2.3 同一件事的重申**（证据：2.3 用的就是真实 `client/` 工程非 demo，改动已提交 `d8108c6`）。WB 复核判定依据成立 → **待老大一句话确认后即可勾掉，不重跑全流程**
+  - ⭐ **顺带判据（建议纳入 DSH-6 测试体系）**：**无 key 时 `exit 0` + session 建立 + 12 条事件，但 `finalResponse` 为空且缺 `assistant/message` 事件** → 只看「exit 0 / 有 session / 有事件」会把「没 key」读成「连得上」。**连通性回归必须有「模型回包非空」断言，否则绿灯无意义**
+  - ⬛ **④ 的「真实模型回包」未经 WB/Claude 独立复验**（本机无 key）→ 若要补验需给临时测试 key（只经环境变量、不落盘）
+- [x] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（决定是否需要全量重嵌，影响 DSH-4 记忆迁移工作量）
+  - 🟢 **Trae 已交 + WB 独立复算通过**（2026-09-10）：WB **未重跑他的脚本**，而是用自己写的算法对同一对产物（`D:\Code\embed-probe\{python,ts}-vectors.json`）重算，结果**逐位一致**——`maxAbsDiff 2.2285e-7` / `maxL2Diff 1.3887e-6` / `cosine min 0.999999999999` / `top-1·3·5 = 14/14`
+  - 🟢 **WB 加做的反向对照（他未做）**：把两侧**错位一格**比对 → cosine 跌到 **0.23–0.47**、maxAbsDiff **0.193** → 证明该判据**对文本错位敏感**，对齐组的高分不是"比对脚本自指"造成的假象
+  - ✅ **结论：无需全量重嵌**（省 DSH-4 一大块工作量）。**硬前提须写进 DSH-4 迁移方案**：向量可比**依赖预处理严格对齐**——`do_lower_case`/统一 lowercase、CLS pooling、L2 normalize、max_length 512；**任一项不对齐会产生 0.77 级假漂移**（Trae 已复现），据此误判"必须重嵌"会白做
+  - ⚠️ **适用边界（不外推）**：覆盖 14 条文本、单一模型 fp32；**未覆盖** q8/量化 dtype、超 512 token 截断行为、其他 embedding 模型 ⬛
+  - 💡 **由此打开一个架构选项**：TS 侧 embedding 已证明与 Python 侧等价 → 若向量存储改用 `sqlite-vec`，可**彻底去掉 Python 运行时**（ChromaDB 91MB + 模型进程），与「全面 TS 化」同向。**未拍，见 `docs/dsh/dsh-cloud-deployment.md` §8**
 
 **DSH-2.6 - 阶段收口复核**
 
@@ -171,7 +193,7 @@
 - [ ] `sandbox/` 接入（替代 IP/目录/SSRF 单一拦截）→ 2.7.1（Linux 侧）
 - [ ] `interaction/` 接入（新增高危工具审批流）→ 2.7.1
 - [ ] `session/` 接入（升级 trajectory）→ 2.8.2
-- [ ] **S0–S4 最小可验证切片**（定义与勾对子项见文档 §3.6）：S0 一条消息完整生命周期 → S1 +interaction 审批 → S2 +compaction → S3 +sandbox 三档 → S4 +记忆最小闭环（**S0 另需验 B 段：Gateway 在 `larry` profile 下能否起 HTTP**，见上方通信面定型区块）
+- [ ] **S0–S4 最小可验证切片**（定义与勾对子项见文档 §3.6）：S0 一条消息完整生命周期 → S1 +interaction 审批 → S2 +compaction → S3 +sandbox 三档 → S4 +记忆最小闭环（**B 段 Gateway 能否起 HTTP 已于 2026-09-10 实测判定：不成立** → B 段定死走 SDK，详见 `docs/dsh/dsh-migration.md`「B 段 Gateway 路线实测判定」）
 - [ ] **A 段自定协议设计（通信面定型派生）**：前端 ↔ 自做云端服务 —— **流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全部自实现**（中转方案主要成本项；官方 Gateway 白送的恰是这部分）
 - [ ] **首验：跨进程 resume 的 id collision 定性**（Claude 判"可能是 SDK 缺口或姿势问题" vs Qoder/Trae 判"固定 ID 所致"，两说未收敛）→ 影响 2.4.1 / 2.8.2 的 fork / resume 承接叙事
 - [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升——不可量化但真实的 go/no-go 信号。文档 §3.7
