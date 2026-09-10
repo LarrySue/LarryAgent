@@ -1,0 +1,17 @@
+{
+  "name": "@larryagent/plugin-sandbox-dialect",
+  "version": "0.0.0",
+  "description": "Windows sandbox denial-dialect fix: extends dsh-sandbox-local so EPERM ('operation not permitted') and zh-CN localized denials are recognized as sandbox denials.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-sandbox-local": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-sandbox-local": { "optional": true }
+  }
+}

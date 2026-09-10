@@ -96,6 +96,131 @@ Step 1 卡住半天以上，或结论是"必须改第三方源码" → 立刻回
 
 ---
 
+## Trae 报告 · DSH-2.5 ③-修复（2026-09-10）
+
+> 基线 `dsh@0.1.2-rc.1`，本机 Windows（zh-CN）。**不动第三方源码**，修复落在我们自己的 provider 插件上。分层：🟢 实测 / 🔴 推断 / ⬛ 未测。
+
+### Step 1 —— 判定结论（先答案后动手）
+
+**1) `DENIAL_SIGNATURES` 有没有配置注入点？→ 没有。** ✗
+
+- 它是 `packages/sandbox/sandbox-local/src/index.ts` 里的**模块级 `const`**（`as const satisfies ...`），不是 Config 字段。
+- 该 provider 的 Config（schemastery，同文件 `LocalSandboxProvider.Config`）只暴露三项：`runnerCommand` / `runnerFailureSignatures` / `probeTimeoutMs` —— **没有任何 denial 签名字段**。
+- 因此 cordis patch 的 config 覆盖**够不到签名列表**。（`runnerCommand` 分支自带另一组签名 `['read-only file system','permission denied']`，同样不可扩。）
+
+**2) 若改不了上游，我们自己的接管点在哪？→ 在 provider 层，用我们自己的子类替换 `sandbox` row。** ✓
+
+- 消费层（`pwsh-sandbox` / `bash-sandbox` 的 `helpers.ts`）**不需要改**：它调 `matchesSignature(exitCode, stderr, signatures)`，签名单是**参数**（来自 `ConfinedArgv.denialSignatures`），我们把列表加宽即可生效。
+- `ConfinedArgv.denialSignatures` 由 provider 的 `confine(argv, policy)` 组装 —— **这就是唯一可注入的接缝**。
+- base bundle 的挂载点：`- id: sandbox` → `name: '@deepseek-ai/dsh-sandbox-local'`（`packages/bundle/base/cordis.patch.yml`），可被 profile patch **disable + 换成我们的插件**。
+
+**倾向验证**：派发稿倾向"优先在我们自己的层做兼容"——**成立且可行**，故**未触碰第三方源码**，无需回报升级。
+
+### Step 2 —— 修
+
+**插件**：`harness/packages/plugin-sandbox-dialect/`（纯 ESM，无需构建）
+
+```js
+import LocalSandboxProvider from '@deepseek-ai/dsh-sandbox-local'
+
+export const WINDOWS_ACL_EXTRA_DENIALS = Object.freeze([
+  'operation not permitted', // ② node EPERM（跨语言；上游那条是 EACCES 文案）
+  '拒绝访问',                 // ① cmd zh-CN
+  '访问被拒绝',               // ① powershell zh-CN
+])
+
+export default class SandboxDialectProvider extends LocalSandboxProvider {
+  confine(argv, policy) {
+    const confined = super.confine(argv, policy)
+    if (process.platform !== 'win32' || confined.enforcement !== 'partial') return confined
+    return { ...confined, denialSignatures: [...confined.denialSignatures, ...WINDOWS_ACL_EXTRA_DENIALS] }
+  }
+}
+```
+
+- **只加宽 win32 的 windows-acl rung**：以 `enforcement === 'partial'` 为闸（源码 `STATIC_ENFORCEMENT` 里仅 windows-acl 是 partial；配了 `runnerCommand` 的路径是 `full`，保持原样）。**不引入跨后端并集**，避免 seam 注释警告的"声称后端从不产生的否认"。
+- **没有**新增"任何非零退出即 denied"这类逻辑 —— 仍是纯签名匹配（反向哨兵 C1/C3 验证）。
+
+**安装与挂载**（两步，缺一不可）：
+
+1. **实体复制**进 profile 的 node_modules（**不要 link**）：
+   ```
+   cp harness/packages/plugin-sandbox-dialect/{index.js,package.json} \
+      ~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/
+   ```
+   ⚠️ **必须实体复制**：link 方式下插件的 bare import 会从**源目录**（harness/）解析，拿不到 `@deepseek-ai/dsh-sandbox-local` 而失败（DSH-2.5 ① 踩过同一坑）。
+2. profile 用户层 `cordis.patch.yml`：
+   ```yaml
+   - id: sandbox
+     disabled: true
+   - insert:
+       - id: sandbox-dialect
+         name: '@larryagent/plugin-sandbox-dialect'
+   ```
+
+### Step 3 —— 验收
+
+#### 3.1 沙箱行为三链（复跑判据）🟢
+
+| 链 | 场景 | 结果 |
+|---|---|---|
+| ① 无沙箱写**未授权**目标 | 直接 spawn（node） | **exit 0，文件存在**（命令本身有效） |
+| ② 沙箱内写**授权**路径（workspace 内） | 经 runner confined | **exit 0，文件存在** |
+| ③ 沙箱内写**未授权**路径 | 经 runner confined | **exit ≠ 0，文件不存在**（三个子进程全部 `failedAndAbsent: true`） |
+
+#### 3.2 三子进程被拒场景 + 修复前后对照 🟢
+
+探针：`harness/scripts/sandbox-probe/sandbox-denial-probe.mjs`（每个子进程都做"无沙箱成功/沙箱内被拒"正反两组）：
+
+| 子进程 | 无沙箱写未授权 | 沙箱内写未授权 | 真实 stderr 关键行 | 官方签名 | **补丁签名** |
+|---|---|---|---|---|---|
+| **node** | exit 0，文件在 ✓ | exit 1，**无泄漏** ✓ | `Error: EPERM: operation not permitted, open 'D:\…\denied-*.txt'` | **false** ❌ | **true** ✅ |
+| cmd | exit 0，文件在 ✓ | exit 1，无泄漏 ✓ | `Access is denied.` | true | true |
+| powershell | exit 0，文件在 ✓ | exit 1，无泄漏 ✓ | `Set-Content : Access to the path '…' is denied.` | true | true |
+
+→ **② 层（EPERM 类别）实测复现且被修复**：node 报 `EPERM: operation not permitted`，官方签名集**不命中**，补丁后**命中**。**这一条与语言无关**（英文文案），是本次修复的实质价值。
+
+#### 3.3 全链路真实验证（真实 cordis Context + 真实 provider 实例）🟢
+
+探针：`harness/scripts/sandbox-probe/cordis-confine-check.mjs`。起两个最小 cordis 应用，分别加载**官方 provider** 与**我们的插件**，对同一 argv 调 `confine()` → 用其返回的 argv 真实 spawn 受限进程 → 判定：
+
+```
+official: enforcement=partial, denialSignatures=[access is denied, access to the path, permission denied]
+          keyStderr=Error: EPERM: operation not permitted, open '…'   → denied=false
+patched : denialSignatures=[…同上…, operation not permitted, 拒绝访问, 访问被拒绝]
+          keyStderr=Error: EPERM: operation not permitted, open '…'   → denied=true
+verdict: { officialDenied:false, patchedDenied:true, fixWorks:true,
+           extraSignatures:[operation not permitted, 拒绝访问, 访问被拒绝] }
+```
+这是**修复生效的最强证据**：真实 provider 实例（`enforcement=partial` = windows-acl rung）、真实受限 spawn、真实 stderr、真实判定逻辑，对照干净。
+
+#### 3.4 反向哨兵（缺一不可，全过）🟢
+
+| 哨兵 | 输入 | 期望 | 实测 |
+|---|---|---|---|
+| **C1 runner 故障不得被判 denied** | exit 127 + `windows-acl-run: CreateProcessAsUserW failed (Win32 2)…` | 两者皆 false | **official=false, patched=false** ✅ |
+| **C2 正向对照** | 受限子进程**主动打印** `Access is denied.` | 仍判 denied | **两者 true** ✅（匹配逻辑未坏） |
+| **C3 一般失败不得被判 denied** | exit 3 + `some ordinary failure` | 两者皆 false | **official=false, patched=false** ✅ |
+
+fail-closed 的区分能力完好：**denial（命令跑了被拦）** 与 **runner 故障（命令没跑）** 仍可区分。
+
+### ⚠️ 两处必须如实说明的偏差与边界
+
+1. **① 层（本地化）在本机我的路径下未复现中文**：我用「runner 直调 + 三个子进程」实测，**cmd 输出 `Access is denied.`、powershell 输出 `Access to the path … is denied.`（英文）** —— 与 `dsh-local-env.md` §4 记录的 WB 实测中文（`拒绝访问。` / `对路径"…"的访问被拒绝。`）**不一致**。
+   → 我只主张：**在我这条路径上**本机 zh-CN 环境输出英文，官方签名已命中 ① 场景；中文签名（`拒绝访问`/`访问被拒绝`）**作为防御性补充保留**（其他路径/环境若输出中文则能命中）。🔴 两处实测差异的成因**未查明**（可能与调用姿势/受限令牌下的 UI 文化有关），我不下结论。
+2. **未在 dsh profile 内做端到端**（挂载后由模型实际触发一次被拒命令、观察 `[sandbox: file access denied]` 标记）：**未测** ⬛。原因：profile 侧需引导模型触发工具调用（慢、需 key、且 `dsh-local-env.md` §1/§6 记录了孤儿锁与冷启动超时噪声）。**插件行为已由 3.3 的真实 cordis 链路证实**，挂载语法见 Step 2 第 2 步，但"profile 内 row 替换 + 模型可见标记"这条端到端路径**本轮未跑**，不据此声明。
+3. **英文 Windows / 其它语言 / pwsh 7**：未测 ⬛（按派发稿边界不要求）。但 ② 层（EPERM）在设计上就是语言无关的修复，英文 Windows 同样受益。
+
+### 交付物与隔离
+
+- 插件：`harness/packages/plugin-sandbox-dialect/`
+- 探针：`harness/scripts/sandbox-probe/sandbox-denial-probe.mjs`（三子进程正反+哨兵）、`harness/scripts/sandbox-probe/cordis-confine-check.mjs`（全链路 cordis）
+- 本机安装点（演示用，可删）：`~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`
+- 探针临时目录：`D:\Code\sandbox-probe\`（仓库外）
+- 未动：第三方包源码（`node_modules` 零修改）、`client/`、`docs/ archive/ .workbuddy/`；`ref/dsh-bare` 只读。
+
+---
+
 ## 📌 上一轮派发（2026-09-10 · DSH-2.5 ①②⑤）— 已交付并通过 WB 复验，待清理
 
 > **回复位置**：本报告完成后写在本节下方，标题用 `## Trae 报告 · DSH-2.5 <日期>`。**不要覆盖本节派发内容**（WB 确认完成后会清理）。
