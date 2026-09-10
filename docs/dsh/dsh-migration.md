@@ -396,15 +396,69 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 1. **A 段退出 DSH 选型范围**——它是我们自己的前后端协议，DSH 的 sdk/acp/Gateway 在这里**都不参与**。此前"哪个面做前端"的全部讨论对 A 段无效。
 2. **B 段是同机 → 此前"sdk/acp 跨网络出局"的排除理由对 B 段不成立**。⚠️ **这不等于要用 sdk**：Gateway 在同机同样可用（localhost HTTP + SSE）。**「中转」不导致能力降级——B 段的 sdk / Gateway 选型仍然开放。**
-   - **sdk 路线**：多会话 = 多子进程（单人低频可接受），但无会话树/历史分页/fork，且 **`resume id collision` 未收敛**（§3.4 硬发现）是隐患。
-   - **Gateway 路线**：单进程多会话 + **官方会话树 / fork / cancel / 历史分页 / 重连追赶 + gap 修复 + 2s 心跳**——**这些恰是中转方案下我们本要自做的部分**（见代价①）。
-   - **WB 倾向**：**B 段仍取 Gateway**，中转省的是 A 段（前端）的复杂度，不是 B 段的。⚠️ **待验**：Gateway 在 `larry`（headless）profile 下能否起 HTTP 服务——已实测的 8123/401 是 **web profile** 路径，**结论不可跨 profile 外推**。
-3. **C 段在中转架构下变得更自然**：指令下发与结果回传发生在**我们的服务 ↔ C 侧**（PC 客户端本就要与云端保持长连/轮询），**完全不经过 DSH**。→ L2 从"DSH 通信面的缺口"降级为"我们自己协议内的事"，**这是中转方案相对直连的一个实质优势**。
-4. **官方 WebUI / UI 自由度三层（L1 换皮 / L2 换部件 / L3 换壳）的定位改变**：
+   - **sdk 路线**：**单进程多会话**（🟢 2026-09-10 实测修正，见下），无会话树/历史分页/fork，且 **`resume id collision` 未收敛**（§3.4 硬发现）是隐患。
+     > 🔴 **更正一条曾长期存在的误述**：旧文称 sdk「多会话 = 多子进程」——**不成立**。`dsh-sdk-client` 官方契约原载 `DeepSeekHarness` owns **one** runtime subprocess **across many sessions**；CVM 实测 20 个 session 句柄 **RSS 增量 0.00 MB**、进程数恒为 1。详见 `docs/dsh/dsh-cloud-deployment.md` §2.4。
+   - **Gateway 路线**：~~单进程多会话~~（⚠️ **此项不再构成相对 sdk 的优势**——sdk 同样是单进程多会话）+ **官方会话树 / fork / cancel / 历史分页 / 重连追赶 + gap 修复 + 2s 心跳**——**这些仍是 Gateway 独有的**，恰是中转方案下我们本要自做的部分（见代价①）。
+   - 🔴 **「B 段取 Gateway」的原倾向已于 2026-09-10 被实测推翻** —— Gateway **无法脱离 `dsh-web-app` 独立起 HTTP**。详见下方【B 段 Gateway 路线实测判定】。**当前有效结论：B 段只能走 SDK（stdio）。**
+3. **【会话状态策略】（老大 2026-09-10 洞察 → WB 拍板，属 A 段设计约束）**
+
+   > **问题来源**：老大指出「侧栏长期存在十几二十个会话（懒得归档），这些算不算并发？」→ **不算**。这暴露了一个此前混淆的概念，并直接改变了 2G/4G 之争的性质。
+
+   **核心区分（勿再混为一谈）**：
+
+   | 层 | 内容 | 内存成本 | 谁是决定方 |
+   |---|---|---|---|
+   | **① 会话元数据**（列表/标题/时间） | 侧栏那十几二十条 | **≈ 0**（几十 KB） | — |
+   | **② 会话历史内容** | 磁盘上的 `session.jsonl.zstd` | **0**（不驻留） | — |
+   | **③ runtime 会话状态** | 单进程内跑过 prompt 的会话 | **≈ 2.24 MB/个**（🟢 实测） | **我们（策略）** |
+
+   **→ 「侧栏 N 个会话」几乎不占内存；真正计费的只有 ③，而它的边际成本低到无需为省内存牺牲体验。**
+
+   **WB 拍板（一期策略）**：
+
+   1. **不设激进的 LRU 淘汰** —— 实测外推 20 个会话仅 ≈182 MB（占 2C2G 约 9%），**为省这点内存牺牲"顺着历史顺手查"的体验不划算**。
+   2. **三态模型**（A 段协议须能表达）：`cold`（仅元数据）/ `warm`（历史已加载，用于 UI 渲染，未发 LLM）/ `hot`（runtime 内活跃）。
+   3. **真正的约束不是内存，是 token 成本** —— `contextWindow = 1,000,000` 很宽，但每次恢复会话的 context 重建**要付真金白银**。故策略优化目标应是**减少无谓的 context 重建**，而非减少常驻。
+   4. **多终端叠加**：PC + 手机同时看同一会话属 A 段协议职责（我们的服务），与 DSH 无关。
+
+   **对 A 段协议的硬要求**：协议须能区分「打开看看」与「真的发一条」——前者不得触发 LLM 调用。
+
+   ⚠️ **未闭合**：接近 100 万 token 上限时的 compaction 行为未测（18 轮远未触顶，且实测 compaction 事件计数为 0，**不可据此断言无此机制**）。若将来出现超长会话须重测。
+
+4. **C 段在中转架构下变得更自然**：指令下发与结果回传发生在**我们的服务 ↔ C 侧**（PC 客户端本就要与云端保持长连/轮询），**完全不经过 DSH**。→ L2 从"DSH 通信面的缺口"降级为"我们自己协议内的事"，**这是中转方案相对直连的一个实质优势**。
+5. **官方 WebUI / UI 自由度三层（L1 换皮 / L2 换部件 / L3 换壳）的定位改变**：
    - **L1 / L2 依赖 `dsh-web-app` roster** → 中转后**基本用不上**（我们不经官方 shell 承载前端）。
    - **L3 由"最高成本备选"变为主路径**。
    - **但可复用性仍然有效**：41 个 `dsh-client-*` 包可 `pnpm add` 直接依赖（exports 含 `./src/*`，源码随包分发）→ **"自做前端"的成本是"用官方组件拼"，不是"从零写"**。
    - 官方 web surface 仍保留一个用途：**云端 DSH 的本地管理 / 调试面**（运维视角）。
+
+### ⭐ B 段 Gateway 路线实测判定（🟢 2026-09-10，CVM 实跑，推翻前述倾向）
+
+**结论：Gateway 无法作为独立的 HTTP 服务端存在，B 段不具备启用 Gateway 的条件。→ 退到 SDK（stdio）。**
+
+证据链（每条均为实跑，非推断）：
+
+| # | 事实 | 等级 |
+|---|---|---|
+| 1 | **`larry` profile 不是预置的** —— `dsh --profile larry` 报 `profile does not exist`，须自行 `plugin add` 组装 | 🟢 |
+| 2 | **`plugin add` 依赖 `pnpm`** —— 缺它则命令直接失败（CVM 初始无 pnpm） | 🟢 |
+| 3 | **默认 `add` 会拉到错误版本** —— `@deepseek-ai/dsh-api-gateway` 的 `latest` 指向 **`0.0.1-rc.1`**（远旧于主包的 `0.1.2-rc.1`），其依赖树引用 **`@deepseek-ai/dsh-type-meta`——该包在 npmmirror 与官方 registry 均 404、不存在** → install 直接失败。**必须显式锁版本 `=0.1.2-rc.1`**（与主包同版本） | 🟢 |
+| 4 | **`plugin add` 只写入 `dependencies`，从不写入 `dsh.profile.bundles`** —— 装了不等于加载。实测 layer 数：web profile **145** / 自组 larry **85**（仅 `dsh-base`） | 🟢 |
+| 5 | **手工补进 `bundles` 会报错**：`profile bundle "@deepseek-ai/dsh-host-webserver" declares no dsh.bundle in its package.json` | 🟢 |
+| 6 | **55 个声明了 `dsh` 字段的包里，能起 HTTP 的 bundle 只有 `@deepseek-ai/dsh-web-app` 一个**（即官方 browser UI 那个包）。`dsh-api-gateway` / `dsh-host-webserver` 均**未声明 bundle**，只是它的内部件 | 🟢 |
+| 7 | 而在已能正常起 HTTP 的 **web profile** 下，gateway 的唯一 RPC 路径 `/api/remote.mux` **带 cookie 仍 404**（见 `dsh-cloud-deployment.md` §7） | 🟢 |
+
+**判定**：想让 B 段走 HTTP，唯一入口是加载 `dsh-web-app`（连带官方 UI 及其鉴权体系）；而即便如此，gateway 的 RPC 端点仍拿不到。**Gateway 路线在当前版本不成立。**
+
+**连带成立的三条推论**：
+
+1. **B 段 = SDK（stdio）** → 与 `dsh-cloud-deployment.md` §7.1 合并得：**自做服务与 DSH 必须同机，不可拆分到两台**。
+2. ** Gateway 白送的能力（会话树 / fork / cancel / 历史分页 / 重连追赶 / gap 修复 / 2s 心跳）拿不到** → 这些须在 A 段自做。**注意：它们本就在本「代价①」清单里**，故此项是**工作量确认**，不是新增黑天鹅。
+3. **重估触发线 T2 的前提需重读**：T2 原设为「官方 web surface 经反向代理对外可行」，但既然 Gateway 不可独立起 HTTP，T2 的可行路径**只剩反向代理 `dsh-web-app` 整体**（即把官方 UI 一起代理出去），而非只代理 gateway。
+
+**尚未排除（勿外推）**：Gateway 可能需 typert 实例注册后才挂载路由；或后续版本补上 `dsh.bundle` 声明。**本次只能判定「当前版本不成立」，不能判定「官方永远不会做」。**
+
+---
 
 **代价（诚实列出，勿只看优势）**：① **流式转发、会话管理、鉴权、多端同步、重连追赶与断线补帧——全部自实现**；这些恰是官方 Gateway 白送的能力（重连追赶 / gap 修复 / 2s 心跳），走中转等于**用 A 段的自由度换 B 段之外的自研量**。② A、B 两段两次序列化 + 转发，延迟叠加。③ 会话/事件状态在我们的服务里需维护一份映射。
 
@@ -429,7 +483,22 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 - **参考源（已完成）**：DSH 主仓 clone 到 **`ref/dsh-bare/`**（项目根独立目录，`.gitignore` 排除、**不入 git**），锁定 `dsh-v0.1.2-rc.1`（裸仓库按 tag 直读，无工作区）。查阅方式见 §2.2
 - **代码存在形态：A 案已判定成立（DSH-2.0 · 2026-09-08）** —— LarryAgent = **独立仓库 + 构建 Cordis bundle 挂载**，**不 fork**。8 项必需能力**全部可经公开挂载面**（Cordis bundle / preset / patches / 配置 / MCP 桥）获得，**无一项需修改 DSH 上游代码**
   - **架构根因**：DSH 核心能力层是 **Service Definition / Provider / Consumer** 三分架构（capability seam 设计）——`ctx.approval` / `ctx.compaction` / `ctx.sandbox` / `ctx.fs` / `ctx.tools` 均为**契约**，默认实现只是**一个 Provider**。我们的全部必需能力 = 提供自己的 Provider / answerer / listener，消费者与模型侧不动
-  - **证据**：逐项表见 `docs/dsh/dsh-form-probe-claude.md`。🟢 **WB 本地复核（`git show` 锁定了 `dsh-v0.1.2-rc.1`）：机制 8/8 属实**；行号 2 处偏差（#2 实际 154 行、#3 实际 22 行）——**报告的行号不可全信，机制结论可信**
+  - **证据（逐项表，🟢 纯源码级判定，2026-09-08）**：
+
+    | # | 能力 | 可达通道 | 证据（`文件:行号`，锁定版） |
+    |---|---|---|---|
+    | 1 | **记忆双写**（会话事件 → 外部 SQLite + ChromaDB） | ① session.event 订阅（数据源）② 自做 cordis 插件做外部写入（SQLite/ChromaDB 是普通 Node/Python 依赖，插件内可用）③ MCP 桥（若走 Python 侧） | 事件流：`packages/core/session/src/known-event-types.ts:66-69`（tool/call、tool/result）实测见 `dsh-pysdk-probe-claude.md` §4；B1 挂载实测 §3 |
+    | 2 | **角色机制**（5 角色 persona + 工具集） | ① 静态：patch persona（B2 实测）② **动态：systemPrompt context 注入**（approval service 先例——scope.systemPrompt.context({ text: (ctx) => ... }) 按 agent 状态动态返回） | persona patch：`packages/bundle/sdk-app/cordis.patch.yml`（system-prompt 行）；动态注入先例：`packages/interaction/user-approval/src/index.ts:113-128`（ctx.inject(['systemPrompt']...context)） |
+    | 3 | **工具**（shell / file_ops / web_search） | cordis 插件注册 ctx.tools（tool-fs 标准模式） | `packages/fs/tool-fs/src/index.ts:52`（`export const inject = ['tools', ...]`）+ `apply(ctx)` 注册工具；B1 实测可挂载 |
+    | 4 | **2.7.2 审批回答侧**（前端批准/拒绝回传） | **scope-filtered answerer 瀑布**：自做 TS answerer 插件监听 approval 请求 → 返回 outcome（claim）或 next() 委托。**这是公开的 cordis 服务调用面，不是 agent loop 内部** | `packages/interaction/user-approval/src/index.ts:44-54`（fail-closed + composed answerers 注释）；`packages/extensions/tool-cordis/src/api-catalog.ts:3033-3038`（"Ask composed answerers... Return an outcome to claim the request or call `next()` to delegate. Scope-filtered dispatch"）——answerer 注册 = cordis listener 模式 |
+    | 5 | **记忆保鲜 / 用户画像 / 知识库**（自做插件） | 纯自做逻辑 + ctx 服务/事件消费（不触 agent loop 内部） | B1 挂载实测（`dsh-pysdk-probe-claude.md` §3）；订阅模式同 #1 |
+    | 6 | **compaction 策略定制** | **Service Definition / Provider 拆分**：`ctx.compaction` 是契约，`compaction-basic` 只是默认 Provider——自做 Provider 插件注册 `ctx.compaction` 即换策略，消费者（command-compact 等）不动 | `packages/compaction/README.md:29-30`（"The shared condensation contract... `ctx.compaction`" / "registers `ctx.compaction`"）；`packages/compaction/command-compact/src/index.ts:66`（消费者 `ctx.compaction.compactNow(...)`——只依赖契约） |
+    | 7 | **session 事件流消费** | session.event 订阅（cordis 或协议面） | 实测（`dsh-pysdk-probe-claude.md` §4）+ `known-event-types.ts` 全量 |
+    | 8 | **端侧执行器 Windows 沙箱** | `ctx.sandbox` Service Definition + **服务实现替换是公开面**（fs-sandbox 先例："Registers as `ctx.fs`... loading it INSTEAD OF dsh-fs-local... is the whole swap——model-facing tools are untouched"）；Windows 后端 = sandbox-local restricted token + sandbox-windows-acl | `packages/fs/fs-sandbox/src/index.ts:44-46`（实现替换模式）；`packages/sandbox/sandbox-local/README.md:12`（"Windows uses the ACL restricted-token runner"）；`packages/sandbox/README.md:29-31`（ctx.sandbox/ctx.sandboxPolicy 服务） |
+
+    **8/8 全部 🟢**——每项的证据都是"公开挂载面可达"的机制性证据（服务实现替换 / provider 注册 / listener 瀑布 / context 注入 / 工具注册），无一项触及"必须改 DSH 核心循环"。
+    🟢 **WB 本地复核（`git show` 锁定了 `dsh-v0.1.2-rc.1`）：机制 8/8 属实**；行号 2 处偏差（#2 实际 154 行、#3 实际 22 行）——**报告的行号不可全信，机制结论可信**
+  - **反向举证（主动找推翻自己结论的证据，未找到否决项）**：① **运行中热重载 patch 级配置** ❌ 确认不可行（`patchReload: startup` 出自 sdk-app README"Configuration changes require restart"）——**但非 A 案否决**：patch 是启动期组合，运行期可变性由 systemPrompt context 动态注入（#2）+ ctx 服务动态实现（#4/#6/#8）覆盖；需重启的是部署期配置（角色清单、工具启用表），非对话期行为，单用户可接受。② **同会话运行中热切角色（含工具集）** ⚠️ 未找到公开 API（工具集在插件 apply 时经 ctx.tools 注册）——**非否决**：产品树当前无此承诺；会话级角色（新建会话选角色）可经 preset 达成，**记入 DSH-3 首验输入**。③ **运行中替换已注册的 ctx 服务实现** ⚠️ 未查证 cordis 是否支持——**非否决**：服务实现替换是"启动时加载哪个插件"的决策（fs-sandbox 的 swap 语义），部署期选择足够
   - **不选 B 案的理由**：8 项无一项触及 agent loop / session 内核 / 事件存储；fork 的代价（每次上游发版 merge 一个 alpha 框架的破坏性变更）换不来任何必需收益。升级 SOP 在 A 案下 = 更新依赖版本 + replay 回归
   - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 

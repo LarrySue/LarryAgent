@@ -90,7 +90,7 @@
 
 **DSH-2.0 - 代码存在形态判定** ✅
 
-- [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**。8 项必需能力全部可经公开挂载面获得，无一项需改上游。架构根因 = DSH 核心能力层是 Service Definition / Provider / Consumer 三分架构。报告 `docs/dsh/dsh-form-probe-claude.md`；🟢 WB 本地复核（机制 8/8 属实，行号 2 处偏差）。**结论已折入文档 §3.6，本区不重复**
+- [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**。8 项必需能力全部可经公开挂载面获得，无一项需改上游。架构根因 = DSH 核心能力层是 Service Definition / Provider / Consumer 三分架构。**逐项证据表已内联决策稿 §3.6**；🟢 WB 本地复核（机制 8/8 属实，行号 2 处偏差）。**结论已折入文档 §3.6，本区不重复**
 - [x] 附带确认：~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2.1 实测推翻**：我们采用的 `larry` profile（dsh-base + dsh-headless）manifest 为 **`patchReload: live`** 🟢 → **配置热重载默认已开，不用 hmr 插件、不必按"改配置必重启"规划**。第 0 项判的 `startup` 出自 sdk-app bundle，不适用我们（决策稿 §3.6 已同步）
 
 **DSH-2.1 - 配套 TS 工程**（已派发 Trae 2026-09-09）
@@ -295,7 +295,7 @@
 ### 待派发
 
 - [ ] **DSH-3 prototype 派发**：Trae / Claude 分工与节奏
-- [x] ~~DSH-2 任务 0 派发~~ **已完成**（Claude 2026-09-08，报告 `docs/dsh/dsh-form-probe-claude.md`：A 案成立、8/8 机制属实，WB 复核订正 2 处行号）
+- [x] ~~DSH-2 任务 0 派发~~ **已完成**（Claude 2026-09-08，报告已吸收内联至决策稿 §3.6 逐项证据表：A 案成立、8/8 机制属实，WB 复核订正 2 处行号）
 
 ---
 
