@@ -386,3 +386,86 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 - [x] **AGENTS.md 阅读**（capability seam / session JSONL / LLM provider / 安全性声明）
 - [x] **releases 阅读**（版本线 / 性能回退官宣 / 无 GA 时间表）
 - [x] **第 0 项：Py SDK 一等 / 二等判定** ✅ 2026-09-08 终裁——三方并行实测（Trae / Claude 判一等、Qoder 判二等）→ **判二等，老大确认 → 定 A-framework**。三份实测报告（`dsh-pysdk-probe*.md`）永久保留于 `docs/dsh/`；判定与证据见决策稿 §3.5
+
+---
+
+### DSH-2.4 - 测试隔离基建（Vitest）✅（2026-09-09，Claude 实现 / WB 复验）
+
+> **DSH 迁移线第 2 阶段（DSH-2）子任务 4**。原文为 Claude 交付报告 `exchange/dsh-24-vitest-isolation-claude.md`，2026-09-10 归档吸收至本区（交流区不留独立报告文件）。
+> **结论、WB 复验与三条复验发现见 `TODO.md`「DSH-2.4」段**（现态唯一事实源）；本节保留**原始输出、七原则对照表与踩坑清单**（治理约定：报告结论不复制，过程证据归档）。
+
+- **返工背景**：原交付 `8796b0c` 经 WB 复验 → 硬验收 ①② 通过、③ 结论成立但**机制从未执行**（key 扫描挂在 worker 下不触发的 exit 钩子）。返工修复 R1/R2/R3 并补 2 组反向哨兵，提交 `fb30d77`
+- **验收口径**：五条全部达成 —— ① fail-fast 真的会拦 ② 正常用例绿 ③ R1 反向哨兵（人为写 key 明文 → teardown 告警）④ R2 反向哨兵（`DSH_HOME` unset 被白名单拦）⑤ 真实库零触碰
+
+**§2 三条硬验收原始输出**
+
+```
+# 硬验收 1 — fail-fast 真的会拦
+ FAIL  tests/sentinel-failfast.test.ts > ... > 污染 DSH_HOME 指向真实库时应被隔离守卫拦截
+Error: [test-isolation] FAIL: DSH_HOME 解析为 D:\Code\LarryAgent\.dsh-home，不在临时根 D:\Temp\Sys 下。
+测试必须运行在临时 DSH_HOME 内——请勿覆盖 DSH_HOME 为真实路径或删除该环境变量。
+（正常路径 tests/guard.test.ts 同文件全绿——护栏存在且不误伤）
+
+# 硬验收 2 — 真实数据未被触碰
+跑前 mtime: backend/data/larry.db 1788027498
+跑后 mtime: backend/data/larry.db 1788027498   ← 未变
+.dsh-home/sessions/ 子目录数：3（Trae DSH-2.x 产物，本次零新增）
+
+# 硬验收 3（R1 反向哨兵）— 人为写 sk-abcdefghijklmnopqrstuvwxyz123456 到临时目录
+[test-isolation] ⚠️ KEY RESIDUE: 临时目录残留疑似 key 明文（1 处）——可能 --real-api 模式泄漏，须人工检查: ...larry-test-VpPXZI
+[test-isolation]   at ...larry-test-VpPXZI\simulated-leak\creds.txt
+[test-isolation] global teardown 清理: ...larry-test-VpPXZI
+（告警先于清理行 = 先扫后删顺序生效；干净路径 0 告警；真实 .dsh-home grep sk-{16,} 零命中）
+```
+
+**§3 七原则 Vitest 等价对照表**（参照物 `backend/tests/conftest.py`，平移原则不平移代码）
+
+| # | Python 原则 | Vitest 等价实现 | 状态 |
+|---|---|---|---|
+| 1 | 会话级临时配置（真配置为基底只换持久化路径） | `isolated-setup.ts`：mkdtemp 临时 `DSH_HOME`（sessions/storages 全落临时）；**平移说明**：A-framework 下配置源是 profile 而非单一 yaml，本阶段隔离对象 = `DSH_HOME`（数据落点），配置基底平移推迟到 DSH-4 有真实 config 时 | ✅ 等价 |
+| 2 | 环境变量时序（conftest 先于收集） | **setupFiles 先于测试文件静态 import**——已实测（时序探针：setupFiles 设的 env 在 import 时可见） | ✅ 实测确认 |
+| 3 | key 一律占位符 | 基建不注入任何 key（DSH key 走环境变量）；**key 残留自检在主进程 teardown 内、rmSync 之前**（R1 修复：原挂在 worker exit 钩子从未触发；先扫后删顺序写死，命中高警） | ✅ R1 |
+| 4 | 密钥判定模式匹配（`endswith("_api_key")` 禁子串） | 平移说明：本阶段基建无密钥字段替换需求（不生成配置）；**该原则在 DSH-4 生成临时 config 时生效**——已记录为后续实现的硬约束（勿用 `"token" in k` 子串） | 📌 推迟生效（本阶段无配置生成） |
+| 5 | 断言"行为"非"动作" | `assertIsolated()`：**正向白名单**——resolve(DSH_HOME) 必须位于临时根（tmpdir）之下（R2 修复：原"≠真实库"精确比对有 unset 盲区——resolve('')=cwd 被放行，而 unset 时 dsh 向上查找写仓库根 .dsh-home；白名单一次覆盖：指向真实库 / 位于真实库内 / unset 落 cwd） | ✅ R2 |
+| 6 | `--real-api` 开关 | 平移说明：本阶段无真实 API 用例（无 LLM 测试）；开关语义在 DSH-6 接 e2e 时实现（默认跳过 + 显式开注入 key + 残留高警） | 📌 推迟（无真实 API 用例故无开关需求） |
+| 7 | 清理失败告警不静默 | **globalSetup 返回 teardown 函数**（主进程，唯一可靠位）：先扫 key 残留（命中高警）后删全部 `larry-test-*`，删除失败打 stderr。（原 setupFiles 的 `process.on('exit')` 在 worker 下不触发——实测失效已移除） | ✅ |
+
+**关键时序发现（原则 2 的实测答案）**：setupFiles 先于测试文件静态 import 执行（Vitest 保证）——等价 conftest 先于 pytest 收集。**但 `process.on('exit')` 清理钩子在 Vitest worker 下不触发**（线程/子进程模式差异），必须用 globalSetup 返回值做 teardown——这是 Python conftest 的 atexit 平移时**不成立**的一条，已用 globalSetup 兜底。
+
+**§4 可复跑步骤**
+
+```bash
+cd harness
+pnpm add -D vitest               # 已装
+npx vitest run tests/guard.test.ts              # 正常路径：绿
+npx vitest run tests/sentinel-failfast.test.ts  # 哨兵：红（护栏在）
+npx vitest run tests/sentinel-unset.test.ts     # R2 反向哨兵：红（unset 被拦）
+npx vitest run tests/sentinel-key-residue.test.ts # R1 反向哨兵：绿 + teardown 告警 KEY RESIDUE
+# package.json 已加 test:isolated / test:isolated:sentinel
+```
+
+**§4 踩坑清单**
+
+1. **Vitest 5 无 `globalTeardown` 配置项**——用 globalSetup 返回值 teardown 模式
+2. **`process.on('exit')` 在 worker 下不触发**——清理钩子须放主进程（globalSetup teardown）
+3. **`import.meta.dirname`** 可用（Node 20.11+），但哨兵文件里 `resolve` 等须显式 import（首版哨兵因漏 import 报 ReferenceError 而非守卫拦截——教训：哨兵自身也要先能跑）
+4. vitest 临时目录前缀用 `larry-test-`（与 Python `larry_test_` 区分避免误清）
+
+**§5 未解决的技术不确定性（当时陈述，现态以 TODO 为准）**
+
+1. **`.dsh-home` 向上查找机制已确认**（仓库根 .dsh-home/ 有 `--D-Code-LarryAgent-harness--` sessions 子目录 = Trae 从 harness 跑时写入的实证）——**但 DSH 内部如何定位（cwd 向上找 vs 其他）未读源码确认**；隔离基建以"强制 DSH_HOME"覆盖该机制，不依赖其内部行为，故不阻塞
+2. **setupFiles 的 env 是否覆盖所有 worker 并发场景**：多 worker 并行时每个 worker 独立跑 setupFiles（各自 mkdtemp 各自 DSH_HOME）——单 worker 已验证；多 worker 的目录隔离逻辑相同，但未用多 worker 实测（当前测试量小默认单 worker）
+3. **哨兵测试的"污染窗口"**：哨兵在模块顶层污染 env → beforeEach 拦截。若未来业务代码在 **import 时** 就启动 DSH（比 beforeEach 更早），守卫需前移到模块加载级——当前守卫粒度（beforeEach）覆盖"测试执行前"，对"import 副作用"的保护需 DSH-6 引入真实业务模块时复核
+
+**产物清单**（均在 `harness/` 内）
+
+```
+harness/vitest.config.ts                     # setupFiles + globalSetup 注册
+harness/tests/isolated-setup.ts              # 隔离基建（临时 DSH_HOME + 守卫 + key 自检）
+harness/tests/global-setup.ts                # teardown 兜底（R1: 先扫 key 后删目录，主进程）
+harness/tests/guard.test.ts                  # 哨兵 1：隔离生效（绿）
+harness/tests/sentinel-failfast.test.ts      # 哨兵 2：fail-fast（红=护栏在）
+harness/tests/sentinel-unset.test.ts         # R2 反向哨兵：delete env 必须红
+harness/tests/sentinel-key-residue.test.ts   # R1 反向哨兵：写 sk- 文件 teardown 告警
+harness/package.json                         # 加 test:isolated 脚本
+```
