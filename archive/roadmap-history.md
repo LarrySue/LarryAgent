@@ -389,7 +389,49 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 
 ---
 
-### DSH-2.4 - 测试隔离基建（Vitest）✅（2026-09-09，Claude 实现 / WB 复验）
+### DSH-2 - 代码形态 + 环境准备 ✅（2026-09-08 → 2026-09-11 整体归档）
+
+> **DSH 迁移线（A-framework）第 2 阶段**，阶段号与决策稿 `docs/dsh/dsh-migration.md` §3.6 一一对应。
+> **本段性质 = 冷历史快照**：只记结论 / 状态 / 转出项。**活跃权威仍留在 `docs/dsh/`**（不被本段覆盖）：环境规格表 / 8 项证据表 / 5 项退出条件 / 通信面定型（含 T1/T2/T3 触发线）见 `dsh-migration.md` §3.4 / §3.6；本机环境基线见 `dsh-local-env.md` §4 / §6 / §8 / §9 / §10；上云结论见 `dsh-cloud-deployment.md`。
+> **原始独立报告均已"吸收再删"**（`dsh-form-probe-claude.md` / `dsh-b1-plugin-probe-trae.md` / `dsh-23-vue-tauri-connect-trae.md` / `dsh-24-vitest-isolation-claude.md`）——内容等价落位 `docs/dsh/`，交流区不留报告文件。
+
+**子任务结论速览**
+
+| 子任务 | 状态 | 结论 / 落位 |
+|---|---|---|
+| **2.0** 代码存在形态判定 | ✅ | **A 案成立**：独立仓库 + 构建 Cordis bundle 挂载，**不 fork**；8 项必需能力全可经公开挂载面获得，无一项需改上游 → 决策稿 §3.6（WB 复核机制 8/8 属实）。附带：`larry` profile 的 `patchReload` 实测为 **`live`** |
+| **2.1** 配套 TS 工程 | ✅ | `harness/`（pnpm workspace）+ 包名前缀 `@larryagent/`；首个自做 Cordis 插件经 **B1 通道**挂载成功 → `dsh-local-env.md` §8 |
+| **2.2** 跑通官方 demo | ✅ | Windows 下 **npm 全局 `dsh@0.1.2-rc.1` 全部可用**（plugin add / `--dump-config` / `--help` / 完整会话 exit 0）；仅源码 `bin.ts` + tsx 入口会卡 → **默认走 npm 全局 `dsh`**。⚠️ 完整会话为交付方（Trae）证据，WB 未独立复跑 |
+| **2.3** Vue/Tauri → DSH 连通 | ✅ | 经 sdk profile（stdio JSON-RPC + 官方 TS SDK）发消息并收真实回包。**能力边界结论**：上行事件面宽（19 类）/ 下行方法面窄（`initialize` · `session.prompt` · `shutdown`）→ 通信面定型输入 → 决策稿「sdk 面实测能力边界」 |
+| **2.4** 测试隔离基建（Vitest） | ✅ | 详见下节（本段唯一保留全量详情者） |
+| **2.5** 退出条件实测（5 项） | ✅ | **5/5 全通过**（2026-09-10），见下 |
+| **2.6** 阶段收口复核 | ✅ | 上游最新已到 `0.1.5-rc.2`；**老大拍定不升基线** → 决策稿 §3.4 |
+
+**DSH-2.5 五项退出条件（✅ 全通过 · 主验证环境 = CVM）**
+
+1. `storage/` 外接 SQLite —— ✅ **可行**（`path` 可指任意绝对路径；反向哨兵证数据走 SQLite 非默认 json）→ `dsh-cloud-deployment.md` §2 / §5。副产品：联合 RSS 峰值 **192MB**
+2. `acp/` 契约稳定性 —— ✅ **通过**（`initialize` / `session.new` / `list` / `close` OK；`fork` / `load` / `delete` = `-32601`，对照 `resume` = `-32602` 证为方法缺失）
+3. Windows 端 `ctx.sandbox` provider —— ✅ **可用**（三档哨兵 + fail-closed；`enforcement=partial`）。⚠️ 方言缺口三层须修 → 修复件 + 挂载范式落 `dsh-local-env.md` §4 / §4.1 / §4.3
+4. Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；四组对照判据矩阵 → `dsh-local-env.md` §6
+5. TS 跑通 `bge-small-zh` 本地 embedding，与 Python 侧漂移比对 —— ✅ **无需全量重嵌**（漂移 `2.2e-7`，cosine ≥ 0.9999999999）。硬前提：预处理须严格对齐（否则产生 0.77 级假漂移）
+
+**DSH-2.6 收口复核（2026-09-11）**
+
+- 锁定 `0.1.2-rc.1`（09-03）vs 上游最新 `0.1.5-rc.2`（09-10）——**7 天 2 个 rc**。
+- **重跑形态测绘**：`packages/` 顶层目录 50 = 50；全仓 8,854 → 10,178 文件（+15%）；**8 项证据文件全在、机制签名 1:1 存续** → **A 案在 0.1.5-rc.2 上仍成立**。
+- 0.1.5 破坏性清单（Session 格式 V2→V3 / 移除 `ctx.agent` / persona 前后缀拆分 / Web slot `conversation`→`main` 等）→ 决策稿 §3.4。
+- **升级闸门未满足**（"性能回退修复"出处未找到 + 破坏性窗口未消化）→ **老大 2026-09-11 拍定：不升基线**（升级门槛太低会导致频繁升级适配）；DSH-3 写码按 `0.1.2-rc.1` API 走，升级当独立动作。
+
+**转出项（未随本次归档闭环，仍须执行）**
+
+- ① **沙箱方言修复件生产挂载落盘**（承 2.5③）→ DSH-3（见 `TODO.md` DSH-3 同名条；范式见 `dsh-local-env.md` §4.3）
+- ② **②「跨进程 resume 成功」定性**（原为 Trae 单方声明）→ DSH-3「首验 id collision 定性」
+- ③ **parentId**：**已裁——按线性记**（2026-09-11，不采纳会话树结构）
+- ④ 其余隐性欠账：Vue→Tauri IPC 自动化覆盖 = 老大定「后续推进中慢慢补」；⑤ 适用边界（量化 dtype / >512 token 截断 / 其他模型）= 归 DSH-4
+
+**关键判据（可复用）**：判据必须取自真实运行时；「机制存在」≠「实现真的走这条路」（须正反两组 + 反向对照）；`patchReload` 不可跨 profile 外推（`larry` = live / `sdk` = startup）。
+
+#### DSH-2.4 - 测试隔离基建（Vitest）✅（2026-09-09，Claude 实现 / WB 复验）
 
 > **DSH 迁移线第 2 阶段（DSH-2）子任务 4**。原文为 Claude 交付报告 `exchange/dsh-24-vitest-isolation-claude.md`，2026-09-10 归档吸收至本区（交流区不留独立报告文件）。
 > **本节为本任务唯一事实源**（TODO 侧已精简为一行状态指针）。保留：WB 复验结论 / 关键判据 / 原始输出（§2）/ 七原则对照表（§3）/ 可复跑步骤（§4）/ 踩坑清单 / 产物清单。

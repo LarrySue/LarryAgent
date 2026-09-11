@@ -283,6 +283,8 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 （工程规格另见决策稿 §3.6「本阶段已定案的环境规格」表。）
 
+> **复核注（2026-09-11 DSH-2.6）**：本节基线为 DSH-2 锁定的 `0.1.2-rc.1`；复核时上游最新已到 **`0.1.5-rc.2`**（`latest` = `0.1.5-rc.1`，7 天 2 个 rc）→ **老大拍定不升基线**（升级门槛太低，会导致频繁升级适配）。**本机仍锁 `0.1.2-rc.1`，DSH-3 写码按此 API 走**；0.1.5 破坏性清单与决定见决策稿 §3.4「DSH-2.6 收口复核」。
+
 ### 8.2 自做插件如何声明 bundle（B1 挂载的判定依据）
 
 `package.json` 必须声明 `dsh.bundle.patch`：
@@ -436,7 +438,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 ### 10.2 实测成立（持久层，与 DSH 开发相关）
 
 - **Python 多入口并存**：持久 User `PATH` 含 `…\Programs\Python\Python311\`。`python` → **3.11.9**，`py -3` → **3.14.3**。⇒ 脚本一律显式 `py -3.x` 或绝对路径，**勿依赖裸 `python`**。
-- **`git` 全局硬编码代理**：`http.proxy` = `https.proxy` = `socks5://127.0.0.1:7890`（用户梯子）。⇒ **梯子关时，`git fetch/pull/push` 与依赖 git 的插件安装会一起失败**；需临时 `git -c http.proxy= -c https.proxy=`（本机直连 GitHub 会被 reset，见 DSH-2.6 记录）。
+- **`git` 全局硬编码代理**：`http.proxy` = `https.proxy` = `socks5://127.0.0.1:7890`（用户梯子）。⇒ **梯子关时，`git fetch/pull/push` 与依赖 git 的插件安装会一起失败**；需临时 `git -c http.proxy= -c https.proxy=`（本机直连 GitHub 会被 reset；见决策稿 §3.4「DSH-2.6 收口复核」）。
 - **行尾**：仓库内 `core.autocrlf=true`，全局未设 ⇒ 跨 AI 协作行尾噪声的来源（本仓治理检查已含"末字节与 HEAD 逐字节比对"）。
 - **控制台编码**：中文 Windows 默认 GBK/CP936，且 User 层未设 `PYTHONUTF8` —— 与 §4.1「编码层」同源，是 ① 层缺口的环境底色。
 

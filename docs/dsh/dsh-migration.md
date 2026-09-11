@@ -81,13 +81,13 @@
 | **口号 / 内核** | Everything is a Plugin（万物皆插件）；内核 = **Cordis** 插件总线（Koishi 生态插件内核）| 🟡 |
 | **主语言 / 规模** | **TypeScript**（Monorepo）。**本地实测：锁定版 `packages/` 顶层 50 个包目录**，另含嵌套子包（如 `sandbox/sandbox-windows-acl/`）；仓库 156 MB / 9,080 文件 | 🟢 |
 | **许可证** | **MIT**（Copyright 2026 DeepSeek，本地 LICENSE 确认）| 🟢 |
-| **锁定版本** | **`dsh-v0.1.2-rc.1`**（0.1.2 线首个 RC，老大裁定锁 release 线）。master 开发线 `dsh-v0.1.3-alpha.2`（2026-09-07，仅 git tag、未进包管理器；较锁定版领先 644 commit）。**tag 名带 `dsh-` 前缀**；11 个 release **全部 prerelease**，无 GA 时间表 | 🟢 |
+| **锁定版本** | **`dsh-v0.1.2-rc.1`**（0.1.2 线首个 RC，老大裁定锁 release 线；**DSH-2.6 复核后仍锁此版未升**）。上游最新（2026-09-10）：**`latest` = `0.1.5-rc.1` / `next` = `0.1.5-rc.2` / `alpha` = `0.1.5-alpha.2`**（原记「master 开发线 `0.1.3-alpha.2`，644 commit 领先」已过期）。**tag 名带 `dsh-` 前缀**；全部 release 为 prerelease，无 GA 时间表 | 🟢 锁定版 / 🟡 上游最新 |
 | **社区规模（2026-09-07 更新）** | star **215K** / fork **25.3K** / watch **923** / releases **11 tags** / commits **15,210**（老大读数；WB 于 09-07 15:53 用 GitHub API 交叉验证 star 214,526 / fork 25,270，与老大读数一致，24 小时 +612 star）。**天龄 25 天**（仓库创建 2026-08-13）。**只记录，不解读** | 🟡 |
 | **官方状态** | `SAFETY.md` 原文：「experimental developer-preview software. It has **not undergone a security audit** and **must not be treated as secure or production-ready**」；沙箱/审批/权限「do not guarantee isolation」 | 🟢 |
 | **沙箱** | 四子包：`sandbox/` + `sandbox-local/`（Linux bwrap→Landlock / macOS Seatbelt / **Windows restricted token**）+ `sandbox-policy/` + **`sandbox-windows-acl/`**（Windows 写入限制：受限子进程仅可写工作区与私有 temp）。三档策略 `read-only` / `workspace-write` / `danger-full-access`；被策略拒绝的调用可经**用户批准的一次性升权**重试。**同世界隔离**：共享宿主内核与文件系统，非容器 / microVM 级 | 🟢 |
 | **运行形态** | 5 个 profile（web / headless / sdk / sdk-minimal / acp）+ 本地 `host/`（API gateway）+ 本地 `client/`（Web-GUI）| 🟡 |
 | **能力分布** | `compaction/` `sandbox/` `interaction/` `session/` `session-query/` `llm/` `mcp/` `acp/` `sdk/` `preset/` `storage/` `e2b/` `subagent/` `workflow/` `web/` `terminal/` `shell/` `fs/` `lsp/` `test-support/` **本地逐一确认存在** | 🟢 |
-| **官方分发（关键）** | ①npm **`@deepseek-ai/dsh`** 真实发布，latest = `0.1.2-rc.1`（与锁定版一致），MIT，bin=`dsh`，70 依赖，官方用法 `npx @deepseek-ai/dsh web`；②PyPI **`deepseek-harness-sdk`**（纯 Python，any 平台）+ **`deepseek-harness-runtime-bin`**（`0.1.2rc1`，**Linux x64/arm64 · macOS arm64 · Windows x64** 均有 wheel），**后者把 `dsh` CLI 与整个 Node 依赖树打包为原生可执行文件，SDK 使用无需系统 Node.js**（`requires no system Node.js`） | 🟢 |
+| **官方分发（关键）** | ①npm **`@deepseek-ai/dsh`** 真实发布，latest = **`0.1.5-rc.1`**（2026-09-10 复核；原记「= `0.1.2-rc.1`，与锁定版一致」**已过时**），MIT，bin=`dsh`，70 依赖，官方用法 `npx @deepseek-ai/dsh web`；②PyPI **`deepseek-harness-sdk`**（纯 Python，any 平台）+ **`deepseek-harness-runtime-bin`**（`0.1.2rc1`，**Linux x64/arm64 · macOS arm64 · Windows x64** 均有 wheel），**后者把 `dsh` CLI 与整个 Node 依赖树打包为原生可执行文件，SDK 使用无需系统 Node.js**（`requires no system Node.js`） | 🟢 |
 | **插件生态（关键，前判"生态早期"已推翻）** | 社区精选列表 `awesome-dsh-plugin/awesome-dsh-plugin`（**14.7k star**）共 **3,199 个插件**，25 个分类；官方安装命令 `dsh plugin add`（插件声明 `dsh.bundle` manifest）+ 插件市场 **`dsh-market`**（一键安装/升级）。**与本项目强相关分类**：Tools & Capabilities **425** / Memory **149** / Sessions & Messages **201** / Workflow & Automation **190** / Skills **135** / Models & Providers **130** / Security & Permissions **108** / Remote & Mobile **89**（飞书 bot / LAN access / auth tunnel）/ WSL & Windows Interop **34**。**Identity & Communication 仅 12**（印证 §3.3「用户画像 DSH 不给」—社区也未补上）。**插件装载在 DSH 运行时内，与后端是否用 Python SDK 无关**（两类方案不冲突）。**⚠️ 用法约束见 §3.0：生态对我们是「参考实现库」，不是「能力货架」——只借鉴 / fork，不直接纳入** | 🟡 |
 | **`identity/` 语义** | 存在，但**不是用户画像**：「one anonymous id per harness home… **without identifying the user**」，用于 telemetry / feedback / DeepSeek 请求关联，无配置项 → §3.3「用户画像 DSH 不给」结论**成立** | 🟢 |
 | **云端形态** | AGENTS.md 对 cloud / multi-user / tenant / single-user / personal **零命中**（本地 grep 确认）| 🟢 |
@@ -225,7 +225,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 - **节拍**：跟随 **rc 及以上** 的 release tag（不跟 master HEAD）；**`alpha` 只作监控信号、不跟随**。
   - **为何须写明（消歧义，非新增规则）**：DSH 的 rc 与 alpha **同为 `dsh-v*` 前缀的 prerelease tag，形式无差别**（84 行：11 个 release 全部 prerelease），故"跟随 release tag"字面口径**会把 alpha 包含进去**——须按**版本号语义**筛选，而非"有 tag 即跟"。
-  - **双护栏**：① alpha **未进包管理器**（`0.1.3-alpha.1/.2` 仅发 git tag，npm / PyPI latest 仍为 `0.1.2-rc.1`）；② 但我们的锁定源是 **git tag**（§2.2 `ref/dsh-bare`），故①对 `ls-remote --tags` 的查法不成立 → **一律以包管理器已发布版本为准，git tag 仅用于读源码**。
+  - **双护栏**：① 按**版本号语义**筛选（`-alpha.` 段一律只监控不跟；`-rc.` 起才考虑）——**原记「alpha 未进包管理器 / npm、PyPI latest 仍为 `0.1.2-rc.1`」已由 DSH-2.6 复核证伪**（2026-09-10 起 latest = `0.1.5-rc.1`），故不能靠"npm 有没有"来区分 rc / alpha，只能按版本号段判；② 我们的锁定源是 **git tag**（§2.2 `ref/dsh-bare`），故①对 `ls-remote --tags` 的查法不成立 → **一律以包管理器已发布版本为准，git tag 仅用于读源码**。详见下方「DSH-2.6 收口复核」。
   - **【老大已拍板】**——"目前先跟随 release tag，具体怎么做到时候再讨论，现在过于细节地讨论纯属空中楼阁"
   - **持续动作**：跟踪上游 tag（当前 release 线 `0.1.2-rc.1`）——按上条节拍筛选，rc 及以上才考虑，alpha 只记录不跟随。**原属 DSH-1 事实校准阶段的未完成项，随该阶段归档后并入此处**（持续性动作不随阶段归档）
   - **复核节拍（老大 2026-09-08 定）**：**不与上游 alpha 节奏绑死，按我们自己的阶段节拍走**——每个 DSH 阶段**完成后**，用当时最新的 rc 版本做一轮复核（评估锁定版是否已过期、有无影响本阶段结论的变更；纯测绘成本低，但结论必须标注基线版本）。DSH-2 的复核点在其任务 0 判定 + 5 项实测收口之后
@@ -233,6 +233,50 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 - **回归分三层**（Claude 采纳——原"每次必跑 P4 全矩阵"在 2.3 天一 tag 下不可执行）：① **每次升级** = RPC 契约快照 diff + `llm-replay` 快照回归（无 key、秒级、廉价哨兵）；② **事件触发**（性能回退修复版 / 破坏性变更 / 影响 31 子项承诺的变更）= P4 全矩阵 + 真实验收；③ **季度评审** = GA 进展 / 生态 / 是否切 HEAD
 - **回退**：任一红**先尝试适配（timebox 一个 release 周期、双轨保护下），超时未收敛即回退上一 tag**——回退仍是默认动作；适配必须有期限，否则"适配"演变为"漂移"
 - **锁定期成本承认**：锁定期内 alpha bug 由本项目背，不指望上游修
+
+#### DSH-2.6 收口复核（2026-09-11 · 基线仍锁 `0.1.2-rc.1`）
+
+> **复核动作**：① 锁定版是否过期 + 有无影响本阶段结论的变更；② 重跑 DSH-2.0 形态测绘（同版本内完成）。**判定：不升基线**（老大 2026-09-11 拍）。
+
+**① 版本时间线（🟡 npm registry / release notes）**
+
+锁定 `0.1.2-rc.1`（**2026-09-03**）→ 上游最新 **`0.1.5-rc.2`**（09-10 14:57）。7 天出 **2 个 rc**，且 **0.1.3 / 0.1.4 无 rc**（`0.1.3-alpha.2` 后直接跳进 `0.1.5` 线）。通道现状：`latest` = `0.1.5-rc.1`、`next` = `0.1.5-rc.2`、`alpha` = `0.1.5-alpha.2`。
+
+**② 影响本阶段结论的变更（有，且集中在"实现范式"）**
+
+0.1.5-rc.1 自述「汇总自 v0.1.2-rc.1 以来主要变更」，破坏性项：
+
+- **Session 数据格式 V2→V3**（仅升不降）——🟢 新版才新增迁移文档（旧版只有 guard 测试）
+- **Session 生命周期**：`SessionHandle` 持有 + **session 锁**（同一 session 至多一进程）
+- **插件 Agent API：移除 `ctx.agent`**；Inbox API 类型化
+- **自定义 persona 配置拆分前缀 / 后缀**（旧配置要适配）← 直压 §3.6 承接表「角色机制」行
+- Web 面板 API：`conversation` slot → `main`；默认工具调整（SDK 默认 read/write/edit）
+
+外加 `FS_NOT_OBSERVED` 诊断统一、Windows 子进程清理改善、默认模型切 `deepseek-flash`。
+
+**③ 重跑形态测绘（🟢 纯源码级，两版对照）**
+
+`packages/` 顶层**目录 50 = 50**（无增删）；全仓文件 **8,854 → 10,178（+15%）**；**DSH-2.0 的 8 项证据文件全部存在，机制签名 1:1 存续**（`inject=['tools']` / `inject(['systemPrompt'])` / `INSTEAD OF` 换实现 / `ctx.compaction` 契约 / `ctx.sandbox` 服务，新旧计数一致）→ **A 案在 0.1.5-rc.2 上仍成立**。
+
+**④ 逐条压到 5 项退出条件上（可行性判定未被推翻）**
+
+| 退出条件 | 判定 |
+|---|---|
+| ① storage 外接 SQLite | 🟢 `packages/storage/` 四件套两版**完全一致**，`storageDomain` 契约在。⚠️ 0.1.2-rc.1 notes 那条「移除 SQLite **Session** 后端」指的是**会话日志后端**，非我们用的 storage domain —— **勿误读** |
+| ② `acp/` 契约 | 🟢 方法集合 ident 不变 |
+| ③ Windows `ctx.sandbox` provider | 🟢 服务契约在；⚠️ **我们的方言修复件在 0.1.5 上未复验** |
+| ④ Vue→sdk profile 连通 | 🟢 **SDK 协议面完全没动**（`sdk/protocol/src/types.ts:116` 的 `initialize` 连行号都一样，`packages/sdk/` 38 = 38）→ **B 段基础稳定** |
+| ⑤ TS embedding | 无上游依赖，不受影响 |
+
+**⑤ 升级闸门（§3.4 首触发条件）—— 未满足**
+
+- 「下一版本确认修复性能回退」：**出处没找到**（0.1.2-rc.1 的 notes 只有"改善…"；0.1.2→0.1.5 五版全无"性能回退修复"字样）→ 该条**需回看当时依据**，现状不足以触发升级。
+- 「破坏性变更窗口消化」：**未消化** —— 0.1.5 本身就是那一大坨。
+
+**【老大裁定 · 决定】不升基线。** 理由：**升级门槛太低 → 会导致频繁升级适配**（老大原话口径）；DSH-2 的机制面结论已确认不受 0.1.5 威胁；DSH-3 刚要起步，先在有把握的 `0.1.2-rc.1` 上跑通 S0 更稳。
+**代价记账**：**0.1.5 破坏性清单须落档**（即本节 ②）；**DSH-3 写码按 `0.1.2-rc.1` API 走**；升级当**独立动作**做（不在 DSH-3 内顺手升）。
+
+**⑥ 顺带订正**：`sdk` profile 的 manifest 实为 **`patchReload: startup`**，只有 `larry` 是 `live` —— 而 **B 段恰好走 sdk**，决策稿此前只记了 larry 的 `live`（见 §3.6 环境规格表 sdk 行）。
 
 ### 3.5 路径决策
 
@@ -525,7 +569,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
     🟢 **WB 本地复核（`git show` 锁定了 `dsh-v0.1.2-rc.1`）：机制 8/8 属实**；行号 2 处偏差（#2 实际 154 行、#3 实际 22 行）——**报告的行号不可全信，机制结论可信**
   - **反向举证（主动找推翻自己结论的证据，未找到否决项）**：① **运行中热重载 patch 级配置** ❌ 确认不可行（`patchReload: startup` 出自 sdk-app README"Configuration changes require restart"）——**但非 A 案否决**：patch 是启动期组合，运行期可变性由 systemPrompt context 动态注入（#2）+ ctx 服务动态实现（#4/#6/#8）覆盖；需重启的是部署期配置（角色清单、工具启用表），非对话期行为，单用户可接受。② **同会话运行中热切角色（含工具集）** ⚠️ 未找到公开 API（工具集在插件 apply 时经 ctx.tools 注册）——**非否决**：产品树当前无此承诺；会话级角色（新建会话选角色）可经 preset 达成，**记入 DSH-3 首验输入**。③ **运行中替换已注册的 ctx 服务实现** ⚠️ 未查证 cordis 是否支持——**非否决**：服务实现替换是"启动时加载哪个插件"的决策（fs-sandbox 的 swap 语义），部署期选择足够
   - **不选 B 案的理由**：8 项无一项触及 agent loop / session 内核 / 事件存储；fork 的代价（每次上游发版 merge 一个 alpha 框架的破坏性变更）换不来任何必需收益。升级 SOP 在 A 案下 = 更新依赖版本 + replay 回归
-  - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
+  - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**（⚠️ **仅 `larry`；`sdk` profile 为 `startup` 须重启**，见环境规格表 sdk 行）；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 
 **退出条件（5 项实测 · ✅ 全部通过 · 2026-09-10 收口；任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
 1. `storage/` 外接 SQLite 可行性 —— ✅ **可行**：官方 backend 仅需配置，`path` 可指任意绝对路径；外部库当日落盘、我们的 `mem-1` 行可读出；反向哨兵证数据走 SQLite 而非默认 json（判据见 `dsh-cloud-deployment.md` §5）
@@ -544,7 +588,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | `DSH_HOME` | `.dsh-home/`（仓库内，已 gitignore——含凭据与会话产物） | 同上 |
 | DSH 入口 | **npm 全局 `dsh@0.1.2-rc.1`**；不用源码 `bin.ts` + tsx | DSH-2.2 反证：源码入口在 PowerShell 下偶发卡住 |
 | DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
-| sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC） | DSH-2.3 连通验证用；注意与 `larry` 是两个 profile，结论不可互推 |
+| sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC）；⚠️ manifest **`patchReload: startup`**（与 `larry` 的 `live` **不同**） | DSH-2.3 连通验证用；**B 段走 sdk → 其配置热重载结论不等于 larry**；与 `larry` 是两个 profile，结论不可互推（`patchReload` 差异 2026-09-11 DSH-2.6 订正） |
 | **端到端动态验证** | **WB 侧可独立完成**：Git Bash 工具 + 环境变量注入测试 key | 🟢 2026-09-09 复测：握手 / 事件流 / **真实 LLM 回包**全部跑通，见下方「WB 复验边界（修订）」 |
 | **WB 的 PowerShell 工具** | **不可用**：未启用 ConPTY，原生 exe（`node.exe`）无输出、等同于不执行 | 🟢 WB 实测：`node -v` 返回空、纯 cmdlet（`Set-Content`）正常 |
 

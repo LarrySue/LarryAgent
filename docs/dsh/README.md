@@ -1,6 +1,6 @@
 # DSH 迁移决策区（docs/dsh/）
 
-- `dsh-migration.md` — **决策稿**（已定稿 + 第 0 项终裁 2026-09-08：Py SDK 判 **二等** → 定 **A-framework**，全面 TS 化）
+- `dsh-migration.md` — **决策稿**（已定稿 + 第 0 项终裁 2026-09-08：Py SDK 判 **二等** → 定 **A-framework**，全面 TS 化）。**⭐ §3.4「DSH-2.6 收口复核」（2026-09-11）：上游已到 `0.1.5-rc.2`（7 天 2 rc），重跑形态测绘 A 案仍成立，但升级闸门未满足 → 老大拍定「**不升基线**」（升级门槛太低会导致频繁升级适配）；0.1.5 破坏性清单（Session 格式 V2→V3 / 移除 `ctx.agent` / persona 前后缀拆分 等）落于此处**
 - `dsh-pysdk-probe-trae.md`（Trae）／`-claude.md`（Claude）／`-qoder.md`（Qoder）— 第 0 项（Py SDK 成色）三方实测报告
 - `dsh-local-env.md` — **本机（Windows）环境约束唯一真相源**：profile 启动锁（wx/2s/孤儿不回收，**且每次 dsh 运行都会留下**）、`--patch` 引本地包触发 heal 撞锁、windows-acl runner 直调格式、**⭐ 拒绝方言缺口（分本地化层与错误码类别层，后者跨语言成立；① 层作用域订正为"取决于启动终端"）**、**§4.3 方言修复件与其挂载范式（须 disable+insert 覆盖官方行／新行 id 无关／sdk·larry·web 三个 profile 均需；落盘并入 DSH-3）**、safe-delete 噪声、**⭐ 连通性/凭据四组对照判据矩阵（成功信号 = `assistant/message` 存在 + 回包非空 + `turn/end.reason.kind === 'completed'`；`exit 0` 无效）**、**⭐ §8 DSH 工程搭建与短路点复跑（版本基线 / 自做插件 bundle 声明范式 / 复跑步骤 / 6 条踩坑 / HMR 开关；原 B1 挂载报告吸收于此）**、**§9 Vue/Tauri ↔ DSH 连通复跑（sdk profile / 复跑步骤 / 踩坑 / GUI 点验；原 2.3 报告吸收于此）**、**§10 本机环境变量与工具链基线（⭐ 各 AI 工具运行时被注入不同环境 ⇒ 判据必须注明取自哪棵树；含实测成立项与证伪项留痕；原 Qoder 环境排查报告校正后采纳）**
 - `dsh-cloud-deployment.md` — **云部署（CVM）唯一真相源**：环境资产、规格判定（4C8G 非硬需求）、DSH 拒绝 0.0.0.0（官方 RCE 理由）、landlock sandbox 正反实测、node:sqlite 判据、部署坑清单、**⭐ §7.1 部署拓扑约束（B 段 stdio 不可跨机）+ T2 触发线实测（官方 web surface 经反代对外可行）**。**跨 AI 共享的部署事实一律放此**，交流区/TODO/AI 记忆只留指针
