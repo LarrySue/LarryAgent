@@ -144,8 +144,8 @@
   - 🟡 「跨进程 resume 成功」仍为 Trae 单方声明 → 已并入 DSH-3「首验 id collision 定性」
 - [x] ③ Windows 端 `ctx.sandbox` provider —— ✅ **可用**（Claude 交 `47b6163` + WB 复验三档哨兵 + fail-closed；`enforcement=partial`）；⚠️ 方言缺口三层须修 → `dsh-local-env.md` §4
   - ✅ **老大派 Trae 修 → Trae 已交 `4d6c5cc` + WB 复验通过**（修复落自做插件，未动第三方源码）
-  - 🔄 二轮收尾（R1 报告数据不符 / R2 探针缺 preamble 致假阴性 / R3 生产挂载未生效）**未回**，规格见 `exchange/log-trae.md`「二轮收尾」
-  - ⬛ **生产挂载未生效**（`larry` / `sdk` 的 `cordis.patch.yml` 均为 `[]`）→ **DSH-3 集成时必须显式挂载**（收口清单隐性欠账 1）
+  - ✅ **二轮收尾（R1/R2/R3）已回 + WB 复验通过**（Trae `1337c3c`：R2「① 层在真实链路下有效」成立；R1 作用域更正成立，**WB 另订正其成因** = 本机 OS 默认 UI 语言是 **zh-CN**、Trae 树的 en-US 才是被上层应用覆盖的）→ 缺口三层 + 修复件 + 挂载范式全落 `dsh-local-env.md` §4／§4.1／§4.3
+  - ⬛ **生产挂载未落盘**（`sdk`/`larry`/`web` 三个 profile 的 `cordis.patch.yml` 仍为 `[]`）→ **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）；挂载范式见 `dsh-local-env.md` §4.3
 - [x] ④ Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；**四组对照判据矩阵**（写进 DSH-6 断言）→ `dsh-local-env.md` §6
 - [x] ⑤ TS embedding 漂移比对 —— ✅ **无需全量重嵌**（漂移 `2.2e-7`；硬前提：预处理严格对齐）→ `dsh-cloud-deployment.md` §8
   - 💡 **衍生架构选项**：TS embedding 与 Python 等价 → 若改 `sqlite-vec` 可去掉 Python 运行时。**未拍**，见 `dsh-cloud-deployment.md` §8
@@ -167,9 +167,9 @@
 >
 > **隐性欠账（挂在已勾主项下、无 checkbox，最易漏）**
 >
-> 1. 🔴 **沙箱方言插件生产挂载未生效** —— 插件已进 profile `node_modules`，但 `larry`/`sdk` 的 `cordis.patch.yml` **均为 `[]`**（2026-09-10 复核仍为 `[]`）→ **DSH-3 集成时必须显式挂载，否则 Trae 的修复等于没做**
->    - 🟢 **挂载语法已 WB 实测（2026-09-10）**：**`- id: sandbox` + `name:` 覆盖不生效**（sandbox 行仍是官方包）→ 插件源码注释说的"改 sandbox 行 name"**字面走不通**；**`disabled: true` + `insert` 新 id** 配置层成立，**但新行插在最末尾、id 为 `sandbox-dialect` ≠ 消费方期望的 `sandbox`** → **运行时能否被正确提供/消费仍未实跑验证** ⬛。详见 `log-trae.md` R3 补充，Trae 须补端到端
-> 2. 🔄 **Trae 二轮 R1/R2/R3 未回**（规格在 `exchange/log-trae.md`「二轮收尾」段）
+> 1. 🔴 **沙箱方言插件生产挂载未落盘** —— 插件已进 profile `node_modules`，但 `sdk`/`larry`/`web` 三个 profile 的 `cordis.patch.yml` **均为 `[]`** → **并入 DSH-3 执行**（老大 2026-09-11 拍），否则 ③ 的修复等于没做
+>    - 🟢 **挂载范式 + 定案已实测（2026-09-11）**：`- id: sandbox` + `name:` **原地改名不生效**（loader id 定位只覆盖 config）；须 **`disabled: true` + `insert`**；**新行 id 不必叫 `sandbox`**（消费方按**服务名**注入）；插件须**实体复制**进 profile `node_modules`（link 取不到 `@deepseek-ai/dsh-sandbox-local`）。⚠️ 自检看"官方行带 `disabled: true`"，**不是"行消失"**。全部 → `dsh-local-env.md` §4.3（含已证/未证边界）
+> 2. ✅ **Trae 二轮 R1/R2/R3 已回 + WB 复验通过**（`1337c3c`；含 1 处 WB 订正：本机 OS 默认 UI 语言是 zh-CN）→ 结论已落 `dsh-local-env.md` §4/§4.1/§4.3，交流区派发块已清理
 > 3. ⚠️ **parentId 建议未拍**（会话事件按树记 or 线性链表，待老大一句话）
 > 4. 🟡 **②「跨进程 resume 成功」仍为 Trae 单方声明** → 已并入 DSH-3「首验 id collision 定性」，在那边收敛
 > 5. ⬛ **Vue → Tauri IPC → node 完整链路无自动化覆盖** —— 老大已定：后续推进中慢慢补（现仅 2.3 GUI 一手点验）
@@ -199,6 +199,7 @@
 - [ ] `interaction/` 接入（新增高危工具审批流）→ 2.7.1
 - [ ] `session/` 接入（升级 trajectory）→ 2.8.2
 - [ ] **S0–S4 最小可验证切片**（定义与勾对子项见文档 §3.6）：S0 一条消息完整生命周期 → S1 +interaction 审批 → S2 +compaction → S3 +sandbox 三档 → S4 +记忆最小闭环（**B 段 Gateway 能否起 HTTP 已于 2026-09-10 实测判定：不成立** → B 段定死走 SDK，详见 `docs/dsh/dsh-migration.md`「B 段 Gateway 路线实测判定」）
+- [ ] **生产挂载落盘（Windows 方言修复件）**：把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 `sdk`／`larry`／`web` 三个 profile 的 `cordis.patch.yml`，并带**一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `dsh-local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**，老大 2026-09-11 拍定并入本阶段）
 - [ ] **A 段自定协议设计（通信面定型派生）**：前端 ↔ 自做云端服务 —— **流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全部自实现**（中转方案主要成本项；官方 Gateway 白送的恰是这部分）。**DSH-2 段「新增派生工作项」的同名条目已并此，勿双处维护**
 - [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升——不可量化但真实的 go/no-go 信号。文档 §3.7
 
@@ -207,7 +208,7 @@
 ### DSH-4 · 差异化能力迁移
 
 - [ ] 长期记忆双写 + 人审（`memory/archiver.py` + `engine.py` → TS 插件挂 `session/` 事件流，保 SQLite+ChromaDB 双写）
-- [ ] **记忆迁移（活资产，非数据搬运）**：全量重嵌（PyTorch/FP32 与 ONNX/q8 不保证逐维一致）+ 漂移比对 + 召回等价性抽样验收 + 语义字段不降级（`is_active` / `last_hit_at` / `source_role`，ChromaDB 只能重灌、机会只有一次）
+- [ ] **记忆迁移（活资产，非数据搬运）**：**无需全量重嵌**（DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧漂移 `2.2e-7`、cosine ≥ 0.9999999999；⚠️ **硬前提 = 预处理严格对齐**，任一项不对齐会产生 0.77 级假漂移）+ 召回等价性抽样验收 + 语义字段不降级（`is_active` / `last_hit_at` / `source_role`，ChromaDB 只能重灌、机会只有一次）
 - [ ] **2.7.2 边界透明 → TS answerer 插件**（B1 通道已实测可行；退路 = permission-preset 白名单）
 - [ ] 角色机制（`config.yaml` 5 角色 → `preset/` + `cordis.yml`）
 - [ ] 工具生态（`tools/` 844 行 → DSH 工具插件；**web_search 暂保留自实现 Brave**——不配正文抓取，SSRF/清洗成本是刻意规避的）
@@ -229,7 +230,7 @@
 ### DSH-6 · 测试 + 验收
 
 - [ ] 测试资产**按 DSH 四层体系重建**（非翻译）：mock LLM → snapshot record/replay（`test-support/llm-replay`，比手写 mock 更真且免费回归）；降级/异常/护栏单测约五成可平移 Vitest；conftest 隔离 / fail-fast 断言DSH-2 重做。四层对照表见文档 §3.6
-- [ ] 验收五层：① 纯逻辑层翻译全绿 ② 关键路径 snapshot replay 覆盖 ③ 真实 API e2e 冒烟 ④ 数据迁移验证（双写 + 全量重嵌后召回抽样比对）⑤ Windows 端侧执行器验收
+- [ ] 验收五层：① 纯逻辑层翻译全绿 ② 关键路径 snapshot replay 覆盖 ③ 真实 API e2e 冒烟 ④ 数据迁移验证（双写 + 迁移前后召回抽样比对，**无需重嵌**）⑤ Windows 端侧执行器验收
 - [ ] 升级回归并入：升级后契约漂移（RPC 快照 diff）+ 资源与凭据（句柄泄漏、key 不进日志）
 - [ ] WB 复验 + 老大最终验收（勾对承接总表）
 

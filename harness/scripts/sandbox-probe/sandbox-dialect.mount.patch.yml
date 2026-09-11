@@ -13,7 +13,10 @@
 #
 # 行 id（sandbox-dialect）**不必**叫 sandbox：消费方（dsh-pwsh-sandbox）按**服务名**
 # `sandbox` 注入，不是按 loader 行 id。此结论已由 plugin-sandbox-mount-probe 在
-# profile 内 boot 实测（见 exchange/log-trae.md 二轮收尾报告 R3）。
+# profile 内 boot 实测 —— 完整定案与已证/未证边界见 `docs/dsh/dsh-local-env.md` §4.3。
+#
+# 生效自检（--dump-config）：官方 sandbox 行**不会消失**，是**保留 + `disabled: true`**，
+# 末尾多出 sandbox-dialect 行。⚠️ 别拿"行消失"当判据（会误判成未生效）。
 
 - id: sandbox
   disabled: true

@@ -1,5 +1,6 @@
 /**
- * R3 补充证据：把 profile 内 boot 产出的**真实产物**拿到 boot 之外重放。
+ * 挂载实跑（DSH-2.5 ③ 二轮收尾 R3）补充证据：把 profile 内 boot 产出的**真实产物**拿到 boot 之外重放。
+ * 定案与已证/未证边界见 `docs/dsh/dsh-local-env.md` §4.3。
  *
  * 为什么需要它：R3 要求"实跑端到端"。但本机 Trae 工具沙箱会拦截
  * **沙箱进程内部的孙进程 spawn**（观测到 `TRAE Sandbox Error: process launch failed`,

@@ -160,6 +160,8 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 **⚠️ 一条必须纠正的认知**：源码**完全没有 `LANDLOCK_ACCESS_NET`**，实测沙箱内照样联网。
 → **"上了 sandbox 就不怕数据外泄"是错的**。它只管文件系统，**防外联必须另做**（网络策略 / 无外网路由）。这是设计选择，不是 bug。
 
+> **与 Windows 侧的关系（避免误移植）**：本机 Windows 的**拒绝方言缺口修复件**（`plugin-sandbox-dialect`）**只对 win32 生效** —— 其 `confine()` 在非 win32 直接返回原值。⇒ **CVM(Linux/landlock) 上不需要挂它、挂了也无副作用**；landlock 方言 `permission denied` 本就命中。方言缺口/修复件/挂载范式见 `dsh-local-env.md` §4／§4.3。
+
 ---
 
 ## 5. 运行时与 2.5 ① 判据 🟢

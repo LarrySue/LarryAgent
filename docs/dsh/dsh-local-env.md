@@ -109,6 +109,8 @@ const DENIAL_SIGNATURES = {
 
 ⚠️ **② 比 ① 更硬**：不要把它整体归因为"中文 Windows 的问题"，那是把跨语言的缺陷降级成了本地化问题。
 
+⚠️ **① 的作用域（2026-09-11 订正）**：① 不是"某台机器有／没有"，而是**取决于跑 DSH 的那棵进程树**。本机 **OS 用户 UI 语言 = zh-CN**（`Get-WinUserLanguageList` / `HKCU\Control Panel\Desktop\MuiCached` / `HKLM\SYSTEM\…\Nls\Language\Default=0804` 三来源一致），普通终端起的树 `Get-UICulture=zh-CN`、console CP 936 ⇒ **① 默认就会触发**；但**进程树的 UI 文化可被上层应用覆盖**（实测：Trae 的终端树 `Get-UICulture=en-US` → 子进程回英文 → ① 不触发）。⇒ ① 是否触发取决于**从哪个终端启动 DSH**，我们控制不了 ⇒ 补丁**两种方言都留**（零成本）。别把 trae 树的 en-US 当成系统设置。
+
 ### 4.1 ⭐ 第 ③ 层：编码层（决定 ① 层能否生效，比 ① ② 都更前置）
 
 **机制**（🟢 源码 `packages/subprocess/subprocess-local/src/spawn.ts:213/246`）：子进程输出**一律按 UTF-8 解码**（`Buffer.concat(chunks).toString('utf8')`）。
@@ -130,6 +132,15 @@ const DENIAL_SIGNATURES = {
 
 → **判据纪律**：验证 ① 层**必须带 preamble 跑**；用裸 `spawn` 会得到**假阴性**（看起来"中文签名没用"，实为探针姿势与真实链路不符）。这与 §7「判据必须取自真实运行时」同源。
 
+**字节级复现（🟢 2026-09-11，模拟 console CP 936 区制，同一句中文仅变"有无前导"）**：
+
+| 组 | stderr 前 11 字节 hex | 按 UTF-8 解码 | 中文签名 |
+|---|---|---|---|
+| 裸 spawn（继承 936，无前导） | `b6 d4 c2 b7 be b6 20 58 20 b5 c4` = **GBK** | 乱码 `��·�� X �ķ��…` | **false**（0 命中） |
+| 真实链路（936 被前导覆盖为 UTF-8） | `e5 af b9 e8 b7 af e5 be 84 20 58` = **UTF-8** | `对路径 X 的访问被拒绝。` | **true**（命中 `访问被拒绝`） |
+
+**探针纪律（补充）**：探针要**直接 `import` 官方 `ENCODING_PREAMBLE`**（`…/dsh-pwsh-local/lib/index.js:412` 有 export），**不要手抄**——手抄会随上游改动漂移，抄漏一个分号就能重造一次假阴性。源码位置：定义 `:158`、拼进 argv `:278`。此结论已由生产侧独立印证：profile 内 boot 取到的消费方 argv **确实带前导**（§4.3）。
+
 ⬛ **未测**：`--mode read-only` 下 PS 进入 ConstrainedLanguage，官方 README 提示 preamble 的 `[Console]::` 赋值**可能被拒**、非 ASCII 输出会退回主机代码页 → 该模式下 ① 层是否仍有效**未验**。
 
 ### 4.2 「一劳永逸解决编码」的四条路径（🟢 源码 + 实测，2026-09-10 WB）
@@ -146,6 +157,41 @@ const DENIAL_SIGNATURES = {
 **实测基线**（直连 / 受限两种跑法**逐值相同**）：`[Console]::OutputEncoding=936`、`ACP=936`、`HKCU` 可读、`HKCU\Console\CodePage` **未设置**、`locale=zh-CN`、`USERPROFILE` 正常。
 
 → **当前建议：什么都不用改**（dsh 自带 preamble 已生效）。把「装 PS7」记为**备用手段**——仅当 read-only 模式下 preamble 被 ConstrainedLanguage 拒、① 层失效时才需要它。
+
+### 4.3 修复件：自做 provider 与其挂载范式（🟢 2026-09-11）
+
+**修复件** = `harness/packages/plugin-sandbox-dialect/`：子类化官方 `sandbox-local` provider，在 `confine()` 返回的 `ConfinedArgv` 上**追加**缺失方言（`operation not permitted` + `拒绝访问` + `访问被拒绝`），**不动第三方源码**（上游升级不破）。仅 `win32` 且 `enforcement==='partial'` 时生效。
+
+**挂载范式（要在 patch 层覆盖官方同名行时）**：
+
+```yaml
+- id: sandbox
+  disabled: true          # 先禁用官方行
+- insert:                 # 再插入我们的行
+    - id: sandbox-dialect
+      name: '@larryagent/plugin-sandbox-dialect'
+```
+
+三条实测定案（🟢 profile 内 boot 实测）：
+
+| 问题 | 结论 |
+|---|---|
+| 能否用 `- id: sandbox` + `name:` **原地改名**？ | ❌ **不行** —— loader 的 id 定位**只覆盖 `config`，不改该行加载哪个包**（sandbox 行仍是官方包）。故必须 disable + insert |
+| 新行 id **必须**叫 `sandbox` 吗？ | ✅ **不必** —— 消费方按**服务名**注入（`dsh-pwsh-sandbox` 声明 `static inject = ['subprocess','sandbox','sandboxPolicy']`），不是按 loader 行 id |
+| 插件怎么进 profile？ | **实体复制**进 `$DSH_HOME/profiles/node_modules/@larryagent/…`；`link` 方式下 bare import 从源目录解析，**取不到** `@deepseek-ai/dsh-sandbox-local` |
+
+**生效自检**：`dsh --profile <p> --dump-config` → 官方 sandbox 行**不会消失**，而是**保留 + `disabled: true`**，末尾多出 `sandbox-dialect` 行。⚠️ **别拿"行消失"当判据**（会误判成未生效）。
+
+**挂载层文件**：`harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml`（生产用，内容即上面两段）；`*.verify.patch.yml` 是叠了只读探针的复验版，**不进生产**。
+
+**覆盖面**：`sdk`／`larry`／`web` **三个 profile 都要**（三者 bundles 均含 `@deepseek-ai/dsh-base` ⇒ 均带 sandbox 行 + win32 下启用的 pwsh-sandbox）。插件实体放在 `profiles/node_modules/@larryagent/`，**三个共享，一份足够**。
+
+**落盘状态**：⬛ **未落盘**（三个 profile 的 `cordis.patch.yml` 仍为 `[]`）→ **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
+
+**已证 / 未证边界（别过度读）**：
+- 🟢 已证：boot 时 `providerCtor=SandboxDialectProvider`；消费方 `SandboxPwshExecutor.confine()` 拿到的签名 = 加宽后 6 条；消费方 argv 含 preamble。
+- ⬛ 未证：**模型真触发一次被拒命令并看到 `[sandbox: file access denied]`** 的真 end-to-end（boot 内的受限 spawn 被工具沙箱拦）→ 留 DSH-3。
+- 适用面：本修复**仅 Windows**（`confine()` 在非 win32 直接返回原值）⇒ CVM(Linux/landlock) 上不需要、也无副作用。
 
 ---
 
