@@ -211,3 +211,157 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 - `sandbox` provider 在 `dsh-base/cordis.patch.yml` 挂载 `@deepseek-ai/dsh-sandbox-local`，**未 disabled**；`bash-sandbox` 在 win32 被禁用、`pwsh-sandbox` 在非 win32 被禁用。
 - `enforcement` 在 Windows 上静态声明为 **`partial`**（受限令牌须保留 Everyone 才能初始化 → 显式给 Everyone 写权限的对象仍可写；NTFS 硬链接是文件对象别名 → 工作区外硬链接仍可写）。**2.10.2「Windows 端侧执行器」按 partial 规划，不要按 full 宣传。**
 - 旁路开关：无静默降级；显式配置 `DSH_PERMISSION_MODE=danger-full-access`（该档 `approval: never`）。
+
+---
+
+## 8. DSH 工程搭建与短路点复跑（DSH-2.1 / 2.2）
+
+> **来源**：原文为 Trae 实测报告 `docs/dsh/dsh-b1-plugin-probe-trae.md`（2026-09-09）。2026-09-11 吸收至本节，独立报告文件随之删除（内容等价）。
+> **结论（两个"能"，已采纳）**：① **DSH-2.2** 官方 demo 能在本机 Windows 跑通一次完整会话；② **DSH-2.1** 自做 Cordis 插件能经 **B1 通道**挂进 DSH 并被 cordis 实际加载。两者都不是"环境能装/能起服务"，而是**跑通到「LLM 完整回复 + 我们的 `apply` 被实际执行」**。
+> 🟢 **WB 独立复验（2026-09-09）**：静态 + 动态证据均本地复现——`dsh --profile larry --dump-config` 见 `larry-probe` 插行、`hmr disabled: false`；`dsh --profile larry --help` 打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)`。**核心结论成立。**
+> ⚠️ **WB 未独立复跑**：官方 demo 完整会话（需真实 key 触发 LLM），采信报告的 exit 0 + stdout + 会话产物说明。
+
+### 8.1 版本基线（🟢 2026-09-09）
+
+| 项 | 值 |
+|---|---|
+| OS / shell | Windows x64 / PowerShell |
+| Node | **v24.14.1**（`D:\App\node\node.exe`；root `package.json` engines 要求 `^22.19.0 \|\| >=24`） |
+| pnpm | **11.7.0**（`npm i -g`；与 root `packageManager: pnpm@11.7.0` 精确一致） |
+| dsh | `@deepseek-ai/dsh@0.1.2-rc.1`（npm 全局） |
+| DSH_HOME | `D:\Code\LarryAgent\.dsh-home`（仓库内，已 gitignore） |
+| profile | `larry` = `dsh-base` + `dsh-headless` + 我们的 `@larryagent/plugin-probe` |
+| 模型凭证 | 测试 key 仅经**环境变量** `DEEPSEEK_API_KEY` 注入，未落任何文件 |
+
+（工程规格另见决策稿 §3.6「本阶段已定案的环境规格」表。）
+
+### 8.2 自做插件如何声明 bundle（B1 挂载的判定依据）
+
+`package.json` 必须声明 `dsh.bundle.patch`：
+
+```json
+{ "main": "lib/index.js", "dsh": { "bundle": { "patch": "./cordis.patch.yml" } } }
+```
+
+`cordis.patch.yml`（profile 层插行）：
+
+```yaml
+- insert:
+    - id: <row-id>
+      name: '@larryagent/<pkg>'
+      config: { ... }
+```
+
+插件骨架 = `export const name` + `export const inject` + `apply(ctx, config)`（范式见 `packages/fs/tool-fs/src/index.ts`，从 `export const inject` 起）。
+挂载动作：`dsh plugin --profile larry add <本地包路径>` → reconcile 后 profile manifest（`package.json` 内）的 `dsh.profile.bundles` **自动纳入该包** —— 这就是"挂进 profile 层"。⚠️ 注意与 B 段 Gateway 判定第 4 条呼应：`plugin add` 默认**只写 dependencies**，走 bundle 声明这条才会进 `bundles`。
+
+### 8.3 复跑步骤（干净状态）
+
+**前置**：`node ≥24` / `npm i -g pnpm@11.7.0` / `npm i -g @deepseek-ai/dsh@0.1.2-rc.1`（`dsh --version` 应打 `0.1.2-rc.1`）；源码查阅走 `ref/dsh-bare` 只读。
+
+**A. 官方 demo（源码树）**
+
+1. 建工作树：`git -C ref/dsh-bare worktree add --detach D:/Code/dsh-src dsh-v0.1.2-rc.1`
+2. `cd D:\Code\dsh-src && pnpm install --ignore-scripts`（约 56s / 1001 包；`--ignore-scripts` 跳过 lefthook，**必须**）
+3. `pnpm run build:lib:host`（**必须**，否则 `typert-loader` 找不到 `lib/typert.host.js`）
+4. `$env:DSH_HOME="D:\Code\dsh-src\.dsh-home-demo"; $env:DEEPSEEK_API_KEY="<key>"; $env:DSH_TOOLS_MODE="ptc"; node scripts/demo-ptc.mjs "Reply with exactly: hello from dsh"` → 期望 stdout `hello from dsh`、exit 0，`.dsh-home-demo/sessions/` 生成 `session.jsonl`
+
+**B. B1 挂载（npm 全局入口即可，无需源码树）**
+
+1. `harness/`：`pnpm install && pnpm run build`（产出 plugin 的 `lib/`）
+2. `$env:DSH_HOME="D:\Code\LarryAgent\.dsh-home"; dsh plugin --profile larry add @deepseek-ai/dsh-base@0.1.2-rc.1`（230 包；若因 `allowBuilds` 以 exit 1 结束 → 见 §8.4 第 3 条）
+3. 同上 add `@deepseek-ai/dsh-headless@0.1.2-rc.1`，再 add `D:/Code/LarryAgent/harness/packages/plugin-probe`（link 方式）
+4. 断言 manifest `bundles` 含三项；`dsh --profile larry --dump-config | grep larry-probe` 见插行
+5. `dsh --profile larry "Reply with exactly: probe loaded"` → stderr 见 `[B1-PROBE] … loaded by cordis`、stdout 见回复、exit 0
+
+> **零成本断言**（不需 key）：`dsh --profile larry --help` 即触发 cordis apply（见上方复验行）。
+
+### 8.4 踩坑清单（6 条）
+
+1. **源码跑 demo 必须先 `build:lib:host`**：headless 基于 dsh-base，`typert-loader` 运行时动态 `import` 各包 `exports "./typert"` 指向的 `lib/typert.host.js`（构建产物、gitignore）——不 build 必崩（`Cannot find module`）。
+2. **`pnpm install` 要加 `--ignore-scripts`**：root postinstall 是 lefthook；独立 worktree 跑无需其 git hooks。
+3. **pnpm 11 的 `allowBuilds` 安全机制**：`dsh plugin … add` 装到含 koffi/node-pty/protobufjs 等依赖时，会因 "ignored build scripts" 以 **exit 1** 结束、reconcile 不跑。解决：在 profile 的 `pnpm-workspace.yaml` 把 `allowBuilds` 待审批项**全设 `false`**（headless boot 不需要这些 native 构建），重跑即 exit 0。**这是 pnpm 11 相对旧版的行为变化，别当成 dsh 坏了。**
+4. **源码入口 + tsx 在 PowerShell 下启动偶发卡住**（本次 add `dsh-headless` 一次后台卡住、CPU 停滞）：改用 **npm 全局 `dsh`**（`lib/bin.js`，无 tsx）后 1.3s 完成。**验证性操作一律走 npm 全局入口，又快又稳。**
+5. **PowerShell 把原生 stderr 包装成 error 流**：`[B1-PROBE]` 这类 stderr 会被 PS 显示成红字 + RemoteException 外观，**内容本身没坏** —— 看字符串别被格式吓到。
+6. **自定义 profile（`larry`）`patchReload` 默认 `live`**：profile 用户层 `cordis.patch.yml` 变化即热载（launcher watch-only fallback，不需要 hmr 插件）；**模块级代码 HMR 是另一个开关**（见 §8.5），别混。
+
+### 8.5 模块级 HMR 开关（可开，非必需）
+
+在 profile 用户层 `cordis.patch.yml` 覆盖 base 默认（base 中 hmr row 为 `disabled: true`）：
+
+```yaml
+- id: hmr
+  disabled: false
+```
+
+`--dump-config` 后该 row 渲染为 `disabled: false`（覆盖生效）；开启后 headless boot 正常（`tag=v1` + `hmr enabled ok`，exit 0），**无副作用**。
+
+> **口径**：**模块级 HMR 开关可开、且开启不影响现有 boot**；但"同进程改代码即热载"的动态观察需**长驻 profile**（web/tui 类有交互/服务生命周期），headless one-shot 跑完即退、没有观察窗口 → 该动态验证留待 web 连通一并做，**不构成阻塞**。
+
+### 8.6 源码工作树生命周期
+
+- 工作树挂载于 `D:\Code\dsh-src`（**仓库外**，未含于 LarryAgent git）；`ref/dsh-bare` 全程只读（`git show` / `worktree add`，未写任何 refs/config）。
+- 保留供后续复用（HMR 动态验证 / web 连通）；一句话清理：
+
+  ```
+  git -C ref/dsh-bare worktree remove D:/Code/dsh-src
+  ```
+
+- `dsh plugin` 仅写 `$DSH_HOME/profiles/<name>`（隔离 DSH_HOME 内），**不触碰用户级全局 profile / `~/.dsh`**。
+
+---
+
+## 9. Vue/Tauri ↔ DSH 连通复跑（DSH-2.3）
+
+> **来源**：原文为 Trae 实测报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`（2026-09-09，基线 `dsh-v0.1.2-rc.1`）。2026-09-11 吸收至本节，独立报告文件随之删除（内容等价）。
+> **结论（判"能"）**：现有 Vue/Tauri 客户端已能经 DSH 的 `sdk` profile（stdio JSON-RPC）发一条消息并收到**真实模型回包**；GUI 侧与无 GUI 复跑路径**走同一通道**（同一 `node` 驱动脚本、同一 profile）。
+> **能力边界观察**（sdk 面的能做/做不了）落决策稿「sdk 面实测能力边界」小节——**B 段已定为 SDK（stdio），该表即 B 段的能力清单**。本节只留可复跑的环境侧事实。
+
+### 9.1 连通方式
+
+| 项 | 值 |
+|---|---|
+| profile | `sdk` = `dsh-base` + `dsh-sdk-app`（`.dsh-home/profiles/sdk`，bundles 2 项）⚠️ 与 `larry` 是两个 profile，**结论不可互推** |
+| 传输 | **stdio JSON-RPC**（`sdk-jsonrpc-server`；**stdout 归协议独占**） |
+| 驱动 | 官方 TS SDK `@deepseek-ai/dsh-sdk-client@0.1.2-rc.1`（`DeepSeekHarness` → `run()`），spawn 同版本 `@deepseek-ai/dsh` runtime 子进程 |
+| 客户端进程管理 | Tauri 新增 `dsh_prompt` IPC command → `Command::new("node")` 跑 `harness/scripts/dsh-prompt.mjs` → 捕获 stdout/stderr 回传；一次性调用、无长驻句柄；DSH_HOME 由 Rust 注入项目 `.dsh-home`，凭据继承启动 env（`DEEPSEEK_API_KEY`，**未落文件**） |
+| GUI 入口 | 主窗口顶栏右侧 **DSH** 按钮（`DshProbe.vue` modal：输入→发送→显示回复/stderr/exit code）；仅 Tauri 环境可用（纯浏览器 vite 下置灰） |
+
+**通道一致性**：GUI invoke `dsh_prompt` 与 CLI 复跑 = 同一个 `node scripts/dsh-prompt.mjs` → GUI 复验可退化为人跑 CLI 命令，结论同源、无需复用点击。
+
+### 9.2 复跑步骤
+
+**前置**（一次性）：Node ≥ 24；`npm i -g pnpm@11.7.0`、`npm i -g @deepseek-ai/dsh@0.1.2-rc.1`；`.dsh-home/profiles/sdk` 已建（`dsh-base` + `dsh-sdk-app`，230 包，`allowBuilds` 全 `false`）；`harness/` 已 `pnpm install`。
+
+**A. 无 GUI（CLI，核心证据路径）**
+
+```
+$env:DSH_HOME = "D:\Code\LarryAgent\.dsh-home"; $env:DEEPSEEK_API_KEY = "<key>"
+node harness/scripts/dsh-prompt.mjs "Reply with exactly: hello from dsh sdk"
+# → stdout: hello from dsh sdk        exit 0
+node harness/scripts/dsh-probe-capability.mjs "Reply with exactly: probe ok"
+# → 完整事件流 JSON（19 事件 / 21 通知 / finalResponse "probe ok"）
+```
+
+**B. GUI**
+
+```
+$env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
+# 顶栏「DSH」→ 输入消息 → 发送 → modal 显示回复（同 A 通道）
+```
+
+### 9.3 踩坑（本节差异项；与 §8.4 重复的不再列）
+
+1. **tauri dev 首次全量 debug build（~1.5min）**；`tauri-plugin-shell` v2.3.5 下 `tauri.conf.json` 的 `plugins.shell.scope`（旧 ACL 字段）是**未知字段**（该版本 schema 只剩 `open`）→ dev 直接 panic（`unknown field scope, expected open`）。删该段即恢复——main.rs 实际用 `std::process::Command` spawn，未用 shell 插件 API，**属修复且非新增破坏**。
+2. **Python 后端冷启动慢**（chromadb 首启 ~2min）；`dsh_prompt` 与后端无耦合、DSH 通道不受影响，但点按钮前后端 healthy 可避免 ConnectionToast 干扰观感。
+3. **sdk runtime stdout 归 JSON-RPC 独占**：驱动脚本自身进度只能走 stderr，往 stdout 混打会破坏协议。
+4. **凭据只经环境变量**：起 tauri 前先 set `DEEPSEEK_API_KEY`，否则 runtime initialize 报缺 credential（与 headless 同行为）。
+5. `pnpm 11 allowBuilds` / `PowerShell 包装 stderr` 两条与 §8.4 第 3、5 条同，不重复。
+
+### 9.4 会话产物与 GUI 点验记录
+
+- **持久化**：每次 prompt 落 `.dsh-home/sessions/`（`session.jsonl`），sessionId 可复现。
+- **事件流粒度**（一次完整回合 = 19 事件）：`turn/start|end`、`step/start|end`、`assistant/chunk`（流式增量，7 条/次）、`assistant/message`、`user/message`、`request/header`、`request/context`、`session/title`、`agent/inbox/spliced`；通知流 `session.event` ×19 + `session.status` ×2。
+- **GUI 人工点验（2026-09-09，老大实测）**：全链路确认「Vue modal → Tauri `dsh_prompt` IPC → `node harness/scripts/dsh-prompt.mjs` → sdk runtime → 真实模型回包」；自定义消息可用，事件流 318/320 为**一次完整对话回合**粒度。模型对"系统提示探测"的拒答 = DSH 侧 agent 指令约束生效的正确行为，非异常。
+  - 注：运行时 cwd 继承 Tauri 进程（= `client/src-tauri`），故模型工作目录显示该路径；要固定工作区，`dsh_prompt` 注入 `cwd` 即可（本轮 hello world 无碍）。
+- **隔离自检**：测试 key 仅经环境变量注入、未落任何文件；`.dsh-home/`（含 sdk profile 会话产物）被 `.gitignore` 排除；`ref/dsh-bare` 全程只读；tauri dev 验证后已停进程并释放 8000 端口。

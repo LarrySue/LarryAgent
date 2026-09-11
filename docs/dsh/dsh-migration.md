@@ -310,9 +310,10 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 > **产品承诺面**（区别于上述安全 / 运行时面）：**记忆删除在 session / trajectory 层的级联语义**——见 §3.4「产品承诺渗透性漂移」行，挂 2.4.3 验收注记。
 
-**前端路线（DSH-2 定死）**：**保留 Vue/Tauri 客户端**、**不采用 DSH Web-GUI**——Tauri 壳是 2.10.2 端侧执行器的宿主，换 web client 等于废掉 client/ 全部工作并丢掉端侧能力载体。**通信面（sdk / acp / 自做网关）暂取 sdk / acp，待 DSH-2.3 实测后定型**。
+**前端路线（DSH-2 定死）**：**保留 Vue/Tauri 客户端**、**不采用 DSH Web-GUI**——Tauri 壳是 2.10.2 端侧执行器的宿主，换 web client 等于废掉 client/ 全部工作并丢掉端侧能力载体。**通信面（sdk / acp / 自做网关）暂取 sdk / acp**（DSH-2.3 已实测，sdk 面边界见下方「sdk 面实测能力边界」）。
 
-> ⚠️ **未收敛项（DSH-2.3 提出，待实测后定型）**：通信面暂取 sdk / acp，但 **sdk 面的 JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown`——这正是不判二等的同一个窄面**（§3.5）。若 client 长期经 sdk 通信，则客户端一侧被永久限制在该窄面内，与 A-framework「贴近核心层」的初衷存在张力。
+> ⚠️ **未收敛项（DSH-2.3 提出）**：通信面暂取 sdk / acp，但 **sdk 面的 JSON-RPC 请求面只有 `initialize` / `session/prompt` / `shutdown`——这正是不判二等的同一个窄面**（§3.5）。若 client 长期经 sdk 通信，则客户端一侧被永久限制在该窄面内，与 A-framework「贴近核心层」的初衷存在张力。
+> **已实测（2026-09-09）**：sdk 面的完整能力边界见下方「sdk 面实测能力边界」小节——**窄面确认属实**（wire 方法面 + 无自带传输/UI）；本项**已由定型结论（自做服务中转）绕开**，sdk 只承担 B 段（服务 ↔ DSH 同机）。
 > **已定型（2026-09-09）**：见下方「定型结论」——**经自做云端服务中转**。
 
 #### 通信面选型分析（🟢 2026-09-09 源码级实测；**前提①已于同日由老大拍板定案**，见文末「定型结论」）
@@ -457,6 +458,30 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 3. **重估触发线 T2 的前提需重读**：T2 原设为「官方 web surface 经反向代理对外可行」，但既然 Gateway 不可独立起 HTTP，T2 的可行路径**只剩反向代理 `dsh-web-app` 整体**（即把官方 UI 一起代理出去），而非只代理 gateway。
 
 **尚未排除（勿外推）**：Gateway 可能需 typert 实例注册后才挂载路由；或后续版本补上 `dsh.bundle` 声明。**本次只能判定「当前版本不成立」，不能判定「官方永远不会做」。**
+
+### ⭐ sdk 面实测能力边界（🟢 2026-09-09 DSH-2.3；B 段 = SDK stdio 的依据）
+
+> 依据：Trae 实测报告（原 `dsh-23-vue-tauri-connect-trae.md`，2026-09-11 吸收；环境侧复跑见 `dsh-local-env.md` §9）。B 段已定为 **SDK（stdio）** → **本表即 B 段的能力清单**，也是 §「未收敛项」所提"sdk 窄面"的实测答案。
+
+**能做（sdk profile + TS SDK，已实测）**：
+
+- **真实完整会话**：`initialize → session/prompt → 模型回复 → shutdown`，一条龙（exit 0）
+- **事件流粒度足够**：`turn/start|end`、`step/start|end`、`assistant/chunk`（流式增量）、`assistant/message`、`user/message`、`request/header`（LLM 请求头）、`request/context`（注入上下文）、`session/title`（自动标题）、`agent/inbox/spliced`（收件箱回执）→ **记忆双写、流式 UI、会话标题所需信号粒度都在**，不是"窄面"能概括
+- **会话持久化**：每次 prompt 落 `.dsh-home/sessions/`（`session.jsonl`），sessionId 可复现
+- **服务端智能体能力**：base 全套（tools/session/agent 等）经 sdk profile 可达 → client 拿到的是「agent 完整回合结果 + 事件」而非裸 LLM 流
+
+**做不了 / 受限（本通道）**：
+
+- **stdout 归 JSON-RPC**：不能直接承载 UI/日志流；多路复用须靠上层封装（未来自做 HTTP 桥，把 stdio 面转为 client 可连的传输）
+- **wire 方法面窄**：实际只有 `initialize` / `session/prompt`（+ `session`/`shutdown` 生命周期）——**对话之外的操面（会话树浏览、子代理管理、设置/配置读写等）不在此协议内**，须借 base 内插件扩展或换 web profile
+- **runtime 子进程生命周期归 SDK**：每次 `run()` 由调用方起停；改 profile 插件代码须重启 runtime（**模块级 HMR 动态观察仍未落地**，需 web/tui 类长驻载体——与 DSH-2.1 结论一致，非本通道能力）
+- **无 HTTP / 无浏览器面**：GUI 直连须走进程（Tauri Rust spawn）；浏览器环境不能直接用 TS SDK（无子进程能力）
+- **模型路由固定**：sdk profile 下 agent 由 `llm-deepseek` 路由（`deepseek-official` / `deepseek-flash` 等）；要接 LarryAgent 的多模型/角色路由须在 base 层扩展（属后续业务，本任务未做）
+
+**一句话**：sdk profile + TS SDK 是"客户端驱动完整 agent 会话"的**合格通道**（流式 + 事件 + 持久全有），窄在 **wire 方法面**与**无自带传输/UI** → 这正是 B 段须自做 A 段协议、并接受"自做服务与 DSH 同机"的原因，非本通道硬伤。
+
+> ⚠️ **模型 id 改名注记（2026-09-10 老大指示）**：项目脚本模型 id 已统一 `deepseek-v4-flash` → `deepseek-flash`（真实调用冒烟通过；反向对照：换成不存在的 id 即 `INVALID_REQUEST`/400 → 证明服务端确实校验，非假绿）。
+> **但官方 catalog 没跟上**：`dsh-v0.1.2-rc.1` 静态 catalog（`DEFAULT_MODELS`）**仍只声明 v4 系列 id**；源码确认**未编目 id 不被拦**（catalog 查询是 advisory：价格 / contextWindow / 图片策略），会直传给 API。→ **改名后必须真实调用冒烟一次才算数，「改完没报错」≠「改名可用」。**
 
 ---
 

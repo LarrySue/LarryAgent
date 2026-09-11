@@ -111,7 +111,7 @@
 - [x] 现有 Vue/Tauri 客户端经 sdk profile（stdio JSON-RPC + 官方 TS SDK）发消息并收到真实回包
 - [x] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
 - [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
-- [x] 报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`
+- [x] 报告已吸收（2026-09-11）：能力边界 → 决策稿「sdk 面实测能力边界」（即 B 段能力清单）；连通方式/复跑步骤/踩坑 → `docs/dsh/dsh-local-env.md` §9。原独立报告文件随之删除
 - [x] ⭐ **能力边界结论（= 通信面定型输入）**：**上行事件面宽（19 类）/ 下行方法面窄**（`initialize` · `session.prompt` · `shutdown`）—— 记忆双写 / 流式 UI / 会话标题**可行**；会话树浏览 / 子代理管理 / 配置读写**不可行**
 
 > **过程记录已闭环，此处不留副本**：WB 独立复现（含真实 LLM 回包）／「initialize 恒超时」根因（WB 的 PowerShell 工具无 ConPTY → 一律用 Git Bash）／残留锁「路径敏感」结论与行事规则 —— **均收口于决策稿 §3.6**。

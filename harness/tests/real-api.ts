@@ -268,7 +268,7 @@ export function createRealApiHome(): RealApiHome {
   const sourceSdk = join(sourceProfiles, 'sdk')
   if (!existsSync(join(sourceSdk, 'package.json'))) {
     throw new Error(
-      `缺少 sdk profile：${sourceSdk} 不存在（先按 docs/dsh/dsh-23-vue-tauri-connect-trae.md §4.1 建 profile，` +
+      `缺少 sdk profile：${sourceSdk} 不存在（先按 docs/dsh/dsh-local-env.md §9.2 建 profile，` +
         `或用 ${PROFILE_HOME_ENV} 指定源目录）`
     )
   }
