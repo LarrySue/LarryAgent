@@ -411,3 +411,40 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 - **GUI 人工点验（2026-09-09，老大实测）**：全链路确认「Vue modal → Tauri `dsh_prompt` IPC → `node harness/scripts/dsh-prompt.mjs` → sdk runtime → 真实模型回包」；自定义消息可用，事件流 318/320 为**一次完整对话回合**粒度。模型对"系统提示探测"的拒答 = DSH 侧 agent 指令约束生效的正确行为，非异常。
   - 注：运行时 cwd 继承 Tauri 进程（= `client/src-tauri`），故模型工作目录显示该路径；要固定工作区，`dsh_prompt` 注入 `cwd` 即可（本轮 hello world 无碍）。
 - **隔离自检**：测试 key 仅经环境变量注入、未落任何文件；`.dsh-home/`（含 sdk profile 会话产物）被 `.gitignore` 排除；`ref/dsh-bare` 全程只读；tauri dev 验证后已停进程并释放 8000 端口。
+
+---
+
+## 10. 本机环境变量与工具链基线（附：各 AI 运行时差异警示）
+
+> **来源**：Qoder《本机开发与测试调试环境冲突摘要》（`exchange/log-other.md`，2026-09-11）；WB 于同机**逐条实测校验**后校正——**只保留实测成立项**，并**保留证伪项**（防后续 AI 再被误导）。
+
+### 10.1 ⭐ 各 AI 工具运行时被注入不同环境 ⇒ 判据必须注明"取自哪棵树"
+
+🟢 实测（2026-09-11，同机同一时刻）：
+
+| 项 | WB 工具树 | 用户裸 shell / 持久层 |
+|---|---|---|
+| `python` / `python3` | **3.13.14**（注入 managed `…\.workbuddy\binaries\python\versions\3.13.12`） | `python` → **3.11.9**（`…\Programs\Python\Python311\`），`py -3` → **3.14.3** |
+| `PYTHONUTF8` / `PYTHONIOENCODING` | **已设**（`1` / `utf-8`，工具注入） | User 作用域**未设** |
+| `npm` | managed node 自带的 npm | `AppData\Roaming\npm` |
+| PATH | — | 无 `.qoderwork\bin`（对方进程注入物，不在持久 PATH） |
+
+⇒ **纪律**：任何"本机环境"结论**必须写明取自哪个运行时**（与 §7「判据必须取自真实运行时」同源）。拿某一棵树的结果去描述"本机"，会得到互相矛盾且不可复现的结论——这正是 Qoder 报告多处失准的根因。
+
+### 10.2 实测成立（持久层，与 DSH 开发相关）
+
+- **Python 多入口并存**：持久 User `PATH` 含 `…\Programs\Python\Python311\`。`python` → **3.11.9**，`py -3` → **3.14.3**。⇒ 脚本一律显式 `py -3.x` 或绝对路径，**勿依赖裸 `python`**。
+- **`git` 全局硬编码代理**：`http.proxy` = `https.proxy` = `socks5://127.0.0.1:7890`（用户梯子）。⇒ **梯子关时，`git fetch/pull/push` 与依赖 git 的插件安装会一起失败**；需临时 `git -c http.proxy= -c https.proxy=`（本机直连 GitHub 会被 reset，见 DSH-2.6 记录）。
+- **行尾**：仓库内 `core.autocrlf=true`，全局未设 ⇒ 跨 AI 协作行尾噪声的来源（本仓治理检查已含"末字节与 HEAD 逐字节比对"）。
+- **控制台编码**：中文 Windows 默认 GBK/CP936，且 User 层未设 `PYTHONUTF8` —— 与 §4.1「编码层」同源，是 ① 层缺口的环境底色。
+
+### 10.3 实测**证伪**（留痕，防止再被误导）
+
+| 曾被报为 | 实测 |
+|---|---|
+| `NODE_TLS_REJECT_UNAUTHORIZED=0`"已生效"（会关闭 Node 证书校验） | ❌ **User / Machine / Process 三作用域全为空** → 系统层无此开关 |
+| 仓库根"只有 `.gitignore` 和 `backend/`" | ❌ 另有 `.claude/.dsh-home/.trae/.vscode/.workbuddy` + `HUMAN*.md/Makefile/README.md/TODO.md` + `archive/client/docs/exchange/harness/mobile/ref` |
+| `tauri` / `vite`"未装到全局或当前工程目录" | ❌ PATH 无，但 **`client/node_modules/.bin/` 内有** `tauri`/`vite`/`vitest`（本地依赖，走 `npx`/package script） |
+| PATH 有 `…\.qoderwork\bin` 重复条目 | ❌ 持久 User PATH 无该条 |
+
+**校正经要**：Qoder 报告整体属**"替身运行时"观察**，**不作为本机事实源**；本节为核准版。其余未列项（如全局工具链位置、PATH 顺序）低影响，不落。
