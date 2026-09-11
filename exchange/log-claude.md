@@ -7,32 +7,35 @@
 
 ---
 
-## 2026-09-11 仓库外测试目录排查（老大指派：确认哪些是我建的）
+## 2026-09-11 仓库外测试目录 · 清理成效评估（老大指派 · 仅评估未操作）
 
-**范围**：`D:\Code\`、`D:\Temp\`、`D:\Temp\Sys\`、用户目录下与 DSH/测试相关的仓库外目录（本机时区 UTC+8）。
-**方法**：目录内容/时间戳 × 我侧会话记录（工具调用 + UTC 时间戳）× `.workbuddy/memory/*.md` 交叉比对。
+> 前置：归属排查见本文件提交 `8406d2d`（已按惯例清理，需要时 `git log -p` 追溯）。本次为老大「初步处理」后的**核销评估**，只读检查、未做任何操作。
 
-### 1. 我建的（可清理）
-| 路径 | 建立时间 | 用途 |
-|---|---|---|
-| `D:\Temp\Sys\gitrm-probe`、`gitrm-probe2`、`gitrm-probe3` | 09-11 00:55-00:57 | 「git rm 删深层文件 → 父目录链消失」现象的**工作区外对照复现**（临时仓库）；结论已入档，物料可删 |
+**结论：成效良好、无不可逆删除。** 清理方式为「暂存到 `D:\_larryagent_cleanup_20260911\` 再整夹删除」（部分原位删除），全部经回收站——抽查确认逐项可还原：gitrm 151 条 / realapi 501 条 / sandbox-probe 29 条 / t2probe 9 条 / dsh-diag 23 条 / root_data 4 条。
 
-### 2. 我侧测试的自动残留（非手建目录，可清理）
-| 路径 | 时间 | 说明 |
-|---|---|---|
-| `D:\Temp\Sys\larry-test-realapi-Zt4zqh`、`larry-test-realapi-tpkFrr` | 09-10 21:20-21:21 | harness real-api 运行的临时 DSH_HOME（`larry-test-*` 前缀 = 我方测试隔离目录），未走 teardown 的残壳。我当天 21:20 前后无工具活动记录，**最可能来自当晚 WB 复验那次**（「跑完不退出」被杀的运行恰好只留这种残壳），无法 100% 区分 |
+### 已清（核销通过）
 
-### 3. 非我（有其他 AI 的证据）
-- **WB 侧**：`D:\Code\t2probe`、`D:\Code\sandbox-probe`（`wb-env-probe.mjs`）、`D:\Temp\dsh-diag`、`D:\Temp\Sys\larry_root_data_backup_20260830_071346`、`C:\Users\SuLarry\wb-sbx-direct-outside`、`D:\Temp\Sys\dsh-acl-locks` 与 `dsh-spill-xCaSSP`（09-11 11:1x-11:2x，落在 WB 沙箱探针窗口，我该时段无活动）——前三项在 `.workbuddy/memory` 有明载
-- **Trae 侧**：`D:\Code\embed-probe`（DSH-2.5 task 5 产物，WB 记忆 09-10 记「与 Trae 报告逐位一致」）、`D:\Code\dsh-src`（worktree → `ref/dsh-bare`，WB 记忆 09-09 载 worktree 用法）
-- **DSH 运行时自动目录**：`D:\Temp\Sys\dsh-spill-{64rl2O,HP7evc,TQYXfu}`、`dsh-subprocess-{7krsGc,wMJ8G8,xc5LcY}`（09-08 21:21-21:23）——DSH spill/subprocess 后端在 OS temp 自动生成；与我当晚 pysdk 探针运行（`D:\Temp\dsh-probe\probe-claude`）时间窗完全重合，**疑似我探针运行的副产物**（也可能是同晚他人 DSH 运行，同机制不可区分）
+- **我名下 5 项**：`D:\Temp\Sys\gitrm-probe{,2,3}`、`larry-test-realapi-{Zt4zqh,tpkFrr}` → 5/5 ✅
+- **WB 侧**：`t2probe`、`dsh-diag`、`dsh-fresh`、`dsh-lock-backup`、`check_dsh.py`、`probe-err.txt`、`probe-out.json`、`wb-sbx-direct-outside`
+- **Trae 侧**：`sandbox-probe`（含 WB 3 文件；R1/R2/R3 复验与收口已于 11:39 完成，删除时机 OK）、`embed-probe` 的 466 MB 主体
+- **未认领项一并清**：`larry-baseline.txt`、`larry-harness.tgz`、`larry_root_data_backup_20260830_071346`、DSH 运行时目录（`dsh-spill-*` / `dsh-subprocess-*` / `dsh-acl-locks`）
 
-### 4. 非我（我侧无任何创建/引用痕迹）
-`D:\Temp\` 下 `check_dsh.py`、`probe-err.txt`、`probe-out.json`、`dsh-fresh\`、`dsh-lock-backup\`（均 09-09 上午，我当日该时段无活动）；`D:\Temp\Sys\` 下 `larry-baseline.txt`、`larry-harness.tgz`（09-10）
+### 正确保留
 
-### 5. 已消失（无需处理）
-`D:\Temp\dsh-probe\`（我 09-08 的 pysdk 探针目录，现不存在）；`D:\Temp\Sys\larry-sandbox-probe*`、`C:\Users\SuLarry\.larry-sandbox-probe-outside`（沙箱探针物料，现不存在，非我建）
+- `D:\Code\dsh-src`（1.52 GB，归属未定）——工作树注册与目录一致、无 stale。**将来若删**：必须走 `git -C ref/dsh-bare worktree remove --force D:/Code/dsh-src`（`docs/dsh/dsh-local-env.md:353` 已写明），不可直接 rm -rf
+- `D:\Code\embed-probe`——只剩 `{python,ts}-vectors.json`（按 Trae 建议留档）。⚠️ 脚本（compare.mjs 等）已清 → **复现链断**，将来复核只能依据 WB 当时的独立复算
+- `~\.dsh\`——Trae 插件安装点 + DSH 运行数据（细项见 `log-trae.md`）
 
-**我名下待清理项合计 5 个**（gitrm-probe×3 + larry-test-realapi×2）。清理动作未做，等老大指令。
+### 漏网小件（不紧急）
+
+- `D:\Temp\Sys\t2probe\`（只剩 `web.log` 82 B，可连夹删）
+- `D:\Temp\Sys\` 下 `probe.log`/`probe2-6.log`/`probe-tty.log`/`probe.err`/`probe.out`/`wb-probe*.log`（09-10，共 ~20 KB）
+- `D:\Temp\Sys\pytest-of-SuLarry\`（pytest 自管 tmp 基座，可随手删、会自动重建）
+- `~\larry_workspace`（08-11 遗留）、`D:\Temp\wb_verify_0830.txt`、`D:\Temp\Sys\LARRY-BOOK-H14A-*.log`——非本轮测试物料，未动合理
+
+### 备注（两条）
+
+1. `larry_root_data_backup_20260830_071346`（8/30 `rm -rf data` 前的项目数据备份）已清但**在回收站**，仓库内 `data/` 现不存在——若那 6 个文件仍有价值可还原。
+2. **订正上一版排查**：把 `D:\Code\sandbox-probe` 记在「WB 侧」有误——按 Trae 第一手清单（`log-trae.md:30`），该目录是 **Trae** 为 DSH-2.5 ③ 所建，WB 仅在其中放了 3 个文件（实为共享目录）。
 
 ---
