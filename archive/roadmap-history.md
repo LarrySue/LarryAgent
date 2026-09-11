@@ -392,7 +392,11 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 ### DSH-2.4 - 测试隔离基建（Vitest）✅（2026-09-09，Claude 实现 / WB 复验）
 
 > **DSH 迁移线第 2 阶段（DSH-2）子任务 4**。原文为 Claude 交付报告 `exchange/dsh-24-vitest-isolation-claude.md`，2026-09-10 归档吸收至本区（交流区不留独立报告文件）。
-> **结论、WB 复验与三条复验发现见 `TODO.md`「DSH-2.4」段**（现态唯一事实源）；本节保留**原始输出、七原则对照表与踩坑清单**（治理约定：报告结论不复制，过程证据归档）。
+> **本节为本任务唯一事实源**（TODO 侧已精简为一行状态指针）。保留：WB 复验结论 / 关键判据 / 原始输出（§2）/ 七原则对照表（§3）/ 可复跑步骤（§4）/ 踩坑清单 / 产物清单。
+>
+> **WB 复验结论（2026-09-09 独立实跑，未采信声明）**：① `pnpm test:isolated:sentinel` → **fail**，且失败原因正是白名单 throw；② `pnpm test:isolated` → **绿**；③ **R1 反向哨兵**：人为写 key 明文 → teardown **确实告警**（输出 `KEY RESIDUE` + `creds.txt` 路径）；④ **R2 反向哨兵**：`delete DSH_HOME` → **fail**（解析为 cwd 不在 tmpdir 下）；⑤ 真实库零触碰（`.dsh-home` mtime 停在 10:31、`larry.db` 停在 08-30）。
+>
+> **关键判据（可复用）**：首版是「**结论对、机制不存在**」——结论（真实库无残留）成立，但自检挂在 `process.on('exit')`，该钩子在 Vitest worker 下**不触发**（即便触发也是先删后扫）。→ **护栏类验收必须加反向哨兵：人为制造违规、看是否报警**；只查"结果达标"会放过从未运行的护栏。
 
 - **返工背景**：原交付 `8796b0c` 经 WB 复验 → 硬验收 ①② 通过、③ 结论成立但**机制从未执行**（key 扫描挂在 worker 下不触发的 exit 钩子）。返工修复 R1/R2/R3 并补 2 组反向哨兵，提交 `fb30d77`
 - **验收口径**：五条全部达成 —— ① fail-fast 真的会拦 ② 正常用例绿 ③ R1 反向哨兵（人为写 key 明文 → teardown 告警）④ R2 反向哨兵（`DSH_HOME` unset 被白名单拦）⑤ 真实库零触碰
@@ -451,9 +455,10 @@ npx vitest run tests/sentinel-key-residue.test.ts # R1 反向哨兵：绿 + tear
 3. **`import.meta.dirname`** 可用（Node 20.11+），但哨兵文件里 `resolve` 等须显式 import（首版哨兵因漏 import 报 ReferenceError 而非守卫拦截——教训：哨兵自身也要先能跑）
 4. vitest 临时目录前缀用 `larry-test-`（与 Python `larry_test_` 区分避免误清）
 
-**§5 未解决的技术不确定性（当时陈述，现态以 TODO 为准）**
+**§5 未解决的技术不确定性（当时陈述；现态：DSH-2.4 已收口，本节为本任务唯一事实源）**
 
 1. **`.dsh-home` 向上查找机制已确认**（仓库根 .dsh-home/ 有 `--D-Code-LarryAgent-harness--` sessions 子目录 = Trae 从 harness 跑时写入的实证）——**但 DSH 内部如何定位（cwd 向上找 vs 其他）未读源码确认**；隔离基建以"强制 DSH_HOME"覆盖该机制，不依赖其内部行为，故不阻塞
+   - 🟢 **数据落点结构（WB 2026-09-09 实测）**：未设 `DSH_HOME` 时默认落**仓库根 `.dsh-home/`**（已 gitignore），下有 `sessions/` `storages/` `profiles/` `.anonymous-user-id`；**`sessions/` 按 cwd 分子目录**。另有真实业务库 `backend/data/larry.db`（迁移时保留）
 2. **setupFiles 的 env 是否覆盖所有 worker 并发场景**：多 worker 并行时每个 worker 独立跑 setupFiles（各自 mkdtemp 各自 DSH_HOME）——单 worker 已验证；多 worker 的目录隔离逻辑相同，但未用多 worker 实测（当前测试量小默认单 worker）
 3. **哨兵测试的"污染窗口"**：哨兵在模块顶层污染 env → beforeEach 拦截。若未来业务代码在 **import 时** 就启动 DSH（比 beforeEach 更早），守卫需前移到模块加载级——当前守卫粒度（beforeEach）覆盖"测试执行前"，对"import 副作用"的保护需 DSH-6 引入真实业务模块时复核
 

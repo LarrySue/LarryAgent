@@ -75,11 +75,11 @@
 
 - [ ] chat_service token 累计上限（单次对话 tool call 总 token 阈值）：防止单轮读大文件等场景暴增，当前仅轮次限制。优先级很低，不做主动处理；若后续出现相关问题再讨论完善，不静默自动处理。
 
-## DSH 迁移（A-framework · 已定稿，DSH-2 进行中）
+## DSH 迁移（A-framework · 已定稿 · DSH-2 已收口，DSH-3 待启动）
 
 > **分区约定（2026-09-08）**：**本区只放待办**。判定依据、行事规则、31 子项承接总表、风险清单一律留在 `docs/dsh/dsh-migration.md`（下文每条标注出处），本区不重复结论。
 > - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P4 主线无关；**完成一个即归档一个**——**DSH-1 事实校准已完成**，全文冷存于 `archive/roadmap-history.md`，本区自 **DSH-2** 起。
-> - **DSH-2 进行中**：2.0 ✅（A 案成立）／2.1 ✅／2.2 ✅（**路线级短路点已过**）／2.3 已派发 Trae（2026-09-09）／2.4–2.6 待派。
+> - **DSH-2 已收口**：**2.0–2.5 全部 ✅**（5 项退出条件全通过，2026-09-10）；仅 **2.6 阶段收口复核**待做（最新 rc 复核 + 重跑形态测绘，**不与上游 alpha 绑死**）。
 > - ⚠️ **启动后本区将取代上方「当前待办」中的多数条目**——A-framework 是全量 TS 化，后端 / 前端 / 测试资产均会重写。此消长关系未定案，待DSH-2 收口时一并处理。
 
 ### DSH-2 · 代码形态 + 环境准备
@@ -88,117 +88,68 @@
 > **基线**：`dsh-v0.1.2-rc.1`——本阶段所有结论须显式标注基线；源码查阅走 `ref/dsh-bare`（**只读**）。
 > ⚠️ **这是最后一次便宜的回头机会**：本阶段成本仅「环境 + hello world」，DSH-3 起真重写 8830 行后回头代价陡增。值得花时间，不要催。
 
-**DSH-2.0 - 代码存在形态判定** ✅
+**DSH-2.0 - 代码存在形态判定** ✅（A 案成立 · 2026-09-08）
 
-- [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**。8 项必需能力全部可经公开挂载面获得，无一项需改上游。架构根因 = DSH 核心能力层是 Service Definition / Provider / Consumer 三分架构。**逐项证据表已内联决策稿 §3.6**；🟢 WB 本地复核（机制 8/8 属实，行号 2 处偏差）。**结论已折入文档 §3.6，本区不重复**
-- [x] 附带确认：~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2.1 实测推翻**：我们采用的 `larry` profile（dsh-base + dsh-headless）manifest 为 **`patchReload: live`** 🟢 → **配置热重载默认已开，不用 hmr 插件、不必按"改配置必重启"规划**。第 0 项判的 `startup` 出自 sdk-app bundle，不适用我们（决策稿 §3.6 已同步）
+- [x] **A 案成立** —— 独立仓库 + 构建 Cordis bundle 挂载，**不 fork**；8 项必需能力全可经公开挂载面获得，无一项需改上游 → **判定与逐项证据表见决策稿 §3.6**（🟢 WB 复核机制 8/8 属实）
+- [x] 附带确认：`patchReload` 经 2.1 实测修正为 **`live`**（配置热重载默认已开，不必按"改配置必重启"规划）→ 决策稿 §3.6 已同步
 
 **DSH-2.1 - 配套 TS 工程** ✅（2026-09-09 交付 Trae；WB 独立复验 B1 挂载）
 
-- [x] pnpm workspace + tsconfig 搭建（**安装期需 Node + pnpm**——第 0 项实测 B1 通道硬发现，仅运行期免 Node）
-- [x] 首个自做 Cordis 插件骨架（`export const inject = [...]` + `apply(ctx)`，范式见 `packages/fs/tool-fs/src/index.ts:22`）
-- [x] 构建产物为可挂载 bundle，经 B1 通道挂进 DSH 并**验证挂载成功**
-- [x] **工程目录 / 仓库位置 / 包名前缀定案**，并明确与现有 `client/` 的关系
+- [x] pnpm workspace + tsconfig + 首个自做 Cordis 插件骨架 + 可挂载 bundle（**B1 挂载验证通过**）
+- [x] **工程目录 / 仓库位置 / 包名前缀定案**（`harness/` + `@larryagent/`，见决策稿 §3.6 环境规格表）
+- 搭建与复跑步骤 → `docs/dsh/dsh-local-env.md` §8
 
-**DSH-2.2 - 跑通官方 demo** ✅（2026-09-09 交付 Trae，作为短路点先做）
+**DSH-2.2 - 跑通官方 demo** ✅（2026-09-09 交付 Trae）
 
-- [x] 按官方 demo 走通一次完整会话，确认环境可用
-- [x] ⚠️ ~~**避坑**：Windows 下官方 `dsh.exe` segfault → 走编程入口不依赖 CLI~~ **⚠️ 该避坑已推翻（DSH-2.2 反证）**：npm 全局 `dsh@0.1.2-rc.1` 在 Windows **全部可用**（plugin add / --dump-config / --help / 完整会话均 exit 0）。**卡住的只有源码入口（`bin.ts` + tsx）在 PowerShell 下偶发**。→ **默认走 npm 全局 `dsh`，不用源码 tsx 入口**（决策稿 §3.4 已同步）
-- [x] 记录本机 Node / pnpm 版本与踩坑，作为后续复现基线
+- [x] 官方 demo 走通一次完整会话，确认环境可用（⚠️ 会话交付方为 Trae，**WB 未独立复跑**，边界见 `dsh-local-env.md` §8）
+- [x] 避坑推翻：Windows 下 **npm 全局 `dsh@0.1.2-rc.1` 全部可用**（plugin add / --dump-config / --help / 完整会话均 exit 0）；卡住的只有源码 `bin.ts` + tsx 入口 → **默认走 npm 全局 `dsh`**（决策稿 §3.4 已同步）
+- [x] 本机 Node / pnpm 版本与踩坑基线 → `docs/dsh/dsh-local-env.md` §8.1 / §8.4
 
 **DSH-2.3 - Vue/Tauri → DSH 连通 hello world** ✅（2026-09-09 交付 + 老大 GUI 一手点验）
 
 - [x] 现有 Vue/Tauri 客户端经 sdk profile（stdio JSON-RPC + 官方 TS SDK）发消息并收到真实回包
-- [x] ⚠️ **交付通道前提**：无交付通道的跑通不算数（DSH-3 退出条件同此口径）
-- [x] 退出条件 ④ 与本项同源——本项跑通即 ④ 达成，不重复验收
-- [x] 报告已吸收（2026-09-11）：能力边界 → 决策稿「sdk 面实测能力边界」（即 B 段能力清单）；连通方式/复跑步骤/踩坑 → `docs/dsh/dsh-local-env.md` §9。原独立报告文件随之删除
-- [x] ⭐ **能力边界结论（= 通信面定型输入）**：**上行事件面宽（19 类）/ 下行方法面窄**（`initialize` · `session.prompt` · `shutdown`）—— 记忆双写 / 流式 UI / 会话标题**可行**；会话树浏览 / 子代理管理 / 配置读写**不可行**
+- [x] ⭐ **能力边界结论（= 通信面定型输入）**：**上行事件面宽（19 类）/ 下行方法面窄**（`initialize` · `session.prompt` · `shutdown`）—— 记忆双写 / 流式 UI / 会话标题**可行**；会话树浏览 / 子代理管理 / 配置读写**不可行** → 详情见决策稿「sdk 面实测能力边界」
+- 连通方式 / 复跑步骤 / 踩坑 → `docs/dsh/dsh-local-env.md` §9（原独立报告已吸收删除）
 
-> **过程记录已闭环，此处不留副本**：WB 独立复现（含真实 LLM 回包）／「initialize 恒超时」根因（WB 的 PowerShell 工具无 ConPTY → 一律用 Git Bash）／残留锁「路径敏感」结论与行事规则 —— **均收口于决策稿 §3.6**。
+**⭐ 通信面定型（DSH-2.3 产出 · 🟢 定案 2026-09-09 · DSH-3 直接输入）**
 
-**⭐ 通信面定型（DSH-2.3 产出 · 🟢 已定案 2026-09-09 · DSH-3 直接输入）**
+> **完整分析见决策稿 §3.6「定型结论：自做服务中转」**；本节只留**状态与待办**，结论不重复。**非终局**——决策稿附三条重估触发线（T1/T2/T3），命中即回头。
 
-> **完整分析见决策稿 §3.6「定型结论：自做服务中转」**；本节只留**待办与待验**，结论不重复。**老大原话：两方案各有利弊、很难判定，先按此推进** → **非终局，决策稿附三条重估触发线（T1/T2/T3），命中即回头。**
+- [x] **前提① 中转 / 前提② C 段自做** —— 均已拍 → 链路切 A（前端↔自做服务，自定协议）/ B（服务↔DSH，**同机**）/ C（DSH⇢端侧工具，自做）三段
+- [x] ✅ **B 段选型：只能走 SDK（stdio）**（2026-09-10 实测，推翻 Gateway 倾向）→ 论据见决策稿 §3.6【B 段 Gateway 路线实测判定】
+  - **连带硬约束**：stdio 不可跨机 → **自做服务与 DSH 必须同机**（`dsh-cloud-deployment.md` §7.1）
+  - **sdk 路线已知代价**：无会话树 / 历史分页 / fork
+- [x] **A 段自定协议设计**（派生工作项）→ **已转移至 DSH-3 段正式条目**（执行维护走那边，勿双处更新）
+- [x] ✅ **【会话状态策略】已拍板** → 决策见决策稿 §3.6 第 3 条（三态分离；不设激进 LRU；A 段协议须能区分"打开看看"与"真的发一条"）
+- [x] ✅ **fork 已裁决放弃**（一期不做；ACP `session/fork` = -32601、Gateway 已判不可用，两条供给路径均堵死）
+  - ⚠️ **待一句话裁决**：会话事件结构是否带 `parentId`（按树记 or 线性链表）——不采纳也行，回一句"线性即可"
+- [x] **T2 触发线 → 判定「命中」**（2026-09-11 WB 实测：反代可行）→ **结论已落位 `dsh-cloud-deployment.md` §7.1**（含证据表与未覆盖边界；仅触发「回头评估直连」，定型不变）
+- [x] ~~web surface 开箱实测~~ **价值随定型下调**；官方 UI 组件（41 个 `dsh-client-*` 包）仍可复用于自做前端
 
-- [x] **前提① 已拍：经自做云端服务中转** → 链路切三段：**A** 前端↔自做服务（**自定协议，与 DSH 无关**）/ **B** 服务↔DSH host（**同机**）/ **C** DSH⇢C 侧本地工具反向驱动（**自做**）
-- [x] **前提② 已拍**：C 段反向工具执行由我们自做，接受其不属于任何官方面（**在中转架构下反而变简单**——指令走"我们的服务↔C 侧"，**不经 DSH**）
-- [x] ✅ **B 段选型已定：只能走 SDK（stdio）**（2026-09-10 实测，**推翻下方 Gateway 倾向**）→ 论据见决策稿 §3.6【B 段 Gateway 路线实测判定】，TODO 不复制
-  - **连带硬约束**：stdio 不可跨机 → **自做服务与 DSH 必须同机部署**（`docs/dsh/dsh-cloud-deployment.md` §7.1）
-  - ~~Gateway 路线~~ 🔴 **已推翻**：7 条实测证据（最硬一条：55 个声明 `dsh` 字段的包里，**能起 HTTP 的 bundle 仅 `dsh-web-app` 一个**；`dsh-api-gateway` / `dsh-host-webserver` 均未声明 bundle）。**边界：只判"当前版本不成立"，不判"官方永不做"**
-  - **sdk 路线已知代价**：**无会话树 / 历史分页 / fork**；`resume id collision` 未收敛（→ DSH-3 首验项）
-  - 🟢 **2026-09-10 实测修正（原"多会话 = 多子进程"系误述，已推翻）**：sdk **单进程多会话**——20 个 session 句柄 RSS 增量 **0.00 MB**、进程恒为 1；真实 prompt 边际 **2.24 MB/会话**，外推 20 会话 ≈ **182 MB**；单会话 18 轮内存有界（存在回收）。**→ 2G/4G 之争收口：2C2G 够**。数据见 `docs/dsh/dsh-cloud-deployment.md` §2.4 / §2.4.1 / §2.4.2
-- [x] **新增派生工作项（A 段，属 DSH-3 输入）**：**自定协议设计**——流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧**全部自实现**。**这是中转方案的主要成本项**，官方 Gateway 白送的恰是这部分
-  - 📌 **已转移（勾掉 ≠ 已完成）**：正式条目在 DSH-3 段「A 段自定协议设计」，**执行与维护一律走那边，勿双处更新**。本条保留仅作「通信面定型 → 派生出 A 段工作项」的**出处留痕**（老大 2026-09-10 授权 WB 按倾向处理）
-  - ⭐ **换回官方的成本须现在压住**（老大 2026-09-10：第三方框架常态，将来官方补齐再评估要不要换）：① **B 段藏在适配器接口后面**，业务代码不直接碰 SDK 细节；② **A 段自定协议以 Gateway 语义为镜**（**历史分页 / cancel / 重连追赶**的形状对齐），将来官方 bundle 可用时**只换 B 段适配器、A 段不动**。此为设计约束，非实现顺序
-  - ⭐ **【会话状态策略】已拍板**（老大洞察"侧栏二十个会话不算并发" → 授权 WB 拍板）→ **决策见 `docs/dsh/dsh-migration.md` §3.6 第 3 条**，TODO 不复制。要点：① 元数据/历史/runtime 三态分离，**侧栏 N 个会话几乎零内存**；② **不设激进 LRU**（20 会话仅 ≈182MB，为省内存牺牲"顺手查历史"不划算）；③ **真约束是 token 成本不是内存**；④ **A 段协议须能区分"打开看看"与"真的发一条"**——前者不得触发 LLM 调用
-  - ✅ **fork 已裁决放弃**（老大 2026-09-10：触发可能性极低，问题不大）：**一期不做 fork 实现**。两条可能的供给路径**均已堵死**——ACP 面实测 `session/fork` = **-32601**；Gateway 面已判不可用。将来若要做只能自做（会话快照 + 重放）
-    - ⚠️ **WB 建议（未拍，待一句话裁决）**：不为 fork 留实现与 UI，但**会话事件结构建议带 `parentId`**（按树形记，而非线性链表）—— 现阶段的额外成本≈0，将来加 fork 就只是"加实现"而非"重构数据流"。**不采纳也行，回一句"线性即可"即可**
-- [x] **T2 触发线 → 判定「命中」（2026-09-11 WB 实测）**：官方 web surface 经**反向代理**对外**可行**——原记「唯一已知障碍 `--trusted-host` 白名单」**实测是个可绕过的 Host 校验，非真阻断**。两条路都通：① `--trusted-host <authority>` 显式放行；② 反代时把 Host 重写为回环（社区普遍做法）
-  - **证据（本机 dsh `0.1.2-rc.1` 实跑，「≠403」即放行）**：直连 `Host=127.0.0.1:8799` → **404**（fence 放行）/ 直连 `Host=evil.example.com` → **403**（fence 拦）；反代·Host 重写回环 → **401** / 反代·Host 原样透传 → **403**（对照）；加 `--trusted-host evil.example.com` 后直连与反代透传**均 401**（官方口子对反代同样生效）
-  - ⚠️ **命中 ≠ 推翻定型**：因 Gateway 不能独立起 HTTP（§B 段已判），T2 现只剩「反代**整个** `dsh-web-app`」一条路（= 承载官方 shell，与「自做前端」取向有张力）→ **仅触发「回头评估直连」，通信面定型不变**
-  - ⚠️ **本轮未覆盖（勿外推）**：WS 升级经反代 / 完整 token→cookie 登录流 / `--trusted-host` 的**安全性**（只测「通不通」，未测「安不安全」）。物料 `D:\Code\t2probe\`（仓库外，未污染 git）
-- [x] ~~web surface 开箱实测 ①②③~~ **价值随定型下调**（我们不承载官方 shell）；**官方 UI 组件仍可复用**——41 个 `dsh-client-*` 包可 `pnpm add`（exports 含 `./src/*`，源码随包分发）→ 自做前端 = **用官方组件拼**，非从零写
+**DSH-2.4 - 测试隔离基建（Vitest）** ✅（返工完成 `fb30d77` · WB 复验 5/5 通过）
 
-**DSH-2.4 - 测试隔离基建（返工完成 `fb30d77` · WB 复验 5/5 通过 · 遗留 1 项见下）**
+- [x] Vitest **临时库隔离** + **fail-fast 哨兵**（实测通过：临时 DSH_HOME + beforeEach 全局断言；故意指回真实库 → fail）
+- [x] **隔离对象已查清**：真实数据落点 = `backend/data/larry.db` + DSH 侧 `.dsh-home/`（结构见归档段）
+- [x] 三条复验发现已修（key 扫描死代码 / 守卫 `unset` 盲区 / 声明过度）
+- [x] 七原则平移对照表已完成（测试资产定稿为**重建**，非翻译）
+- [x] `--real-api` 等价物 → ✅ **已由 Claude 交付（`0e2a7e9`）+ WB 复验通过**（真 Key 绿 / 错 Key 红）；退回件（进程不退出）已按偶发收口 → 执行维护走 DSH-3「前置件 1」
+- 📌 **结论 / 关键判据 / 原始输出 / 七原则表 / 踩坑清单 → `archive/roadmap-history.md`「DSH-2.4」段**（本节不含副本）
 
-> **WB 复验结论（2026-09-09 独立实跑，未采信声明）**：① `pnpm test:isolated:sentinel` → **fail**，且失败原因正是白名单 throw；② `pnpm test:isolated` → **绿**；③ **R1 反向哨兵**：人为写 key 明文 → teardown **确实告警**（输出 `KEY RESIDUE` + `creds.txt` 路径）；④ **R2 反向哨兵**：`delete DSH_HOME` → **fail**（解析为 cwd 不在 tmpdir 下）；⑤ 真实库零触碰（`.dsh-home` mtime 停在 10:31、`larry.db` 停在 08-30）。
-> **关键判据（可复用）**：首版是「**结论对、机制不存在**」——结论（真实库无残留）成立，但自检挂在 `process.on('exit')`，该钩子在 Vitest worker 下**不触发**（即便触发也是先删后扫）。→ **护栏类验收必须加反向哨兵：人为制造违规、看是否报警**，只查"结果达标"会放过从未运行的护栏。
-> 报告原件（原始输出 / 七原则对照表 / 踩坑清单）已归档 `archive/roadmap-history.md`「DSH-2.4」段（2026-09-10 吸收，交流区不留独立报告文件）。
+**DSH-2.5 - 退出条件实测（5 项 · ✅ 全部通过 · 2026-09-10 收口）**
 
-- [x] Vitest **临时库隔离**（实测通过：临时 DSH_HOME + beforeEach 全局断言）
-- [x] **fail-fast 哨兵测试**（实测通过：故意指回真实库 → fail，且由 `assertIsolated` throw 触发）
-- [x] **先查清隔离对象**：迁移后真实数据落在哪（现有 `backend/data/larry.db`；DSH 侧在 `.dsh-home/`），可能不止一处
-  - 🟢 **WB 已实测落点（2026-09-09）**：未设 `DSH_HOME` 时数据落在**仓库根 `.dsh-home/`**（已 gitignore），下有 `sessions/` `storages/` `profiles/` `.anonymous-user-id`；`sessions/` **按 cwd 分子目录**。从 `harness/` 子目录跑时写入仓库根那份（**向上查找**）
-  - ✅ **"向上查找"机制未确认已不再阻塞**：R2 改用**正向白名单**（必须位于 `tmpdir()` 之下）后，守卫**不依赖**该机制的成立与否——无论 dsh 向上查找到哪，只要解析结果不在临时根下就拦。**这是白名单相对黑名单的额外收益：把未确认行为从依赖项里摘掉了。**（若日后仍需该机制的事实答案，另立项）
-- [x] 🔴 **复验发现 1 — key 残留扫描是死代码 → 已修**：`scanForKeys` 迁入 `global-setup.ts` 主进程 teardown，**先扫后删**（顺序写死并注释"勿调回"）。原位置 `process.on('exit')` 在 worker 下不触发，已移除
-- [x] 🟡 **复验发现 2 — 守卫盲区 `DSH_HOME` unset → 已修**：断言由精确相等改为**正向白名单** `resolve(DSH_HOME).startsWith(tmpdir())`，一次覆盖「等于真实库 / 位于库内 / unset 落 cwd」三种漏法
-- [x] 🟡 **复验发现 3 — 声明过度 → 已修**：注释改为「`backend/data/larry.db` 待 DSH-4 接入时补断言」，并注明「勿将"均已覆盖"当已实现」
-- [x] 对照 DSH 四层测试体系设计——测试资产已定稿为**重建**，不是翻译；参照物 = `backend/tests/conftest.py` 的七条设计原则（平移原则不平移代码）。**已完成七原则平移对照表**（见 Claude 报告 §3；P1/P2/P5/P7 有程序化实现，P6 即 R1 已修，P3/P4 本阶段无对应路径）
-- [x] `--real-api` 占位符机制的等价物（默认跳过真实 API 用例；开启才注入 key，且该模式残留含 key 明文）——**本阶段未做** → ✅ **已由 Claude 交付（`0e2a7e9`）+ WB 复验通过**（真 Key 绿 / 错 Key 红两侧均复现）；退回件（进程不退出）已按偶发收口
-  - ⚠️ **不提前设计 = DSH-3 起每步验证都裸奔**（文档 §3.6 硬要求：本阶段设计到位）。**承接方 = DSH-3「前置件 1」**（已完成），**执行与维护走那边，此处不留副本**
+> **主验证环境 = CVM**（老大 2026-09-09 决定；WSL 保留作本地对照）。5 项结论已落决策稿 §3.6「退出条件」。
 
-**DSH-2.5 - 退出条件实测（5 项，任一不过 → DSH-3 收益表重估、C 路径回退进入议程）**
-
-- [x] **WSL2 环境已就绪并验收合格**（老大 2026-09-09 配置，WB 复验）：正反两组并发判据均对。**不再作为判定依据**。执行报告与复验见 `exchange/log-other.md` §7
-- [x] **⭐ 主验证环境改为 CVM**（老大 2026-09-09 决定）—— **2.5 起结论以 CVM 为准**；WSL 保留作本地快速对照
-  - **环境资产 / 规格判定（4C8G 非硬需求）/ 部署约束 / 验收判据 → `docs/dsh/dsh-cloud-deployment.md`**（TODO 不复制内容）
-- [x] ① `storage/` 外接 SQLite 可行性（**须在 Linux 环境取数**，见前置）
-  - 🟢 **Trae 已交 + WB 独立复验通过**（2026-09-10）：官方 `dsh-storage-sqlite` backend 仅需配置，`path` 可指任意绝对路径（脱离 `.dsh-home`）；外部库 `/home/ubuntu/larry-data/larry.db` 当日落盘、`SQLite format 3` header、`units` 含 `larry_probe`、**我们写入的 `mem-1` 行可读出**；**反向哨兵**：json 侧 `storages/session_projcache` 两处均 1 文件未增长 → 数据确实走 SQLite 而非默认 json
-  - ✅ **Step 0（CVM 冷启动 PoC）已完成并复验**：**自做服务经 stdio 驱动 DSH 跑通真实会话**（`finalResponse="probe ok"`）。WB 独立补了他自陈的判据弱点——`zstd -d` 解开 session 文件，内含 `deepseek-v4-flash` + `usage/inputTokens/outputTokens` 且 `grep -c mock = 0` → **真实 provider 调用，非 mock 顶替**
-  - 🟢 **副产品（填掉 2G/4G 最后一个空位）**：联合 RSS 峰值 **192MB**（默认 DSH_HOME 189MB），冷启动 3190/2359 ms → 详见 `docs/dsh/dsh-cloud-deployment.md` §2
-- [x] ② `acp/` 契约稳定性
-  - 🟢 **WB 已独立复验通过**（2026-09-10，`~/harness/wb-acp-fork-verify.mjs`，CVM 跑 Trae 的 `acp` profile，**不采信其声明**）：`initialize` OK（protocolVersion=1）/ `session/new` OK / `session/list` OK(6) / `session/close` OK
-  - **⭐ 复验关键在反向对照（Trae 未做）**：`fork` / `load` / `delete` → **-32601 Method not found**；对照 `session/resume` → **-32602 Invalid params（session is already active）**。→ **两个不同错误码证明 -32601 是精确的方法缺失，不是"整体被鉴权挡住"**，判据有效
-  - 🟡 **跨进程 resume 成功**一项仍为 Trae 单方声明（WB 本轮未复现该场景，因同进程内 resume 命中"已活跃"）
-- [x] ③ **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）
-  - 🟢 **Claude 已交（提交 `47b6163`）+ WB 独立复验通过**（2026-09-10）
-  - **WB 复验路径（未采信声明，且绕开 dsh profile）**：直接 spawn `windows-acl` runner（法子见 `docs/dsh/dsh-local-env.md` §3）→ **P1 工作区内落盘=true**（整轮锚点）／**P2 工作区外落盘=false**／**P3 read-only 下工作区内落盘=false**；另**首轮误用参数触发 runner 故障时落盘=false 且未裸跑** → fail-closed 独立印证。判定分层（拒绝 vs runner 故障）与 S0/S1/S2 哨兵经读探针源码确认成立
-  - **无需 UAC、无需预装**；`enforcement = partial`（Everyone 可写目录 / 工作区外硬链接 两条边界属实）→ **2.10.2 按 partial 规划，不得按 full 宣传**
-  - ⚠️ **新缺口（WB 独立发现，比 Claude 报告更进一步）**：拒绝方言缺口**分两层** —— ①本地化层（中文 Windows 输出中文，英文签名命中不了）；②**错误码类别层：node 报 `EPERM: operation not permitted`，签名备的是 `permission denied`（EACCES 文案）→ 英文 Windows 同样不命中**。② 跨语言成立、优先级更高。详见 `docs/dsh/dsh-local-env.md` §4
-  - ✅ **老大 2026-09-10 裁决：派 Trae 修** → **Trae 已交（提交 `4d6c5cc`）+ WB 独立复验通过**：修复落在我们自己的 provider 插件 `harness/packages/plugin-sandbox-dialect/`（**未动第三方源码**），`enforcement==='partial'` 闸选得对（已核实 `STATIC_ENFORCEMENT` 中仅 windows-acl 为 partial）。**② 层（EPERM）修复🟢成立**：独立复跑其 `cordis-confine-check.mjs` → `officialDenied=false / patchedDenied=true`，逐字一致
-  - 🔄 **二轮收尾已退回 Trae**（规格见 `exchange/log-trae.md`「二轮收尾」段）：R1 报告 §3.2 表格数据与其探针实测输出不符（cmd/powershell 官方在我复跑下为 false，非其报告所写 true）；R2 探针缺 `ENCODING_PREAMBLE` → ① 层判定为**假阴性**（真实链路 `pwsh-sandbox` 复用带 preamble 的 `PwshLocalExecutor`，带 preamble 实测补丁 true）；R3 生产挂载结论（profile patch 均为空 → 当前不生效）
-  - ⬛ **生产挂载未生效（不依赖记忆的指针）**：插件已复制进 `~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`，但 `larry` / `sdk` 的 `cordis.patch.yml` **均为 `[]`** → **DSH-3 集成时必须显式挂载，否则修复=没做**。挂载语法见 `exchange/log-trae.md`「二轮收尾」R3 段
-  - ⭐ **第 ③ 层：编码层（WB 复验新发现，比 ① ② 更前置）**：子进程输出**一律按 UTF-8 解码**（`subprocess-local/src/spawn.ts:246`），而 PS 5.1 默认写 OEM 代码页 → **中文签名只在输出为 UTF-8 时命中**。详见 `docs/dsh/dsh-local-env.md` §4.1
-- [x] ④ Vue/Tauri → sdk profile 连通（同 DSH-2.3）—— **老大 2026-09-10 确认勾掉**
-  - 🟢 **Claude 判为与 DSH-2.3 同一件事的重申**（证据：2.3 用的就是真实 `client/` 工程非 demo，改动已提交 `d8108c6`）；WB 复核判定依据成立。
-  - 🟢 **WB 已补做「真实模型回包」独立复验**（2026-09-10，临时测试 Key 用完即关）：sdk profile + stdio 实跑 → **`finalResponse = "PROBE-OK-2026"`**、`assistant/message` 事件存在、23 事件 / 25 通知、耗时 106.2s。
-  - ⭐ **四组对照判据（WB 实跑，须写进 DSH-6 断言）** —— 详见 `docs/dsh/dsh-local-env.md` §6：
-    | 场景 | exit | 回包 | `assistant/message` | `turn/end.reason.code` |
-    |---|---|---|---|---|
-    | 有效 Key | 0 | `PROBE-OK-2026` | ✅ 有 | （无 = 正常） |
-    | 无 Key | 0 | 空 | ❌ | `MISSING_CREDENTIAL` |
-    | 错误 Key | 0 | 空 | ❌ | `AUTH` / 401 |
-    | 已关闭 Key | 0 | 空 | ❌ | `AUTH` / 401 |
-    - → **成功信号 = `assistant/message` 存在 + 回包非空 + 无 `turn/end.reason`**；**`exit 0` / 有 session / 有事件流三项全部不能作判据**（三种失败在上面三项都与成功一致）。
-    - → **错误 Key 与已关闭 Key 不可区分**（同为 AUTH/401）→ 用户报"AI 不回话"时须回查平台，不能靠输出判因。
-  - ⬛ **边界（不外推）**：本轮覆盖到 **`scripts/dsh-prompt.mjs` 这一层**（Tauri 壳底层就是同一脚本），**未经 Vue → Tauri IPC → node 完整链路**；该完整链路目前仅有 2.3 的老大 GUI 一手点验，**无自动化覆盖**。将来 Tauri 侧改动可能悄悄断链而无人察觉 —— 若要自动化，需补一个 GUI 冒烟。
-  - ⚠️ **实跑前置**：每次跑前必须清 profile 孤儿锁，否则表现为 `initialize timed out` / `JSON-RPC input closed`，会被误判成"profile 启动慢"。真实调用耗时 ~106s，`dsh-prompt.mjs` 内置 20s 超时，**超时 ≠ 失败**。
-- [x] ⑤ **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（决定是否需要全量重嵌，影响 DSH-4 记忆迁移工作量）
-  - 🟢 **Trae 已交 + WB 独立复算通过**（2026-09-10）：WB **未重跑他的脚本**，而是用自己写的算法对同一对产物（`D:\Code\embed-probe\{python,ts}-vectors.json`）重算，结果**逐位一致**——`maxAbsDiff 2.2285e-7` / `maxL2Diff 1.3887e-6` / `cosine min 0.999999999999` / `top-1·3·5 = 14/14`
-  - 🟢 **WB 加做的反向对照（他未做）**：把两侧**错位一格**比对 → cosine 跌到 **0.23–0.47**、maxAbsDiff **0.193** → 证明该判据**对文本错位敏感**，对齐组的高分不是"比对脚本自指"造成的假象
-  - ✅ **结论：无需全量重嵌**（省 DSH-4 一大块工作量）。**硬前提须写进 DSH-4 迁移方案**：向量可比**依赖预处理严格对齐**——`do_lower_case`/统一 lowercase、CLS pooling、L2 normalize、max_length 512；**任一项不对齐会产生 0.77 级假漂移**（Trae 已复现），据此误判"必须重嵌"会白做
-  - ⚠️ **适用边界（不外推）**：覆盖 14 条文本、单一模型 fp32；**未覆盖** q8/量化 dtype、超 512 token 截断行为、其他 embedding 模型 ⬛
-  - 💡 **由此打开一个架构选项**：TS 侧 embedding 已证明与 Python 侧等价 → 若向量存储改用 `sqlite-vec`，可**彻底去掉 Python 运行时**（ChromaDB 91MB + 模型进程），与「全面 TS 化」同向。**未拍，见 `docs/dsh/dsh-cloud-deployment.md` §8**
+- [x] ① `storage/` 外接 SQLite —— ✅ **可行**（Trae 交 + WB 复验：`path` 可指任意绝对路径、反向哨兵证数据走 SQLite 非默认 json）；副产品联合 RSS 峰值 **192MB** → `dsh-cloud-deployment.md` §2 / §5
+- [x] ② `acp/` 契约稳定性 —— ✅ **通过**（`initialize`/`session.new`/`list`/`close` OK；`fork`/`load`/`delete` = -32601，对照 `resume` = -32602 证为方法缺失）
+  - 🟡 「跨进程 resume 成功」仍为 Trae 单方声明 → 已并入 DSH-3「首验 id collision 定性」
+- [x] ③ Windows 端 `ctx.sandbox` provider —— ✅ **可用**（Claude 交 `47b6163` + WB 复验三档哨兵 + fail-closed；`enforcement=partial`）；⚠️ 方言缺口三层须修 → `dsh-local-env.md` §4
+  - ✅ **老大派 Trae 修 → Trae 已交 `4d6c5cc` + WB 复验通过**（修复落自做插件，未动第三方源码）
+  - 🔄 二轮收尾（R1 报告数据不符 / R2 探针缺 preamble 致假阴性 / R3 生产挂载未生效）**未回**，规格见 `exchange/log-trae.md`「二轮收尾」
+  - ⬛ **生产挂载未生效**（`larry` / `sdk` 的 `cordis.patch.yml` 均为 `[]`）→ **DSH-3 集成时必须显式挂载**（收口清单隐性欠账 1）
+- [x] ④ Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；**四组对照判据矩阵**（写进 DSH-6 断言）→ `dsh-local-env.md` §6
+- [x] ⑤ TS embedding 漂移比对 —— ✅ **无需全量重嵌**（漂移 `2.2e-7`；硬前提：预处理严格对齐）→ `dsh-cloud-deployment.md` §8
+  - 💡 **衍生架构选项**：TS embedding 与 Python 等价 → 若改 `sqlite-vec` 可去掉 Python 运行时。**未拍**，见 `dsh-cloud-deployment.md` §8
+  - ⚠️ 适用边界（不外推）：覆盖 14 条文本 / 单一模型 fp32；未覆盖量化 dtype、超 512 token 截断、其他模型
 
 **DSH-2.6 - 阶段收口复核**
 
@@ -211,7 +162,7 @@
 > |---|---|---|---|
 > | ✅ **A 已交付** | `--real-api` 等价物（真实调用断言机制） | 2.4 段 + DSH-3「前置件 1」 | 🟢 **Claude 已交（提交 `0e2a7e9`）+ WB 独立复验通过**（真 Key 绿 / 错 Key 红两侧均复现）→ **退回 1 项（跑完进程不退出）已收口**：老大裁定按偶发收口，入口脚本 20 分钟墙钟看门狗兜住（CI 不再挂死）；细节见 DSH-3「前置件 1」段 |
 > | 🟡 **B 已转移** | A 段自定协议设计 | 通信面段（派生留痕）+ DSH-3 正式条目 | **已勾掉**（留痕保留，非已完成）；执行走 DSH-3 那条 |
-> | ✅ **已命中（判毕）** | T2 触发线：官方 web surface 经**反向代理**对外是否可行 | 通信面段 | **命中**（2026-09-11 WB 实测：反代可行；原记「`--trusted-host` 为唯一已知障碍」**实为可绕过的 Host 校验**）→ 仅触发「回头评估直连」，定型不变；详见上方「⭐ 通信面定型」段 T2 条目 |
+> | ✅ **已命中（判毕）** | T2 触发线：官方 web surface 经**反向代理**对外是否可行 | 通信面段 | **命中**（2026-09-11 WB 实测：反代可行；原记「`--trusted-host` 为唯一已知障碍」**实为可绕过的 Host 校验**）→ 仅触发「回头评估直连」，定型不变；**证据与未覆盖边界见 `dsh-cloud-deployment.md` §7.1** |
 > | ⬜ C 低优先 | 最新 rc 复核 / 重跑形态测绘 | 本段上两条 | 老大定：**不与上游 alpha 绑死，按我们节拍走** |
 >
 > **隐性欠账（挂在已勾主项下、无 checkbox，最易漏）**

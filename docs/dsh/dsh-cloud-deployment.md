@@ -223,6 +223,22 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
   3. **故障域合一** —— 任一部分 OOM / 崩溃可能拖垮整机组。§2 观测到 DSH 常驻仅 173MB，短期不是问题，但缺小时级数据（见 §8）。
 - **唯一能拆开的出路**是让 B 段回到 HTTP（Gateway），而这恰好被 §7 的负结果挡住 —— **除非后续查明 gateway 路由需 typert 实例注册后才挂载**（此为待验项，非已证否）。
 
+**⭐ T2 触发线实测：官方 web surface 经反向代理对外可行（🟢 2026-09-11 WB 实跑，dsh `0.1.2-rc.1`）**
+
+`/api` 上有一道 **browser-trust fence**（`dsh web --help`：`--trusted-host <authority>` = fence **额外放行**的 authority，host 或 host:port，可重复）。原记「`--trusted-host` 白名单为唯一已知障碍」——**实测是个可绕过的 Host 校验，非真阻断**。两条路都通：
+
+| 场景 | 状态码 | 读法 |
+|---|---|---|
+| root 无 token | 401 | token 门 |
+| 直连 `Host=127.0.0.1:8799` | 404 | fence 放行（路由无此端点）|
+| 直连 `Host=evil.example.com` | **403** | **fence 拦** |
+| 反代·Host 重写为回环 | 401（≠403）| **放行 → 反代有效** |
+| 反代·Host 原样透传 | 403 | 仅透传无用（对照）|
+| 服务加 `--trusted-host evil.example.com`，直连 / 反代透传 | 401（≠403）| **官方口子生效** |
+
+- ⚠️ **命中 ≠ 推翻定型**：因 Gateway 不能独立起 HTTP（§7），T2 现只剩「反代**整个** `dsh-web-app`」一条路（= 承载官方 shell，与「自做前端」取向有张力）→ **仅触发「回头评估直连」，通信面定型不变**。
+- ⚠️ **本轮未覆盖（勿外推）**：WS 升级经反代 / 完整 token→cookie 登录流 / `--trusted-host` 的**安全性**（只测「通不通」，未测「安不安全」）。
+
 ---
 
 ## 8. 尚未闭合
@@ -231,6 +247,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 |---|---|---|
 | embedding 模型加载内存 | 🔴 估算 150–250MB | 模型源 15KB/s，未在时限内下完。**已不阻塞选型**——即便取区间上位，2C2G 仍余 ~35%，投产后实测校正即可 |
 | 生产是否保留 ChromaDB | ⬛ 架构变量（**⑤ 结论后已被重新打开**） | 与「全面 TS 化」存在张力（既有决策 TODO 183 保留 SQLite+ChromaDB 双写，不主张推翻）。🟢 **新证据**：TS embedding 与 Python 侧等价（漂移 `2.2e-7`）→ 若向量存储改 `sqlite-vec`，可**去掉 Python 运行时**（省 91MB 进程 + 模型层 + 一个 runtime），且避开机上装境外模型的部署坑（§6 坑 2）。**需老大择期拍一次** |
+| ~~**embedding 是否需全量重嵌**~~ | ✅ **无需**（2026-09-10） | DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧向量漂移 `2.2e-7`、cosine ≥ 0.9999999999、top-1/3/5 全对 → **不重嵌**，省 DSH-4 一大块。⚠️ **硬前提：预处理严格对齐**（`do_lower_case` / lowercase、CLS pooling、L2 normalize、max_length 512），任一项不对齐会产生 0.77 级假漂移（详见 `dsh-migration.md` DSH-4 承载表）|
 | ~~**多会话并发的内存线性增长**~~ | ✅ **已推翻**（2026-09-10） | 原假设"多会话 = 多子进程、线性上涨"**不成立**：官方契约明载 `DeepSeekHarness` **单进程跨多会话**，实测 20 句柄增量 **0.00 MB**、6 会话真实 prompt 边际 **2.24 MB/个**、外推 20 会话 ≈ **182 MB**。详见 §2.4 / §2.4.1。**2G / 4G 之争由此收口：2C2G 够** |
 | **接近 contextWindow 上限时的 compaction 行为** | ⬛ 未测 | 实测仅 18 轮短对话，`contextWindow = 1,000,000` token 远未触顶；**未观测到 compaction 事件（计数 0），但不可据此断言无此机制**。若将来出现百万 token 级会话，须重测内存与压缩行为 |
 | gateway 真实端点 | ⬛ | 见 §7 |

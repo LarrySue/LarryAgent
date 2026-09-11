@@ -217,8 +217,8 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | **生态繁荣但质量参差**（**前判"生态早期"已推翻**，见 §2 插件生态行）| 3,199 插件 / 25 分类，但 UI·主题类占 640+（大量玩具）；个人作者为主，弃坑风险高 | **只借鉴、不直装（§3.0）**——生态价值定位为**参考实现库**：读源码抄设计、必要时 fork 自改；**不把任何关键能力押在外部作者的维护意愿上**。临时验证只在隔离环境装，不进产品依赖。补充（老大）：3,199 这个数字本身也可能含代理行为与跟风件，**不可作为"有人维护"的证据** |
 | **插件版本漂移** | DSH preview 期 API 频繁变动，插件作者跟不上（已有插件标注 "verified against DSH 0.1.0-rc.6"，而锁定版为 `0.1.2-rc.1`）| 因 §3.0 **不直装**，本风险对**产品运行时不成立**（我们不依赖插件跟上 DSH）；仅影响**参考时效**——借鉴时标注其验证版本，fork 代码须按锁定版 `0.1.2-rc.1` 重验 API。DSH 升级时**不产生插件兼容性回归项** |
 | **第三方插件安全** | SAFETY.md 明示：沙箱、审批与权限控制**不能保证隔离**（未接受安全审计）| 第三方插件视为**不可信代码**。**§3.0 后本风险大幅下降**：不直装 = **未经审读的**第三方代码不进运行时（fork 路径下经改造的源码必先审读，措辞前后自洽）；凭据 / 文件 / 网络相关部分按最小权限重写。**缺口（Qoder 二点，采纳）**：不直装 = 失去上游自动补丁通道 → 须补 **upstream 追踪与 CVE 响应流程**（见 §3.7）|
-| **会话存储外接**（原 §九 保留项）| `storage/` 是 Non-session storage hub + backends，但具体能否外挂 SQLite 未确认 | DSH-2 环境准备时实测 |
-| **headless + ACP 契约**（原 §九 保留项）| `acp/` 描述"Automation-only Agent Client Protocol server"，契约稳定性需实测 | DSH-2 环境准备时实测 |
+| **会话存储外接**（原 §九 保留项）| `storage/` 是 Non-session storage hub + backends | ✅ **DSH-2.5 ① 已实测（2026-09-10）**：官方 `dsh-storage-sqlite` backend 仅需配置，`path` 可指任意绝对路径（脱离 `.dsh-home`）→ 外接 SQLite **可行**（结论见下方 DSH-2 退出条件）|
+| **headless + ACP 契约**（原 §九 保留项）| `acp/` 描述"Automation-only Agent Client Protocol server" | ✅ **DSH-2.5 ② 已实测（2026-09-10）**：`initialize` / `session.new` / `session.list` / `session.close` 均 OK；`fork` / `load` / `delete` = **`-32601` 方法缺失**（对照 `session/resume` = `-32602` 证明非鉴权遮挡）→ 契约面稳定，但**无 fork / replay，不适合前端**（§3.6）|
 | **产品承诺渗透性漂移（层间泄漏）**（Marvis，采纳）| 承接 ≠ 承诺不变，底座机制会悄悄改写产品语义：① **2.4.3 硬删 vs session append-only 留痕**（记忆删了但事件日志仍在，与 2.8.2 行为可见冲突）；② **2.9.2 保真度档位**取决于 compaction 默认策略（不满足则自做策略插件）；③ **三处泄底**：术语（harness 词不得出现在用户可见处）/ 交互（审批须默认聚合、低打扰）/ 能力（接了 8 个子项却没兑成体验）| **换底座对用户观感中性偏加分**——DSH 是原材料，净影响由语义层决定；**"套壳"在用户侧不是风险，真风险是没把白给子项兑成体验**。① 挂 2.4.3 验收注记：删 → 回放 → 断言无残留，不可避免则产品层定夺（轨迹脱敏 vs 级联删）；② 泄底三项由语义层收敛，不进必关清单 |
 
 **升级 SOP**（取代原"锁版本不升不降"——该表述与立论③"随 DSH 演进"自相矛盾，第 1 轮 Trae/Qoder/Marvis 三方一致指出）：
@@ -527,12 +527,12 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
   - **不选 B 案的理由**：8 项无一项触及 agent loop / session 内核 / 事件存储；fork 的代价（每次上游发版 merge 一个 alpha 框架的破坏性变更）换不来任何必需收益。升级 SOP 在 A 案下 = 更新依赖版本 + replay 回归
   - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 
-**退出条件（5 项实测，任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
-1. `storage/` 外接 SQLite 可行性
-2. `acp/` 契约稳定性
-3. **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）
-4. Vue/Tauri → sdk profile 连通
-5. **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）
+**退出条件（5 项实测 · ✅ 全部通过 · 2026-09-10 收口；任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
+1. `storage/` 外接 SQLite 可行性 —— ✅ **可行**：官方 backend 仅需配置，`path` 可指任意绝对路径；外部库当日落盘、我们的 `mem-1` 行可读出；反向哨兵证数据走 SQLite 而非默认 json（判据见 `dsh-cloud-deployment.md` §5）
+2. `acp/` 契约稳定性 —— ✅ **通过**：`initialize` / `session.new` / `session.list` / `session.close` 均 OK；`fork` / `load` / `delete` = **`-32601`**（方法缺失，非鉴权）
+3. **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）—— ✅ **可用**：三档哨兵成立 + fail-closed；`enforcement = partial`（两条边界属实）；⚠️ **方言缺口三层**（本地化 / 错误码类别 / 编码）须修，详见 `dsh-local-env.md` §4
+4. Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；判据矩阵见 `dsh-local-env.md` §6
+5. **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）—— ✅ **无需全量重嵌**（漂移 `2.2e-7`，cosine ≥ 0.9999999999）；硬前提见下方 DSH-4 承载表
 
 **本阶段已定案的环境规格（后续阶段沿用，勿各自另起一套）** 🟢 DSH-2.1/2.2：
 
@@ -603,7 +603,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 能力（实现路径判定，非任务清单）| 原 Python 模块 | DSH 实现路径 |
 |---|---|---|
 | 长期记忆双写 + 人审 | `memory/archiver.py` 223 行 + `engine.py` 107 行 | 自做插件挂载 `session/` 事件流；保留 SQLite+ChromaDB 双写 |
-| **记忆迁移（活资产，非数据搬运）** | 全量 memories + 向量 | **全量重嵌**（PyTorch/FP32 与 ONNX/q8 向量不保证逐维一致，不可假设跨运行时可比）+ 同文本向量漂移比对 + 召回等价性抽样验收（迁移前后同组 query 的 top-k 一致性达阈值）+ 语义字段不降级（`is_active` / `last_hit_at` / `source_role` 一个不能丢，ChromaDB 只能重灌、机会只有一次）|
+| **记忆迁移（活资产，非数据搬运）** | 全量 memories + 向量 | ✅ **无需全量重嵌**（DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧向量漂移 `2.2e-7`、cosine ≥ 0.9999999999、top-1/3/5 全对）。⚠️ **硬前提：预处理须严格对齐**——`do_lower_case` / 统一 lowercase、CLS pooling、L2 normalize、max_length 512；**任一项不对齐会产生 0.77 级假漂移**，据此误判"必须重嵌"会白做。其余仍须：召回等价性抽样验收（迁移前后同组 query 的 top-k 一致性达阈值）+ 语义字段不降级（`is_active` / `last_hit_at` / `source_role` 一个不能丢，ChromaDB 只能重灌、机会只有一次）|
 | 用户画像 | 📐（TODO 长期项）| 自做插件；DSH 身份语义待核（见 §3.3）|
 | 知识库 | 📐（2.4.6 三层递进）| 自做插件；BM25/FTS+向量混合检索 |
 | 角色机制 | `config.yaml` + 5 角色 system_prompt | 用 `preset/`（agent-presets + persona）+ `cordis.yml` 配置 |
