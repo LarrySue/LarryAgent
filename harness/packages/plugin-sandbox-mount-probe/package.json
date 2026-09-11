@@ -1,0 +1,17 @@
+{
+  "name": "@larryagent/plugin-sandbox-mount-probe",
+  "version": "0.0.0",
+  "description": "R3 verification probe: boots inside a real dsh profile and records which provider serves ctx.sandbox plus what the consumer-side ctx.shell.confine() seam returns.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-sandbox-local": "*"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-sandbox-local": { "optional": true }
+  }
+}

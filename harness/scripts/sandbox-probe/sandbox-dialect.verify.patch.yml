@@ -1,0 +1,17 @@
+# R3 复验专用覆盖层：在生产挂载层之上再加一行**只读探针**，
+# 用于在真实 profile 内 boot 时记录「谁在 provide ctx.sandbox / 消费方接缝拿到什么」。
+# 证据文件：D:\Code\sandbox-probe\mount-probe.json
+#
+#   dsh --profile sdk --patch <本文件绝对路径> --dump-config
+#
+# 探针是复验仪器，不是修复的一部分；生产落盘只放 sandbox-dialect.mount.patch.yml 的内容。
+
+- id: sandbox
+  disabled: true
+
+- insert:
+    - id: sandbox-dialect
+      name: '@larryagent/plugin-sandbox-dialect'
+
+    - id: sandbox-mount-probe
+      name: '@larryagent/plugin-sandbox-mount-probe'

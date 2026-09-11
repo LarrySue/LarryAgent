@@ -1,0 +1,23 @@
+# DSH-2.5 ③-修复 · 生产挂载层（form B：disable 官方 sandbox 行 + insert 我们的 provider）
+#
+# 用法（二选一，二者语义相同 —— 前者用于复验，后者是生产落盘位置）：
+#   复验： dsh --profile <p> --patch <本文件绝对路径> --dump-config
+#   生产： 把下面两段整体粘进 $DSH_HOME/profiles/<p>/cordis.patch.yml
+#
+# ⚠️ form A（`- id: sandbox` + `name:` 覆盖同名行）实测**不生效** —— loader 的 id 定位
+#    只做 config 覆盖，不改该行的插件来源。故必须用 disable + insert。
+#
+# ⚠️ 插件须**实体复制**进 profile 的 node_modules（不要 link）：
+#    link 方式下插件的 bare import 会从源目录解析，取不到 @deepseek-ai/dsh-sandbox-local。
+#    安装点：$DSH_HOME/profiles/node_modules/@larryagent/plugin-sandbox-dialect/
+#
+# 行 id（sandbox-dialect）**不必**叫 sandbox：消费方（dsh-pwsh-sandbox）按**服务名**
+# `sandbox` 注入，不是按 loader 行 id。此结论已由 plugin-sandbox-mount-probe 在
+# profile 内 boot 实测（见 exchange/log-trae.md 二轮收尾报告 R3）。
+
+- id: sandbox
+  disabled: true
+
+- insert:
+    - id: sandbox-dialect
+      name: '@larryagent/plugin-sandbox-dialect'

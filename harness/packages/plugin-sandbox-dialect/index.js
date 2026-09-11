@@ -12,12 +12,32 @@
  *      entry `permission denied` is the EACCES wording); this one is
  *      LANGUAGE-INDEPENDENT, so plain English Windows misses it too.
  *   ① zh-CN localization — cmd `拒绝访问。` / powershell `对路径"…"的访问被拒绝。`
- *      (not reproduced on this host under the runner path, kept defensively).
+ *      Only reachable in the real chain: `PwshLocalExecutor.argv()` prepends
+ *      `ENCODING_PREAMBLE`, which pins the child's output to UTF-8 so the
+ *      collector's UTF-8 decode preserves these strings. Measured: under an
+ *      inherited console CP of 936 a bare spawn emits GBK and the same
+ *      signatures miss; with the preamble they match.
  *
  * FIX (ours, not the third-party package): subclass the shipping provider and
- * append the missing dialect entries to the `ConfinedArgv` it returns. Mounted
- * by pointing the profile's `sandbox` row at this plugin, so the upstream
- * package stays untouched and survives upgrades.
+ * append the missing dialect entries to the `ConfinedArgv` it returns, so the
+ * upstream package stays untouched and survives upgrades.
+ *
+ * MOUNTING (verified in-profile, see `harness/scripts/sandbox-probe/`): the
+ * `sandbox` row must be DISABLED and this plugin INSERTED as a new row —
+ *   - id: sandbox
+ *     disabled: true
+ *   - insert:
+ *       - id: sandbox-dialect
+ *         name: '@larryagent/plugin-sandbox-dialect'
+ * ⚠️ Overriding the existing row in place (`- id: sandbox` + `name:` on the
+ * same entry) does NOT work: loader id targeting only overrides `config`, it
+ * never changes which package a row loads. The inserted row's id need not be
+ * `sandbox` — consumers inject the SERVICE name `sandbox` (`dsh-pwsh-sandbox`
+ * declares `static inject = ['subprocess','sandbox','sandboxPolicy']`), not the
+ * loader entry id.
+ * The plugin must be physically copied into the profile's node_modules (a
+ * `link` install resolves its bare imports from the source dir and then cannot
+ * find `@deepseek-ai/dsh-sandbox-local`).
  *
  * Why `enforcement === 'partial'` gates the patch: on win32 the only platform
  * candidate is the windows-acl runner, whose static enforcement is `partial`
