@@ -1,0 +1,213 @@
+# DSH 本机（Windows）环境约束与已知坑
+
+> **定位**：本机 Windows 侧跑 DSH 的**环境事实与坑**的唯一真相源（与 `dsh-cloud-deployment.md` 对仗：那个管云，这个管本机）。
+> 跨 AI 共享的本地环境事实一律放此，交流区 / TODO / AI 记忆只留指针。
+> 全部为 🟢 实测或源码级确认，基线 `dsh-v0.1.2-rc.1`。
+
+---
+
+## 1. profile 启动锁（会卡死所有 dsh 命令）
+
+**现象**：任何 dsh 命令启动即失败，报
+
+```
+Error: atomic-write: timed out waiting for the writer lock at C:\Users\SuLarry\.dsh\profiles\node_modules.lock
+    at withFileLock (...dsh-atomic-write/lib/index.js:136)
+    at async healProfilesModuleFallback (...dsh-app-boot/lib/index.js:662)
+```
+
+**机制**（🟢 源码 `dsh-atomic-write/lib/index.js`）：
+- 锁是 `wx` 排他创建的兄弟文件 `<filename>.lock`，内容 = 持有者 PID
+- 默认 `DEFAULT_LOCK_WAIT_MS = 2e3` → **只等 2 秒**就抛超时
+- 源码注释明写：**「The contender never removes an existing lock because file age cannot prove that its owner stopped; orphan recovery is an operator action.」** → **孤儿锁永远不会自动回收**
+
+**判定与处理**（照做，别靠猜）：
+1. `cat <lock>` 取 PID → 与 `tasklist | grep node.exe` 比对
+2. PID 不在活进程里 = **死 PID 残留锁** → 可安全清理
+3. 清理方式：**重命名备份，不删除**（dsh 自己就是这么做的，目录下已存在 `node_modules.lock.bak.<ts>` 先例）：
+   ```
+   mv node_modules.lock node_modules.lock.bak.$(date +%s)
+   ```
+
+⚠️ **不要**据此写"dsh 有 bug"——这是设计选择（宁可失败也不误删别人的锁）。**运维动作**才是正确归属。
+
+---
+
+## 2. `--patch` 引本地路径包会触发 heal → 撞上面那把锁
+
+**现象**：`dsh --profile larry --patch ./packages/<pkg>/cordis.patch.yml` 启动即锁超时。
+
+**原因**：本地路径包不在 profile 的 `node_modules` 里 → boot 时 `healProfilesModuleFallback` 试图 pnpm install → 争锁（见 §1）。
+
+**正确处理**：本地包须**先装进 profile node_modules**，再 boot：
+```
+dsh plugin --profile <name> add <本地包路径>
+... 跑 ...
+dsh plugin --profile <name> remove <包名>
+```
+（`dsh plugin` 是转发给 pnpm，在 profile 目录执行；`--patch` **只适合**覆盖已装包的 patch 层。）
+
+**替代（复验推荐，零侵入）**：不 boot profile，直接 spawn 被测二进制（见 §3）。
+
+---
+
+## 3. windows-acl runner 直调格式（绕开 profile 的独立验证路径）
+
+想验证沙箱而**不想动 profile / 不想撞锁**，可直接 spawn runner：
+
+```
+node <...>/dsh-sandbox-windows-acl/lib/runner.js \
+  --workspace <已存在目录> --temp <目录> \
+  --mode <read-only|workspace-write> \
+  -- <可执行文件绝对路径> <args...>
+```
+
+⚠️ `--` 后**第一个必须是可执行文件**（如 node.exe 绝对路径）。传 `-e ...` 之类会报：
+
+```
+windows-acl-run: CreateProcessAsUserW failed (Win32 2): command: -e
+```
+
+（Win32 error 2 = 文件不存在。这不是沙箱缺陷，是调用姿势错。）
+
+---
+
+## 4. Windows 沙箱：**拒绝方言缺口**（🟢 源码 + 实测，影响模型可见性）
+
+**契约**（🟢 `packages/sandbox/sandbox-local/src/index.ts:205-213`，tag `dsh-v0.1.2-rc.1`）：
+
+```js
+const DENIAL_SIGNATURES = {
+  bwrap:    ['read-only file system'],
+  landlock: ['permission denied'],
+  seatbelt: ['operation not permitted'],
+  // pwsh/.NET: "Access to the path '...' is denied."; cmd: "Access is denied.";
+  // node EACCES: "permission denied".
+  'windows-acl': ['access is denied', 'access to the path', 'permission denied'],
+  runnerCommand: ['read-only file system', 'permission denied'],
+}
+```
+
+> 注：`denialSignatures` 由 **provider（sandbox-local）** 组装，**不是**后端（sandbox-windows-acl）声明的——后者 `lib/` 里一个相关字符串都没有。改方言要改 provider。
+
+**实测缺口分两层**（两层都独立复现，务必分开记）：
+
+| 层 | 现象 | 是否跨语言成立 |
+|---|---|---|
+| **① 本地化层** | 中文 Windows 下 cmd/powershell 输出中文，英文签名命中不了 | ❌ 仅非英文系统 |
+| **② 错误码类别层** | **node 写失败报 `EPERM: operation not permitted`，而签名备的是 `permission denied`（那是 EACCES 的文案）** | ✅ **英文 Windows 同样不命中** |
+
+实测三条（🟢 2026-09-10 WB 独立复现，`locale=zh-CN` `oemcp=936` `IsInRole(Administrator)=False`）：
+
+| 子进程 | 实际 stderr | 命中三条签名 |
+|---|---|---|
+| node | `Error: EPERM: operation not permitted, open '…'` | ❌ |
+| Windows PowerShell | `对路径"…"的访问被拒绝。` | ❌ |
+| cmd（无引号重定向写法） | `拒绝访问。` | ❌ |
+
+**影响面**：`denied=false` → 模型侧**只当普通命令失败**，既看不到 `[sandbox: file access denied]` 标记，也拿不到升权提示 → **沙箱拦住了，但拦住的信号传不出去**。
+
+⚠️ **② 比 ① 更硬**：不要把它整体归因为"中文 Windows 的问题"，那是把跨语言的缺陷降级成了本地化问题。
+
+### 4.1 ⭐ 第 ③ 层：编码层（决定 ① 层能否生效，比 ① ② 都更前置）
+
+**机制**（🟢 源码 `packages/subprocess/subprocess-local/src/spawn.ts:213/246`）：子进程输出**一律按 UTF-8 解码**（`Buffer.concat(chunks).toString('utf8')`）。
+
+**官方自述**（🟢 `packages/shell/pwsh-local/src/index.ts:40-49` 注释逐字）：
+
+> "The subprocess collector decodes output bytes as UTF-8, but Windows PowerShell 5.1 **writes the console/OEM code page by default, which garbles non-ASCII output**"
+
+对应解法是 `ENCODING_PREAMBLE`（`[Console]::OutputEncoding = UTF8; …`），**钉在每个命令前面**。
+
+**关键**：沙箱版 `pwsh-sandbox/src/index.ts:28` **复用** `PwshLocalExecutor`（即带 preamble）→ 真实链路下 PS 输出 **UTF-8 中文**，可被 utf8 正确解码 → **中文签名有效**。
+
+**实测矩阵**（🟢 2026-09-10 WB，runner `--mode workspace-write`，同一命令仅变 preamble）：
+
+| 场景 | stderr 真实编码 | 官方签名 | 含中文的签名 |
+|---|---|---|---|
+| 裸 spawn（探针姿势） | **GBK/OEM** → utf8 解码成乱码 | false | **false** ❌ |
+| 带 preamble（真实链路姿势） | **UTF-8** | false | **true** ✅ |
+
+→ **判据纪律**：验证 ① 层**必须带 preamble 跑**；用裸 `spawn` 会得到**假阴性**（看起来"中文签名没用"，实为探针姿势与真实链路不符）。这与 §7「判据必须取自真实运行时」同源。
+
+⬛ **未测**：`--mode read-only` 下 PS 进入 ConstrainedLanguage，官方 README 提示 preamble 的 `[Console]::` 赋值**可能被拒**、非 ASCII 输出会退回主机代码页 → 该模式下 ① 层是否仍有效**未验**。
+
+### 4.2 「一劳永逸解决编码」的四条路径（🟢 源码 + 实测，2026-09-10 WB）
+
+老大提问：前置 preamble 这种事，有没有配置能一劳永逸？——**分层看，四条的结论完全不同。**
+
+| 层 | 机制 | 有没有 | 结论 |
+|---|---|---|---|
+| **DSH** | 配置项覆盖 preamble | ❌ **无**（`ENCODING_PREAMBLE` 是 `export const`，与 `DENIAL_SIGNATURES` 同构，拼死在 `index.ts:220` 的 argv 里） | **不需要**：dsh 默认就给每条命令前置，我们这条链路已"自动一劳永逸" |
+| **PowerShell** | `$PROFILE`（`profile.ps1`，四作用域含 AllUsers* 可全局下发） | ⚠️ **有但被禁用** | dsh 一律 `-NoProfile` 启动 → **profile 不加载**。⚠️ **用 `-NoProfile` 等于放弃所有 profile 级治理手段**，这条有普适价值 |
+| **Windows 系统** | ① `HKCU\Console\CodePage=65001`（可按 host 子键）<br>② 系统级 UTF-8 Beta（`HKLM\...\Nls\CodePage\ACP=65001`）<br>③ 装 PowerShell 7 | ① 存在<br>② 存在<br>③ 存在 | ① **配置在受限令牌下可见**（实测：受限进程读到 `HKCU\Environment\TEMP`、`LocaleName=zh-CN`），但**能否影响被管道捕获的 PS 5.1 输出未实测** ⬛；副作用是本机所有新建控制台窗口<br>② 本机 `ACP=936`（未开）；**影响所有非 Unicode 老程序，不建议为这一件事开**<br>③ **最干净**：dsh 解析顺序 **PS7 优先**（`resolve.ts`：`$ProgramFiles\PowerShell\7\pwsh.exe` → PATH 中的 `pwsh` → 5.1 兜底），且官方注释明说 **"pwsh 7 defaults to UTF-8 and is unaffected"**。本机**尚未装 PS7** |
+| **我们自己的代码** | 保留 buffer 做 UTF-8/GBK 双解 | ✅ | ⭐ **必做**：第三方收集器一旦 `toString('utf8')`，GBK 字节**不可逆**（变 U+FFFD，还原不回来）。将来我们自己 spawn 子进程，必须**留 buffer 再解码**，别直接吃 `text` |
+
+**实测基线**（直连 / 受限两种跑法**逐值相同**）：`[Console]::OutputEncoding=936`、`ACP=936`、`HKCU` 可读、`HKCU\Console\CodePage` **未设置**、`locale=zh-CN`、`USERPROFILE` 正常。
+
+→ **当前建议：什么都不用改**（dsh 自带 preamble 已生效）。把「装 PS7」记为**备用手段**——仅当 read-only 模式下 preamble 被 ConstrainedLanguage 拒、① 层失效时才需要它。
+
+---
+
+## 5. 环境噪声：WorkBuddy 的批量删除保护会污染沙箱探针输出
+
+node 侧 `rmSync` 递归删除 **>50 个文件**时，会抛：
+
+```
+Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":50,"scope":"turn",...}
+```
+
+沙箱探针的 cleanup 阶段可能踩到（**exit 仍为 0，但 stderr 有这条**）。
+→ **判读时不要把它误判成沙箱缺陷**。临时目录建议用带时间戳的新目录名、不递归删旧目录。
+
+---
+
+## 6. ⭐ 连通性 / 凭据状态判据矩阵（🟢 四组对照实跑，2026-09-10 WB）
+
+场景：同一脚本 `scripts/dsh-prompt.mjs`（sdk profile + stdio JSON-RPC），只改 Key 状态。
+
+| 场景 | exit | `finalResponse` | `assistant/message` 事件 | `turn/end.reason.kind` | `error.code` | status | 耗时 |
+|---|---|---|---|---|---|---|---|
+| **有效 Key** | 0 | `PROBE-OK-2026` | ✅ **有** | **`completed`** | — | — | 106.2s（冷跑）/ **1.9–3s（暖跑）** |
+| **无 Key** | 0 | 空 | ❌ 无 | error | `MISSING_CREDENTIAL` | — | 2.9s |
+| **错误 Key** | 0 | 空 | ❌ 无 | error | `AUTH` | 401 | 3.0s |
+| **已关闭的有效 Key** | 0 | 空 | ❌ 无 | error | `AUTH` | 401 | 2.6s |
+| **未知模型 id** | 0 | 空 | ❌ 无 | error | `INVALID_REQUEST` | 400 | 2s |
+
+> 末行🟢 Claude 2026-09-10 补（含反向对照：同一 Key 下把模型名换成 `deepseek-not-a-real-model` 即现此行 → 证明模型名在服务端被校验，故"改名后冒烟绿"不是假绿）。
+
+### 由此定出的判据（可直接写进 DSH-6 断言）
+
+- **成功 ⇔ `assistant/message` 事件存在 且 `finalResponse` 非空 且 `turn/end.reason.kind === 'completed'`。**
+  - 🔴 **此处早期写作「`turn/end.reason` 不存在」是错的**（2026-09-10 订正）：当时成功组取到的"无"是**字段路径取错**（实际在 `turn/end.data.reason`），**不是真的没有**。照字面实现 → **有效 Key 也被判红 = 假红**，而假红会逼人习惯性忽略红灯，比没有护栏更糟。
+  - **非 `completed` 的收尾一律判红**：`error` / `max-tokens` / `aborted` / `blocked` / `interrupted`。
+- **`exit 0` / session 建立 / 有事件流 —— 三项全部无效**：三种失败场景在这三项上都与成功一致。
+- **要区分失败原因，读 `turn/end.reason.error.code`**：`MISSING_CREDENTIAL` = 没配；`AUTH`+401 = 配了但无效/已关。
+- ⚠️ **错误 Key 与已关闭 Key 不可区分**（同为 `AUTH`/401）→ 用户报"AI 不回话"时，从输出**无法**判断是配错还是被关，只能凭 Key 后 4 位回查平台。
+
+### 两个附带事实
+
+- DSH **自带 Key 脱敏**：日志里呈现为 `****3c36`（**保留后 4 位**）→ 不会明文泄漏，但**后 4 位会进 session 日志**，涉及凭据时须知悉。
+- **环境变量方式不落盘**：跑完再无 Key 复现同一脚本，仍得 `MISSING_CREDENTIAL`（未从环境变量偷偷持久化）。credentials service（web Models 页面）那条落盘路径**未测** ⬛。
+
+### ⬛ 残留扫描的已知盲区：压缩
+
+`scanForKeys` 只扫**明文**文件，而 session 日志是 `session.jsonl.zstd`（**多帧 zstd**）→ 结构上扫不进去，**压缩是残留扫描的盲区**。
+
+- **现状可接受**：环境变量注入**不落 session 日志**（已解压核对，连脱敏形态都无）→ 该路径下盲区无实害，**本轮不补解压扫描**（裁定 ②：无收益不扩围）。
+- 🔴 **触发条件（届时必须补）**：一旦改用 **credentials service 那条落盘路径**，Key 可能以明文进 session 日志 → **必须先补"解压后扫描"**（多帧魔数切帧，约 30 行），否则残留扫描形同虚设。**此为条件式欠账，不是"已知无害"。**
+
+### ⚠️ 实跑前置（漏了会伪装成别的故障）
+
+1. **先清 profile 锁**（见 §1）——任何一次 dsh 运行（含 `--dump-config`）都会留下孤儿锁。
+   不清的表现是 `initialize timed out after 20000ms` 或 `JSON-RPC input closed`，**极易误判为"profile 启动慢 / SDK 握手有问题"**。
+2. **真实模型调用耗时两极**：**冷跑**（含 profile boot / pnpm heal / 首次 SDK 握手）可到 **106 秒**；**暖跑**（同进程 SDK、profile 已热）**1.9–3 秒**。`dsh-prompt.mjs` 内置 `initializeTimeoutMs: 20_000`，冷跑容易超时 → **超时 ≠ 失败**，复跑前先确认锁。
+   → 超时预算**别一律按 106s 设**（会拖慢正常用例）。建议 `initializeTimeoutMs=120s / requestTimeoutMs=240s`，取宽松侧防冷跑误杀。
+
+---
+
+## 7. 其他已确认事实
+
+- `sandbox` provider 在 `dsh-base/cordis.patch.yml` 挂载 `@deepseek-ai/dsh-sandbox-local`，**未 disabled**；`bash-sandbox` 在 win32 被禁用、`pwsh-sandbox` 在非 win32 被禁用。
+- `enforcement` 在 Windows 上静态声明为 **`partial`**（受限令牌须保留 Everyone 才能初始化 → 显式给 Everyone 写权限的对象仍可写；NTFS 硬链接是文件对象别名 → 工作区外硬链接仍可写）。**2.10.2「Windows 端侧执行器」按 partial 规划，不要按 full 宣传。**
+- 旁路开关：无静默降级；显式配置 `DSH_PERMISSION_MODE=danger-full-access`（该档 `approval: never`）。
