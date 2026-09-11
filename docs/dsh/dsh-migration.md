@@ -379,7 +379,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 > ✅ **定型后修正（见「定型结论」）**：上述倾向谈的是**直连前提下的 L1 整段**。改为中转子，Gateway 的适用位置**从 A 段收窄到 B 段**（服务 ↔ DSH 同机），且**待验** `larry` profile 下能否起 HTTP。
 
-**实测动作的优先级已随定型下调**：原「web surface 开箱实测」中，**①②③（dist 来源与可替换性 / token 获取 / 页面能力面）价值下降**——中转后我们不承载官方 shell；仅 **④（`--trusted-host` 能否放开非 loopback / 反代可行性）** 仍与重估触发线 **T2** 直接相关，保留为低优先级待验。
+**实测动作的优先级已随定型下调**：原「web surface 开箱实测」中，**①②③（dist 来源与可替换性 / token 获取 / 页面能力面）价值下降**——中转后我们不承载官方 shell；**④（`--trusted-host` 能否放开非 loopback / 反代可行性）已实测（2026-09-11）：反代可行 → 重估触发线 T2 判「命中」，见 `dsh-cloud-deployment.md` §7.1**。
 
 #### 定型结论：自做服务中转（🟢 老大 2026-09-09 拍板）
 
@@ -489,7 +489,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **重估触发线（命中任一即回头评估直连）**：
 - **T1**：DSH-3 的 S0 切片实测显示自研流式/重连/会话管理复杂度显著超出预期；
-- **T2**：官方 web surface 经反向代理对外服务被验证**可行且省事**（当前 `--trusted-host` 白名单约束是唯一已知障碍，未实测反代）；
+- **T2**：官方 web surface 经反向代理对外服务被验证**可行且省事** —— 🟢 **已实测判「命中」（2026-09-11 WB）**：反代可行（"唯一已知障碍 `--trusted-host`"实为可绕过的 Host 校验）；因 Gateway 不可独立起 HTTP，只剩「反代整个 `dsh-web-app`」一条路 → **仅触发回头评估，定型不变**。证据与边界见 `dsh-cloud-deployment.md` §7.1；
 - **T3**：多端（PC + 移动）实时同步需求变强，自研同步成本逼近复用官方通道的成本。
 
 > **已拍的两个前提（归档）**：① 部署形态 = **经自做云端服务中转**（本结论）；② **C 段反向工具执行由我们自做**，接受其不属于任何官方面。
