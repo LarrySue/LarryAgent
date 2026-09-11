@@ -184,6 +184,8 @@ const DENIAL_SIGNATURES = {
 
 **挂载层文件**：`harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml`（生产用，内容即上面两段）；`*.verify.patch.yml` 是叠了只读探针的复验版，**不进生产**。
 
+**探针物料现状（2026-09-11）**：仓库外复验物 `D:\Code\sandbox-probe\`（`mount-probe.json` / `v3.json` / `forensics.json` / `dump-config.txt` / `boot-help.txt` 等）已随仓库外清理**整体进回收站**（可恢复窗口内可取回）。⇒ `mount-artifact-replay.mjs` 的**输入产物已不在原位**，要复跑须先用 `*.verify.patch.yml` 重跑一次 boot；**本节结论不依赖该产物，判定不受影响**。
+
 **覆盖面**：`sdk`／`larry`／`web` **三个 profile 都要**（三者 bundles 均含 `@deepseek-ai/dsh-base` ⇒ 均带 sandbox 行 + win32 下启用的 pwsh-sandbox）。插件实体放在 `profiles/node_modules/@larryagent/`，**三个共享，一份足够**。
 
 **落盘状态**：⬛ **未落盘**（三个 profile 的 `cordis.patch.yml` 仍为 `[]`）→ **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
