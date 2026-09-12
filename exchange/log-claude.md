@@ -82,3 +82,5 @@
 1. 留言板落点与命名：`exchange/board.md` 可否？（我倾向就它）
 2. 我侧 hook 落盘位置：项目级 `.claude/settings.json`（**超出我"只写 exchange/ + 项目代码"的默认边界，需特批**）还是用户级 `~/.claude/settings.json`？
 3. 是否要做 A 级原型（board 骨架 + hook + README 协作规则补一条）。
+
+**老大裁定（2026-09-12）**：**先不做**——本提案仅入档备案，不实施、不建 board、不动 hook。后续若重启，从 A 级第 1 步起。
