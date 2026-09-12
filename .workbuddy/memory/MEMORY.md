@@ -47,7 +47,7 @@
   2. 已完成阶段的交付说明/验收结论删除
   3. 已闭环的裁决/事故记录删除
   4. 历史状态/历史记录段压缩成"哪阶段已完成"等索引，删过程性总评/宏观摘要
-  5. 对未来有持续引用价值的内容（产品基调、结构决策、需求）保留。**环境 / 基础设施规格（硬要求、已知坑、验收判据、环境清单）属"事实"不属"派发状态"**——清理前须先升格进 `docs/`，不得随派发稿一起删（实例：`daa508e` 把 WSL 环境规格 404 行当"已闭环派发稿"清掉，连 CVM 选型论证一并丢失，导致后续 AI 与老大本人都重新发现一遍）
+  5. 对未来有持续引用价值的内容（产品基调、结构决策、需求）保留。**环境 / 基础设施规格（硬要求、已知坑、验收判据、环境清单）属"事实"不属"派发状态"**——清理前须先**确认**已落 `docs/`，不得随派发稿一起消失
   6. 当前状态块精简：只写"X✅/Y🔄+一句话指向规格"，删悬空引用、删跨文件多余引用
 - 派发稿写在**顶部状态区**（或顶部加醒目指针指向末尾），不可只追加到 log 末尾。
 
@@ -113,8 +113,3 @@
 - **将存在的问题定论为"必现"需要谨慎**：也有“偶发”等其他可能，另：是否"必现"不代表问题严重性
 - **查 DSH 凭据载体走 `$DSH_HOME/.credentials.yaml` 的 `refs:` 分节（非 config.yaml、非 `.env`）**：四层优先级=启动环境 > 受管文件 > 项目 `.env` > 主目录 `.env`；**POSIX 强制"仅属主可读"，否则启动直接失败**；**agent 工具进程可读该文件**（官方明说"是审慎不是边界"）。机制详情见 `.workbuddy/memory/2026-09-12.md`（待升格进 `docs/` DSH 专题）。
 - **Windows 原生 Python 不认 MSYS 风格路径**：`open('/c/Users/...')` → `No such file or directory`，而 Git Bash 的 `find`/`ls` 认。⇒ 传给 Python 的路径用 `C:/Users/...`（正斜杠盘符）或先 `cd` 再用相对路径。**同一会话里两种工具对同一路径的判定可能不一致，别据此判"文件不存在"。**
-- **`wsl.exe` 在程序黑名单**（与 `reg.exe` 并列，WB 完全无法调用 WSL）。⇒ **探测 WSL 环境走非程序路径**：① `winreg` 读 `HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss`（发行版名 / BasePath / State / DefaultUid）；② 直接读 `C:\Program Files\WSL\tools\kernel` 二进制里的 `X.Y.Z-microsoft-standard-WSL2` 版本串 ⇒ 反推 landlock ABI（**V1=5.13 / V2=5.19 / V3=6.2 / V4=6.7 / V5=6.10 / V6=6.12 / V7=6.15 / V8=7.0**）。**别用"目录不存在"推定"没装"**——发行版数据在 `%LOCALAPPDATA%\wsl\{GUID}\ext4.vhdx`，不在 `Packages\`。
-- **WSL2 文件系统陷阱**：工作副本放 `/mnt/<盘>`（9p/virtiofs）会 **flock 失效 + inotify 缺失 + 小文件 IO 指数级变慢**；必须放 WSL 内部 ext4（`~/`）。**任何带文件锁 / SQLite WAL 的程序（如 DSH 的 session 锁 + node:sqlite）放错会产出"看起来像程序 bug"的假故障**。
-- **PowerShell 工具的 `Get-CimInstance` 输出也为空**（不止原生 exe）⇒ 查系统信息一律改用 **Python 标准库**（`platform.win32_ver()` / `winreg`），不走 PowerShell。
-- **动手评估某个环境前，先查既有结论，别重新论证**（2026-09-12 WB 犯过一次：把**已验收的 WSL** 当成"新候选"重推一遍，结论还是 09-09 自己写过的）。**现有环境清单**：① **WSL Ubuntu 24.04.4**（内核 6.18.33.2 / ext4 / 已验收）= DSH-2.5 验证环境，定位「**仅为验证，非生产**」（记录：`.workbuddy/memory/2026-09-09.md`）；② **CVM**（Ubuntu 24.04.4 / 内核 6.8.0-124 / 2C·1935MB / ext4 云盘）= 判定环境 + 未来生产（记录：`docs/dsh/dsh-cloud-deployment.md`）；③ **本机 Windows 11** = 开发宿主；④ 另有 **RMBP 2019（Intel+T2）** 闲置，评估结论：**需求未到期，真要用走 VM 而非裸装**。
-- **`docs/` 下无 WSL 专章** —— 上述环境知识目前只散在 WB 私有日志（治理缺口，已向老大提议落进 `docs/dsh/dsh-local-env.md`，待拍）。
