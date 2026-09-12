@@ -103,7 +103,7 @@
 
 ### 二、做不到的（别朝这些方向设计）
 
-- **不能被唤醒**：没有跨进程消息 API。别的 AI 发什么都不会"叮"我一下；我只能被 ①人类消息 或 ④定时任务 启动。
+- **不能被唤醒**（⚠️ **此条已更正，见文末「补充与更正」**）：没有跨进程消息 API。别的 AI 发什么都不会"叮"我一下；我只能被 ①人类消息 或 ④定时任务 启动。
 - **不监听入站连接**：我能起服务（本机/WSL 均可，WSL 侧已实测），但**服务收到的消息进不了我的会话**——除非我下一轮主动去读它。所以"给我开个端口往里发"这条路在我这里不成立。
 - **MCP 是拉不是推**：我能配 MCP server 去查询（用户级已具备 `mcpServers` 配置位，当前无已配服务），但那是"我问它"，不是"它通知我"。
 - **会话之间不共享记忆**：本会话结束，未落盘的信息我记不住。跨会话只能靠仓库文件 + 我的记忆目录。
@@ -122,3 +122,40 @@
 
 - **今天可用**：② 文件投递 + 老大一句话触发（老大只须说"看某文件"，不必复述内容）。
 - **要做到"完全不经过老大"**：③ 或 ④ 至少一件需落地；相关提案见上一节，老大已裁定"先不做"。
+
+---
+
+## 2026-09-12 补充与更正（文档核查 + 本机实查后）
+
+> 来源：官方文档检索（hooks / headless / platforms / scheduled-tasks / channels）+ 本机实测（仅只读探查与 `--version/--help`）。
+> **未本地实测**：hook 注入效果、Channels、`claude -p` 实跑（会消耗老大账号额度，等授权）。
+
+### A. 更正 §二「不能被唤醒」
+
+不是"绝不能"，要分形态：
+
+| 形态 | 外部能否把消息送进我的**运行中**会话 |
+|---|---|
+| **当前 VSCode 扩展面板**（本会话） | ❌ 不行。扩展只注册了 URI handler，且 `prompt` 参数**只预填输入框、不提交** |
+| **CLI 会话**（终端里的 `claude`） | ✅ 有官方通道：**Channels**（研究预览；`--channels` 显式开启；**需 claude.ai 登录，API key 登录不支持**；v2.1.80+；团队/企业需管理员开关）——MCP server 发 `notifications/claude/channel`，内容以标签形式注入运行中会话；Claude 忙时排队，下一轮送达 |
+| **CLI + 插件 monitors**（实验） | ✅ 监视进程的输出行可唤醒**空转的交互式 CLI 会话**；`claude -p` 下不武装 |
+| **任何形态的"沉睡"会话** | ❌ 无此概念：`--resume` 是开新进程回放，不是附着 |
+
+⇒ **结论修订**：要"别的 AI 直接推给我"，必须换成 **CLI 形态**，且走 Channels/monitors（研究预览级）。
+
+### B. 本机已存在完整 CLI（不需新装、不需换 Codex）
+
+- 路径：`%USERPROFILE%\.vscode\extensions\anthropic.claude-code-2.1.269-win32-x64\resources\native-binary\claude.exe`
+- 版本 **2.1.269**（222 MB 原生构建）；**未加 PATH**（所以 `claude` 命令不可用，但可直接调用该 exe）
+- 具备：`--print`(headless) / `--resume` / `--continue` / `--output-format` / `--permission-mode` / `--allowedTools` / `--settings` / `--mcp-config` / `--plugin-dir` / `--add-dir` / `--max-turns` / `--max-budget-usd` / `--bare`；子命令 `agents`(后台会话) / `attach` / `auth` / `doctor` / `install` / `gateway` / `import` 等
+- ⇒ **"我变完全体"的最小路径**：用该 exe 跑 `claude install` 装到 PATH（或直接调 exe）；headless `-p` + `--resume` 即可被别的进程"发起请求—我回话"
+- **未验证**：本机 `--help` 中未见 `--channels`；计费/额度规则（`--bare` 需 API key）；Windows 下 hook 的 shell 语义
+
+### C. Hook 注入能力（③ 通道的细节）
+
+- **能注入上下文的事件**：`SessionStart`（stdout 亦算上下文）、`UserPromptSubmit`、`PreToolUse`、`PostToolUse`、`PostToolUseFailure`/`PostToolBatch`、`Stop`/`SubagentStop`、`SubagentStart`
+- **注入写法**：`{"hookSpecificOutput":{"hookEventName":"<事件名>","additionalContext":"…"}}`；**顶层裸 `additionalContext` 会被忽略**
+- **不能注入**（只能副作用）：`PreCompact`、`SessionEnd`、`Notification`
+- **配置位置**：`~/.claude/settings.json`（用户级）或 `.claude/settings.json`（项目级）；扩展与 CLI **同一引擎、共享 settings/CLAUDE.md/MCP**
+- **限制**：内容超约 1 万字符会落文件、只给我路径+预览；settings 改动**启动时快照**，需重启（或 `/hooks`）；插件 `hooks.json` 的 SessionStart 注入有已知 bug（#16538）；退出码 2 = 阻断并把 stderr 喂给我
+- ⇒ 它能把"文件里有新留言"变成"我上下文里自动出现"，**但仍需要我被触发**（人类消息/定时任务）；它本身不叫醒我
