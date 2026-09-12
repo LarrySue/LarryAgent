@@ -197,7 +197,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 ## 6. 部署坑清单（行事规则，别重复踩）
 
 1. **安全组默认只放行 22** 🟢：起在 8123 的服务公网超时，但 CVM 本机 curl 200（**已做对照，是安全组不是服务**）。需其他端口须控制台开（建议 8000–9000 段）。
-2. **境外资源下载极慢** 🟢：Chroma 默认 embedding 模型 79MB 从境外源下 → **15 KB/s，8 分钟 9%，全量约 1.5 小时**；换 `HF_ENDPOINT` 镜像**无效**（Chroma 走自己的 S3，不经 HuggingFace）。**对生产的直接含义：首次部署必须预置模型或找可用国内镜像/代理，否则卡死在初始化**。这是**源的归属问题**而非网络慢——同机 npmmirror 下 node 31MB **仅 3 秒**，差三个数量级。
+2. **境外资源下载极慢** 🟢：Chroma 默认 embedding 模型 79MB 从境外源下 → **15 KB/s，8 分钟 9%，全量约 1.5 小时**；换 `HF_ENDPOINT` 镜像**无效**（Chroma 走自己的 S3，不经 HuggingFace）。**对生产的直接含义：首次部署必须预置模型或找可用国内镜像/代理，否则卡死在初始化**。这是**源的归属问题**而非网络慢——同机 npmmirror 下 node 31MB **仅 3 秒**，差三个数量级。⇒ **解法已有实测（见 §11.3）**：预置模型文件（国内镜像 ~10 MB/s，95 MB 约 10 s），**不必让 Chroma 自己下**。
 3. **ssh/scp 后台任务拿不到沙箱放行** 🟢：一律**前台跑**；长任务用远程 `nohup ... &` 挂起再轮询日志。
 4. **`pip install chromadb` 撞 PyYAML RECORD 缺失** 🟢：加 `--ignore-installed PyYAML` 绕过。
 5. **`pkill -f "import chromadb"` 会杀掉自己** 🟢：该 pattern 匹配到自身命令行。用更精确 pattern 或直接不 pkill。
@@ -250,7 +250,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 
 | 项 | 状态 | 卡点 |
 |---|---|---|
-| embedding 模型加载内存 | 🔴 估算 150–250MB | 模型源 15KB/s，未在时限内下完。**已不阻塞选型**——即便取区间上位，2C2G 仍余 ~35%，投产后实测校正即可 |
+| embedding 模型加载内存 | 🟡 估 150–250MB，**卡点已解除** | ~~模型源 15KB/s，未在时限内下完~~ ⇒ **§11.3 实测国内镜像 ~10 MB/s（95 MB 约 10 s）⇒ 现在可真机下载并实测加载内存**。仍不阻塞选型——即便取区间上位，2C2G 仍余 ~35% |
 | 生产是否保留 ChromaDB | ⬛ 架构变量（**⑤ 结论后已被重新打开**） | 与「全面 TS 化」存在张力（既有决策 TODO 183 保留 SQLite+ChromaDB 双写，不主张推翻）。🟢 **新证据**：TS embedding 与 Python 侧等价（漂移 `2.2e-7`）→ 若向量存储改 `sqlite-vec`，可**去掉 Python 运行时**（省 91MB 进程 + 模型层 + 一个 runtime），且避开机上装境外模型的部署坑（§6 坑 2）。**需老大择期拍一次** |
 | ~~**embedding 是否需全量重嵌**~~ | ✅ **无需**（2026-09-10） | DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧向量漂移 `2.2e-7`、cosine ≥ 0.9999999999、top-1/3/5 全对 → **不重嵌**，省 DSH-4 一大块。⚠️ **硬前提：预处理严格对齐**（`do_lower_case` / lowercase、CLS pooling、L2 normalize、max_length 512），任一项不对齐会产生 0.77 级假漂移（详见 `dsh/dsh-migration.md` DSH-4 承载表）|
 | ~~**多会话并发的内存线性增长**~~ | ✅ **已推翻**（2026-09-10） | 原假设"多会话 = 多子进程、线性上涨"**不成立**：官方契约明载 `DeepSeekHarness` **单进程跨多会话**，实测 20 句柄增量 **0.00 MB**、6 会话真实 prompt 边际 **2.24 MB/个**、外推 20 会话 ≈ **182 MB**。详见 §2.4 / §2.4.1。**2G / 4G 之争由此收口：2C2G 够** |
@@ -338,3 +338,56 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 - 启动命令（**必须 127.0.0.1，见 §3**）：`dsh --profile web --host 127.0.0.1 --port <p> --no-open`
 
 > 上述文件在 CVM 上，**该机有期限 → 如需长期保留应回传本地**。
+
+---
+
+## 11. 出网能力实测（2026-09-12 🟢 WB 在该机上实跑）
+
+> **动机**：老大问「要不要给 CVM 搭梯子 / 要不要换一家云」。此前只有 §6 坑 2 的**单点观察**（Chroma 模型源 15 KB/s），不足以支撑决策 ⇒ 做一轮全目标实测。
+> **方法**：`curl -w` 取状态码 / `time_connect` / `time_starttransfer`；大文件取 `size_download ÷ time_total` 为实速（**小响应的 `speed_download` 无参考价值**，勿混用）；每目标限时 8–20 s。
+
+### 11.1 实测数据
+
+| 目标 | 结果 | 连接 / 首字节 / 实速 |
+|---|---|---|
+| **① 完全不通** | | |
+| `www.google.com` | **000** | —（复测稳定，非偶发） |
+| `api.openai.com` | **000** | — |
+| `huggingface.co` | **000** | — |
+| **② 通但慢** | | |
+| `registry.npmjs.org` | 200 | conn 178 ms / ttfb **948 ms** |
+| `github.com` | 200 | conn 130 ms / ttfb 524 ms / ~29 KB/s |
+| `pypi.org` | 200 | conn 223 ms / ttfb 672 ms / ~30 KB/s |
+| **③ 通且快（境外）** | | |
+| `nodejs.org` | 200 | **31.0 MB / 8.24 s = 3.77 MB/s** |
+| **④ 通且快（国内 / 镜像）** | | |
+| `api.deepseek.com` | **401**（无 key 的正常响应） | conn 16 ms / ttfb **105 ms** |
+| `mirrors.tencent.com` | 200 | conn 4 ms / ttfb **34 ms** |
+| `registry.npmmirror.com` | 200 | conn 6 ms / ttfb 130 ms |
+| `mirrors.ustc.edu.cn` | 200 | conn 60 ms / ttfb 118 ms |
+| `www.modelscope.cn` | 302 | conn 20 ms / ttfb 76 ms |
+| `hf-mirror.com` | 200 | conn 185 ms / ttfb 386 ms |
+| **⑤ 模型文件实测下载（唯一真痛点）** | | |
+| `hf-mirror` → `bge-small-zh-v1.5/pytorch_model.bin` | 200 | **95.8 MB / 9.45 s = 10.1 MB/s** |
+| `modelscope` → 同上 | 200 | **95.8 MB / 10.45 s = 9.17 MB/s** |
+| **⑥ 网络层** | | |
+| `8.8.8.8:53` / `1.1.1.1:53` TCP | **OK** | 境外 IP 层**可达**（⇒ 不是全网封锁） |
+| proxy 环境变量 | 无 | 仅预置 `GOPROXY=https://mirrors.tencent.com/go,direct` |
+
+### 11.2 判定
+
+1. **这台机器"不天然翻墙"** —— Google / OpenAI / HuggingFace 直连**稳定失败**。
+2. **但"出境"本身不慢** —— `nodejs.org` 跑出 **3.77 MB/s**。⇒ **问题不在"境内 vs 境外"，在"具体目标"**：同为境外，`nodejs.org` 快、`npmjs` 慢、`google` 不通。⚠️ **§6 坑 2 的"15 KB/s"是特定源（Chroma 自带 S3 下载器）的问题，不得外推成"境外源都慢"。**
+3. ⭐ **生产依赖逐项有解（限定于当前依赖清单）**：
+   - **LLM API**（`api.deepseek.com`）→ 国内，ttfb 105 ms，**完全不涉及出境**
+   - npm → npmmirror｜apt → USTC｜Go → 腾讯镜像（34 ms）
+   - **embedding 模型（唯一真痛点）→ 国内两条路都 ~10 MB/s**（95 MB / 10 s）
+4. ⇒ **不需要给 CVM 搭梯子**；**不需要为此换云厂商** —— 换厂商解决不了"特定目标被墙"（那是政策层，不是厂商路由差异），且本机出境路由质量意外地好。
+
+> **边界**：第 4 条只对**当前依赖清单**成立。若将来要接入 OpenAI / Claude 等境外 LLM 或 `huggingface.co` 直连，结论不适用（但本项目已明确放弃海外配置，2026-09-06）。
+
+### 11.3 由此产生的两条订正
+
+- **§6 坑 2 订正**：原文"换 `HF_ENDPOINT` 镜像**无效**…首次部署必须预置模型或找可用国内镜像/代理，否则卡死在初始化"。**前半句仍成立**（Chroma 走自己的 S3、不经 `HF_ENDPOINT`）；**后半句已有实测解** ⇒ **解法不是"让 Chroma 自己下"，而是「预置模型文件」**：用 `hf-mirror` / `modelscope` 拉文件（各 ~10 MB/s）放进 Chroma 模型缓存目录。
+- **§8 未闭合表解锁**：`embedding 模型加载内存（150–250 MB 🔴 估算）` 的**卡点（模型源 15 KB/s 下不完）已解除** ⇒ 现在可以真机下载后测实际加载内存。
+- ⚠️ **一条不解释的现象（留痕，不猜成因）**：`hf-mirror.com` 302 后的 final URL 落在 **`cas-bridge.xethub.hf.co`**（HF 自己的 CDN 域）却**可达且 10 MB/s**，而 `huggingface.co` 直连 000。**成因未查、不给猜测**；就可用性而言"能拿到文件"已构成结论。
