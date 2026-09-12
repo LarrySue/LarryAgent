@@ -24,7 +24,7 @@
 
 - `ai-governance.md` — 多 AI 协作约束分级总纲（Tier 约束模型、角色分工、协作规则）
 - `production-env.md` — **生产环境（server 侧 / CVM / 轻量 Lighthouse）唯一真相源**：环境资产、规格判定（4C8G 非硬需求）、DSH 拒绝 0.0.0.0（官方 RCE 理由）、landlock sandbox 正反实测、node:sqlite 判据、部署坑清单、**⭐ §7.1 部署拓扑约束（B 段 stdio 不可跨机）+ T2 触发线实测**、成本 / 机型选型 / 域名备案三路径
-- `test-env.md` — **测试环境（WSL / Ubuntu-24.04）唯一真相源**：实测版本基线、四项验收判据、硬要求、已知坑清单、**⭐ 与生产的 landlock ABI 边界（WSL 7 vs CVM 4，判定不可互搬）**、**⭐ §8 执行通道（Claude 主 / Trae 次 / WB 只读复验；两通道结论不可互推）**、残留资产
+- `test-env.md` — **测试环境（WSL / Ubuntu-24.04）唯一真相源**：实测版本基线、四项验收判据、硬要求、已知坑清单、**⭐ 与生产的 landlock ABI 边界（WSL 7 vs CVM 4，判定不可互搬）**、**⭐ §8 执行通道（Claude 主 / Trae 次 / WB 只读复验；两通道结论不可互推）**、**§8.4 安全边界（越宿主沙箱的写路径）+ §8.4.1 收口候选**、残留资产
 - `local-env.md` — **本机（Windows）环境唯一真相源**：**⭐ 三种角色（开发环境 / C 侧测试环境 / PC 侧生产使用环境）**、profile 启动锁、`--patch` 引本地包撞锁、windows-acl runner 直调格式、**⭐ 拒绝方言缺口三层 + 方言修复件与挂载范式（§4.3）**、**⭐ 连通性 / 凭据四组对照判据矩阵**、DSH 工程搭建与短路点复跑、Vue/Tauri ↔ DSH 连通复跑、本机环境变量与工具链基线、**§11 PC 侧生产使用环境的口径（🟡 推论）**
 - `dsh/` — **DSH 迁移决策区**：`dsh-migration.md` 为决策文档，另有一些专题文档，包括三份含实测报告作**永久保留的证据**。细则见 `dsh/README.md`
 - `product-positioning.md` — **产品功能边界能力树**：8 域 / 31 子项，含每条落地方式与现状状态。根目录 `README.md` 与 `dsh/dsh-migration.md` 均存指针，勿另立副本

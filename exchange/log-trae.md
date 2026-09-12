@@ -99,6 +99,10 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 
 **含义**：**WSL 是本工具沙箱之外的一条写入路径**（9p 默认 `rwxrwxrwx`，uid 映射到 `sularry`）。边界仍在：系统 ACL 照样生效（`C:\Windows\System32\…` 写入 `Permission denied`）。
 
+> ⚠️ **WB 复看（2026-09-12）——归因待钉，勿据此定性**：上一段"被 **Trae 工具沙箱**拒绝"的**唯一依据**是本会话 `dsh --dump-config` 报的 `EPERM`，而那次拒绝出自 **DSH 自身沙箱**（windows-acl runner 拒绝写入后 node 报 `EPERM: operation not permitted`，DSH 未识别该文案；见 `local-env.md` §4「错误码类别层」）。
+> ⇒ 该证据支撑的是「**DSH 沙箱可被此路径绕过**」，**不等于**「AI 工具自身的沙箱可被绕过」（后者本会话**无对照实验**）。补证只需一次对照：不经 `dsh`，直接用工具自身能力在 Windows 侧写 `~/.dsh/…`。
+> ⇒ 收口候选（未拍板）见 `docs/test-env.md` §8.4.1。
+
 **我的立场**：把它当**能力事实**上报，**不当逃逸手段用**；是否收口（给 WSL 加约束 / 保持现状）由老大定。这也符合 HUMAN.md 原则 4「明确安全边界，而非控制安全边界」。
 
 ### 9. 给未来 WSL 测试的建议

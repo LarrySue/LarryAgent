@@ -231,13 +231,29 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 
 > 建议把 §8.3 三条 + PATH 净化**固化成脚本**（可执行、自强制、不依赖任何 AI 的"记忆"），而非散文指南。落盘位置待定（见 §10）。
 
-### 8.4 ⚠️ 安全边界：WSL 是各 AI 工具沙箱之外的一条写入路径
+### 8.4 ⚠️ 安全边界：WSL 是沙箱之外的一条写入路径
 
-🟢 **实证**（Trae，2026-09-12）：WSL 内 `echo probe > /mnt/c/Users/SuLarry/.dsh/trae-wsl-probe.txt` **成功**；而**同一路径在 Windows 侧写入被该工具沙箱拒绝**（`EPERM`）。
+🟢 **实证**（Trae，2026-09-12）：WSL 内 `echo probe > /mnt/c/Users/SuLarry/.dsh/trae-wsl-probe.txt` **成功**；**同一路径在 Windows 侧写入被拒**。
 
-- **含义**：**WSL 是宿主侧工具沙箱之外的一条写入路径**（9p 默认 `rwxrwxrwx`、uid 映射到 `sularry`）。⚠️ 凡"从宿主调 `wsl.exe`"的通道（Claude / Trae 都是此形）都具备该能力。
+- **含义**：**WSL 是宿主侧沙箱之外的一条写入路径**（9p 默认 `rwxrwxrwx`、uid 映射到 `sularry`；写入由 **WSL 侧内核 / 9p 服务**代劳，**不经工具的进程树**）⇒ 凡"从宿主调 `wsl.exe`"的通道（Claude / Trae 都是此形）都具备该能力。
 - **边界仍在**：系统 ACL 照样生效（`C:\Windows\System32\…` 写入仍 `Permission denied`）。
-- **定性**：Trae 已按「**当能力事实上报、不当逃逸手段用**」上报老大，是否收口（给 WSL 加约束 / 保持现状）由老大定。⇒ **裁定前，各 AI 一律按"不是逃逸手段"处理，不得据此绕过宿主侧沙箱策略。**
+- 🔴 **归因待钉（2026-09-12 WB 复看）**：原报告把 Windows 侧对照组写成「**被 Trae 工具沙箱拒绝**」，但其唯一依据是 `dsh --dump-config` 报的 `EPERM` —— 那次拒绝出自 **DSH 自身沙箱**（`local-env.md` §4「错误码类别层」：DSH 的 windows-acl runner 拒绝写入后，node 报 `EPERM: operation not permitted`，而 DSH 未识别该文案）。
+  ⇒ 该证据支持的是「**DSH 沙箱可被此路径绕过**」，**不等于**「AI 工具自身沙箱可被绕过」（后者本会话**无对照实验**）。**两者严重性与归属不同，勿混用、勿据此给工具沙箱定性。**
+  ⇒ 补证只需一次对照：**不经 `dsh`**，直接用工具自身能力在 Windows 侧写 `~/.dsh/…`，看是否被拦。
+- **敏感面（具体化，勿抽象化）**：`~/.dsh`（全局 DSH home）内含 **`.credentials.yaml` 与 `profiles/`** ⇒ 这条路径的**写**能力落在**凭据载体**上（对应 Tier0 红线①）。这也是"要不要收口"的实际标的。
+- **定性**：Trae 按「**当能力事实上报、不当逃逸手段用**」上报，是否收口由老大定。⇒ **裁定前一律按"不是逃逸手段"处理，不得据此绕过任何沙箱 / 审批策略。**
+
+#### 8.4.1 收口候选（⬛ **未拍板、未实测**，仅供裁决）
+
+| 方案 | 动作 | 效果 / 代价 |
+|---|---|---|
+| **甲（最彻底）** | `/etc/wsl.conf` → `[automount] enabled = false` | WSL **看不见 Windows 盘** ⇒ 写路径直接消失。代价：WSL 内需自带仓库副本（`~/work/LarryAgent`，与 §10 已倾向一致）；需要时手动 `mount -t drvfs C: /mnt/c -o ro` 按需**只读**挂载 |
+| **乙（一行，保读）** | `/etc/wsl.conf` → `[automount] options = "ro"` | 只读挂载 ⇒ **杀写、留读**（`cp` 仓库进 WSL 仍是读操作，可用）。⬛ 该选项是否被当前 WSL 接受**未实测** |
+| **丙（不做）** | 保持现状 | 理由：单用户单机、需 AI **主动**执行 `wsl.exe`、系统 ACL 仍拦系统路径；与 HUMAN 原则 4「明确安全边界，而非控制安全边界」一致 |
+| **✗ 在 WSL 内加 Docker** | — | **位置错**：逃逸发生在「宿主进程 spawn `wsl.exe`」这条边界上，写入由 WSL 侧代劳 ⇒ 在 WSL 里再套一层是**在被突破通道的内侧加围栏**，AI 照样能用 `-v /mnt/c:…` 把 Windows 盘挂回容器，且容器仍须挂 `/mnt` 才读得到仓库。**它解决的是"容器内工作负载的隔离"，不是"AI 通道"** ⇒ 对本口子无效；另会给 landlock 判定引入额外 seccomp / mount ns 干扰层 |
+
+> ⚠️ `/etc/wsl.conf` 是**全 WSL 共享**、改动**须 `wsl --shutdown` 才生效** ⇒ 影响所有 AI，**须先拍板再执行**（当前状态：Trae 明确**未动**该文件）。
+> ✅ `\\wsl.localhost\` 是**反方向**（Windows → WSL 读），**不受 automount 影响** ⇒ WB 的只读复验通道不会因此断。
 
 ---
 
@@ -265,3 +281,4 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 | PID 1 独占 seccomp USER_NOTIF | ⬛ 未测 | systemd 作 PID1 且 running；当前进程已带 1 个 seccomp 过滤器，常规操作未被挡。DSH 走 landlock 则无碍，走 seccomp 退路可能 EBUSY |
 | 执行范式固化脚本 | ⬛ 待定 | 落盘位置待指定（内容见 §8.3：两通道范式 + 三条共同坑） |
 | 单通道未测项（Trae 侧声明） | ⬛ 未测 | `wsl --shutdown`（只做了 `--terminate`，避免影响他人）、WSLg / 图形、IPv6 出站、GPU / CUDA |
+| **越宿主沙箱的写路径是否收口** | ⬛ **待拍板** | §8.4.1：候选甲（关 automount）/ 乙（automount 只读）/ 丙（不做）；✗ Docker 已排除（位置错）。⚠️ 拍板前须先补一次**归因对照**（工具自身沙箱 vs DSH 沙箱，见 §8.4 归因待钉） |
