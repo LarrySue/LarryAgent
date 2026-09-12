@@ -1,6 +1,6 @@
 # DSH 本机（Windows）环境约束与已知坑
 
-> **定位**：本机 Windows 侧跑 DSH 的**环境事实与坑**的唯一真相源（与 `dsh-cloud-deployment.md` 对仗：那个管云，这个管本机）。
+> **定位**：本机 Windows 侧跑 DSH 的**环境事实与坑**的唯一真相源。**环境文档三者对仗**：`../production-env.md` 管生产 / CVM、`../test-env.md` 管测试 / WSL、本文档管本机 Windows 开发环境（本文内容与 DSH 迁移专题强绑定，故暂留 `docs/dsh/` 内）。
 > 跨 AI 共享的本地环境事实一律放此，交流区 / TODO / AI 记忆只留指针。
 > 全部为 🟢 实测或源码级确认，基线 `dsh-v0.1.2-rc.1`。
 

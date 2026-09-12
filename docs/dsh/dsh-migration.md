@@ -423,7 +423,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 > ✅ **定型后修正（见「定型结论」）**：上述倾向谈的是**直连前提下的 L1 整段**。改为中转子，Gateway 的适用位置**从 A 段收窄到 B 段**（服务 ↔ DSH 同机），且**待验** `larry` profile 下能否起 HTTP。
 
-**实测动作的优先级已随定型下调**：原「web surface 开箱实测」中，**①②③（dist 来源与可替换性 / token 获取 / 页面能力面）价值下降**——中转后我们不承载官方 shell；**④（`--trusted-host` 能否放开非 loopback / 反代可行性）已实测（2026-09-11）：反代可行 → 重估触发线 T2 判「命中」，见 `dsh-cloud-deployment.md` §7.1**。
+**实测动作的优先级已随定型下调**：原「web surface 开箱实测」中，**①②③（dist 来源与可替换性 / token 获取 / 页面能力面）价值下降**——中转后我们不承载官方 shell；**④（`--trusted-host` 能否放开非 loopback / 反代可行性）已实测（2026-09-11）：反代可行 → 重估触发线 T2 判「命中」，见 `../production-env.md` §7.1**。
 
 #### 定型结论：自做服务中转（🟢 老大 2026-09-09 拍板）
 
@@ -442,7 +442,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 1. **A 段退出 DSH 选型范围**——它是我们自己的前后端协议，DSH 的 sdk/acp/Gateway 在这里**都不参与**。此前"哪个面做前端"的全部讨论对 A 段无效。
 2. **B 段是同机 → 此前"sdk/acp 跨网络出局"的排除理由对 B 段不成立**。⚠️ **这不等于要用 sdk**：Gateway 在同机同样可用（localhost HTTP + SSE）。**「中转」不导致能力降级——B 段的 sdk / Gateway 选型仍然开放。**
    - **sdk 路线**：**单进程多会话**（🟢 2026-09-10 实测修正，见下），无会话树/历史分页/fork，且 **`resume id collision` 未收敛**（§3.4 硬发现）是隐患。
-     > 🔴 **更正一条曾长期存在的误述**：旧文称 sdk「多会话 = 多子进程」——**不成立**。`dsh-sdk-client` 官方契约原载 `DeepSeekHarness` owns **one** runtime subprocess **across many sessions**；CVM 实测 20 个 session 句柄 **RSS 增量 0.00 MB**、进程数恒为 1。详见 `docs/dsh/dsh-cloud-deployment.md` §2.4。
+     > 🔴 **更正一条曾长期存在的误述**：旧文称 sdk「多会话 = 多子进程」——**不成立**。`dsh-sdk-client` 官方契约原载 `DeepSeekHarness` owns **one** runtime subprocess **across many sessions**；CVM 实测 20 个 session 句柄 **RSS 增量 0.00 MB**、进程数恒为 1。详见 `docs/production-env.md` §2.4。
    - **Gateway 路线**：~~单进程多会话~~（⚠️ **此项不再构成相对 sdk 的优势**——sdk 同样是单进程多会话）+ **官方会话树 / fork / cancel / 历史分页 / 重连追赶 + gap 修复 + 2s 心跳**——**这些仍是 Gateway 独有的**，恰是中转方案下我们本要自做的部分（见代价①）。
    - 🔴 **「B 段取 Gateway」的原倾向已于 2026-09-10 被实测推翻** —— Gateway **无法脱离 `dsh-web-app` 独立起 HTTP**。详见下方【B 段 Gateway 路线实测判定】。**当前有效结论：B 段只能走 SDK（stdio）。**
 3. **【会话状态策略】（老大 2026-09-10 洞察 → WB 拍板，属 A 段设计约束）**
@@ -491,13 +491,13 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | 4 | **`plugin add` 只写入 `dependencies`，从不写入 `dsh.profile.bundles`** —— 装了不等于加载。实测 layer 数：web profile **145** / 自组 larry **85**（仅 `dsh-base`） | 🟢 |
 | 5 | **手工补进 `bundles` 会报错**：`profile bundle "@deepseek-ai/dsh-host-webserver" declares no dsh.bundle in its package.json` | 🟢 |
 | 6 | **55 个声明了 `dsh` 字段的包里，能起 HTTP 的 bundle 只有 `@deepseek-ai/dsh-web-app` 一个**（即官方 browser UI 那个包）。`dsh-api-gateway` / `dsh-host-webserver` 均**未声明 bundle**，只是它的内部件 | 🟢 |
-| 7 | 而在已能正常起 HTTP 的 **web profile** 下，gateway 的唯一 RPC 路径 `/api/remote.mux` **带 cookie 仍 404**（见 `dsh-cloud-deployment.md` §7） | 🟢 |
+| 7 | 而在已能正常起 HTTP 的 **web profile** 下，gateway 的唯一 RPC 路径 `/api/remote.mux` **带 cookie 仍 404**（见 `../production-env.md` §7） | 🟢 |
 
 **判定**：想让 B 段走 HTTP，唯一入口是加载 `dsh-web-app`（连带官方 UI 及其鉴权体系）；而即便如此，gateway 的 RPC 端点仍拿不到。**Gateway 路线在当前版本不成立。**
 
 **连带成立的三条推论**：
 
-1. **B 段 = SDK（stdio）** → 与 `dsh-cloud-deployment.md` §7.1 合并得：**自做服务与 DSH 必须同机，不可拆分到两台**。
+1. **B 段 = SDK（stdio）** → 与 `../production-env.md` §7.1 合并得：**自做服务与 DSH 必须同机，不可拆分到两台**。
 2. ** Gateway 白送的能力（会话树 / fork / cancel / 历史分页 / 重连追赶 / gap 修复 / 2s 心跳）拿不到** → 这些须在 A 段自做。**注意：它们本就在本「代价①」清单里**，故此项是**工作量确认**，不是新增黑天鹅。
 3. **重估触发线 T2 的前提需重读**：T2 原设为「官方 web surface 经反向代理对外可行」，但既然 Gateway 不可独立起 HTTP，T2 的可行路径**只剩反向代理 `dsh-web-app` 整体**（即把官方 UI 一起代理出去），而非只代理 gateway。
 
@@ -533,7 +533,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **重估触发线（命中任一即回头评估直连）**：
 - **T1**：DSH-3 的 S0 切片实测显示自研流式/重连/会话管理复杂度显著超出预期；
-- **T2**：官方 web surface 经反向代理对外服务被验证**可行且省事** —— 🟢 **已实测判「命中」（2026-09-11 WB）**：反代可行（"唯一已知障碍 `--trusted-host`"实为可绕过的 Host 校验）；因 Gateway 不可独立起 HTTP，只剩「反代整个 `dsh-web-app`」一条路 → **仅触发回头评估，定型不变**。证据与边界见 `dsh-cloud-deployment.md` §7.1；
+- **T2**：官方 web surface 经反向代理对外服务被验证**可行且省事** —— 🟢 **已实测判「命中」（2026-09-11 WB）**：反代可行（"唯一已知障碍 `--trusted-host`"实为可绕过的 Host 校验）；因 Gateway 不可独立起 HTTP，只剩「反代整个 `dsh-web-app`」一条路 → **仅触发回头评估，定型不变**。证据与边界见 `../production-env.md` §7.1；
 - **T3**：多端（PC + 移动）实时同步需求变强，自研同步成本逼近复用官方通道的成本。
 
 > **已拍的两个前提（归档）**：① 部署形态 = **经自做云端服务中转**（本结论）；② **C 段反向工具执行由我们自做**，接受其不属于任何官方面。
@@ -572,7 +572,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
   - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**（⚠️ **仅 `larry`；`sdk` profile 为 `startup` 须重启**，见环境规格表 sdk 行）；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 
 **退出条件（5 项实测 · ✅ 全部通过 · 2026-09-10 收口；任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
-1. `storage/` 外接 SQLite 可行性 —— ✅ **可行**：官方 backend 仅需配置，`path` 可指任意绝对路径；外部库当日落盘、我们的 `mem-1` 行可读出；反向哨兵证数据走 SQLite 而非默认 json（判据见 `dsh-cloud-deployment.md` §5）
+1. `storage/` 外接 SQLite 可行性 —— ✅ **可行**：官方 backend 仅需配置，`path` 可指任意绝对路径；外部库当日落盘、我们的 `mem-1` 行可读出；反向哨兵证数据走 SQLite 而非默认 json（判据见 `../production-env.md` §5）
 2. `acp/` 契约稳定性 —— ✅ **通过**：`initialize` / `session.new` / `session.list` / `session.close` 均 OK；`fork` / `load` / `delete` = **`-32601`**（方法缺失，非鉴权）
 3. **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）—— ✅ **可用**：三档哨兵成立 + fail-closed；`enforcement = partial`（两条边界属实）；⚠️ **方言缺口三层**（本地化 / 错误码类别 / 编码）须修，详见 `dsh-local-env.md` §4
 4. Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；判据矩阵见 `dsh-local-env.md` §6

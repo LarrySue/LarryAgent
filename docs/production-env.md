@@ -1,9 +1,10 @@
-# DSH 云部署验证环境（CVM）— 实测数据与判定结论
+# 生产环境（CVM / 轻量 Lighthouse）— 实测数据与判定结论
 
-> **定位**：DSH 云部署相关信息的**单一真相源**——环境资产、实测数据、部署约束、判定结论。
-> **来源**：2026-09-09 WB 在 CVM 上**实跑**取得（标注 🟢），估算项标 🔴，未测项标 ⬛。
-> **为何独立成文**：`exchange/log-other.md` 是交流区（动态、不存档），`TODO.md` 是待办清单（不做规格载体），WB 记忆不与其他 AI 共享。**需要跨 AI 共享的部署事实一律放这里**，那三处只留指针。
-> **效力**：`TODO.md` 与 AI 记忆**只保留指向本文档的指针**，不复制内容。
+> **定位**：本项目 **生产环境（也是当前唯一判定环境）** 的**单一真相源** —— 环境资产、实测数据、部署约束、成本与选型判定。与 `test-env.md`（测试 / WSL）、`dsh/dsh-local-env.md`（本机 Windows 开发环境）三者对仗。
+> **为何独立成文（且置于 `docs/` 顶层而非 `docs/dsh/`）**：环境是**跨阶段的长期基础设施**，不属于"DSH 迁移"这一阶段专题 —— 该专题完结后 `docs/dsh/` 会归档，环境事实必须留在**唯一能跨 AI、跨清理周期的位置**。
+> **来源**：2026-09-09 WB 在 CVM 上**实跑**取得（标注 🟢），估算项标 🔴，未测项标 ⬛；2026-09-10 / 09-11 陆续补测。
+> **效力**：`TODO.md`、交流区、AI 记忆**只保留指向本文档的指针**，不复制内容。
+> **边界**：其中属 **DSH 迁移专题**的部分（通信面定型、B 段 Gateway 路线判定）以 `dsh/dsh-migration.md` 为准，本文档只记由此得出的**部署侧后果**。
 
 ---
 
@@ -160,7 +161,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 **⚠️ 一条必须纠正的认知**：源码**完全没有 `LANDLOCK_ACCESS_NET`**，实测沙箱内照样联网。
 → **"上了 sandbox 就不怕数据外泄"是错的**。它只管文件系统，**防外联必须另做**（网络策略 / 无外网路由）。这是设计选择，不是 bug。
 
-> **与 Windows 侧的关系（避免误移植）**：本机 Windows 的**拒绝方言缺口修复件**（`plugin-sandbox-dialect`）**只对 win32 生效** —— 其 `confine()` 在非 win32 直接返回原值。⇒ **CVM(Linux/landlock) 上不需要挂它、挂了也无副作用**；landlock 方言 `permission denied` 本就命中。方言缺口/修复件/挂载范式见 `dsh-local-env.md` §4／§4.3。
+> **与 Windows 侧的关系（避免误移植）**：本机 Windows 的**拒绝方言缺口修复件**（`plugin-sandbox-dialect`）**只对 win32 生效** —— 其 `confine()` 在非 win32 直接返回原值。⇒ **CVM(Linux/landlock) 上不需要挂它、挂了也无副作用**；landlock 方言 `permission denied` 本就命中。方言缺口/修复件/挂载范式见 `dsh/dsh-local-env.md` §4／§4.3。
 
 ---
 
@@ -200,7 +201,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 5. **`pkill -f "import chromadb"` 会杀掉自己** 🟢：该 pattern 匹配到自身命令行。用更精确 pattern 或直接不 pkill。
 6. **Chroma collection 名 ≥ 3 字符**（SDK 校验，非环境问题）。
 7. **公网机器上调试避免回显 token** 🟢：实测中 DSH boot token 出现在日志回显里。本次实例只听 127.0.0.1、为临时免费机、重启即变，不构成实际风险，**但纪律上应暴露并规避**。
-8. **组装自定义 DSH profile 的三道坎（2026-09-10 实测）** 🟢：① **`dsh plugin add` 依赖 `pnpm`**（镜像机默认没有，须先 `npm i -g pnpm`）；② **必须显式锁版本**与主包同版（`0.1.2-rc.1`）——**默认 `latest` 指向旧版 `0.0.1-rc.1`，其依赖树引用 registry 上不存在的 `@deepseek-ai/dsh-type-meta`，安装必然 404 失败**；③ **`plugin add` 只写 `dependencies`、不写 `dsh.profile.bundles`，装了不生效**，且多数相关包（含 `dsh-api-gateway` / `dsh-host-webserver`）**未声明 `dsh.bundle`，手工补进 bundles 会直接报错**。详见 `dsh-migration.md`「B 段 Gateway 路线实测判定」。
+8. **组装自定义 DSH profile 的三道坎（2026-09-10 实测）** 🟢：① **`dsh plugin add` 依赖 `pnpm`**（镜像机默认没有，须先 `npm i -g pnpm`）；② **必须显式锁版本**与主包同版（`0.1.2-rc.1`）——**默认 `latest` 指向旧版 `0.0.1-rc.1`，其依赖树引用 registry 上不存在的 `@deepseek-ai/dsh-type-meta`，安装必然 404 失败**；③ **`plugin add` 只写 `dependencies`、不写 `dsh.profile.bundles`，装了不生效**，且多数相关包（含 `dsh-api-gateway` / `dsh-host-webserver`）**未声明 `dsh.bundle`，手工补进 bundles 会直接报错**。详见 `dsh/dsh-migration.md`「B 段 Gateway 路线实测判定」。
 
 ---
 
@@ -249,7 +250,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 |---|---|---|
 | embedding 模型加载内存 | 🔴 估算 150–250MB | 模型源 15KB/s，未在时限内下完。**已不阻塞选型**——即便取区间上位，2C2G 仍余 ~35%，投产后实测校正即可 |
 | 生产是否保留 ChromaDB | ⬛ 架构变量（**⑤ 结论后已被重新打开**） | 与「全面 TS 化」存在张力（既有决策 TODO 183 保留 SQLite+ChromaDB 双写，不主张推翻）。🟢 **新证据**：TS embedding 与 Python 侧等价（漂移 `2.2e-7`）→ 若向量存储改 `sqlite-vec`，可**去掉 Python 运行时**（省 91MB 进程 + 模型层 + 一个 runtime），且避开机上装境外模型的部署坑（§6 坑 2）。**需老大择期拍一次** |
-| ~~**embedding 是否需全量重嵌**~~ | ✅ **无需**（2026-09-10） | DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧向量漂移 `2.2e-7`、cosine ≥ 0.9999999999、top-1/3/5 全对 → **不重嵌**，省 DSH-4 一大块。⚠️ **硬前提：预处理严格对齐**（`do_lower_case` / lowercase、CLS pooling、L2 normalize、max_length 512），任一项不对齐会产生 0.77 级假漂移（详见 `dsh-migration.md` DSH-4 承载表）|
+| ~~**embedding 是否需全量重嵌**~~ | ✅ **无需**（2026-09-10） | DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧向量漂移 `2.2e-7`、cosine ≥ 0.9999999999、top-1/3/5 全对 → **不重嵌**，省 DSH-4 一大块。⚠️ **硬前提：预处理严格对齐**（`do_lower_case` / lowercase、CLS pooling、L2 normalize、max_length 512），任一项不对齐会产生 0.77 级假漂移（详见 `dsh/dsh-migration.md` DSH-4 承载表）|
 | ~~**多会话并发的内存线性增长**~~ | ✅ **已推翻**（2026-09-10） | 原假设"多会话 = 多子进程、线性上涨"**不成立**：官方契约明载 `DeepSeekHarness` **单进程跨多会话**，实测 20 句柄增量 **0.00 MB**、6 会话真实 prompt 边际 **2.24 MB/个**、外推 20 会话 ≈ **182 MB**。详见 §2.4 / §2.4.1。**2G / 4G 之争由此收口：2C2G 够** |
 | **接近 contextWindow 上限时的 compaction 行为** | ⬛ 未测 | 实测仅 18 轮短对话，`contextWindow = 1,000,000` token 远未触顶；**未观测到 compaction 事件（计数 0），但不可据此断言无此机制**。若将来出现百万 token 级会话，须重测内存与压缩行为 |
 | gateway 真实端点 | ⬛ | 见 §7 |

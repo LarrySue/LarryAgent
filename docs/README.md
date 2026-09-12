@@ -20,7 +20,11 @@
 
 ## 文件索引
 
+> **环境文档刻意放在本区顶层而非 `dsh/` 下**（2026-09-12 起）：环境是**跨阶段的长期基础设施**，不随「DSH 迁移」这一阶段专题归档；三者对仗 —— `production-env.md`（生产 / CVM）、`test-env.md`（测试 / WSL）、`dsh/dsh-local-env.md`（本机 Windows 开发）。移出的两份**不再受 `dsh/README.md` 规则 2（永久保留）覆盖**，但同属本区「定案级」文档，按本区规则对待。
+
 - `ai-governance.md` — 多 AI 协作约束分级总纲（Tier 约束模型、角色分工、协作规则）
+- `production-env.md` — **生产环境（CVM / 轻量 Lighthouse）唯一真相源**：环境资产、规格判定（4C8G 非硬需求）、DSH 拒绝 0.0.0.0（官方 RCE 理由）、landlock sandbox 正反实测、node:sqlite 判据、部署坑清单、**⭐ §7.1 部署拓扑约束（B 段 stdio 不可跨机）+ T2 触发线实测**、成本 / 机型选型 / 域名备案三路径
+- `test-env.md` — **测试环境（WSL / Ubuntu-24.04）唯一真相源**：实测版本基线、四项验收判据、硬要求、已知坑清单、**⭐ 与生产的 landlock ABI 边界（WSL 7 vs CVM 4，判定不可互搬）**、入口与执行人分配、残留资产
 - `dsh/` — **DSH 迁移决策区**：`dsh-migration.md` 为决策文档，另有一些专题文档，包括三份含实测报告作**永久保留的证据**。细则见 `dsh/README.md`
 - `product-positioning.md` — **产品功能边界能力树**：8 域 / 31 子项，含每条落地方式与现状状态。根目录 `README.md` 与 `dsh/dsh-migration.md` 均存指针，勿另立副本
 - `ui-reference.md` — UI 设计单一权威参考（组件 / 交互 / 视觉 token，所有 AI 以它为准）
