@@ -1,8 +1,9 @@
 # 测试环境（WSL）— 事实、边界与已知坑
 
-> **定位**：本项目 **Linux 测试 / 实验环境**的**单一真相源** —— 环境资产、实测数据、硬要求、已知坑、与生产环境的边界。与 `production-env.md`（生产 / CVM）、`dsh/dsh-local-env.md`（本机 Windows 开发环境）三者对仗。
+> **定位**：本项目 **Linux 测试 / 实验环境**的**单一真相源** —— 环境资产、实测数据、硬要求、已知坑、与生产环境的边界。与 `production-env.md`（生产 / CVM）、`local-env.md`（本机 Windows：开发 + C 侧测试 + PC 侧生产使用）三者对仗。
 > **为何独立成文（且提到 docs/ 顶层）**：环境是**跨阶段的长期基础设施**，不属于"DSH 迁移"这个阶段专题。原先这类事实寄居在 `exchange/log-other.md` 的派发稿里，派发稿一清就随之丢失（2026-09-10 实际发生过一次）⇒ 环境事实必须放在**唯一能跨 AI、跨清理周期的位置**。
-> **来源**：① 2026-09-09 环境搭建的派发与验收记录（原 `exchange/log-other.md`，派发稿已清理，**事实于 2026-09-12 迁移至此**）；② 2026-09-12 Claude《WSL 能力边界探测》报告（WB 复验合格）。
+> **来源**：① 2026-09-09 环境搭建的派发与验收记录（原 `exchange/log-other.md`，派发稿已清理，**事实于 2026-09-12 迁移至此**）；② 2026-09-12 Claude《WSL 能力边界探测》（🟢 WB 复验合格）；③ 2026-09-12 Trae《WSL 能力边界实测》（🟢 WB 交叉核对后吸收）。
+> ⚠️ **②③ 来自两条不同的执行通道**（宿主 shell 形态不同）—— **同一事实两通道一致才采信单值；两通道不同的，本文档并列留痕、不擅自合并**（见 §8.3）。
 > **标记约定**：🟢 实测 ／ 🔴 估算 ／ ⬛ 未测。
 
 ---
@@ -11,7 +12,7 @@
 
 | 环境 | 角色 | 文档 |
 |---|---|---|
-| 本机 Windows | **开发环境** | `dsh/dsh-local-env.md` |
+| 本机 Windows | **开发环境 + C 侧（client）测试环境 + PC 侧生产使用环境** | `local-env.md` |
 | **WSL（Ubuntu-24.04）** | **测试 / 实验环境** | 本文档 |
 | CVM（轻量 Lighthouse） | **判定环境 + 未来生产机** | `production-env.md` |
 
@@ -19,6 +20,7 @@
 - **它不是什么**：**不是生产环境，也不是生产替身**。判定标的是内核 ABI 的测试**必须留在 CVM**（见 §5）。
 - **原始定位（2026-09-09）**：为 DSH-2.5 ①（`storage/` 外接 SQLite）取 Linux 侧数据而建，"仅为验证，不是生产环境"。
 - **定位升格（2026-09-12）**：老大定 **WSL 长期担任核心测试环境**（不再是一次性验证机）。
+- **执行通道（2026-09-12 起，详见 §8）**：**Claude 为主执行人；Trae 为次执行人**（已实测能完整操作，按需直用）；**WB 只复验不执行**（`wsl.exe` 在 WorkBuddy 程序黑名单内）。⚠️ **通道间结论不可互推**。
 
 ---
 
@@ -30,11 +32,14 @@
 | 发行版 | **Ubuntu-24.04**（`24.04.4 LTS`，USTC 镜像 `wsl --install --from-file`） |
 | 内核 | **6.18.33.2-microsoft-standard-WSL2**（`wsl --version` 报 `6.18.33.2-2`） |
 | 文件系统 | `df -T .` → `/dev/sdd  ext4`（**未踩 `/mnt/c`**） |
+| 挂载类型 | `/` = **ext4**；`/mnt/d` = **9p(v9fs)**，权限 `rwxrwxrwx`（⚠️ 见 §6.1） |
 | 磁盘 | ext4 约 1 TB（VHDX 动态扩展，初始 1.3 GB） |
 | 默认用户 | `sularry`（uid 1000，sudo 组） |
-| 工具链 | node **v22.23.2**（nvm `~/.nvm`）／npm 10.9.8／**pnpm 11.7.0**／git 2.43.0／Python 3.12.3／gcc・make・sqlite3 3.45.1 |
+| 工具链 | node **v22.23.2**（nvm `~/.nvm`）／npm 10.9.8／**pnpm 11.7.0**／git 2.43.0／Python 3.12.3／gcc 13.3.0・make 4.3・sqlite3 **3.45.1** |
+| 工具链缺项 | **docker / podman / `bwrap` / strace / uv 均无**；系统级无 pip（venv 内 pip 24.0 可用）⇒ 要测 DSH 的 bwrap rung 须先 `apt install bubblewrap` |
 | apt 源 | **USTC** 镜像 |
 | Windows 宿主 | Windows 11 build **26200**（10.0.26200.9445） |
+| 宿主镜像规格 | `nproc=24`／Mem ≈ 15.5 GB／`/` ≈ 1007 GB（可用 ≈ 954 GB）—— WSL 直接镜像宿主资源，**不是沙箱限额**，别当"环境给足了"读 |
 
 > ⭐ **pnpm 11.7.0 与 `harness/package.json` 的 `packageManager` 精确匹配** —— 这是它比 CVM（无 pnpm，需现装）更适合"跑仓库工程"的一条实测理由。
 
@@ -54,6 +59,8 @@
 
 > ⚠️ **判据方向（勿再写反）**：`busy_timeout=0` 下**出现** `database is locked` **不是失败**，恰恰证明 **WAL 写锁在生效** —— 这正是本环境存在的理由。**必须正反两组都对**（反向组看到锁拦人、正向组看到等待后全部成功），才说明取到的是真实 Linux 锁语义。
 
+> 🟢 **2026-09-12 补齐（Trae 通道独立复现）**：文件系统那条（ext4 vs 9p，见 §6.1）与 §5 的内核事实，**两条通道结论一致、判据方向一致**。⇒ 这两类事实可以按单值引用；**其余只在单一通道测过的项，引用时须注明取自哪条通道**（§8.3）。
+
 ---
 
 ## 4. 硬要求（不满足则数据无效，宁可不测）
@@ -72,8 +79,24 @@
 | **landlock ABI** | **7**（🟢 2026-09-12 实跑 syscall 正证：设 `no_new_privs` 后 `restrict_self` 成功、随后读 `/etc/hostname` 被 EACCES） | **4**（🟢 实测，`probe=partial`） |
 | 可用权限位集合 | 多（`LL_FS_REFER` ≥2、`LL_FS_TRUNCATE` ≥3 有；另含 ABI v5 的**设备 ioctl**） | 少（缺 ABI v5 设备 ioctl；`REFER`/`TRUNCATE` 有） |
 
+> 🟢 **两条通道独立复现**（2026-09-12）：Claude 走 syscall 正证、Trae 走 `landlock_create_ruleset` 返回值 → **同为 ABI 7**，故 WSL 侧的 7 可按单值采信。
+
 > ⚠️ **判定不可互搬**：ABI 不同 ⇒ **可用权限位集合不同** ⇒ **WSL 上测出的"某操作被放行 / 被拒"不得搬到生产定论，反之亦然。**
 > ⇒ **判定标的是内核 ABI 的 landlock 测试必须留在 CVM**；WSL 适合承载 **代码逻辑 / 工具链 / 接入层 / 破坏性试验**。
+
+### 5.1 沙箱相关的内核能力（🟢 两条通道一致，供 Linux 侧测试直接用）
+
+| 能力 | 状态 | 备注 |
+|---|---|---|
+| **landlock ABI 7 且强制生效** | ✅ 可用 | 正证见上表。⚠️ 细节：`restrict_self` 前**必须先设 `no_new_privs`**，否则 `EPERM` —— 探测脚本初版正踩这个，**会误判成"landlock 不可用"** |
+| **非特权 user namespace** | ✅ 可用 | `unshare -U --map-user=0 id` → `uid=0(root)`；该内核**无** `apparmor_restrict_unprivileged_userns` 限制 |
+| **user ns + net ns** | ✅ 可用 | `unshare -Urn` 成功；ns 内起 loopback HTTP 服务可访问（200）⇒ **可做网络隔离的封闭测试** |
+| **`bwrap`（bubblewrap）** | ⬛ **未装** | 要测 DSH 的 bwrap rung 须先 `apt install bubblewrap` |
+| cgroup v2 | ✅ 控制器齐全 | cpuset / cpu / io / memory / hugetlb / pids / rdma |
+| systemd | ✅ 作 PID 1 且 running | 附带 ⬛：PID 1 独占 seccomp USER_NOTIF 未测（见 §10） |
+| seccomp | ⚠️ 当前进程已带 1 个过滤器 | `Seccomp:2`，常规操作未被挡；走 landlock 则无碍 |
+| **loop 挂载** | ✅ 全通 | 自建 8 MB ext4 镜像 → `mkfs.ext4` → `mount -o loop` → 读写 → `umount`；root 可写 `/etc` |
+| 权限墙 | ✅ 正常 | root 建的 600 文件普通用户读写被拒（目录属主仍可删该文件，Unix 语义如此） |
 
 > 附（landlock 精确语义，防误信）：DSH 自带 `node-addon-landlock-run`，**只管文件系统**，源码**完全没有 `LANDLOCK_ACCESS_NET`**（实测沙箱内照样联网）⇒ **"上了 sandbox 就不怕数据外泄"是错的**，防外联必须另做（网络策略 / 无外网路由）。这是设计选择，不是 bug。
 
@@ -81,14 +104,30 @@
 
 ## 6. 已知坑（会静默出错的那几个）
 
-### 6.1 `/mnt/*` 三重限制（本环境最致命）🟢 实测
+### 6.1 `/mnt/*` 三重限制（本环境最致命）🟢 实测 · 两条通道各测一遍
 
-`/mnt/d` 上：① **大小写不敏感**（`CaseProbe.txt` 用小写文件名可读）；② **约 6 倍慢**（同法 188 MB/s，ext4 为 1.1 GB/s；小文件差距更大）；③ **收不到 Windows 侧写入的 inotify 事件**（ext4 对照组正常收到）。外加 POSIX 锁语义不一致（见 §4 第 2 条）。
-⇒ **任何判据相关的工作副本必须放 ext4**，否则得到一堆"看着像被测对象 bug"的假故障。
+| 项 | ext4（`~/…`） | `/mnt/d`（**9p / v9fs**，权限 `rwxrwxrwx`） |
+|---|---|---|
+| 大小写 | **敏感** | **不敏感**（`CaseProbe.txt` 用小写文件名可读） |
+| 顺序写 | **1.1 GB/s**（Claude）／64 MB `dd` **49 ms**（Trae） | **188 MB/s**（Claude）／64 MB `dd` **466 ms**（Trae）⇒ **≈6–10× 慢** |
+| 小文件（200 个创建） | **31 ms**（Trae） | **883 ms**（Trae）⇒ **≈28×** |
+| inotify | **event_ok** | **no_event_within_2s**（`add_watch` 成功但事件不到） |
+| symlink / hardlink | OK / OK | — / OK |
 
-### 6.2 PATH 注入：裸跑 `node`/`npm`/`pnpm` 命中的是 **Windows 版** 🟢 实测
+外加 **POSIX 锁语义不一致**（见 §4 第 2 条）⇒ **任何判据相关的工作副本必须放 ext4**，否则得到一堆"看着像被测对象 bug"的假故障。
 
-Windows PATH 被注入 WSL（30 条 `/mnt/*`）。报错形式极具误导性（`pnpm: exec: node: not found`、corepack `cannot execute`）。
+> ⚠️ **引用数字的纪律**：两通道测出的倍数不同（**测法不同**：文件大小 / 块大小 / 工具），但**方向与量级一致** ⇒ 结论只取"**慢一个数量级，小文件更甚**"，**别把某一组数字当精确值引**。
+
+### 6.2 PATH 注入：裸跑 `node`/`npm`/`pnpm` 不可信 🟢 实测 · ⚠️ 两通道现象不一致
+
+Windows PATH 被注入 WSL（约 30 条 `/mnt/*`）。**两通道观察到的现象不同**：
+
+| 通道 | 裸跑 `node` 的结果 |
+|---|---|
+| Claude | 命中 **Windows 版**（interop），且报错形式极具误导性（`pnpm: exec: node: not found`、corepack `cannot execute`） |
+| Trae | 直接 **`command not found`** —— 注入的 PATH 只带来 `npm`/`pnpm` shim，**没有 node** |
+
+⬛ **未收敛**：两者为何不同**未定位**（PATH 顺序 / shell 形态 / 工具如何 spawn 均有嫌疑）⇒ **不擅自给结论**（见 §10）。但两者导出的**行动纪律完全相同**：
 ⇒ 必须显式 `export PATH="$HOME/.nvm/versions/node/v22.23.2/bin:/usr/bin:/bin"` 或用绝对路径。**非登录 / 非交互 shell 都不加载 nvm。**
 
 ### 6.3 其余（简表）
@@ -101,6 +140,8 @@ Windows PATH 被注入 WSL（30 条 `/mnt/*`）。报错形式极具误导性（
 | **WSL 内绑 `0.0.0.0` = 暴露在局域网** | 实测网络形态是**宿主网卡镜像**（非 NAT）⇒ 起服务默认绑回环 |
 | **VHDX 只增不减** | WSL 内删文件，宿主 C 盘空间不释放 ⇒ 需 `wsl --shutdown` 后 compact，或 `export` + `import` |
 | **`sudo` 在 WSL 内要密码** | 要 root 只能从 Windows 侧 `wsl -u root`（免密） |
+| **`wsl --terminate` 会清掉全部后台进程** | 长任务的存活边界 = **别 terminate**；`setsid nohup … &` 起的进程只在**不 terminate** 时跨 `wsl.exe` 退出存活（复入 pid 不变） |
+| **无 TTY** | `tty0` / `tty1` 均为 no ⇒ **交互式程序不可用**（`sudo` 要密码也有此原因）；脚本一律非交互写法 |
 | **Windows 防火墙 Public profile** | 局域网设备访问 WSL 服务超时（Windows 侧监听者是 `dllhost.exe`，服务进程的入站规则管不到它）；**loopback 不受影响** ⇒ 需显式入站规则 |
 | **CRLF 污染** | 仓库统一 LF ⇒ WSL 侧 `git config core.autocrlf input`（**已配**，`git status` 干净无噪声） |
 | **空间** | 本次必需约 **3–3.5 GB**；`harness/node_modules` + dsh CLI + 运行时数据 **不能从 Windows 侧拷贝复用**（跨 OS，原生模块不通用），须在 WSL 内 `pnpm install` 重装；建议预留 8–10 GB |
@@ -110,36 +151,93 @@ Windows PATH 被注入 WSL（30 条 `/mnt/*`）。报错形式极具误导性（
 ## 7. 网络与访问
 
 - **WSL → 外网**：正常（registry.npmjs.org / pypi.org / api.github.com 全 200）。
-- **Windows → WSL**：`localhost` 转发可用（实测绑 `0.0.0.0:18777` 后 Windows 侧 200，跨边界集成测试可行）。
+  - ⚠️ **但快慢两极**：npmmirror **200 / 0.22 s**；**GitHub 200 却要 70.9 s**（🟢 Trae）⇒ 装包一律走 npmmirror，别指望 GitHub。
+- **Windows → WSL**：`localhost` 转发可用（实测绑 `0.0.0.0:18777` 后 Windows 侧 200，跨边界集成测试可行）。🟢 **两条通道各复现一次**：Claude 走 `http://localhost:18777/`、Trae 走 `curl.exe --noproxy "*" http://localhost:18799/` → 均 200。
+  - ⚠️ 宿主侧 `curl` **须加 `--noproxy "*"`** —— 否则可能被代理环境变量拦掉本地回环（与 WB 环境纪律同源）。
 - ⚠️ **内部访问一律用 `127.0.0.1`，不用 `localhost`** —— 实测 `localhost` 走 IPv6 优先解析后回落，**慢约 40 倍**（207 ms vs 5 ms）。
+- ⚠️ **网络形态 = 宿主网卡镜像，不是 NAT** —— WSL 内网卡直接拿到宿主 LAN 网段地址、网关即宿主网关（🟢 两通道一致）。⚠️ **WSL 启动告警里那句 "networkingMode Nat + localhost 代理未镜像" 与实际表现不符**（🔴 该提示本身失真），别信那句提示；实测后果见 §6.3「绑 `0.0.0.0` = 暴露在局域网」。
 - WSL 内**无 proxy 环境变量**；Windows 侧 git 的 `socks5://127.0.0.1:7890` **不继承**进 WSL。
 - 局域网访问（手机等）受 §6.3 防火墙那条限制；是否真需要，取决于后续是否做移动版真机联调。
 
 ---
 
-## 8. 入口（事实）
+## 8. 入口与执行通道
+
+### 8.1 入口事实（🟢 实测；**单通道独有项已注明通道**）
 
 | 项 | 值 |
 |---|---|
-| 发行版名 | `Ubuntu-24.04` |
-| 进入 | `wsl.exe -d Ubuntu-24.04 -- <cmd>`；退出码透传；stdin 可喂脚本；**无 TTY** |
-| 默认用户 / root | `sularry`（uid 1000，sudo 组）；`-u root` **免密**直达 root |
+| 发行版名 | `Ubuntu-24.04`（`VERSION 2`） |
+| 进入 | `wsl.exe -d Ubuntu-24.04 -- <cmd>`；`-e <bin>` 可直 exec；退出码透传（`exit 42` → 42，命令不存在 → 1）；stdin 可喂脚本；**无 TTY** |
+| 默认用户 / root | `sularry`（uid 1000，含 `sudo` 组）；`-u root` **免密**直达 root；默认用户 `sudo -n` **要密码** |
 | 工作目录 | `--cd /path` 可指定；**未指定时继承 Windows 当前目录**（从仓库目录调用 → 落在 `/mnt/d/Code/LarryAgent`） |
-| 文件互通 | Windows 侧 `\\wsl.localhost\Ubuntu-24.04\…` 可读（WB 的只读复验通道）；WSL 侧 `/mnt/c`、`/mnt/d` 可读写 |
-| 长任务 | `setsid nohup … < /dev/null &` 起的后台进程在 `wsl.exe` 退出后**存活**，可复入轮询 |
+| 文件互通 | Windows 侧 `\\wsl.localhost\Ubuntu-24.04\…` 可读（WB 的只读复验通道）；WSL 侧 `/mnt/c`、`/mnt/d` 可读写；**双向**（Windows 侧写入 WSL 内文件也被看到） |
+| 长任务 | `setsid nohup … < /dev/null &` 起的后台进程在 `wsl.exe` 退出后**存活**，可复入轮询；⚠️ **`wsl --terminate` 后全清** |
+| 并发（Trae） | 🟢 3 路并发各 `sleep 3` → **总 3.9 s**（真并行，非串行 9 s） |
+| 单次耗时（Trae） | 首调（冷）**4.55 s**；热调 **0.13–0.14 s**（3 次稳定）；`--terminate` 后重进 3.46 s |
 | 可重来 | `wsl --unregister Ubuntu-24.04`（秒级清空重建，这是它作"实验场"的核心优势） |
 
-> **执行人分配（2026-09-12 定）**：**Claude 执行**（已实测能完整操作 WSL；Claude Code 官方推荐姿势是**直接运行在 WSL 内部**）；**WB 复验**（走 `\\wsl.localhost\` 只读通道读产出）。`wsl.exe` 在 WorkBuddy 的**程序黑名单**内 ⇒ WB 不执行、只复验。
+### 8.2 执行人分配（2026-09-12 定）
 
-### 附：从 Windows 宿主（Git Bash）调 `wsl.exe` 的适配坑 —— **入口特定，非环境事实**
+| 通道 | 执行人 | 形态 | 定位 |
+|---|---|---|---|
+| **宿主 shell → `wsl.exe`** | **Claude（主）**、**Trae（次）** | 各自工具内的 shell 调 `wsl.exe`（**两者宿主 shell 形态不同**，见 §8.3） | **测试执行** —— 已实测均能完整操作 WSL |
+| `\\wsl.localhost\…` 只读 | **WB** | 文件系统只读通道 | **只复验、不执行** —— `wsl.exe` 在 WorkBuddy 的**程序黑名单**内 |
 
-> 若执行人是**在 WSL 内部**运行（Claude 的姿势），以下三条**都不存在**；只有"从 Windows 宿主调 `wsl.exe`"这条路才需要。
+- 老大 2026-09-12 定：**Claude 负责测试**；**Trae 在需要时也可直接操作 WSL**（已实测具备完整能力，非"或许能"）。
+- ⚠️ **通道间结论不可互相外推**（Trae 报告原话：「本报告**只描述 Trae 通道**……两个方向的结论**不可互相外推**」）—— 宿主 shell 语义不同，会各自制造**独有的坑**（§8.3）。⇒ 本文档凡**单通道**取得的结论，一律注明通道；**两通道分歧的并列留痕、不合并**（如 §6.2）。
+
+### 8.3 各通道的适配坑与稳定范式 —— ⚠️ **按通道看，别混用**
+
+#### 8.3.1 Claude 通道（宿主 bash / MSYS 形态）
 
 1. `MSYS_NO_PATHCONV=1` —— MSYS 会改写参数里的 POSIX 路径（`… -- ls /home` 实际执行 `ls D:/App/Git/home`）。
 2. 脚本首行 `exec 2>&1` —— `wsl.exe` 的 stdout/stderr 混流会**损坏输出**（互相吞字、顺序错乱）。
 3. **显式 `cd` 到自建目录** —— "cwd 继承 + 路径改写"的组合拳曾让探测文件建进**仓库根**（未跟踪，已清）。
 
-> 建议这三条 + PATH 净化**固化成脚本**（可执行、自强制、不依赖任何 AI 的"记忆"），而非散文指南。
+范式：`MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -- bash -s <<'EOF' … EOF`
+
+#### 8.3.2 Trae 通道（宿主 PowerShell 工具 + **base64 载体**）
+
+⚠️ **本通道独有的最大坑：内联命令里的 `$(...)` / `$VAR` 会在 Windows 侧被提前展开一次**（静默产生错值）⇒ **含变量 / 命令替换的脚本必须走 base64 载体**。
+
+| 组 | 命令（均内联） | 结果 |
+|---|---|---|
+| A | `date +%s; sleep 5; date +%s` | 差 5 s ✔ 顺序正常 |
+| B | `echo $(date +%s); sleep 5; echo $(date +%s)` | **两次同值**（同一次求值 → 被提前展开） |
+| C | `X=AAA; echo "X=$X"` | 输出 `X=`（`$X` 在 Windows 侧被展开成空） |
+| D | **base64 载体**内同样的 `$(date +%s)` ×2 + `sleep 5` | 差 5 s ✔ 正常 |
+
+其它三坑：
+
+- **stdin 管道会注入 CRLF**：`"echo …; whoami" | wsl.exe … bash -s` → `bash: $'whoami\r': command not found`（exit 127）。
+- `wsl.exe` **自身的中文文案在本通道下乱码**（`wsl -l --running`、「操作成功完成」等），但 **`--` 之后的 Linux 输出完全正常**（中文 / 全角 / `①②③` 均正确往返）。
+- ⚠️ `Measure-Command { … }` 会**吞掉块内输出**（本通道因此丢过一次结果）—— 别用它包装要取输出的命令。
+
+范式（**四件套**）：
+
+```powershell
+$s = @' …bash 脚本… '@            # 脚本首行写 exec 2>&1
+$s = $s -replace "`r",""           # 去 CR
+$b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($s))
+wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > /tmp/x.sh; bash /tmp/x.sh"
+```
+
+#### 8.3.3 两通道共同的坑（与通道无关）
+
+1. **`--cd` 显式定 cwd** —— 别依赖 cwd 继承：**两个通道都因此把文件写进过仓库根**（均已清）。
+2. **`exec 2>&1`** —— 输出混流会损坏结果。
+3. **大结果落文件，再用 `\\wsl.localhost\…` 读回** —— 别指望 stdout 承接长输出。
+
+> 建议把 §8.3 三条 + PATH 净化**固化成脚本**（可执行、自强制、不依赖任何 AI 的"记忆"），而非散文指南。落盘位置待定（见 §10）。
+
+### 8.4 ⚠️ 安全边界：WSL 是各 AI 工具沙箱之外的一条写入路径
+
+🟢 **实证**（Trae，2026-09-12）：WSL 内 `echo probe > /mnt/c/Users/SuLarry/.dsh/trae-wsl-probe.txt` **成功**；而**同一路径在 Windows 侧写入被该工具沙箱拒绝**（`EPERM`）。
+
+- **含义**：**WSL 是宿主侧工具沙箱之外的一条写入路径**（9p 默认 `rwxrwxrwx`、uid 映射到 `sularry`）。⚠️ 凡"从宿主调 `wsl.exe`"的通道（Claude / Trae 都是此形）都具备该能力。
+- **边界仍在**：系统 ACL 照样生效（`C:\Windows\System32\…` 写入仍 `Permission denied`）。
+- **定性**：Trae 已按「**当能力事实上报、不当逃逸手段用**」上报老大，是否收口（给 WSL 加约束 / 保持现状）由老大定。⇒ **裁定前，各 AI 一律按"不是逃逸手段"处理，不得据此绕过宿主侧沙箱策略。**
 
 ---
 
@@ -151,6 +249,8 @@ Windows PATH 被注入 WSL（30 条 `/mnt/*`）。报错形式极具误导性（
 | WSL `~/sqlite-check` | 09-09 并发探针遗留 | 非 WB 造 |
 | WSL `~/claude-probe/` | 2026-09-12 Claude 探测产物（链接 / 稀疏文件 / 16 MB 镜像 / venv / 日志，约 50 MB） | **可整目录删**，未清 |
 | Windows `D:\Temp\Sys\claude-wsl-probe\` | Claude 侧 `landlock_probe.py` 等 | 同上 |
+| WSL `~/trae-probe/` | 2026-09-12 Trae 探测产物（`README-trae-probe.txt` 说明牌 + `zh.txt`、`中文文件名.txt` 两个 UTF-8 样本） | **保留**；说明牌已写明"非 Trae 资产勿依赖此目录" |
+| Trae 已清项 | `/mnt/d/Code/_wsl-probe/`、仓库根 `img.bin`、`/root/img.bin`、`/mnt/trae-loop/`、探测进程（`http.server` / `sleep 600`）、apt 装的 `tree`（已 purge） | 均经自查确认不存在；`/etc/wsl.conf` 与既有他人文件**未动** |
 | ⚠️ 过程瑕疵（留痕） | `inotify-ext4.log` 长到 31 MB —— inotifywatch 监视了**含自身输出的目录** → **自激循环** | 结论不推翻（自激反向强化了对照），**复跑须避开自监视** |
 
 ---
@@ -160,6 +260,8 @@ Windows PATH 被注入 WSL（30 条 `/mnt/*`）。报错形式极具误导性（
 | 项 | 状态 | 说明 |
 |---|---|---|
 | **`flock` 在 `/mnt` vs ext4 的行为** | ⬛ **未实测** | ⚠️ 这条比 inotify 更贴要害（DSH 有 **session 锁** + `node:sqlite`）。"`/mnt` 下 flock 失效"目前**只有文献支撑、无本机实测** |
-| **WSL 具体承载哪类测试** | ⬛ 待定 | 候选：DSH sandbox / landlock 行为 / harness 冒烟 / LarryAgent 单测。**须套 §5 边界**（ABI 判定不在此） |
+| **WSL 具体承载哪类测试** | ⬛ 待定 | 候选：DSH sandbox / landlock 行为 / harness 冒烟 / LarryAgent 单测。**须套 §5 边界**（ABI 判定不在此）。工作区位置倾向 `~/work/LarryAgent`（ext4 内、由 git 同步） |
+| **裸跑 `node` 的两通道现象分歧** | ⬛ **未收敛** | §6.2：Claude 侧命中 Windows 版、Trae 侧 `command not found`。**成因未定位**（不给猜测）；因两通道的行动纪律一致，**不阻塞** |
 | PID 1 独占 seccomp USER_NOTIF | ⬛ 未测 | systemd 作 PID1 且 running；当前进程已带 1 个 seccomp 过滤器，常规操作未被挡。DSH 走 landlock 则无碍，走 seccomp 退路可能 EBUSY |
-| 执行范式固化脚本 | ⬛ 待定 | 落盘位置待指定（内容见 §8 附录三条坑） |
+| 执行范式固化脚本 | ⬛ 待定 | 落盘位置待指定（内容见 §8.3：两通道范式 + 三条共同坑） |
+| 单通道未测项（Trae 侧声明） | ⬛ 未测 | `wsl --shutdown`（只做了 `--terminate`，避免影响他人）、WSLg / 图形、IPv6 出站、GPU / CUDA |

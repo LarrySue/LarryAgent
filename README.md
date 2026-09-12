@@ -166,12 +166,15 @@ cd client && npm run test:unit
 | `docs/README.md` / `archive/README.md` / `exchange/README.md` | 三区各自规则（落位标准 / 维护归属 / 区域纪律） |
 | `.claude/CLAUDE.md` / `.trae/TRAE.md` | 各 AI 角色约束，会话开始加载 |
 
-**定案区 `docs/`**（活跃权威 / 单一真相源）：
+**定案区 `docs/`**（活跃权威 / 单一真相源）—— ⚠️ **完整索引见 `docs/README.md`「文件索引」，本表只列最常引用者**（避免两处各列一半而漂移）：
 
 | 文件 | 用途 |
 |---|---|
 | `docs/ai-governance.md` | 多 AI 协作治理：Tier 约束模型、角色分工、协作规则 |
 | `docs/ui-reference.md` | UI 设计规格（组件 / 交互 / 视觉 token），单一权威参考 |
+| `docs/product-positioning.md` | 产品功能边界能力树（8 域 / 31 子项，含每条的落地方式与现状） |
+| `docs/production-env.md` / `docs/test-env.md` / `docs/local-env.md` | **环境三份对仗**：server 侧生产（CVM）/ 测试（WSL）/ 本机 Windows（开发 + C 侧测试 + PC 侧生产使用） |
+| `docs/dsh/` | DSH 迁移决策区：`dsh-migration.md`（决策稿）+ 证据报告，细则见 `docs/dsh/README.md` |
 
 **活区 `exchange/`**（各 AI 日志 + 未定稿讨论稿）：
 

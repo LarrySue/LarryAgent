@@ -15,9 +15,9 @@
 ### DSH-2 · 代码形态 + 环境准备 ✅（2026-09-08 → 2026-09-11 · **已整体归档**）
 
 > **全文冷存于 `archive/roadmap-history.md`「DSH-2」段**（治理约定：完成一个即归档一个）——含 2.0–2.6 各子任务结论、5 项退出条件原始证据、DSH-2.4 全量详情、2.5③ 方言缺口三层、2.6 收口复核。
-> **判定依据 / 环境规格表 / 8 项证据表 / 通信面定型（含 T1/T2/T3 触发线）** → `docs/dsh/dsh-migration.md` §3.4 / §3.6；**本机环境基线** → `dsh-local-env.md` §4 / §6 / §8 / §9 / §10。
+> **判定依据 / 环境规格表 / 8 项证据表 / 通信面定型（含 T1/T2/T3 触发线）** → `docs/dsh/dsh-migration.md` §3.4 / §3.6；**本机环境基线** → `docs/local-env.md` §4 / §6 / §8 / §9 / §10。
 > **六个隐性欠账处置（2026-09-11 结清）**：
-> 1. 🔴 沙箱方言修复件**生产挂载落盘** → **转 DSH-3**（承 2.5③）——挂载范式见 `dsh-local-env.md` §4.3
+> 1. 🔴 沙箱方言修复件**生产挂载落盘** → **转 DSH-3**（承 2.5③）——挂载范式见 `docs/local-env.md` §4.3
 > 2. ✅ Trae 二轮 R1/R2/R3 —— 已回 + WB 复验通过（含 1 处 WB 订正：本机 OS 默认 UI = zh-CN）
 > 3. ✅ **parentId —— 老大裁定：按线性记**（不采纳会话树结构）
 > 4. 🟡 ②「跨进程 resume 成功」单方声明 → **转 DSH-3「首验 id collision 定性」**
@@ -33,7 +33,7 @@
 - [x] 🔴 **前置件 1 — `--real-api` 等价物（真实调用断言机制）** ✅ **已完成**（Claude 提交 `0e2a7e9`；WB 2026-09-10 独立复验**通过**）
   - ⭐ **为什么必须补**：文档 §3.6 原话「…须在 DSH-2 设计到位——**不提前设计，DSH-3 起每步验证都裸奔**」。DSH-2.5 ④ 已实证：**无 key 时 `exit 0` + session 建立 + 12 条事件，与成功完全一致** → S0 的验收口径（消息往返 / 事件落盘 / 回读）**每一项都能在假绿灯下通过**。
   - 🟢 **WB 独立复验（真 Key 实跑，不采信声明）**：有效 Key → `verdict=OK assistant/message=1 turn/end.kind=completed` 3s（**绿灯是真的**）；错误 Key → `FAIL / error.code=AUTH / 401`（**红灯也是真的**）。两侧均复现 → 判据有效。
-  - ⚠️ **判据订正（2026-09-10）**：成功判据是 **`turn/end.reason.kind === 'completed'`**，**不是**「`turn/end.reason` 不存在」—— 后者是 WB 字段路径取错（`turn/end.data.reason`）写下的错误表述，**照字面实现会假红**。`dsh-local-env.md` §6 已订正。
+  - ⚠️ **判据订正（2026-09-10）**：成功判据是 **`turn/end.reason.kind === 'completed'`**，**不是**「`turn/end.reason` 不存在」—— 后者是 WB 字段路径取错（`turn/end.data.reason`）写下的错误表述，**照字面实现会假红**。`docs/local-env.md` §6 已订正。
   - ✅ **退回件已收口（2026-09-10 晚，WB 复验）**：原报「进程不退出**必现**」**撤回** —— 实测为**偶发**（Claude 独占 6 次 + WB 干净 1 次全部正常；WB 另 3 次复现，**均在其自己环境被污染的条件下**）。⚠️ **WB 原归因（"teardown 没跑"）是错的**，日志显示 teardown 跑了。
   - 🟢 **根因已收窄**：复现日志证明**挂点在「teardown 跑完之后、vitest 主进程真正退出之前」**，且 **EXIT-NET 安全网（teardown 布防）全程未触发** → **实测印证了 Claude 的"两层互补"判断**：该层救不了，**只有入口脚本墙钟看门狗能兜住**。
   - ✅ **防护已就位（Claude 交付，WB 判通过）**：① 启动期清扫过期残留（>2h）；② teardown 退出安全网（方案 A：真实退出码 + 诊断，**不因残留判红**——假红比没护栏更糟）；③ **入口脚本墙钟看门狗 20 分钟**（超时杀进程树 + exit 124，与测试失败的 1 区分）。CI 不会再挂死。
@@ -50,8 +50,8 @@
 - [ ] `interaction/` 接入（新增高危工具审批流）→ 2.7.1
 - [ ] `session/` 接入（升级 trajectory）→ 2.8.2
 - [ ] **S0–S4 最小可验证切片**（定义与勾对子项见文档 §3.6）：S0 一条消息完整生命周期 → S1 +interaction 审批 → S2 +compaction → S3 +sandbox 三档 → S4 +记忆最小闭环（**B 段 Gateway 能否起 HTTP 已于 2026-09-10 实测判定：不成立** → B 段定死走 SDK，详见 `docs/dsh/dsh-migration.md`「B 段 Gateway 路线实测判定」）
-- [ ] **生产挂载落盘（Windows 方言修复件）**：把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 `sdk`／`larry`／`web` 三个 profile 的 `cordis.patch.yml`，并带**一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `dsh-local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**，老大 2026-09-11 拍定并入本阶段）
-  - ⚠️ **本机有两个 dsh home**（2026-09-11 实测）：工程 home `.dsh-home/` 仅 `larry`／`sdk`（**无 web**），`~/.dsh/` 才有三个 —— **落盘目标与「web 是否补建」待老大定**（勿默认三 profile 都存在；两处 `cordis.patch.yml` 现状见 `dsh-local-env.md` §4.3）
+- [ ] **生产挂载落盘（Windows 方言修复件）**：把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 `sdk`／`larry`／`web` 三个 profile 的 `cordis.patch.yml`，并带**一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**，老大 2026-09-11 拍定并入本阶段）
+  - ⚠️ **本机有两个 dsh home**（2026-09-11 实测）：工程 home `.dsh-home/` 仅 `larry`／`sdk`（**无 web**），`~/.dsh/` 才有三个 —— **落盘目标与「web 是否补建」待老大定**（勿默认三 profile 都存在；两处 `cordis.patch.yml` 现状见 `docs/local-env.md` §4.3）
 - [ ] **A 段自定协议设计（通信面定型派生）**：前端 ↔ 自做云端服务 —— **流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全部自实现**（中转方案主要成本项；官方 Gateway 白送的恰是这部分）。**DSH-2 段「新增派生工作项」的同名条目已并此，勿双处维护**
 - [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升——不可量化但真实的 go/no-go 信号。文档 §3.7
 

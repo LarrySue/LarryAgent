@@ -7,7 +7,7 @@
  *    🔴 skip ≠ pass：用例必须显示为 skipped，且禁止"无 Key 就当通过"。
  *    R1 场景（开关开 + 错误 Key）必须判 **fail**——既不是 skip 也不是 pass。
  *
- * 2. **判据**（取自 docs/dsh/dsh-local-env.md §6 四组对照实跑，勿回退）：
+ * 2. **判据**（取自 docs/local-env.md §6 四组对照实跑，勿回退）：
  *    成功 ⇔ `assistant/message` 事件存在 ∧ `finalResponse` 非空 ∧ 无 error 类 turn/end.reason
  *    - `exit 0` / session 建立 / 有事件流：三项在三种失败场景下与成功**完全一致**
  *      （WB 实测：无 Key/错误 Key/已关闭 Key 全是 exit 0）→ **一律不得作判据**。
@@ -206,7 +206,7 @@ export interface LockAction {
 }
 
 /**
- * 清理 profile 孤儿锁（见 docs/dsh/dsh-local-env.md §1）。
+ * 清理 profile 孤儿锁（见 docs/local-env.md §1）。
  * 只处理**死 PID**的锁：重命名备份（`node_modules.lock.bak.<ms>`），不删除——
  * 与 dsh 自身惯例一致，且孤儿锁永不自动回收是设计选择，不是 bug。
  * @param profilesDir - profile 目录（含 node_modules.lock 的那一层）
@@ -268,7 +268,7 @@ export function createRealApiHome(): RealApiHome {
   const sourceSdk = join(sourceProfiles, 'sdk')
   if (!existsSync(join(sourceSdk, 'package.json'))) {
     throw new Error(
-      `缺少 sdk profile：${sourceSdk} 不存在（先按 docs/dsh/dsh-local-env.md §9.2 建 profile，` +
+      `缺少 sdk profile：${sourceSdk} 不存在（先按 docs/local-env.md §9.2 建 profile，` +
         `或用 ${PROFILE_HOME_ENV} 指定源目录）`
     )
   }

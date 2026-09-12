@@ -505,7 +505,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 ### ⭐ sdk 面实测能力边界（🟢 2026-09-09 DSH-2.3；B 段 = SDK stdio 的依据）
 
-> 依据：Trae 实测报告（原 `dsh-23-vue-tauri-connect-trae.md`，2026-09-11 吸收；环境侧复跑见 `dsh-local-env.md` §9）。B 段已定为 **SDK（stdio）** → **本表即 B 段的能力清单**，也是 §「未收敛项」所提"sdk 窄面"的实测答案。
+> 依据：Trae 实测报告（原 `dsh-23-vue-tauri-connect-trae.md`，2026-09-11 吸收；环境侧复跑见 `../local-env.md` §9）。B 段已定为 **SDK（stdio）** → **本表即 B 段的能力清单**，也是 §「未收敛项」所提"sdk 窄面"的实测答案。
 
 **能做（sdk profile + TS SDK，已实测）**：
 
@@ -574,8 +574,8 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 **退出条件（5 项实测 · ✅ 全部通过 · 2026-09-10 收口；任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
 1. `storage/` 外接 SQLite 可行性 —— ✅ **可行**：官方 backend 仅需配置，`path` 可指任意绝对路径；外部库当日落盘、我们的 `mem-1` 行可读出；反向哨兵证数据走 SQLite 而非默认 json（判据见 `../production-env.md` §5）
 2. `acp/` 契约稳定性 —— ✅ **通过**：`initialize` / `session.new` / `session.list` / `session.close` 均 OK；`fork` / `load` / `delete` = **`-32601`**（方法缺失，非鉴权）
-3. **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）—— ✅ **可用**：三档哨兵成立 + fail-closed；`enforcement = partial`（两条边界属实）；⚠️ **方言缺口三层**（本地化 / 错误码类别 / 编码）须修，详见 `dsh-local-env.md` §4
-4. Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；判据矩阵见 `dsh-local-env.md` §6
+3. **Windows 端 `ctx.sandbox` provider 可用性**（2.10.2 端侧执行器前提）—— ✅ **可用**：三档哨兵成立 + fail-closed；`enforcement = partial`（两条边界属实）；⚠️ **方言缺口三层**（本地化 / 错误码类别 / 编码）须修，详见 `../local-env.md` §4
+4. Vue/Tauri → sdk profile 连通 —— ✅ 真实回包 `PROBE-OK-2026`；判据矩阵见 `../local-env.md` §6
 5. **TS 跑通 bge-small-zh 本地 embedding，与 Python 侧同文本向量漂移比对**（重嵌策略依据）—— ✅ **无需全量重嵌**（漂移 `2.2e-7`，cosine ≥ 0.9999999999）；硬前提见下方 DSH-4 承载表
 
 **本阶段已定案的环境规格（后续阶段沿用，勿各自另起一套）** 🟢 DSH-2.1/2.2：

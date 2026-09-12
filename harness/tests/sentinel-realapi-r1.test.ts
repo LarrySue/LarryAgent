@@ -13,7 +13,7 @@
  *
  * ⚠️ 不加开关直接跑 → 本文件故意报错（不是 skip）：哨兵静默跳过等于没跑，
  * 与 R2 要防的"静默通过"是同一个坑。
- * ⚠️ 前置：profile 无孤儿锁（见 docs/dsh/dsh-local-env.md §1；runRealPrompt 会自动
+ * ⚠️ 前置：profile 无孤儿锁（见 docs/local-env.md §1；runRealPrompt 会自动
  * 清死锁，活跃锁则停手报错）。
  */
 import { describe, it } from 'vitest'

@@ -1,6 +1,6 @@
 # 生产环境（CVM / 轻量 Lighthouse）— 实测数据与判定结论
 
-> **定位**：本项目 **生产环境（也是当前唯一判定环境）** 的**单一真相源** —— 环境资产、实测数据、部署约束、成本与选型判定。与 `test-env.md`（测试 / WSL）、`dsh/dsh-local-env.md`（本机 Windows 开发环境）三者对仗。
+> **定位**：本项目 **生产环境（server 侧 / CVM，也是当前唯一判定环境）** 的**单一真相源** —— 环境资产、实测数据、部署约束、成本与选型判定。与 `test-env.md`（测试 / WSL）、`local-env.md`（本机 Windows：开发 + C 侧测试 + **PC 侧生产使用**）三者对仗；⚠️ 三者中"生产"的角色**按侧分**：**server 侧生产 = 本文档**，**PC / client 侧生产使用 = `local-env.md` §11**。
 > **为何独立成文（且置于 `docs/` 顶层而非 `docs/dsh/`）**：环境是**跨阶段的长期基础设施**，不属于"DSH 迁移"这一阶段专题 —— 该专题完结后 `docs/dsh/` 会归档，环境事实必须留在**唯一能跨 AI、跨清理周期的位置**。
 > **来源**：2026-09-09 WB 在 CVM 上**实跑**取得（标注 🟢），估算项标 🔴，未测项标 ⬛；2026-09-10 / 09-11 陆续补测。
 > **效力**：`TODO.md`、交流区、AI 记忆**只保留指向本文档的指针**，不复制内容。
@@ -161,7 +161,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 **⚠️ 一条必须纠正的认知**：源码**完全没有 `LANDLOCK_ACCESS_NET`**，实测沙箱内照样联网。
 → **"上了 sandbox 就不怕数据外泄"是错的**。它只管文件系统，**防外联必须另做**（网络策略 / 无外网路由）。这是设计选择，不是 bug。
 
-> **与 Windows 侧的关系（避免误移植）**：本机 Windows 的**拒绝方言缺口修复件**（`plugin-sandbox-dialect`）**只对 win32 生效** —— 其 `confine()` 在非 win32 直接返回原值。⇒ **CVM(Linux/landlock) 上不需要挂它、挂了也无副作用**；landlock 方言 `permission denied` 本就命中。方言缺口/修复件/挂载范式见 `dsh/dsh-local-env.md` §4／§4.3。
+> **与 Windows 侧的关系（避免误移植）**：本机 Windows 的**拒绝方言缺口修复件**（`plugin-sandbox-dialect`）**只对 win32 生效** —— 其 `confine()` 在非 win32 直接返回原值。⇒ **CVM(Linux/landlock) 上不需要挂它、挂了也无副作用**；landlock 方言 `permission denied` 本就命中。方言缺口/修复件/挂载范式见 `local-env.md` §4／§4.3。
 
 ---
 
