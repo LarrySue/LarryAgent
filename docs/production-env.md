@@ -426,18 +426,28 @@ records:
       secret: <值>
 ```
 
-### 12.4 四条实操事实 🟢
+### 12.4 五条实操事实 🟢
 
 1. **可直接手工编辑** —— `watch: true` ⇒ **改完自动热重载，不需要重启 DSH**（包文档明写"你可以直接编辑该文件"）
 2. **并发编辑会合并** —— 产品写入时保留注释与未触及条目的排版 ⇒ 手工编辑与产品写入不互斥，不会被覆盖
 3. ⚠️ **Windows 侧不检查文件权限**（原话"Windows 没有可检查的 mode，因此在那里跳过该检查而不是伪造它"）⇒ **"必须 600 否则启动失败"是 POSIX 专属**（CVM / WSL 成立，本机不成立）
 4. **空值 ≠ 有值** —— 空字符串被拒；**删密钥 = 删条目**，不是置空。未知顶层键 / 类型错误 / 格式错误 YAML 会在**启动时失败**（不静默忽略）
+5. ⚠️ **`key:` 冒号后必须留一个空格**（2026-09-14 实战踩坑，**静默降级**）
+   - 写成 `DEEPSEEK_API_KEY:sk-xxx`（冒号后无空格）时：**YAML 不报错、`yaml.safe_load` 不报错、`grep 'DEEPSEEK_API_KEY'` 照样命中** —— 但该行**不被解析为子键**，而是降级成父键的**多行标量续行** ⇒ **`refs` 整个变成字符串**（实测 52 字符 = 键名 `DEEPSEEK_API_KEY: ` 18 + 值 33 + 换行 1），DSH 按 `refs.DEEPSEEK_API_KEY` 取值取不到。
+   - ⇒ 与第 4 条对照：第 4 条是**响的**（启动时失败），**本条是哑的**（零报错、语义已变）—— 同类陷阱里更危险的一种。
+   - **唯一可靠判据 = 看类型，不是看键在不在**：
+     ```bash
+     python3 -c "import yaml;d=yaml.safe_load(open('$HOME/.dsh/.credentials.yaml'));print(type(d.get('refs')).__name__, sorted((d.get('refs') or {}).keys()))"
+     ```
+     必须打印 `dict ['DEEPSEEK_API_KEY']`；打印 `str` 即中招。
+   - **修复**：补一个空格 —— `sed -i 's|^  DEEPSEEK_API_KEY:|  DEEPSEEK_API_KEY: |' <file>`。⚠️ `sed -i` 会**重建文件**，改完必须 `chmod 600` + 复核（本次实测权限未掉，但不可依赖）。
+   - **附带一般化**：凡"填了但没生效"的排查，**先验结构再疑逻辑** —— 本案里 `grep` 命中、字节数也变了（161→222），一路都是"看起来填上了"。
 
 ### 12.5 落点与现状（2026-09-14 🟢 实测）
 
 | 环境 | 路径 | 现状 | 要填吗 |
 |---|---|---|---|
-| **CVM** | `/home/ubuntu/.dsh/.credentials.yaml` | **存在**（600 / 161 B），**仅 `records:`，无 `refs:` 段** | ⭐ 3.0 前置 |
+| **CVM** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；**真生效**待 3.0 real-api 复跑 |
 | 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
 | 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
 | WSL | `~/.dsh/.credentials.yaml` | DSH-3 不参与 | 暂不填 |

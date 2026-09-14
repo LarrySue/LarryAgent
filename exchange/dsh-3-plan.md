@@ -28,6 +28,8 @@ DSH-3 的判定标的是**核心链路（会话 + 记忆 + 工具）达到 P4 �
 1. CVM 上 `dsh@0.1.2-rc.1` 可用（版本号须显式核对，**勿用 `latest`**——见 `docs/production-env.md` §6 坑 8）
 2. profile 就位（`larry` / `sdk` 至少各一）
 3. **凭据落位**：CVM 侧 `$DSH_HOME/.credentials.yaml` 的 `refs:` 分节 —— ⚠️ **键名固定为 `DEEPSEEK_API_KEY`**（`dsh-llm-deepseek` 的 `apiKeyEnv` 默认值，**不可自命名**），值取控制台那把 `larry-cvm`；POSIX 下须 `chmod 600`。机制与落点详见 `docs/production-env.md` §12（含"不用改 profile / 改完自动热重载 / 别删已有 `records:` 段"三条实操）
+   - ✅ **2026-09-14 已完成落位**：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），600 / 223 B，`records:` 原段完好；结构校验通过。⇒ 派发 3.0 时**无需重做**，只需跑 real-api 验"真生效"。
+   - ⚠️ 落位过程踩坑一次：**冒号后缺空格** ⇒ `refs` 静默降级为字符串（YAML 层零报错，`grep` 仍命中）。已入档 `docs/production-env.md` §12.4 第 5 条。
 4. real-api 等价物在 Linux 侧跑通（载体：`harness/scripts/run-real-api.mjs` + `harness/tests/real-api.ts`，DSH-2 前置件 1 的产物，**需在 CVM 侧复跑**）
 
 **硬判据**
