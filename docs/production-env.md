@@ -449,7 +449,7 @@ records:
 
 | 环境 | 路径 | 现状 | 要填吗 |
 |---|---|---|---|
-| **CVM · 裸跑（默认 home）** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；**真生效**待 3.0 real-api 复跑 |
+| **CVM · 裸跑（默认 home）** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；**真生效**待验 —— ⚠️ 但**不能用 real-api 验**（见下条订正），须用 `dsh-prompt.mjs` 裸跑 |
 | **CVM · 显式 `DSH_HOME=~/larry-dsh-home`** | `/home/ubuntu/larry-dsh-home/.credentials.yaml` | ⚠️ **不存在**（09-10 建的该 home，profiles / sessions / storages 齐全，**独无凭据**） | ⚠️ **本机 `harness/scripts/cvm-probes/*.sh` 钉死此路径** ⇒ 照抄 = "无 key 假绿" |
 | 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
 | 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
@@ -458,6 +458,13 @@ records:
 > ⚠️ **订正一处旧假设**：此前记"CVM 上那份是 09-10 PoC 留下的、Key 早已关闭"—— **实测该文件从来没有 `refs:` 段**（只有 browser-session 记录）⇒ 该机**从未配过 LLM Key**，09-10 的连通来自启动环境注入。⇒ 给 CVM 填 = **新增一段**，不是"替换旧 Key"。
 
 > ⚠️ **再订正一处（同日）**：WB 上一轮口头结论称"**CVM 落点唯一**，没有本机那种两个 home 的歧义"—— **错，已实测推翻**。CVM 的成因与本机**完全相同**：**显式 `DSH_HOME` → 落到指定目录；未设 → 回落 `~/.dsh`**。CVM 上两处并存（见表）⇒ **"填哪个"同样取决于"谁启动 DSH"**，不是无歧义。该口头结论当时指导了 09-14 的落盘动作（选择本身未错——裸跑确实读 `~/.dsh`），但**"无歧义"这半句是错的**。
+
+> 🔴 **订正第三处：验证路径错了（WB 2026-09-14 查实，推翻一条既有预期）**。§12.5 表里 CVM 行原写"**真生效**待 3.0 real-api 复跑" —— **该路径不成立**。
+>
+> - `harness/scripts/run-real-api.mjs` → vitest → `harness/vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']`，而该文件 `:31-33` 把 `process.env.DSH_HOME` **强制覆盖为 `mkdtempSync` 出的临时目录**，`:44-52` 还有正向白名单断言（指向真实路径会判 FAIL）。
+> - ⇒ **real-api 链路读不到 `~/.dsh/.credentials.yaml`**；它的 Key **只能来自环境变量** `DEEPSEEK_API_KEY`（`tests/real-api.ts:28` 自述"注入值"、`:31` 临时 home 隔离）。
+> - ⇒ 推论：`cvm-probes/*.mjs`、`dsh-prompt.mjs` 的注释也都写"Key 由 caller 注入" ⇒ **CVM 上至今没有任何一条路径消费过那份 `.credentials.yaml`**（与 `:458` 那条"09-10 的连通来自启动环境注入"互为佐证）。
+> - ⇒ **正确验法**：`harness/scripts/dsh-prompt.mjs`（**不覆盖 `DSH_HOME`** ⇒ 裸跑落 `~/.dsh`），且**不注入** `DEEPSEEK_API_KEY` 环境变量 —— 若此时仍成功，即证明**文件层被读**。派发见 `exchange/log-trae.md` 派发 001 §D（含三态造法）。
 
 ### 12.6 与 Tier0 红线 ① 的关系
 

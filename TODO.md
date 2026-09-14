@@ -48,7 +48,7 @@
 > **判据 / 验收基准 / 负向对照矩阵 / 采数口径 / 执行范式 → `docs/dsh/dsh-migration.md` §3.6「DSH-3」**；CVM 环境与凭据 → `docs/production-env.md` §12；方言修复件范式 → `docs/local-env.md` §4.3；**派发规格（执行人 / 批次）→ 本文件「待派发」段**。
 > ⚠️ 原详细计划稿 `exchange/dsh-3-plan.md`（含四方评审附 A/A-2/B/C）的实质内容已于 2026-09-14 **全数承接入本文件与 §3.6**，该稿已于 `677523d` 处置（删除）；如需追溯评审原文：`git show 3362f57:exchange/dsh-3-plan.md`。
 
-#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）
+#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📮 已派发 001（Trae 2026-09-14）
 
 - [x] ✅ **凭据落位**（2026-09-14）：CVM `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY`（600 / 223 B，`records:` 段完好）
 - [x] ✅ **环境核对**（2026-09-14）：`dsh@0.1.2-rc.1` 双证（CLI + `package.json`）；`~/.dsh/profiles/` 四个全在（acp / larry / sdk / web）；node v22.22.2
@@ -56,7 +56,10 @@
   - ⚠️ **它同时卡着 3.5** —— 缺的三个包里正含 3.5 要用的沙箱探针包
   - 传输非瓶颈（1.5 s 级）；成本在后置 `pnpm install`（须记墙钟。CVM 已配 npmmirror 源 ⇒「境外源 15 KB/s」场景不适用）
   - ⭐ **留版本锚点 `SYNC-ANCHOR.txt`**（源 commit `d8cc7c4b` / `HEAD:harness` = `6c268877`）—— 否则将来"CVM 上跑不过"无法区分**环境问题 vs 代码漂移**
-- [ ] **real-api 在 CVM 侧复跑** —— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）
+- [ ] ⭐ **凭据层验真（2026-09-14 查实后新增，本步最重要）** —— 证明 `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` **确实被读取且真用于调用**：用 `harness/scripts/dsh-prompt.mjs` **裸跑**（它**不覆盖 `DSH_HOME`** ⇒ 落 `~/.dsh`），三态 = 真 key（**不注入** env）/ 无 key（`DSH_HOME=~/larry-dsh-home`：有 profile、无凭据）/ 错 key（隔离 home + 伪造值 + 600）；判据 = **三态互不相同** + 每态记 `(DSH_HOME, profile, 凭据来源层)` 三元组
+  - ⚠️ **为什么必须新开这条路径**：`run-real-api.mjs` → vitest → `vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']` **强制把 `DSH_HOME` 覆盖为临时目录**（该文件 `:31-33`）⇒ **real-api 读不到凭据文件**，其 key 只能来自 env（`tests/real-api.ts:28`）。⇒ `production-env.md` §12.5 原写"真生效待 3.0 real-api 复跑"**是错的，已订正**（该文档 §12.5 第三条订正）
+  - ⚠️ **不得改动** `~/.dsh/.credentials.yaml`（负向两态一律用隔离 home 造）；回报只写键名 / 是否存在 / 长度
+- [ ] **real-api 在 CVM 侧复跑** —— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）。⚠️ **本组只代表「环境变量层」**，**不得**用于宣称"CVM 凭据文件生效"
 - [ ] **顺手采数**（白捡的规格账；**老大 2026-09-14 拍：纳入 3.0 验收**，口径见 `docs/dsh/dsh-migration.md` §3.6〈采数口径〉）：cgroup v2 为主口径 + 免轮询三件（`memory.peak` / `memory.events` / `memory.pressure`）+ 带宽（记工具/目标/时段）
   - ⚠️ **采数窗口内冻结 CVM 其他活动**（2G 机器；OOM 会把曲线**断掉**、事后被误读成"内存稳定"）
 - [ ] **执行说明就位**：⚠️ `node` / `dsh` **都不在 PATH**（`export PATH=$HOME/node/bin:$PATH`）+ 远程长任务范式（`setsid nohup` + 完成标记 + `echo $? > rc`）
@@ -213,6 +216,7 @@
 ### 待派发
 
 - [ ] **DSH-3 prototype 派发**（**批次与执行人，老大 2026-09-14 拍定**）
+  - 📮 **派发进度（2026-09-14）**：**001 · DSH-3.0 已发** → `exchange/log-trae.md`（执行人 Trae）；老大定「**一个一个发，不要并行发**」⇒ **3.2 / 3.7 待 001 回报后再发**
   - **执行人分配**
     - **3.1–3.6 实现侧 + 3.2 定性** → **Trae**（分工原则 + 他 §八 已自认领）
     - **3.5 上机跑** → **Trae**；**器材由 Claude 出**（`landlock_probe.py` 已回归：ABI 自适应 + 负向开关 + `VERDICT=` 机读行）
