@@ -66,6 +66,7 @@
 - [ ] ⭐ **`harness/packages/plugin-tool-readfile/`**（**首个"产品"插件**，此前 5 个 `packages/*` 全是探针）+ 可复跑 e2e 脚本
 - [ ] 四项硬判据**同时**成立：① 消息往返 + **nonce 内容断言** ② plugin **确实被激活**（⭐ 以 boot 时 `activate` 打点为准；⚠️ **`--dump-config` 是假绿源**——只组配置树、不激活） ③ 真实回包非空 + `turn/end.reason.kind === 'completed'` ④ session 落盘 + **回读可查到同一 nonce**
 - [ ] **待拍**：S0 通道走 `sdk`（倾向）还是 `acp`
+- [ ] 📚 **参考件**（登记表 3.1 行）：`ref/community/kun2-5code__dsh-plugin-template` —— 插件脚手架（`dsh.bundle.patch` + `dsh.client` 清单形状、`service` / `hook` / `commands` 三个半边、**假 ctx 单测范式** `test/smoke.mjs`）；e2e 台可参照 `iiwish/dsh-testkit`（Docker 隔离真宿主生命周期测试）/ `PerryLink/dsh-test-drive`（一次性 profile 冒烟）
 
 #### DSH-3.2 · 首验：跨进程 resume 的 id collision 定性
 
@@ -74,6 +75,7 @@
 - [ ] ⚠️ **复用 3.1 产出的 nonce 会话，不另造**（否则两处会话构造法会漂）
 - 执行人：**Trae**（他此前判"改 UUID 后成功"，让他自己验自己的判据）
 - 🟡 前置：我方 CVM 通道核查（见 3.0）
+- [ ] 📚 **参考件**（登记表 3.2 行）：`EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令 —— 复现件的形态参照）；官方 `dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`
 
 #### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1）
 
@@ -87,6 +89,7 @@
   - **3.3-c = 3.8** 对端换成 driver + 前端 ⇒ 人审批闭环
 - [ ] 用例覆盖 5 条：批准 / 拒绝 / **answerer 超时** / **answerer 抛错** / **渠道断裂** —— 后三条均须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿：你以为是人点了拒绝，其实是请求从未到达）
 - [ ] 观测点 = **工具 handler 入口打点**（有行 = 真的执行了），UI 与 DSH 日志只作旁证
+- [ ] 📚 **参考件**（登记表 3.3 行）：`ref/community/PerryLink__dsh-reach` —— **deferred answerer**（`approval/request` + `user-questions/request` 两个 waterfall，答案稍后从 IM 回来才兑现）+ `cardTimeoutSec`（超时）+ `bridge.dispose()`（结清待决）+ `inject: []` 降级矩阵；官方机制侧 `dsh-user-approval` / `dsh-permission-presets`
 
 #### DSH-3.4 · S2 compaction 接入（→ 2.9.2）
 
@@ -109,6 +112,7 @@
 - [ ] 判据：事件**确实被消费**（不是只注册了监听）+ 数据落在**我们自己的库**（⭐ **带反向哨兵**）+ **新会话能召回**
 - [ ] ⚠️ **双写不是事务** ⇒ 须定义**一致性模型**（ChromaDB 不可达 / SQLite 独存时的降级行为与召回路径）
 - ⚠️ 写码前必读：`node:sqlite` 在并发 + `busy_timeout=0` 时 **`prepare()` 阶段就抛错**（Python 侧只在 `run()` 阶段失败）⇒ 错误处理须包到 `prepare` 层
+- [ ] 📚 **参考件**（登记表 3.6 行）：`ref/community/Asher-2000__dsh-memory-connect` —— SQLite FTS5 + 本地 embedding（`scripts/embed_server.py`）+ `systemPrompt.context` 逐轮召回；⚠️ 其 CHANGELOG 记了两个**静默不生效**根因（Cordis 惰性构造服务 ⇒ 只 `ctx.provide()` 不实例化；召回写进无人读的字段），**与本步判据“事件确实被消费”同源**
 
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
 
@@ -116,12 +120,14 @@
 - [ ] ⚠️ **待拍两件**：① **落哪个 home**（工程 `.dsh-home/` 仅 `larry`/`sdk`、**无 web**；`~/.dsh/` 才有三个）② **谁执行落盘**
   - 🔍 **落盘人待定的实况（2026-09-14 WB 实测）**：Trae 报其通道写 `~/.dsh/profiles/*/cordis*.yml` 被拒 `EPERM` —— ⚠️ **该归因待复核**（09-12 曾出现同类"主体错位"：把 **DSH 自身沙箱**的 EPERM 记成 AI 工具沙箱）；**WB 通道实测可写**（`~/.dsh/profiles/sdk/` 试写成功）。⚠️ **三通道结论不可互推**，Trae 那条须他自己复跑定性
   - ⚠️ 落盘**是追加不是覆盖**：`.dsh-home/profiles/larry/cordis.patch.yml` 现有 477 B，**已含一条 `- id: hmr / disabled: false`**
+  - 📚 **参考件**：模板的 `dev/cordis.yml` 记了一条开发回路坑 —— **overlay 只加载 host 半边**，`dsh.client` 包级声明发现不了（要测 client 半边必须把包装进 profile）；另：`patch` 是**行级覆盖**非深合并（与本项“追加不是覆盖”互证）；病毒式参照 `WSL & Windows Interop` 整类（37 件，登记表 3.7 行）
 
 #### DSH-3.8 · A 段自定协议设计（通信面定型派生）
 
 - [ ] 设计稿 → `docs/`：**流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全自实现**（官方 Gateway 白送的恰是这部分）。**DSH-2 段「新增派生工作项」的同名条目已并此，勿双处维护**
 - [ ] ⭐ **审批请求双向中继**（老大 2026-09-14 定「分阶段往 ②」，终点落在本段）：A 段协议须含 **server→client 请求**的承载。传输能力已由 `JsonRpcLineTransport`（protocol 包公开导出）提供 ⇒ 本段要做的是**协议定义 + 对端接线**，不是造传输
 - ⭐ **可复用产物**：3.3-b 的薄客户端 = 本段 driver 的骨架（勿另起一套）
+- [ ] 📚 **参考件**（登记表 3.8 行）：官方 `dsh-api-remotes`（原话“任何不依赖 React 的 `ctx.remote` 约定均可复用其 **Client face**”）+ `dsh-client-connection`（gateway 挂 `/api`；browser 半 = fetch/SSE）；社区同题 `litestartup-com/dsh-api-gateway`（REST + SSE + API-key 鉴权）/ `Jiachi5533/dsh-remote-gateway`
 - ⚠️ **它不再阻塞 3.3-a / 3.3-b**（2026-09-14 修正）：依赖只剩 **3.3-c** 这一段（见 3.3 三段拆分）
 
 #### DSH-3.9 · 阶段收口
@@ -138,6 +144,10 @@
 - [ ] ⭐ **环境口径统一（老大 2026-09-14 指令）：同一环境内只用一个 DSH home，不再制造重叠环境**
   - **CVM**：以裸跑默认 **`~/.dsh`** 为准（凭据已在此）⇒ **废弃 `~/larry-dsh-home`**，并改掉 `harness/scripts/cvm-probes/*.sh` 里钉死的 `export DSH_HOME="$HOME/larry-dsh-home"`（⚠️ **照抄这些脚本 = "无 key 假绿"**）
   - **本机**：client 显式指 `.dsh-home` ⇒ 手工跑也**显式指同一处**（勿靠默认回落 `~/.dsh`）
+- [ ] ⭐ **参考件先行（老大 2026-09-14 定）：每切片开工前，先在 `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉定位参考件**（官方读 `ref/dsh-bare/` 或 npm；社区读 `ref/community/`，未落位者按需拉取），**用完回填一行「借鉴点」**；找不到就写“无”
+  - 已落位三件（浅克隆、**只读参考、不进构建**）：`ref/community/kun2-5code__dsh-plugin-template`（3.1）/ `PerryLink__dsh-reach`（3.3）/ `Asher-2000__dsh-memory-connect`（3.6）；名录 `ref/tmp_awesome.md.bak`（3,386 行 / 27 分类）
+  - ⚠️ 拉取踩坑：git 全局配了**不在运行的本机代理** ⇒ 用 `git -c http.proxy= -c https.proxy= clone --depth 1 <url> <dst>`
+  - ⚠️ 纪律边界：社区件**只读参考不纳入依赖**（§3.0）；真要抄进产品 ⇒ **fork → 本仓库 → review / 测试**
 
 **退出条件**：核心链路（会话 + 记忆 + 工具）在 DSH 下达到 **P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
 
@@ -174,6 +184,7 @@
 
 > 均为 §3.0「只借鉴不直装」的配套，或包归属定位。
 
+- [ ] ⭐ **DSH-3 的“每切片参考件”已建表** → `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉（10 切片 × 官方/社区参考 + 8 条可借鉴事实）；**下方两条是 DSH-4 的取样清单，与登记表互补，勿双处维护**
 - [ ] **插件生态借鉴清单**（§3.3 降级 3 项）：Memory 分类 149 个中筛 3–5 个候选（重点 `dsh-memory-connect` / `dsh-auto-memory` / `dsh-project-memory` / ReMe），产出**可借鉴点清单**（schema / 检索融合 / 时间上下文建模 / 信任模型 / 已知陷阱），**不是"选哪个装"**；评估维度 = 设计可参考性 + 代码可读性 + 语义贴合度 + fork 改造量
 - [ ] **借鉴调研的取样原则**：面对数千插件，产出「设计差异表」+「对方如何验证该设计」列 + 「改造后需补哪些测试」清单；目标是提炼可复用设计模式，不是给单个插件下价值判断
 - [ ] **借鉴 / fork 代码纳入规范**：进库位置（独立 `vendor/` or 按能力模块落地）、upstream 出处与 license 标注格式、改造后须过本项目测试与命名规范、与自研代码的边界标识

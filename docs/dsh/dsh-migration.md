@@ -105,7 +105,12 @@
 > **PTC 模式**（对应 #8 部分）：模型输出 TS 代码编排批量工具调用，减少 LLM 往返、省 Token。
 > **ACP（Agent Client Protocol）**：headless 之外的自动化服务协议（`acp/` 包 + `sdk/` JSON-RPC SDK），是 B/D 路径抓手。
 
-### 2.2 本地代码副本（AI 查阅指南）
+### 2.2 本地参考代码区（`ref/`，AI 查阅指南）
+
+> **两个子区**：`ref/dsh-bare/` = **官方底座源码**（只读锁定副本）；`ref/community/` = **社区参考件**（按需浅克隆）。整个 `ref/` 已在 `.gitignore` 排除、**不入版本、不进构建**。
+> **它服务的是一条已定纪律**（§3.0「只参考不直装」）：把"值得借鉴的件"从*网上某个仓库*变成*本机可读的目录*。**每步对应的具体参考件见 §3.6〈参考实现登记表〉。**
+
+#### 2.2.1 官方底座源码（`ref/dsh-bare/`）
 
 - **路径**：`ref/dsh-bare/`（**裸仓库**，项目根；`.gitignore` 已排除，**不入版本**）
 - **性质**：**只读参考副本**——供 AI 核查 DSH 事实用，**不是 LarryAgent 的项目依赖**。项目代码对它**零引用**，构建与运行时都不读它
@@ -138,6 +143,32 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 4. **不要在 Windows 上做整体 checkout**——9,080 文件 + 实时防护逐文件扫描 = 卡死（实测 5.5 小时未完成）。要实体文件就走上面的「按需局部检出」
 
 **刷新方式**：`git -C ref/dsh-bare fetch --tags`（裸仓库无分支切换，直接按新 tag 查即可）
+
+
+#### 2.2.2 社区参考件（`ref/community/`）—— 约定
+
+- **命名**：`ref/community/<owner>__<repo>/`（斜杠换成 `__`，一眼看出出处）
+- **拉取**：`git clone --depth 1`（**浅克隆**——只要当前版本，不需要历史）
+- **性质**：同上，**只读参考、不纳入依赖、不进构建**（§3.0）。真要用其代码 ⇒ 走 **fork → 本仓库 → 本项目 review / 测试**，**不复用这里的目录**
+- **登记**：每个件要记 `LICENSE` 类型与对应切片（见 §3.6〈参考实现登记表〉）；版本以浅克隆当日为准
+
+**已落位（2026-09-14，3 件 / 约 0.9 MB）**
+
+| 目录 | 对应切片 | 为什么值得看 |
+|---|---|---|
+| `kun2-5code__dsh-plugin-template/` | 3.1 / 3.7 | 插件脚手架（MIT）：`src/index.ts` + `service` / `hook` / `commands` + `client/` UI 半边 + **`dev/cordis.yml` 开发 overlay** + **`test/smoke.mjs`（假 ctx 单测范式）** |
+| `PerryLink__dsh-reach/` | 3.3 / 3.8 | 决策卡（approval / user-question）**推送到 IM 并从聊天回答**（Apache-2.0）：`src/bridge.ts` 的 **deferred-answerer waterfall** + `decision.ts` + 7 条 IM 适配器 + 降级矩阵 + `client/` 半边（`dsh.client.inject` 声明） |
+| `Asher-2000__dsh-memory-connect/` | 3.6 | 跨会话记忆（MIT）：SQLite FTS5 + 本地 embedding（`scripts/embed_server.py`）+ `systemPrompt.context` 逐轮召回 + 上下文预算测试 |
+
+- **本地社区名录**：`ref/tmp_awesome.md.bak` = `awesome-dsh-plugin` 英文版快照，**3,386 行 / 27 个分类含分类行号**；按分类定位候选，**不必重新联网**（⚠️ 文件名是下载时的 `.bak`，语义上等同于 `ref/awesome-dsh-plugin.md`）
+
+> ⚠️ **拉取时的一个坑（2026-09-14 实测）**：本机 git 全局配了 `http(s).proxy = socks5://127.0.0.1:7890`，而该代理**当时不在运行** ⇒ `git clone` 直接报 `Failed to connect to github.com port 443 via 127.0.0.1`。**github.com 本身 TCP 可达**（实测握手通）。绕法：
+>
+> ```bash
+> git -c http.proxy= -c https.proxy= clone --depth 1 <url> <dst>   # 并清掉 env 里的 http_proxy / https_proxy
+> ```
+>
+> ⇒ **这类失败看起来像"被墙"，实为本机代理配置** —— 判"网络不通"前先 `git config --get http.proxy`。
 
 
 **验证纪律**：任何写进本稿**结论区**的 DSH 事实必须标 🟢 / 🟡 / 🔴；**🔴 不得作为决策依据**，只能列入待验证
@@ -708,6 +739,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 **成本与复用（诚实列出）**：
 - 3.3-b 的**主要成本** = 自己起子进程、自构启动参数（不能复用 `HarnessClient`）
 - ⭐ **产物不是一次性的**：薄客户端 + `onRequest` / `AbortSignal` 用法 = **3.8 driver 的骨架**
+- 📚 **第三方已实现同类（社区实证，🟡 待我方复跑）**：`ref/community/PerryLink__dsh-reach/` 把 `approval/request` + `user-questions/request` 做成 **deferred answerer**（答案**稍后**从 IM 回来才兑现）⇒ **② 有现实例证**；其 `cardTimeoutSec`（0 = 永不过期）与 `bridge.dispose()`（结清待决）分别是**超时**与**卸载**的现成参照。逐条对照见 §3.6〈参考实现登记表〉第 1–3 条
 - 📌 **未来替代观察点（不改本次结论）**：`dsh-api-gateway`（typert）本是官方 Client↔Host 双向通道、自带重连 / 心跳 / 取消，且 `dsh-base` 默认启用；但 **2026-09-10 实测其传输面不可达**（`/api/remote.mux` 带 cookie 仍 404、无法独立起 HTTP）。typert 的"进程内载体"**不解决跨进程问题** ⇒ 不影响本次路线。若上游修好传输面，② 有更省事的替代，届时重估。
 
 > ⚠️ **由此浮现一条产品定位层面的问题**：审批流跨越 A/B 段边界 ⇒ "PC 侧弹框审批"这一产品能力，取决于 A 段协议何时落地。**是否写入 `docs/product-positioning.md` 待与老大讨论**（本稿不擅自改产品定位）。**现状补充**：拍定「分阶段往 ②」后，该能力已有一条具体收敛路径（3.3-c / 3.8）⇒ 建议**等 3.8 设计稿出来时再谈定位**，那时能对着具体协议形状谈，比现在空谈准。
@@ -822,6 +854,54 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - DSH-4 任一项差异化能力卡死 → **单独延后，不阻塞主线**（DSH 框架先落地，差异化能力分批做）
 - DSH 发布破坏性变更 → 按升级 SOP（§3.4）：跟 rc 及以上 tag（alpha 不跟随），升级必跑 replay + P4，任一红回退
 - 方向不对齐长期化 → §3.3 的 7 项差异化能力同步排进 P 队列
+
+#### 参考实现登记表（每步 → 具体可借鉴件）
+
+> **口径**：本表是 §3.0「只参考不直装」的**操作面** —— 把"某步可以参考什么"从口头共识变成**可核对的清单**。
+> **规矩（老大 2026-09-14 定）**：**每步开工前先在表内定位参考件**（官方读 `ref/dsh-bare/` 或 npm；社区读 `ref/community/`，未落位者按需拉取），用完**回填一行「借鉴点」**；**找不到就写"无"** —— 空着比编一个强。
+> **三类来源**：① **官方包**（`@deepseek-ai/*`，实测 **277 个 `dsh*` 包**在 npm 分发）② **社区件**（名录 `ref/tmp_awesome.md.bak` + 目录站 `deepseek-harness-plugin.com`）③ **上游主仓**（`ref/dsh-bare/`，锁 `dsh-v0.1.2-rc.1`）。
+> **证据等级**：包名 / 件名 / 落位状态 🟢（2026-09-14 实查 npm org 与本地名录）；「借鉴点」凡**未经我方复跑**者一律 🟡。
+
+| 切片 | 要解决什么 | 官方参考（`@deepseek-ai/`） | 社区参考 | 本地落位 |
+|---|---|---|---|---|
+| **3.0** 三态对照 / 采数 / 凭据 | 判据有效性 + 环境口径 | 五个 profile 模板 `dsh-web-app` / `dsh-headless` / `dsh-sdk-app` / `dsh-sdk-minimal` / `dsh-acp-app`；`dsh-home-paths`（`DSH_HOME` 解析） | `omdsh-dev/dsh-security-audit`（配置 / 插件来源 / 网络暴露的**只读审计清单**，可作采数项参照） | — |
+| **3.1** S0 基础链路（首个产品插件） | 工具插件的**最小注册面** + e2e | `dsh-sdk-protocol` / `dsh-sdk-client` / `dsh-sdk-jsonrpc-server` / `dsh-sdk-app`（sdk 面四件）；`packages/fs/tool-fs`（工具注册范式）；`dsh-sdk-minimal`（最小组合） | ⭐ `kun2-5code/dsh-plugin-template`；`omdsh-dev/plugin-template`（官方 turtle-ui 派生）；`iiwish/dsh-testkit`（Docker 隔离的真宿主生命周期测试）、`PerryLink/dsh-test-drive`（一次性 profile 冒烟） | ✅ 模板已落位 |
+| **3.2** resume id collision | 复现与定性 | `packages/core/session`；`dsh-session-persistence-sqlite` / `-jsonl`、`dsh-session-query-sqlite` | `EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令）——复现件的形态参考 | — |
+| **3.3** S1 审批（三段） | 答者接口 + 出境往返 + fail-closed | `dsh-user-approval`（机制）/ `dsh-permission-presets`（预设答者）/ `dsh-client-ui-approval` / `dsh-client-ui-permission-presets` / `dsh-headless`；出境面 `dsh-api-remotes` / `dsh-client-connection` | ⭐⭐ **最富的一类（50+ 件）**：**答者链** `PerryLink/dsh-auto-review`、`Letter2025/dsh-approval-llm`、`simon300000/dsh-auto`、`ilharp/dsh-tool-approval`、`SeverusZh/dsh-yolo-mode`（fail-closed 兜底）；**出境到人** `PerryLink/dsh-reach`、`moyu-good/dsh-lark-bridge`、`452926826/dsh-feishu-bot`；**规则引擎** `940842546/dsh-permissions`、`PerryLink/dsh-permission-rules` | ✅ `dsh-reach` 已落位 |
+| **3.4** S2 compaction | 换 Provider + 保原文 | `dsh-compaction`（契约）/ `dsh-compaction-basic`（默认 Provider）/ `dsh-compaction-tool-result-pruner` | `aerince/dsh-active-context-pruning`（**经官方 compaction API** 做模型自定剪枝）、`giter00/dsh-headroom`（压 tool 输出、保原文） | — |
+| **3.5** S3 sandbox 三档 | seam 可替换 + 中间档 | `dsh-sandbox` / `-policy` / `-local` / `-windows-acl`、`dsh-fs-sandbox`、`dsh-bash-sandbox`、`dsh-pwsh-sandbox` | ⭐ `omdsh-dev/sandbox-micro` / `sandbox-mxc` / `sandbox-nono`（**三个第三方 backend ⇒ 证明 `ctx.sandbox` 是可替换 seam**）；中间档预设 `Alnita-M/dsh-Almost_Full_Access`、`a903067276-rgb/dsh-perm-guard`、`Jiao-XXX/dsh-auto-approve` | — |
+| **3.6** S4 记忆最小闭环 | 双写 + 召回 + 降级 | `packages/core/session`（事件类型）；`dsh-session-persistence-sqlite`、`dsh-session-query-sqlite`、`dsh-session-projection` | ⭐ `Asher-2000/dsh-memory-connect`（SQLite FTS5 + 本地 embedding + `systemPrompt.context` 逐轮召回）；`aqsk-BLG/dsh-memory`（分层文件记忆 + 混合检索）、`chenzheshushi-commits/dsh-evolve`（零 token 确定性召回）、`agentscope-ai/ReMe` | ✅ 已落位 |
+| **3.7** Windows 方言修复件 | 方言件写法 + 开发 overlay | `dsh-sandbox-windows-acl`、`dsh-sandbox-local`、`dsh-pwsh-sandbox` | ⭐ **`WSL & Windows Interop` 整类 37 件**（社区专门做过）：`173787247/dsh-wsl-env`（WSL / 路径映射 / CRLF / git 注意事项注入 systemPrompt）、`lucifergzsz414/dsh-windows-native`（native-Windows PowerShell / 编码 / 文件系统 gotchas）、`173787247/dsh-wsl-path` / `-mnt` | ✅ 模板的 `dev/cordis.yml` 可参照 |
+| **3.8** A 段协议（通信面） | 跨网络宽面 + 审批中继 | ⭐ `dsh-api-remotes`（**"任何不依赖 React 的 `ctx.remote` 约定均可复用其 Client face"**）、`dsh-client-connection`（gateway 挂 `/api`；browser 半 = fetch/SSE）、`dsh-api-gateway` + `dsh-typert-*`（4 件）、`dsh-host-webserver` / `-frontend-static` / `-apiproxy`、`dsh-cordis-host-runner`、`dsh-api-session-controller`、`dsh-sdk-protocol`（transport / `onRequest`） | ⭐ `litestartup-com/dsh-api-gateway`（**REST + SSE 暴露运行中会话给第三方客户端 + API-key 鉴权** —— 与自做 driver 同题）、`Jiachi5533/dsh-remote-gateway`（source-filtered HTTP/SSE/WS 网关）、`BotonJ/dsh-remote-link`、`liguobao/deepseek-harness-remote`、`yabolee-kkk/dsh-streaming-mcp-bridge` | ✅ `dsh-reach` 的 `client/` 半边（`dsh.client.inject`）可参照 |
+| **3.9** 阶段收口 | 上游漂移 + 回传 | — | `MicroMilo/upstream-radar`（盯 release + 在一次性 runner 复测已发布产物，输出机器可读兼容矩阵）——升级 SOP / 漂移复核的方法参考 | — |
+
+**社区名录索引（在 `ref/tmp_awesome.md.bak` 内按分类名检索；"行"为该快照位置）**
+
+| 分类 | 行 | 与哪几步相关 |
+|---|---|---|
+| `Sessions & Messages` | 1061 | 3.1 / 3.2 |
+| `Memory` | 1265 | 3.6 |
+| `Tools & Capabilities` | 1417 | 3.1 |
+| `WSL & Windows Interop` | 1845 | 3.7 |
+| `Notifications & Integrations` | 2576 | 3.3（出境到人） |
+| `Development & Runtime` | 2705 | 3.1 / 3.2（脚手架 / testkit / template） |
+| `Security & Permissions` | 2962 | 3.3 / 3.5 |
+| `Remote & Mobile` | 3073 | 3.8 |
+
+**⭐ 从已落位三件读到的可借鉴事实（含 4 条真坑，2026-09-14 读码所得 🟡）**
+
+| # | 事实 | 为什么对我们有用 |
+|---|---|---|
+| 1 | ⭐ `dsh-reach` 监听 **`approval/request`** 与 **`user-questions/request`** 两个 waterfall，并做成 **"deferred answerer"** —— **答案是稍后（人从 IM 回）才兑现的** | ⇒ **3.3-b 的关键疑点有第三方实证**：审批"出境 → 人答 → 回填"**可在 DSH 插件模型内完成**，不必改 SDK、不必等官方补 `server→client` 请求。我方仍须自己复跑（🟡） |
+| 2 | 同件 `src/bridge.ts` / `decision.ts` 出现 **`onRequest`**；配置含 **`cardTimeoutSec`（0 = 永不过期）**；`bridge.dispose()` **结清待决请求** | ⇒ **超时 / 取消 / 卸载**三处语义都有现成参照 —— 对应 3.3-b 的判据，以及 3.3-a 那条"超时 / 断链是同进程替身路径"的诚实边界 |
+| 3 | 同件声明 **`inject: []`（零硬依赖）**，每项能力用 `ctx.get(...)` 探测、缺失即降级，并附一张**降级矩阵**（能力 / 依赖服务 / 缺失时行为 / 卸载行为） | ⇒ 可直接抄的设计纪律：**我方插件也应在任意组合下可加载、可完全卸载**（对 `larry` / `sdk` 两个 profile 的差异、以及 3.7 的 overlay 场景都实用） |
+| 4 | 模板 `dev/cordis.yml` 明写：**开发 overlay 只加载 host 半边**（模块解析到源码文件，**发现不了 `dsh.client` 包级声明**）；要测浏览器半边**必须把包装进 profile** | ⇒ **3.7 / 3.8 的开发回路坑**：用 overlay 跑出"看起来通了"，其实 client 半边从没加载 |
+| 5 | 模板 `test/smoke.mjs` 用手写的**最小假 `ctx`**（只实现该插件用到的成员）做单测，断言 `inject` 数组、工具注册、settings 命名空间实时接线 | ⇒ **3.1 / 3.3 的廉价单测范式**：逻辑层不必真起 DSH，把"必须真跑"的部分压到 e2e（`dsh-testkit` / `dsh-test-drive` 同思路） |
+| 6 | 模板 `cordis.patch.yml` 原话：**"后层按 id 覆盖前层，覆盖整行 config 而非深合并"** | ⇒ 与 3.7「落盘是追加不是覆盖」+ 跨 profile 的 `patchReload` 差异互证：**patch 是行级覆盖语义，不能假设深合并** |
+| 7 | `dsh-memory-connect` CHANGELOG 记的两个"**静默不生效**"根因：① **Cordis 惰性构造服务** —— 把类交给 `ctx.provide()` 时构造器从不执行（v0.3.0 注册了服务却从未实例化）② **召回结果写进了一个没人读的字段** | ⇒ **与 3.6 判据"事件确实被消费（不是只注册了监听）"同源** —— 第三方替我们踩过；也说明"注册成功"离"生效"还有两步 |
+| 8 | 同件 README：patch 里**没有 `config:` 块时 Cordis 传 `undefined` config**，裸 `dsh plugin add` 会崩 ⇒ `apply()` 必须填默认值（该件 v0.4.0 才修） | ⇒ **我方每个插件都要容忍 `undefined` config**（3.1 / 3.3 / 3.4 / 3.5 / 3.6 全适用），否则"装上即崩"却看起来像环境问题 |
+
+> ⚠️ **本表只登记"可借鉴点"，不构成采纳决定**。凡打算抄进产品的设计，仍走 §3.0：**fork → 本仓库 → review / 测试**。
 
 ### 3.7 待办 → TODO（本稿不存放待办）
 
