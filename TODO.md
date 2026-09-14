@@ -42,18 +42,95 @@
     - 📌 **本件（DSH-3 前置件 1 退回件）至此全部收口**：三件交付通过（含看门狗）、退回撤回、安全网按方案 A 落地。
 - [x] ✅ **S0 环境已拍（老大 2026-09-11）：CVM 单跑，本机对照省。**原三选一（① CVM（Linux，与生产形态一致，顺带回答"云上跑 DSH + 自做工具"这个上云核心未知）／② 本机 Windows／③ 双跑互为对照）收窄为 **① 单跑**。理由：S0–S4 的判定标的全在 Linux 侧（`sandbox/` 判定环境 = Linux、生产形态 = Linux），S0 目的是"能力接入"而非跨 OS 兼容；**Windows 侧的差异数据不丢**——由下方「生产挂载落盘（Windows 方言修复件）」在同机复跑时天然覆盖，不另开对照跑。
   - 🔴 **时间窗**：CVM 有效期至 **2026-10-09**（2026-09-09 起算）→ 到期前须把产出搬回本地/入库，**机器上任何产出不得是唯一副本**（`docs/production-env.md` §1 行事规则）。
-  - ⚠️ **开工第一卡点 = 模型凭据**：`docs/production-env.md` 无「key 已落该机」的记载 ⇒ 须定**用临时测试 Key（用完关闭）还是正式 key 配到那台机器**（Tier0 红线 1：key 内容不进对话/日志）。
-- [ ] ⬜ **首验：跨进程 resume 的 id collision 定性**（两说未收敛）→ 与 S0 **可并行、不阻塞**（派 Trae 或 Claude 均可，WB 倾向 Trae：他此前判"改 UUID 后成功"，让他自己验证自己的判据）
+  - ✅ **开工第一卡点已解（2026-09-14）**：三环境三把专用 Key（`larry-dev` / `larry-wsl` / `larry-cvm`），**按环境分不按轨分**（同环境内 backend 与 DSH 填同一把）；CVM 那把**已落位**，见 3.0
 
-- [ ] `compaction/` 接入（替代 `max_input_tokens` 截断）→ 2.9.2
-- [ ] `sandbox/` 接入（替代 IP/目录/SSRF 单一拦截）→ 2.7.1（Linux 侧）
-- [ ] `interaction/` 接入（新增高危工具审批流）→ 2.7.1
-- [ ] `session/` 接入（升级 trajectory）→ 2.8.2
-- [ ] **S0–S4 最小可验证切片**（定义与勾对子项见文档 §3.6）：S0 一条消息完整生命周期 → S1 +interaction 审批 → S2 +compaction → S3 +sandbox 三档 → S4 +记忆最小闭环（**B 段 Gateway 能否起 HTTP 已于 2026-09-10 实测判定：不成立** → B 段定死走 SDK，详见 `docs/dsh/dsh-migration.md`「B 段 Gateway 路线实测判定」）
-- [ ] **生产挂载落盘（Windows 方言修复件）**：把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 `sdk`／`larry`／`web` 三个 profile 的 `cordis.patch.yml`，并带**一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**，老大 2026-09-11 拍定并入本阶段）
-  - ⚠️ **本机有两个 dsh home**（2026-09-11 实测）：工程 home `.dsh-home/` 仅 `larry`／`sdk`（**无 web**），`~/.dsh/` 才有三个 —— **落盘目标与「web 是否补建」待老大定**（勿默认三 profile 都存在；两处 `cordis.patch.yml` 现状见 `docs/local-env.md` §4.3）
-- [ ] **A 段自定协议设计（通信面定型派生）**：前端 ↔ 自做云端服务 —— **流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全部自实现**（中转方案主要成本项；官方 Gateway 白送的恰是这部分）。**DSH-2 段「新增派生工作项」的同名条目已并此，勿双处维护**
-- [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升——不可量化但真实的 go/no-go 信号。文档 §3.7
+> **子阶段划分（2026-09-14 定）**：3.0 前置 → 3.1–3.6 主线六切片（**严格串行、逐层叠加**）→ 3.2 首验 / 3.7 方言修复件（支线）→ 3.8 设计产出 → 3.9 收口。
+> **判据 / 验收基准 / 负向对照矩阵 / 采数口径 / 执行范式 → `docs/dsh/dsh-migration.md` §3.6「DSH-3」**；CVM 环境与凭据 → `docs/production-env.md` §12；方言修复件范式 → `docs/local-env.md` §4.3；详细计划稿（含四方评审附 A/A-2/B/C）→ `exchange/dsh-3-plan.md`。
+
+#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）
+
+- [x] ✅ **凭据落位**（2026-09-14）：CVM `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY`（600 / 223 B，`records:` 段完好）
+- [x] ✅ **环境核对**（2026-09-14）：`dsh@0.1.2-rc.1` 双证（CLI + `package.json`）；`~/.dsh/profiles/` 四个全在（acp / larry / sdk / web）；node v22.22.2
+- [ ] **同步本机 `harness/` → CVM**：精确缺口 **30 文件 / 0.13 MB**（`run-real-api.mjs` + `cvm-probes/` + `embed-probe/` + `sandbox-probe/` + `tests/real-api*` + `scan-keys.ts` + 2 个 sentinel + **3 个沙箱探针包**）
+  - ⚠️ **它同时卡着 3.5** —— 缺的三个包里正含 3.5 要用的沙箱探针包
+  - 传输非瓶颈（1.5 s 级）；成本在后置 `pnpm install`（须记墙钟。CVM 已配 npmmirror 源 ⇒「境外源 15 KB/s」场景不适用）
+  - ⭐ **留版本锚点 `SYNC-ANCHOR.txt`**（源 commit `d8cc7c4b` / `HEAD:harness` = `6c268877`）—— 否则将来"CVM 上跑不过"无法区分**环境问题 vs 代码漂移**
+- [ ] **real-api 在 CVM 侧复跑** —— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）
+- [ ] **顺手采数**（白捡的规格账）：cgroup v2 为主口径 + 免轮询三件（`memory.peak` / `memory.events` / `memory.pressure`）+ 带宽（记工具/目标/时段）
+  - ⚠️ **采数窗口内冻结 CVM 其他活动**（2G 机器；OOM 会把曲线**断掉**、事后被误读成"内存稳定"）
+- [ ] **执行说明就位**：⚠️ `node` / `dsh` **都不在 PATH**（`export PATH=$HOME/node/bin:$PATH`）+ 远程长任务范式（`setsid nohup` + 完成标记 + `echo $? > rc`）
+- [ ] ⚠️ **各执行人各自做一次通道核查、各自出《我方执行说明》**（三种工具形态坑不同，**谁也不能替谁许愿**）
+
+#### DSH-3.1 · S0 基础链路
+
+- [ ] ⭐ **`harness/packages/plugin-tool-readfile/`**（**首个"产品"插件**，此前 5 个 `packages/*` 全是探针）+ 可复跑 e2e 脚本
+- [ ] 四项硬判据**同时**成立：① 消息往返 + **nonce 内容断言** ② plugin **确实被激活**（⭐ 以 boot 时 `activate` 打点为准；⚠️ **`--dump-config` 是假绿源**——只组配置树、不激活） ③ 真实回包非空 + `turn/end.reason.kind === 'completed'` ④ session 落盘 + **回读可查到同一 nonce**
+- [ ] **待拍**：S0 通道走 `sdk`（倾向）还是 `acp`
+
+#### DSH-3.2 · 首验：跨进程 resume 的 id collision 定性
+
+- [ ] 反向组（固定 ID 复现 `id collision`）+ 正向组（新 UUID）+ **关键组**（真实 completed 会话、跨进程复用同 ID）
+- [ ] **对照组 0**：grep SDK client 源码确认**是否存在显式 resume 入口** —— 若不存在，"SDK 不支持 resume"与"固定 ID 会 collision"是**两个独立的 bug**，可能同时存在
+- [ ] ⚠️ **复用 3.1 产出的 nonce 会话，不另造**（否则两处会话构造法会漂）
+- 执行人：**Trae**（他此前判"改 UUID 后成功"，让他自己验自己的判据）
+- 🟡 前置：我方 CVM 通道核查（见 3.0）
+
+#### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1）
+
+- [ ] **scope-filtered answerer 插件**（TS）
+- [ ] ⚠️ **依赖图缺边（须先拍路）**：现判据写"前端弹 Tauri 对话框"（PC 侧），但 **A 段协议是 3.8 的产出、B 段 SDK 无法中继 approval**（无可用 answerer 时 fail-closed）⇒ **3.3 的验收条件依赖一个尚不存在的协议层**
+  - 三条路择一：① CVM 侧 native 插件就地回答（代价：取消"Tauri 对话框"的意义）② 等 3.8 的 A 段协议（**依赖图补边 3.3 → 3.8**）③ 改判据为 CVM 侧临时替代（CLI prompt / 文件审批）
+- [ ] 用例覆盖 5 条：批准 / 拒绝 / **answerer 超时** / **answerer 抛错** / **渠道断裂** —— 后三条均须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿：你以为是人点了拒绝，其实是请求从未到达）
+- [ ] 观测点 = **工具 handler 入口打点**（有行 = 真的执行了），UI 与 DSH 日志只作旁证
+
+#### DSH-3.4 · S2 compaction 接入（→ 2.9.2）
+
+- [ ] **compaction provider 插件**（`ctx.compaction` 是契约 ⇒ 自做 Provider 即换策略，消费者不动）
+- [ ] 构造法：**注入大段填充文本逼出触发**（勿真灌 200+ 轮 —— `contextWindow` 实测 1M，"200+ 轮"这个数字本身待核）
+- [ ] 判据：摘要注入 **且** 近文原文保留 + 摘要含可验证 nonce 片段
+- [ ] ⚠️ 开跑前先给 **token / 费用上限**，写进判据
+
+#### DSH-3.5 · S3 sandbox 三档接入（→ 2.7.1 Linux 侧）
+
+- [ ] 三档（read-only / workspace-write / danger）各自拒绝与提权流程生效 + **fail-closed 成立**
+- [ ] **前置核查：目标机 `bwrap` 是否存在**（DSH Linux 链 = `['bwrap','landlock']` 两个 rung ⇒ probe 仲裁；不存在则永远只走 landlock rung）
+- [ ] 加判据：**DSH 的 sandbox ruleset 在 CVM 上建立成功**，并**单独判其失败形态**（fail-open 还是 fail-closed —— 决定生产安全）
+- [ ] 器材：`D:\Temp\Sys\claude-wsl-probe\landlock_probe.py`（ABI 自适应 + `--fs-mask` 负向开关 + `VERDICT=` 机读行）
+- ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **判定只能写在 CVM 上，不得互搬**（实测：ABI 5+ 掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）
+
+#### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
+
+- [ ] **session 事件订阅插件**（TS）+ SQLite / ChromaDB 双写
+- [ ] 判据：事件**确实被消费**（不是只注册了监听）+ 数据落在**我们自己的库**（⭐ **带反向哨兵**）+ **新会话能召回**
+- [ ] ⚠️ **双写不是事务** ⇒ 须定义**一致性模型**（ChromaDB 不可达 / SQLite 独存时的降级行为与召回路径）
+- ⚠️ 写码前必读：`node:sqlite` 在并发 + `busy_timeout=0` 时 **`prepare()` 阶段就抛错**（Python 侧只在 `run()` 阶段失败）⇒ 错误处理须包到 `prepare` 层
+
+#### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
+
+- [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 profile 的 `cordis.patch.yml` + **一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）
+- [ ] ⚠️ **待拍两件**：① **落哪个 home**（工程 `.dsh-home/` 仅 `larry`/`sdk`、**无 web**；`~/.dsh/` 才有三个）② **谁执行落盘**
+  - 🔍 **落盘人待定的实况（2026-09-14 WB 实测）**：Trae 报其通道写 `~/.dsh/profiles/*/cordis*.yml` 被拒 `EPERM` —— ⚠️ **该归因待复核**（09-12 曾出现同类"主体错位"：把 **DSH 自身沙箱**的 EPERM 记成 AI 工具沙箱）；**WB 通道实测可写**（`~/.dsh/profiles/sdk/` 试写成功）。⚠️ **三通道结论不可互推**，Trae 那条须他自己复跑定性
+  - ⚠️ 落盘**是追加不是覆盖**：`.dsh-home/profiles/larry/cordis.patch.yml` 现有 477 B，**已含一条 `- id: hmr / disabled: false`**
+
+#### DSH-3.8 · A 段自定协议设计（通信面定型派生）
+
+- [ ] 设计稿 → `docs/`：**流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全自实现**（官方 Gateway 白送的恰是这部分）。**DSH-2 段「新增派生工作项」的同名条目已并此，勿双处维护**
+- ⚠️ **已从"派生"升格为关键路径**：3.3 的验收依赖它（见 3.3 的缺边）
+
+#### DSH-3.9 · 阶段收口
+
+- [ ] ⭐ **CVM 产出回传核对表**：逐项列（会话库 / SQLite+ChromaDB / 日志与曲线 / dump-config 快照 / 复现脚本），标"已回传本机 / 无需回传"并附 sha256 —— **含 `~/larry-data/larry.db`（36 KB，该机独有的证据原件）**；CVM **10-09 到期**，这是唯一能系统性堵住"唯一副本"的时点
+- [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升 —— 不可量化但真实的 go/no-go 信号（文档 §3.7）
+- [ ] 退出条件勾对（核心链路达 **P4 等价**）+ 上游漂移复核 + 阶段归档
+
+#### DSH-3 · 贯穿规则（写码 / 验收前必读）
+
+- [ ] **负向对照矩阵**：每条 S 切片挑 1 条判据做"**破坏它、看它变红**"的对照 —— 不做则"真的通了"与"判据没生效"**不可区分**
+  - `bundle` 注释掉 → 3.1 ②｜换错 Key → 3.1 ③ 与 3.0 红灯组｜摘/只读 session 落盘目录 → 3.1 ④｜answerer 抛错或超时 → 3.3 拒绝路径（须 fail-closed）｜SQLite 路径指回 DSH 默认后端 → 3.6 哨兵｜kill SDK 客户端 → 3.1 ④ 完整性｜停 ChromaDB → 3.6 双写降级
+- [ ] **每个验收脚本头部加一行「姿势自证」**：本脚本模拟的是哪条真实链路（哪个执行器 / 哪层前导 / 哪个 home+profile）—— DSH-2.5 ③ 教训：**判据姿势不对会同时造出假绿与假红**
+- [ ] ⭐ **环境口径统一（老大 2026-09-14 指令）：同一环境内只用一个 DSH home，不再制造重叠环境**
+  - **CVM**：以裸跑默认 **`~/.dsh`** 为准（凭据已在此）⇒ **废弃 `~/larry-dsh-home`**，并改掉 `harness/scripts/cvm-probes/*.sh` 里钉死的 `export DSH_HOME="$HOME/larry-dsh-home"`（⚠️ **照抄这些脚本 = "无 key 假绿"**）
+  - **本机**：client 显式指 `.dsh-home` ⇒ 手工跑也**显式指同一处**（勿靠默认回落 `~/.dsh`）
 
 **退出条件**：核心链路（会话 + 记忆 + 工具）在 DSH 下达到 **P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
 

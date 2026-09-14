@@ -638,6 +638,76 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流**（A-framework）。退出判据一律是"产品树子项可勾对"，不是"包能跑"。
 
+> ⚠️ **上表为骨架，判据以〈各切片判据细则〉为准** —— 其中"S0 消息往返成功"、"S2 灌 200+ 轮"两处表述已在 2026-09-14 修订（见下），**勿照骨架字面实现**。
+>
+> 判据修订来源：`exchange/dsh-3-plan.md` 附 A/A-2/B/C 四方评审（Claude 测试视角 / Trae 实现视角 / Qoder 反向举证视角）+ WB 筛选与实测复核。**只吸收经复核立得住的**。
+
+---
+
+##### DSH-3.0 验收基准：三态对照（⭐ 本阶段最容易整体翻车处）
+
+> **为什么必须三态**：S0 的验收口径（消息往返 / 事件落盘 / 回读）**每一项都能在无 key 的假绿灯下通过**（DSH-2.5 ④ 实证：无 key 时 `exit 0` + session 建立 + 12 条事件）。**"无 key"正是已证会假绿的那一态，却不进对照** ⇒ "真 Key 绿灯"可能只是同一片假绿里的一条。
+
+| 态 | 构造 | 期望观察 |
+|---|---|---|
+| **无 key** | 移除 / 不注入凭据 | **必须与真 key 态表现不同** —— 这是判据有效性的检验本身 |
+| **错 key** | 换成无效值 | `error.code = AUTH` / HTTP 401（红灯也是真的） |
+| **真 key** | `refs.DEEPSEEK_API_KEY` 就位 | `assistant/message` 存在 **且** `turn/end.reason.kind === 'completed'` |
+
+- 三态**同一脚本**跑；判据 = **三态表现互不相同**
+- ⚠️ 每态须显式记 **(DSH_HOME, profile, 凭据来源层)** 三元组 —— 否则"无 key 态"与"真 key 态"可能测的是同一件事
+- ⚠️ **已定位的陷阱**：`harness/scripts/cvm-probes/*.sh` 全部钉 `DSH_HOME=$HOME/larry-dsh-home`，而 CVM 凭据只在 `~/.dsh/` ⇒ **照抄这些脚本 = 无 key 假绿，且判据看起来全绿**
+
+##### 采数口径（3.0 顺手采数 与 3.9 回传核对表共用）
+
+| 采什么 | 怎么采 | 为什么 |
+|---|---|---|
+| 联合内存 | **cgroup v2 为准**：`/sys/fs/cgroup/user.slice/user-1000.slice/{memory.current, memory.peak, memory.events, memory.pressure}` | ⚠️ `ps -eo rss` 求和**虚高 53%**（共享页重复计）；⚠️ root 与 session scope **没有**这几个文件，`stat -fc` 判 cgroup2fs 会**假阳性** |
+| 是否吃紧过 | `memory.peak` + `memory.events`（`oom` / `oom_kill`）+ `memory.pressure`（PSI） | **免轮询**即可回答；`memory.events` 是 OOM 的**权威计数**（比 dmesg / journal 可靠） |
+| 小时级曲线 | 定时采样 + `date -Is` 时间戳 + **断点 / 重启留痕** | ⚠️ 采数窗口内**冻结其他活动**：OOM 会把曲线**断掉**，事后被误读成"内存稳定" |
+| 带宽 | 记 **工具 + 目标 + 时段** | 4M 共享 / 独享影响结论 |
+
+##### 各切片判据细则（只列对骨架表的**修订与加强**）
+
+| 切片 | 修订 |
+|---|---|
+| S0 ① | "消息往返成功" → **回包内容须含 `PING-<nonce>`**（只验"往返成功"会被空壳会话骗过） |
+| S0 ② | plugin mount **以 boot 时 `activate` 打点为准**。⚠️ **`--dump-config` 是假绿源** —— 实测只组配置树、不激活插件（探针行**出现在 dump 里但没执行**） |
+| S0 ④ | "落盘 + 回读" → **回读结果里能查到同一 nonce**（不是"文件存在 / 条数够"） |
+| S1 | 用例扩到 5 条：批准 / 拒绝 / **超时** / **抛错** / **渠道断裂** —— 后三条须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿）；观测点 = **工具 handler 入口打点**，UI 与 DSH 日志只作旁证 |
+| S2 | **弃"灌 200+ 轮"**（`contextWindow` 实测 1M，"200+"来源不明）→ 改用**注入大段填充文本、1 轮逼出**；判据加"摘要含可验证 nonce 片段 + 近文原文保留"；开跑前给 **token / 费用上限** |
+| S3 | 加两条：① **`bwrap` 存在性前置**（Linux 链 = `['bwrap','landlock']` 两个 rung）② **DSH 的 ruleset 建立成功** + **失败形态判定**（fail-open / fail-closed 决定生产安全） |
+| S4 | 加 **双写一致性模型** —— ⚠️ SQLite + ChromaDB **双写不是事务** ⇒ 须定义 ChromaDB 不可达时的降级行为与召回路径 |
+
+##### ⚠️ S1 的依赖图缺边（判定依据级，非任务调整）
+
+S1 判据写"前端弹 Tauri 对话框"（PC 侧），但 **A 段协议是 DSH-3.8 的产出**，而 B 段 SDK 只有 `initialize / session/prompt / shutdown` 三个 method ⇒ **无法中继 approval request 到 PC 端**（无可用 answerer 时 fail-closed，已由 probe-qoder 反向举证坐实）。
+
+⇒ **S1 的验收条件依赖一个尚不存在的协议层**。三条路择一（待拍）：① CVM 侧 native 插件就地回答（代价：取消"Tauri 对话框"的意义）② 等 3.8 的 A 段协议（**依赖图补边 S1 → 3.8**）③ 改判据为 CVM 侧临时替代（CLI prompt / 文件审批）。
+
+> ⚠️ **由此浮现一条产品定位层面的问题**：审批流跨越 A/B 段边界 ⇒ "PC 侧弹框审批"这一产品能力，取决于 A 段协议何时落地。**是否写入 `docs/product-positioning.md` 待与老大讨论**（本稿不擅自改产品定位）。
+
+##### 负向对照矩阵（不做则"真的通了"与"判据没生效"不可区分）
+
+| 破坏动作 | 期望变红的判据 |
+|---|---|
+| profile 里注释掉自做 bundle | S0 ②（plugin mount） |
+| 换成错 Key | S0 ③ + 3.0 红灯组 |
+| 摘掉 / 只读 session 落盘目录 | S0 ④ |
+| answerer 抛错或超时 | S1 拒绝路径（须 fail-closed） |
+| SQLite 路径指回 DSH 默认后端 | S4 ②（反向哨兵） |
+| kill SDK 客户端进程 | S0 ④（已写入部分的一致性） |
+| 停 ChromaDB 进程 | S4 双写**降级行为**是否定义 |
+
+##### 执行范式与边界（防重复踩）
+
+- **远程长任务范式**：`setsid nohup <cmd> >log 2>&1 </dev/null &` + **完成标记 + `echo $? > rc`**；复入时**先看 rc 再看日志**。
+  ⚠️ `production-env.md` §6.3「ssh 后台任务拿不到沙箱放行」**约束的是本地发起侧**（沙箱 / 审批），**不是远程进程生命周期** —— 两通道实测远程进程存活（裸 `&` 5/5、`setsid nohup` 6/6）。
+- **姿势自证**：每个验收脚本头部加一行 —— 本脚本模拟的是哪条真实链路（哪个执行器 / 哪层前导 / 哪个 home+profile）。DSH-2.5 ③ 教训：**判据姿势不对会同时造出假绿与假红**。
+- **各执行人各自做一次通道核查**、各自出《我方执行说明》（三种工具形态的坑不同，**谁也不能替谁许愿**）。
+- ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **landlock 判定不可互搬**（实测：ABI 5+ 的掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）。
+- ⚠️ **CVM 产出不得是唯一副本**（机器 2026-10-09 到期）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
+
 #### DSH-4：差异化能力迁移
 
 > **任务清单与进度见 `TODO.md`「DSH-4」**；本节只放**排序原则、实现路径判定与验收基准**。

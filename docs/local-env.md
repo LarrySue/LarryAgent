@@ -198,7 +198,13 @@ const DENIAL_SIGNATURES = {
 
 **覆盖面**：`sdk`／`larry`／`web` **三个 profile 都要**（三者 bundles 均含 `@deepseek-ai/dsh-base` ⇒ 均带 sandbox 行 + win32 下启用的 pwsh-sandbox）。插件实体放在 `profiles/node_modules/@larryagent/`，**三个共享，一份足够**。
 
-**落盘状态**：⬛ **未落盘**（三个 profile 的 `cordis.patch.yml` 仍为 `[]`）→ **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
+**落盘状态**：⬛ **未落盘** → **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
+
+> ⚠️ **2026-09-14 订正上句的判据表述**：原记"三个 profile 的 `cordis.patch.yml` 仍为 `[]`"—— **只在全局 home 成立**。实测须分两处看：
+> - `~/.dsh/profiles/{larry,sdk,web}/cordis.patch.yml` = **模板空态 `[]`** ✅ 原记正确
+> - **`.dsh-home/profiles/larry/cordis.patch.yml` = 477 B，已含一条 `- id: hmr / disabled: false`**（即 §8.5 的模块级 HMR 开关）⇒ **非空**
+>
+> ⇒ **"未落盘"的结论不变**（两者都不是方言修复件），但**判"是否落盘"要看内容、不看文件是否为空；且必须区分 home**（工程 `.dsh-home/` vs 全局 `~/.dsh/`）。⚠️ 3.7 落盘时**是追加不是覆盖**（该文件已有那条 hmr 条目）。
 
 **已证 / 未证边界（别过度读）**：
 - 🟢 已证：boot 时 `providerCtor=SandboxDialectProvider`；消费方 `SandboxPwshExecutor.confine()` 拿到的签名 = 加宽后 6 条；消费方 argv 含 preamble。
