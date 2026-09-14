@@ -479,7 +479,7 @@ records:
 
 ⚠️ **`backend/config.yaml` 不止 LLM Key**：另有 `embedding.api_key` / `search.brave_api_key` / `server.api_key`。它们在终态的归属属**迁移映射**范畴（DSH-3/4 处理），本节只钉 LLM Key 一条。
 
-#### 附：两个环境各有两个 DSH home —— 决定 `.credentials.yaml` 究竟写哪
+#### 附一：两个环境各有两个 DSH home —— 决定 `.credentials.yaml` 究竟写哪
 
 `DSH_HOME` 解析优先级（`@deepseek-ai/dsh-home-paths` 包文档）：**显式配置 > `$DSH_HOME` > `~/.dsh`**
 
@@ -499,3 +499,27 @@ records:
 
 ⇒ 两处**互不相通**（非软链、非同一份）：填哪个取决于"**谁启动 DSH**"，要两边都能起就得两处都填。
 ⇒ ⚠️ **CVM 特有风险**：本机脚本钉的 home 与 CVM 已填凭据的 home **不是同一个** ⇒ **照抄 `cvm-probes` 脚本 = 无 key 假绿**（§1 已记录该形态）。处置二选一：**改本机脚本**（指向 `~/.dsh`）或派发时**写死必须注入 env / 显式指定 `DSH_HOME`**。
+
+#### 附二：手工复验 / 脚本驱动时的 `DSH_HOME` 注入（2026-09-14 实测）
+
+**触发问题**：老大问"我怎么给你显式注入 `DSH_HOME=<项目根>/.dsh-home`"。查实的结论是——**这件事不需要老大做**：Bash 命令的 env 前缀由执行方自己在命令里带；WorkBuddy 全局 `settings.json` 无 `env` 字段、公开文档亦无配置章节 ⇒ **平台层没有这个位**。但**写法本身有一个静默坑**，故立此节。
+
+**Windows 侧只有两种写法可用**，而 Git Bash 里最自然的两种恰恰是错的：
+
+| 写法（Git Bash） | 结果 | 说明 |
+|---|---|---|
+| `DSH_HOME=/d/Code/LarryAgent/.dsh-home` | ❌ | MSYS 风格。**env 值不经 Git Bash 路径转换**（转换只作用于 argv） |
+| `DSH_HOME="$(pwd)/.dsh-home"` | ❌ | `pwd` 输出 `/d/…`，同上 |
+| `DSH_HOME="D:/Code/LarryAgent/.dsh-home"` | ✅ | 盘符形式（正/反斜杠均可） |
+| ⭐ `DSH_HOME="$(pwd -W)/.dsh-home"` | ✅ | **推荐**：自动推导且给盘符形式（`pwd -W` 是 Git Bash 内建；`cygpath` 在 PortableGit 1.2.0 下**不可用**） |
+
+⚠️ **错写不报错，而是静默另起一个空 home**：`path.resolve('/d/Code/LarryAgent/.dsh-home')` = **`D:\d\Code\LarryAgent\.dsh-home`**（当前盘根下多一层 `d\`）。DSH 找不到会**自己创建**（profiles / 凭据全无）⇒ 静默走"无 key"路径、**判据全绿**。与 `cvm-probes` 钉错 home（§12.5）**同一形态**。
+
+⛔ **分场景纪律（防"一刀切注入"踩测试守卫）**：
+
+| 场景 | 注入？ | 为什么 |
+|---|---|---|
+| 手工跑 `harness/scripts/*.mjs`（非测试） | **必须**：`DSH_HOME="$(pwd -W)/.dsh-home"` | 脚本本身不推导；未设即回落全局 `~/.dsh`（**无 `refs:` 段**） |
+| 跑 harness 测试（vitest / `run-real-api.mjs`） | **禁止** | `tests/isolated-setup.ts` 逐 worker 强制覆盖为临时 home + 正向白名单守卫；注入真实路径会触发 `sentinel-failfast` 判 FAIL |
+| client（Tauri）启动 | 无需人工介入 | `main.rs:291` 硬编码 `.env("DSH_HOME", <项目根>/.dsh-home)` |
+| CVM | 不注入（裸跑落 `~/.dsh`，凭据在此） | ⚠️ 但 `cvm-probes/*.sh` 脚本内**钉死了错 home**，须先改脚本 |

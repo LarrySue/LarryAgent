@@ -65,7 +65,7 @@
 
 - [ ] ⭐ **`harness/packages/plugin-tool-readfile/`**（**首个"产品"插件**，此前 5 个 `packages/*` 全是探针）+ 可复跑 e2e 脚本
 - [ ] 四项硬判据**同时**成立：① 消息往返 + **nonce 内容断言** ② plugin **确实被激活**（⭐ 以 boot 时 `activate` 打点为准；⚠️ **`--dump-config` 是假绿源**——只组配置树、不激活） ③ 真实回包非空 + `turn/end.reason.kind === 'completed'` ④ session 落盘 + **回读可查到同一 nonce**
-- [ ] **待拍**：S0 通道走 `sdk`（倾向）还是 `acp`
+- [x] ✅ **S0 通道已定（老大 2026-09-14）：走 `sdk`** —— 它走的就是 **B 段**（09-09 已定型 SDK/stdio），**非新开面**；前置件 1（`harness/tests/real-api.ts`）已用 `dsh-sdk-client` + `profile: 'sdk'` 且绿/红两侧经 WB 独立复验 ⇒ **零新增器材**；S0 四项判据在〈sdk 面实测能力边界〉逐条覆盖。理由与 ACP 用途的定位见 `docs/dsh/dsh-migration.md` §3.6〈通信面选型分析〉落定块
 - [ ] 📚 **参考件**（登记表 3.1 行）：`ref/community/kun2-5code__dsh-plugin-template` —— 插件脚手架（`dsh.bundle.patch` + `dsh.client` 清单形状、`service` / `hook` / `commands` 三个半边、**假 ctx 单测范式** `test/smoke.mjs`）；e2e 台可参照 `iiwish/dsh-testkit`（Docker 隔离真宿主生命周期测试）/ `PerryLink/dsh-test-drive`（一次性 profile 冒烟）
 
 #### DSH-3.2 · 首验：跨进程 resume 的 id collision 定性
@@ -88,6 +88,7 @@
     - ⭐ **产物不是一次性的**：薄客户端 = **3.8 driver 的骨架**
   - **3.3-c = 3.8** 对端换成 driver + 前端 ⇒ 人审批闭环
 - [ ] 用例覆盖 5 条：批准 / 拒绝 / **answerer 超时** / **answerer 抛错** / **渠道断裂** —— 后三条均须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿：你以为是人点了拒绝，其实是请求从未到达）
+  - ⏱️ **超时值须先定死**（否则"超时路径"无法构造）：建议 **30 s**，写入判据；可依实测调整
 - [ ] 观测点 = **工具 handler 入口打点**（有行 = 真的执行了），UI 与 DSH 日志只作旁证
 - [ ] 📚 **参考件**（登记表 3.3 行）：`ref/community/PerryLink__dsh-reach` —— **deferred answerer**（`approval/request` + `user-questions/request` 两个 waterfall，答案稍后从 IM 回来才兑现）+ `cardTimeoutSec`（超时）+ `bridge.dispose()`（结清待决）+ `inject: []` 降级矩阵；官方机制侧 `dsh-user-approval` / `dsh-permission-presets`
 
@@ -117,14 +118,22 @@
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
 
 - [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 profile 的 `cordis.patch.yml` + **一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）
-- [ ] ⚠️ **待拍两件**：① **落哪个 home**（工程 `.dsh-home/` 仅 `larry`/`sdk`、**无 web**；`~/.dsh/` 才有三个）② **谁执行落盘**
+- [x] ✅ **落盘人已定（老大 2026-09-14）**：先由 **Trae 复跑一次**把 `EPERM` 归因定性清楚，**他通道实测可写则由他落盘**（分配明细见「待派发」段）
+- [x] ✅ **落点已定（老大 2026-09-14）**：写**工程 `.dsh-home/profiles/larry/cordis.patch.yml`**（追加）；**不落 `~/.dsh/`**；**`web` profile 不补建**
+  - 判据：3.7 的 end-to-end **真实宿主是 client 启动的 DSH**，而 client **显式指工程 home**（`main.rs:291`）⇒ 落全局只能验"手工跑生效"，属**替身路径**；且"手工跑回落全局／client 读工程"正是 09-14 刚定要消灭的重叠环境
+  - ⭐ **配套三件（缺一即"落点对了却没生效"）**：① `.dsh-home/.credentials.yaml` **须建**并填 `larry-dev`（`refs.DEEPSEEK_API_KEY`）——否则带对 home 也**无 key**；② 手工复验**须显式注入 `DSH_HOME`**（模板见下）；③ 凡启动 DSH 处**一律显式注入、不靠默认回退**
+  - 🔧 **手工复验命令模板**：`cd /d/Code/LarryAgent && DSH_HOME="$(pwd -W)/.dsh-home" node harness/scripts/dsh-prompt.mjs "…"`
+    - ⚠️ **`pwd -W` 不是可选的**：Git Bash 的 **env 值不做路径转换**（转换只发生在 argv）⇒ `/d/Code/…` 原样给 Windows node，被 resolve 成 **`D:\d\Code\…`**（当前盘根多一层 `d\`）⇒ DSH **自己新建一个空 home** ⇒ **无 key 假绿、判据全绿**（**与 `cvm-probes` 钉错 home 同形态**）。三写法实测对照 → `docs/production-env.md` §12.7 附二
+    - ⛔ **跑 harness 测试时禁止注入真实 home**：`tests/isolated-setup.ts` 强制覆盖为临时目录 + 正向白名单守卫；注入真实路径会触发 `sentinel-failfast` 判 FAIL
   - 🔍 **落盘人待定的实况（2026-09-14 WB 实测）**：Trae 报其通道写 `~/.dsh/profiles/*/cordis*.yml` 被拒 `EPERM` —— ⚠️ **该归因待复核**（09-12 曾出现同类"主体错位"：把 **DSH 自身沙箱**的 EPERM 记成 AI 工具沙箱）；**WB 通道实测可写**（`~/.dsh/profiles/sdk/` 试写成功）。⚠️ **三通道结论不可互推**，Trae 那条须他自己复跑定性
   - ⚠️ 落盘**是追加不是覆盖**：`.dsh-home/profiles/larry/cordis.patch.yml` 现有 477 B，**已含一条 `- id: hmr / disabled: false`**
+    - ⭐ **追加的正确写法 = 把模板里的 `[]` 那行删掉、换成条目**；**不能**在 `[]` 之后再续 `- id: …`（🟢 2026-09-14 用真实解析器实测：`~/.dsh/profiles/node_modules/js-yaml@4.3.2` 下前者报 `end of the stream or a document separator is expected (2:1)`、后者 OK）。模板文件内容 = 4 行注释 + `[]`（217 B）；工程 `larry` 那份的 hmr 条目就是**已删 `[]`** 的实样
   - 📚 **参考件**：模板的 `dev/cordis.yml` 记了一条开发回路坑 —— **overlay 只加载 host 半边**，`dsh.client` 包级声明发现不了（要测 client 半边必须把包装进 profile）；另：`patch` 是**行级覆盖**非深合并（与本项“追加不是覆盖”互证）；病毒式参照 `WSL & Windows Interop` 整类（37 件，登记表 3.7 行）
 
 #### DSH-3.8 · A 段自定协议设计（通信面定型派生）
 
 - [ ] 设计稿 → `docs/`：**流式转发 / 会话管理 / 鉴权 / 多端同步 / 重连补帧全自实现**（官方 Gateway 白送的恰是这部分）。**DSH-2 段「新增派生工作项」的同名条目已并此，勿双处维护**
+- 执行人（老大 2026-09-14 定）：**WB 出设计稿、Trae 承接实现**
 - [ ] ⭐ **审批请求双向中继**（老大 2026-09-14 定「分阶段往 ②」，终点落在本段）：A 段协议须含 **server→client 请求**的承载。传输能力已由 `JsonRpcLineTransport`（protocol 包公开导出）提供 ⇒ 本段要做的是**协议定义 + 对端接线**，不是造传输
 - ⭐ **可复用产物**：3.3-b 的薄客户端 = 本段 driver 的骨架（勿另起一套）
 - [ ] 📚 **参考件**（登记表 3.8 行）：官方 `dsh-api-remotes`（原话“任何不依赖 React 的 `ctx.remote` 约定均可复用其 **Client face**”）+ `dsh-client-connection`（gateway 挂 `/api`；browser 半 = fetch/SSE）；社区同题 `litestartup-com/dsh-api-gateway`（REST + SSE + API-key 鉴权）/ `Jiachi5533/dsh-remote-gateway`
@@ -145,9 +154,13 @@
   - **CVM**：以裸跑默认 **`~/.dsh`** 为准（凭据已在此）⇒ **废弃 `~/larry-dsh-home`**，并改掉 `harness/scripts/cvm-probes/*.sh` 里钉死的 `export DSH_HOME="$HOME/larry-dsh-home"`（⚠️ **照抄这些脚本 = "无 key 假绿"**）
   - **本机**：client 显式指 `.dsh-home` ⇒ 手工跑也**显式指同一处**（勿靠默认回落 `~/.dsh`）
 - [ ] ⭐ **参考件先行（老大 2026-09-14 定）：每切片开工前，先在 `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉定位参考件**（官方读 `ref/dsh-bare/` 或 npm；社区读 `ref/community/`，未落位者按需拉取），**用完回填一行「借鉴点」**；找不到就写“无”
-  - 已落位三件（浅克隆、**只读参考、不进构建**）：`ref/community/kun2-5code__dsh-plugin-template`（3.1）/ `PerryLink__dsh-reach`（3.3）/ `Asher-2000__dsh-memory-connect`（3.6）；名录 `ref/tmp_awesome.md.bak`（3,386 行 / 27 分类）
+  - ⭐ **派发四要素（老大 2026-09-14 定）：派发稿里逐件写明 ① 路径 ② 怎么参考 ③ 参考程度 ④ 哪部分不可参考**（定义见 `docs/dsh/dsh-migration.md` §3.6 规矩；**落位三件的现成清单见同稿 §2.2.2「可参考 / 不可参考」表**，派发时照抄，勿另行转述）
+  - 已落位三件（浅克隆、**只读参考、不进构建**）：`ref/community/kun2-5code__dsh-plugin-template`（3.1）/ `PerryLink__dsh-reach`（3.3）/ `Asher-2000__dsh-memory-connect`（3.6）；名录 `ref/awesome-dsh-plugin.md`（3,386 行 / 27 分类）
   - ⚠️ 拉取踩坑：git 全局配了**不在运行的本机代理** ⇒ 用 `git -c http.proxy= -c https.proxy= clone --depth 1 <url> <dst>`
   - ⚠️ 纪律边界：社区件**只读参考不纳入依赖**（§3.0）；真要抄进产品 ⇒ **fork → 本仓库 → review / 测试**
+- [ ] ⬛ **WSL 在 DSH-3 期间的角色（待老大拍）**：S0 已拍"CVM 单跑" ⇒ 若 WSL **不参与**，则 `docs/test-env.md` §10 的「WSL 承载哪类测试」+「flock 未实测」**不阻塞 DSH-3**，可从卡点列表摘出
+  - 🟡 **未采纳的建议（留痕，勿当既成事实）**：Claude 提「WSL 当**演练场**、CVM 当**判定场**」—— 脚本/范式/超时/日志先在 WSL 顺一遍（同 Linux），凡"拦住了/放行了"的判定**只在 CVM 出结论**（严守 ABI 边界）。理由：CVM 10-09 到期、机会一次性，不先演练等于**脚本第一次跑就落在正式判定场**
+- [ ] ⬛ **`D:\Code\API Key.txt`**（老大自处理，未闭环）
 
 **退出条件**：核心链路（会话 + 记忆 + 工具）在 DSH 下达到 **P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
 
@@ -196,7 +209,22 @@
 
 ### 待派发
 
-- [ ] **DSH-3 prototype 派发**：Trae / Claude 分工与节奏
+- [ ] **DSH-3 prototype 派发**（**批次与执行人，老大 2026-09-14 拍定**）
+  - **执行人分配**
+    - **3.1–3.6 实现侧 + 3.2 定性** → **Trae**（分工原则 + 他 §八 已自认领）
+    - **3.5 上机跑** → **Trae**；**器材由 Claude 出**（`landlock_probe.py` 已回归：ABI 自适应 + 负向开关 + `VERDICT=` 机读行）
+    - **3.0 CVM 侧**（本机 harness 同步 + real-api 三态 + 采数）→ **Trae**（他自验通道 ✅ 0.94 s、四范式齐备）；**Claude 只在验收环节上机**做负向对照
+    - **3.8 A 段协议设计稿** → **WB 出稿、Trae 承接实现**。依据：分工「WB=架构」；且其核心是"审批请求双向中继"的协议定义（3.3 三段收敛的终点），需**跨段视角**，写码者自定协议易把实现细节当规范
+    - **3.7 落盘** → 先由 **Trae 复跑一次**把 `EPERM` 归因定性清楚（⚠️ 该归因**待复核**；09-12 曾有同类"主体错位"：把 **DSH 自身沙箱**的 EPERM 记成 AI 工具沙箱），**他通道可写则由他落盘**
+    - **3.9 收口核对表 / `docs/` 维护 / 复验他人结论** → **WB**
+  - **批次节奏**
+    | 批次 | 内容 | 说明 |
+    |---|---|---|
+    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖（凭据已定、落点已定）；⚠️ 3.7 待"落盘人"定性后起跑 |
+    | **2** | **3.1 S0** | 单发；后续一切的地基 |
+    | **3** | **3.3 → 3.4 → 3.5 → 3.6** | **严格串行**（逐层叠加、单独验收） |
+    | **4** | **3.8** + **3.9** | 3.8 可在批次 3 后期并行 |
+  - 「待核（不阻塞拍板）」段各条**全为调研类**（不碰 CVM、不等 Key）⇒ 可与批次 1 并行派出
 - [x] ~~DSH-2 任务 0 派发~~ **已完成**（Claude 2026-09-08，报告已吸收内联至决策稿 §3.6 逐项证据表：A 案成立、8/8 机制属实，WB 复核订正 2 处行号）
 
 ---

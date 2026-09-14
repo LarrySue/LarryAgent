@@ -108,7 +108,7 @@
 ### 2.2 本地参考代码区（`ref/`，AI 查阅指南）
 
 > **两个子区**：`ref/dsh-bare/` = **官方底座源码**（只读锁定副本）；`ref/community/` = **社区参考件**（按需浅克隆）。整个 `ref/` 已在 `.gitignore` 排除、**不入版本、不进构建**。
-> **它服务的是一条已定纪律**（§3.0「只参考不直装」）：把"值得借鉴的件"从*网上某个仓库*变成*本机可读的目录*。**每步对应的具体参考件见 §3.6〈参考实现登记表〉。**
+> **它服务的是一条已定纪律**（§3.0「只参考不直装」）：把"值得借鉴的件"从*网上某个仓库*变成*本机可读的目录*。**每步对应的具体参考件、以及"开工前先调研参考件"的规矩（含版本脱节哨兵），见 §3.6〈参考实现登记表〉。**
 
 #### 2.2.1 官方底座源码（`ref/dsh-bare/`）
 
@@ -160,7 +160,15 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | `PerryLink__dsh-reach/` | 3.3 / 3.8 | 决策卡（approval / user-question）**推送到 IM 并从聊天回答**（Apache-2.0）：`src/bridge.ts` 的 **deferred-answerer waterfall** + `decision.ts` + 7 条 IM 适配器 + 降级矩阵 + `client/` 半边（`dsh.client.inject` 声明） |
 | `Asher-2000__dsh-memory-connect/` | 3.6 | 跨会话记忆（MIT）：SQLite FTS5 + 本地 embedding（`scripts/embed_server.py`）+ `systemPrompt.context` 逐轮召回 + 上下文预算测试 |
 
-- **本地社区名录**：`ref/tmp_awesome.md.bak` = `awesome-dsh-plugin` 英文版快照，**3,386 行 / 27 个分类含分类行号**；按分类定位候选，**不必重新联网**（⚠️ 文件名是下载时的 `.bak`，语义上等同于 `ref/awesome-dsh-plugin.md`）
+- **本地社区名录**：`ref/awesome-dsh-plugin.md` = `awesome-dsh-plugin` 英文版快照，**3,386 行 / 27 个分类含分类行号**；按分类定位候选，**不必重新联网**
+
+**⚠️ 落位三件的「可参考 / 不可参考」**（⭐ **派发任务时须逐件照抄进派发稿** —— 老大 2026-09-14 定；四要素定义见 §3.6〈参考实现登记表〉规矩）
+
+| 件 | 许可 | ⛔ 不可参考 | ✅ 可参考 |
+|---|---|---|---|
+| `kun2-5code__dsh-plugin-template` | MIT | **`src/client/` 14 个文件全是 React**（`import React from 'react'`）—— 本项目前端是 Vue/Tauri，**UI 代码不可照搬**；**`dev/cordis.yml` overlay 只加载 host 半边**，不能拿它判 client 半边可用（§3.6 事实 4） | host 半边 `dsh.bundle.patch` / `dsh.client` 的**包级声明形状**、`service` / `hook` / `commands` 三半边划分；`test/smoke.mjs` 的**假 ctx 单测范式** |
+| `PerryLink__dsh-reach` | Apache-2.0 | 摘录 / 改写**须保留 `NOTICE` 与许可声明**（另有 `THIRD_PARTY_NOTICES.md`）；`src/client/ReachSettingsTab.tsx` 是 **React**（同上不可照搬）；`src/adapters/` 是 **IM 平台专有**（Lark / 钉钉 / 飞书 / QQ …）—— 本项目出境面走**自做 A 段协议**，不是 IM；**不可 `dsh plugin add` 直装**（§3.0） | `src/bridge.ts` 的 **deferred-answerer 生命周期**（超时 `cardTimeoutSec` / 结清 `dispose()` / 卸载）；`src/decision.ts` 的审批判定形状；`inject: []` **降级矩阵**写法 |
+| `Asher-2000__dsh-memory-connect` | MIT | `scripts/embed_server.py` 走**独立 Python 进程**做 embedding —— 3.6 的路线是 **TS 插件内直接 embedding**（DSH-2.5 ⑤ 已验漂移 `2.2e-7`）⇒ **该脚本不可采用**；其 CHANGELOG 那两个"静默不生效"的**旧写法是反面教材**，不可照抄 | `systemPrompt.context` **逐轮召回**的接线形状；上下文预算测试的构造法 |
 
 > ⚠️ **拉取时的一个坑（2026-09-14 实测）**：本机 git 全局配了 `http(s).proxy = socks5://127.0.0.1:7890`，而该代理**当时不在运行** ⇒ `git clone` 直接报 `Failed to connect to github.com port 443 via 127.0.0.1`。**github.com 本身 TCP 可达**（实测握手通）。绕法：
 >
@@ -417,6 +425,9 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
    - `dsh-api-gateway` 在 **base 默认启用**（`dsh-base/cordis.patch.yml:45` `- id: typert-gateway`），非可选附加 → DSH 侧装配成本为 **0**。
 6. 🟡 **新增硬约束（对上云有直接影响）**：web surface **不支持绑定全部网卡**——README 原话 *"binding all network interfaces is intentionally not supported"*，只能经 `--host` / `--trusted-host` 白名单放开。**上云部署形态须按此约束设计**（反向代理或显式白名单）。
 
+> ⭐ **DSH-3 的 S0 通道已定（老大 2026-09-14 拍）：`sdk`。** 它走的就是 **B 段**（服务 ↔ DSH 同机，09-09 定型 SDK/stdio），**不是新开一条面**；依据 = 前置件 1（`harness/tests/real-api.ts`）**已用 `dsh-sdk-client` + `profile: 'sdk'`**（绿/红两侧经 WB 独立复验）⇒ **零新增器材**；S0 四项判据在〈sdk 面实测能力边界〉**逐条覆盖**。
+> **ACP 的用途（一笔记录）**：ACP = **对外"标准 agent server"入口**（第三方 IDE / CI 直驱）+ **子代理 / 测试集成**的协议面；本项目**不在 DSH-3 用它**。⚠️ **它不是 sdk 的升级替代** —— sdk 面虽无具名 `resume`，**续会话语义在 `SessionPromptParams.sessionId` 上**（`packages/sdk/protocol/src/types.ts:36-38`；方法面 `:115-119` 仅 `initialize` / `session/prompt` / `shutdown`），acp 的 `session/resume` 是**同能力的不同承载**，**不构成换面理由**。
+
 **风险（修订）**：① preview 期 API 漂移（锁定 0.1.2-rc.1）；② **鉴权已内置**（token→签名 cookie），但**多用户 / 租户隔离仍须自做**（§3.3：DSH 内核对 cloud / multi-user / tenant 零论述）；③ 浏览器侧 WS 可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，未实测；④ **L2 反向工具执行仍须自做**（事件流下发指令 + unary 回传结果），此缺口三个官方面都没有。
 
 > ✅ **可复用性已确认（2026-09-09，推翻一小时前"未知"的判词）**：`dsh-client-connection`、`dsh-client-ui-*` **全部随 npm 分发**（实测 **41 个 `dsh-client-*` 包均为 `0.1.2-rc.1`**，含 chat / theme / brand-official / connection）。以 `dsh-client-ui-chat` 为例，其形态为**双面包**：
@@ -657,7 +668,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **退出条件**：**核心链路（会话 + 记忆 + 工具）在 DSH 下达到 P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
 
-**最小可验证切片 S0–S4（Trae，采纳）**：S0 = 一条消息的完整生命周期（客户端 → sdk/acp JSON-RPC → session create → agent loop 挂 **1 个**自做工具 `read_file` → 真实 LLM 调用 → 回客户端 → session 落盘 → session-query 回读），一条链同时验证交付通道 / plugin mount / llm provider / session 持久化四个前置；其后逐层叠加、单独验收：
+**最小可验证切片 S0–S4（Trae，采纳）**：S0 = 一条消息的完整生命周期（客户端 → **`sdk`** JSON-RPC → session create → agent loop 挂 **1 个**自做工具 `read_file` → 真实 LLM 调用 → 回客户端 → session 落盘 → session-query 回读），一条链同时验证交付通道 / plugin mount / llm provider / session 持久化四个前置；其后逐层叠加、单独验收：
 
 | 步 | 叠加 | 验收 | 勾对子项 |
 |---|---|---|---|
@@ -761,6 +772,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - **远程长任务范式**：`setsid nohup <cmd> >log 2>&1 </dev/null &` + **完成标记 + `echo $? > rc`**；复入时**先看 rc 再看日志**。
   ⚠️ `production-env.md` §6.3「ssh 后台任务拿不到沙箱放行」**约束的是本地发起侧**（沙箱 / 审批），**不是远程进程生命周期** —— 两通道实测远程进程存活（裸 `&` 5/5、`setsid nohup` 6/6）。
 - **姿势自证**：每个验收脚本头部加一行 —— 本脚本模拟的是哪条真实链路（哪个执行器 / 哪层前导 / 哪个 home+profile）。DSH-2.5 ③ 教训：**判据姿势不对会同时造出假绿与假红**。
+- ⚠️ **"前后对照"实验须在单租户窗口内做**：CVM 上曾观测到第三方活跃会话（`who` 见 `pts/0`），且 `~/.dsh/profiles` 的 mtime 与自己的动作**同秒**变动；但**对照实验打回**（取 mtime → 跑 `--help` → 再取 mtime，前后完全一致）⇒ 只能记"**观测到、未归因**"。⇒ 凡"取状态 → 跑命令 → 再取状态"类归因，**必须先确认窗口内无第三方活动**，否则证据自动降级。（这条比"2G 内存"更硬地支持 3.0 采数窗口**冻结其他活动**。）
 - **各执行人各自做一次通道核查**、各自出《我方执行说明》（三种工具形态的坑不同，**谁也不能替谁许愿**）。
 - ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **landlock 判定不可互搬**（实测：ABI 5+ 的掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）。
 - ⚠️ **CVM 产出不得是唯一副本**（机器 2026-10-09 到期）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
@@ -857,9 +869,11 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 #### 参考实现登记表（每步 → 具体可借鉴件）
 
+> 【老大注：每一步计划开始前最好研究一下是否有更好的新的可参考对象，因为社区变化日新月异，但是也要注意，我们锚定的DSH版本可能和社区主流会逐渐脱节，评估的时候如果发现DSH版本已经严重落后到无法利用社区红利，需暴露给老大】
 > **口径**：本表是 §3.0「只参考不直装」的**操作面** —— 把"某步可以参考什么"从口头共识变成**可核对的清单**。
 > **规矩（老大 2026-09-14 定）**：**每步开工前先在表内定位参考件**（官方读 `ref/dsh-bare/` 或 npm；社区读 `ref/community/`，未落位者按需拉取），用完**回填一行「借鉴点」**；**找不到就写"无"** —— 空着比编一个强。
-> **三类来源**：① **官方包**（`@deepseek-ai/*`，实测 **277 个 `dsh*` 包**在 npm 分发）② **社区件**（名录 `ref/tmp_awesome.md.bak` + 目录站 `deepseek-harness-plugin.com`）③ **上游主仓**（`ref/dsh-bare/`，锁 `dsh-v0.1.2-rc.1`）。
+> **派发四要素（老大 2026-09-14 定）**：**派发任务时逐件写明** ① **路径**（写到可复制的程度）② **怎么参考**（读哪几个文件 / 读源码还是读 README / 要不要先跑）③ **参考程度**（只借鉴设计 ／ 可抄形状 ／ 可 fork 改造）④ **哪部分不可参考**（许可限制 / 与锁定版 `0.1.2-rc.1` 不符 / 与产品形态冲突）。**落位三件的四要素清单已备好** → §2.2.2「可参考 / 不可参考」表；新落位件按同格式补行。
+> **三类来源**：① **官方包**（`@deepseek-ai/*`，实测 **277 个 `dsh*` 包**在 npm 分发）② **社区件**（名录 `ref/awesome-dsh-plugin.md` + 目录站 `deepseek-harness-plugin.com`）③ **上游主仓**（`ref/dsh-bare/`，锁 `dsh-v0.1.2-rc.1`）。
 > **证据等级**：包名 / 件名 / 落位状态 🟢（2026-09-14 实查 npm org 与本地名录）；「借鉴点」凡**未经我方复跑**者一律 🟡。
 
 | 切片 | 要解决什么 | 官方参考（`@deepseek-ai/`） | 社区参考 | 本地落位 |
@@ -875,7 +889,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | **3.8** A 段协议（通信面） | 跨网络宽面 + 审批中继 | ⭐ `dsh-api-remotes`（**"任何不依赖 React 的 `ctx.remote` 约定均可复用其 Client face"**）、`dsh-client-connection`（gateway 挂 `/api`；browser 半 = fetch/SSE）、`dsh-api-gateway` + `dsh-typert-*`（4 件）、`dsh-host-webserver` / `-frontend-static` / `-apiproxy`、`dsh-cordis-host-runner`、`dsh-api-session-controller`、`dsh-sdk-protocol`（transport / `onRequest`） | ⭐ `litestartup-com/dsh-api-gateway`（**REST + SSE 暴露运行中会话给第三方客户端 + API-key 鉴权** —— 与自做 driver 同题）、`Jiachi5533/dsh-remote-gateway`（source-filtered HTTP/SSE/WS 网关）、`BotonJ/dsh-remote-link`、`liguobao/deepseek-harness-remote`、`yabolee-kkk/dsh-streaming-mcp-bridge` | ✅ `dsh-reach` 的 `client/` 半边（`dsh.client.inject`）可参照 |
 | **3.9** 阶段收口 | 上游漂移 + 回传 | — | `MicroMilo/upstream-radar`（盯 release + 在一次性 runner 复测已发布产物，输出机器可读兼容矩阵）——升级 SOP / 漂移复核的方法参考 | — |
 
-**社区名录索引（在 `ref/tmp_awesome.md.bak` 内按分类名检索；"行"为该快照位置）**
+**社区名录索引（在 `ref/awesome-dsh-plugin.md` 内按分类名检索；"行"为该快照位置）**
 
 | 分类 | 行 | 与哪几步相关 |
 |---|---|---|
