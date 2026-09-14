@@ -27,7 +27,7 @@ DSH-3 的判定标的是**核心链路（会话 + 记忆 + 工具）达到 P4 �
 **交付物**
 1. CVM 上 `dsh@0.1.2-rc.1` 可用（版本号须显式核对，**勿用 `latest`**——见 `docs/production-env.md` §6 坑 8）
 2. profile 就位（`larry` / `sdk` 至少各一）
-3. **凭据落位**：CVM 侧 `$DSH_HOME/.credentials.yaml` 的 `refs:` 分节写入 **`larry-cvm`**（`chmod 600`，否则 DSH 启动直接失败）
+3. **凭据落位**：CVM 侧 `$DSH_HOME/.credentials.yaml` 的 `refs:` 分节 —— ⚠️ **键名固定为 `DEEPSEEK_API_KEY`**（`dsh-llm-deepseek` 的 `apiKeyEnv` 默认值，**不可自命名**），值取控制台那把 `larry-cvm`；POSIX 下须 `chmod 600`。机制与落点详见 `docs/production-env.md` §12（含"不用改 profile / 改完自动热重载 / 别删已有 `records:` 段"三条实操）
 4. real-api 等价物在 Linux 侧跑通（载体：`harness/scripts/run-real-api.mjs` + `harness/tests/real-api.ts`，DSH-2 前置件 1 的产物，**需在 CVM 侧复跑**）
 
 **硬判据**
@@ -247,10 +247,10 @@ DSH-3 的判定标的是**核心链路（会话 + 记忆 + 工具）达到 P4 �
 
 > ✅ **① 模型凭据 —— 2026-09-14 已定（不再是待拍项）**：**三环境三把专用 Key**（`larry-dev` / `larry-wsl` / `larry-cvm`，老大已在控制台备好，随时可填）。三条口径：
 > 1. **按环境分，不按轨分** —— 同一环境内 backend 与 DSH 两处填**同一把**；Key 的用途是"分辨哪台机器在烧"，不是"分辨哪条轨"。
-> 2. **DSH-3 期间只需两把**：`larry-cvm`（3.0，CVM 侧 `$DSH_HOME/.credentials.yaml` 的 `refs:`，**POSIX 600 否则启动失败**）+ `larry-dev`（3.7 本机 end-to-end；**落哪个 home 随待拍 ③ 一并定**）。
+> 2. **DSH-3 期间只需两把**：`larry-cvm`（3.0，CVM 侧 `$DSH_HOME/.credentials.yaml` 的 `refs:`，**键名固定 `DEEPSEEK_API_KEY`**、POSIX 须 600）+ `larry-dev`（3.7 本机 end-to-end；**落哪个 home 随待拍 ③ 一并定**）。
 > 3. `larry-wsl` **暂不动用**（S0 已拍 CVM 单跑；WSL 将来参与测试再启）。
 >
-> 载体优先级（启动环境 > 受管文件 > 项目 `.env` > 主目录 `.env`）见 2026-09-12 调研记录。
+> 载体优先级（启动环境 > 受管文件 > 项目 `.env` > 主目录 `.env`）与**三环境落点现状**见 `docs/production-env.md` §12。
 
 | # | 待拍 | 阻塞谁 | 选项 |
 |---|---|---|---|

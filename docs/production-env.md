@@ -391,3 +391,60 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 - **§6 坑 2 订正**：原文"换 `HF_ENDPOINT` 镜像**无效**…首次部署必须预置模型或找可用国内镜像/代理，否则卡死在初始化"。**前半句仍成立**（Chroma 走自己的 S3、不经 `HF_ENDPOINT`）；**后半句已有实测解** ⇒ **解法不是"让 Chroma 自己下"，而是「预置模型文件」**：用 `hf-mirror` / `modelscope` 拉文件（各 ~10 MB/s）放进 Chroma 模型缓存目录。
 - **§8 未闭合表解锁**：`embedding 模型加载内存（150–250 MB 🔴 估算）` 的**卡点（模型源 15 KB/s 下不完）已解除** ⇒ 现在可以真机下载后测实际加载内存。
 - ⚠️ **一条不解释的现象（留痕，不猜成因）**：`hf-mirror.com` 302 后的 final URL 落在 **`cas-bridge.xethub.hf.co`**（HF 自己的 CDN 域）却**可达且 10 MB/s**，而 `huggingface.co` 直连 000。**成因未查、不给猜测**；就可用性而言"能拿到文件"已构成结论。
+
+---
+
+## 12. 凭据落位（DSH 侧 LLM Key）
+
+> **动机**：3.0 前置需在该机配起可用 Key ⇒ 先钉死"填哪里"（指错文件等于白干一轮）。
+> **权威来源**：`@deepseek-ai/dsh-credentials-local@0.1.2-rc.1` 包内 `README.zh.md`（「密钥从哪里来」「凭据文件本身」「谁能读取该文件」三节）+ `@deepseek-ai/dsh-llm-deepseek` 的配置表。**源码文档级确认，非推测。**
+
+### 12.1 载体 · 结构 · 优先级
+
+- **载体** = `<harness home>/.credentials.yaml`，即 **`$DSH_HOME/.credentials.yaml`**（`$DSH_HOME` 未设时回落 `~/.dsh`）
+- **结构** = 带版本的 YAML，**两个分节**：`refs:`（按环境变量名存密钥值）／ `records:`（按 `<owner>/<id>` 存插件凭据）。**LLM Key 走 `refs:`**
+- **四层优先级**（先有值者胜）：**启动环境 > 存储文件 > 项目 `.env`（`<invocation cwd>/.env`）> 主目录 `.env`（`$DSH_HOME/.env`）**
+
+### 12.2 键名（由消费方定，非自由命名）🟢
+
+`dsh-llm-deepseek` 配置项：`apiKeyEnv` 默认 **`DEEPSEEK_API_KEY`**（先经凭据 seam，再到环境变量）；`baseURL` 默认 `https://api.deepseek.com`（设了 `$DEEPSEEK_BASE_URL` 则优先）。
+⇒ **默认值即所需 ⇒ profile 不用改** —— 只要 `refs:` 里出现 `DEEPSEEK_API_KEY` 即生效。
+
+### 12.3 文件形态
+
+```yaml
+version: 1
+
+refs:
+  DEEPSEEK_API_KEY: <值>
+
+records:
+  client-connection/browser-session:   # DSH 客户端会话凭据（非 LLM Key），勿删
+    kind: grant
+    payload:
+      version: 1
+      secret: <值>
+```
+
+### 12.4 四条实操事实 🟢
+
+1. **可直接手工编辑** —— `watch: true` ⇒ **改完自动热重载，不需要重启 DSH**（包文档明写"你可以直接编辑该文件"）
+2. **并发编辑会合并** —— 产品写入时保留注释与未触及条目的排版 ⇒ 手工编辑与产品写入不互斥，不会被覆盖
+3. ⚠️ **Windows 侧不检查文件权限**（原话"Windows 没有可检查的 mode，因此在那里跳过该检查而不是伪造它"）⇒ **"必须 600 否则启动失败"是 POSIX 专属**（CVM / WSL 成立，本机不成立）
+4. **空值 ≠ 有值** —— 空字符串被拒；**删密钥 = 删条目**，不是置空。未知顶层键 / 类型错误 / 格式错误 YAML 会在**启动时失败**（不静默忽略）
+
+### 12.5 落点与现状（2026-09-14 🟢 实测）
+
+| 环境 | 路径 | 现状 | 要填吗 |
+|---|---|---|---|
+| **CVM** | `/home/ubuntu/.dsh/.credentials.yaml` | **存在**（600 / 161 B），**仅 `records:`，无 `refs:` 段** | ⭐ 3.0 前置 |
+| 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
+| 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
+| WSL | `~/.dsh/.credentials.yaml` | DSH-3 不参与 | 暂不填 |
+
+> ⚠️ **订正一处旧假设**：此前记"CVM 上那份是 09-10 PoC 留下的、Key 早已关闭"—— **实测该文件从来没有 `refs:` 段**（只有 browser-session 记录）⇒ 该机**从未配过 LLM Key**，09-10 的连通来自启动环境注入。⇒ 给 CVM 填 = **新增一段**，不是"替换旧 Key"。
+
+### 12.6 与 Tier0 红线 ① 的关系
+
+- 该文件**只存凭据**，且**产品绝不把文件路径交给 agent**；但**同 UID 的工具进程照样可读**（官方原话"这是审慎，不是边界"）
+- ⇒ **值不得写进任何受版本控制的文件**；两处 dsh home 与 CVM 的 `~/.dsh` 均在 git 跟踪范围之外
