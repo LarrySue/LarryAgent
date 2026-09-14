@@ -453,7 +453,7 @@ records:
 | **CVM · 显式 `DSH_HOME=~/larry-dsh-home`** | `/home/ubuntu/larry-dsh-home/.credentials.yaml` | ⚠️ **不存在**（09-10 建的该 home，profiles / sessions / storages 齐全，**独无凭据**） | ⚠️ **本机 `harness/scripts/cvm-probes/*.sh` 钉死此路径** ⇒ 照抄 = "无 key 假绿" |
 | 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
 | 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
-| WSL | `~/.dsh/.credentials.yaml` | DSH-3 不参与 | 暂不填 |
+| WSL | `~/.dsh/.credentials.yaml` | **DSH-3 不参与**（老大 2026-09-14 拍定；见 §12.7 附三） | 暂不填 |
 
 > ⚠️ **订正一处旧假设**：此前记"CVM 上那份是 09-10 PoC 留下的、Key 早已关闭"—— **实测该文件从来没有 `refs:` 段**（只有 browser-session 记录）⇒ 该机**从未配过 LLM Key**，09-10 的连通来自启动环境注入。⇒ 给 CVM 填 = **新增一段**，不是"替换旧 Key"。
 
@@ -523,3 +523,10 @@ records:
 | 跑 harness 测试（vitest / `run-real-api.mjs`） | **禁止** | `tests/isolated-setup.ts` 逐 worker 强制覆盖为临时 home + 正向白名单守卫；注入真实路径会触发 `sentinel-failfast` 判 FAIL |
 | client（Tauri）启动 | 无需人工介入 | `main.rs:291` 硬编码 `.env("DSH_HOME", <项目根>/.dsh-home)` |
 | CVM | 不注入（裸跑落 `~/.dsh`，凭据在此） | ⚠️ 但 `cvm-probes/*.sh` 脚本内**钉死了错 home**，须先改脚本 |
+
+#### 附三：WSL 在 DSH-3 期间不参与（老大 2026-09-14 拍定）
+
+⇒ §12.5 表内 WSL 行"暂不填"的**依据**：**DSH-3 的判定链只在 CVM 上跑**（S0 已拍"CVM 单跑"），WSL 不承担 DSH-3 的任何一个判定环节 ⇒ 无需为其准备凭据。
+
+- **不采纳 Claude「WSL 当演练场、CVM 当判定场」的建议**，三条理由（沙箱探针 ABI 自适应 ⇒ 无需在 ABI 7 的 WSL 预演；WSL 与 CVM 差异不止 ABI ⇒ 预演结论不可外推、反造假安全感；一次性风险用 CVM 上 dry-run + 采数化解更便宜）见 `TODO.md` DSH-3 段。
+- ⚠️ 是"**DSH-3 期间不参与**"，**不是**"WSL 定位降级" —— `test-env.md` §1「WSL 长期担任核心测试环境」的定位**不变**；该文档 §10「WSL 具体承载哪类测试」在 DSH-3 期间**挂起**（状态仍是待定，勿读成已解决）。

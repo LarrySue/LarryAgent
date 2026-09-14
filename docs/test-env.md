@@ -289,7 +289,7 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 | 项 | 状态 | 说明 |
 |---|---|---|
 | **`flock` 在 `/mnt` vs ext4 的行为** | ⬛ **未实测** | ⚠️ 这条比 inotify 更贴要害（DSH 有 **session 锁** + `node:sqlite`）。"`/mnt` 下 flock 失效"目前**只有文献支撑、无本机实测** |
-| **WSL 具体承载哪类测试** | ⬛ 待定 | 候选：DSH sandbox / landlock 行为 / harness 冒烟 / LarryAgent 单测。**须套 §5 边界**（ABI 判定不在此）。工作区位置倾向 `~/work/LarryAgent`（ext4 内、由 git 同步） |
+| **WSL 具体承载哪类测试** | ⬛ 待定 | 候选：DSH sandbox / landlock 行为 / harness 冒烟 / LarryAgent 单测。**须套 §5 边界**（ABI 判定不在此）。工作区位置倾向 `~/work/LarryAgent`（ext4 内、由 git 同步）。⚠️ **DSH-3 期间不参与**（老大 2026-09-14 拍定）：判定链只在 CVM 上跑，本项**挂起、不等它**（见 `TODO.md` DSH-3 段） |
 | **裸跑 `node` 的两通道现象分歧** | ⬛ **未收敛** | §6.2：Claude 侧命中 Windows 版、Trae 侧 `command not found`。**成因未定位**（不给猜测）；因两通道的行动纪律一致，**不阻塞** |
 | PID 1 独占 seccomp USER_NOTIF | ⬛ 未测 | systemd 作 PID1 且 running；当前进程已带 1 个 seccomp 过滤器，常规操作未被挡。DSH 走 landlock 则无碍，走 seccomp 退路可能 EBUSY |
 | 执行范式固化脚本 | ⬛ 待定 | 落盘位置待指定（内容见 §8.3：两通道范式 + 三条共同坑） |
