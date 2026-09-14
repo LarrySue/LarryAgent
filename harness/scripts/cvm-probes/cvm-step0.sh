@@ -1,11 +1,13 @@
 #!/bin/bash
 # CVM DSH-2.5 Step 0 probe: stdio PoC with cold-start timing and combined RSS sampling.
-# usage: bash cvm-step0.sh <explicit|default>
+# usage: bash cvm-step0.sh <default|explicit>
+#   default  = 不设 DSH_HOME（落 ~/.dsh，凭据在此）—— 2026-09-14 起的新默认
+#   explicit = 隔离到 ~/larry-dsh-home（仅作负向对照器材）
 # requires DEEPSEEK_API_KEY in env (injected by caller; never printed)
 set -u
 export PATH="$HOME/node/bin:$PATH"
 cd "$HOME/harness" || exit 1
-MODE="${1:-explicit}"
+MODE="${1:-default}"
 
 if [ "$MODE" = "explicit" ]; then
   export DSH_HOME="$HOME/larry-dsh-home"

@@ -501,11 +501,30 @@ records:
 
 | 谁启动 DSH | `DSH_HOME` 来源 | 凭据实际落点 |
 |---|---|---|
-| **本机 `harness/scripts/cvm-probes/*.sh`**（探针脚本） | ⭐ 脚本内**钉死** `export DSH_HOME="$HOME/larry-dsh-home"`（`cvm-step0.sh:11` / `cvm-acp-setup.sh:5`） | `/home/ubuntu/larry-dsh-home/.credentials.yaml`（**不存在**）⇒ 静默走"无 key"路径 |
-| **裸跑 `dsh`（默认）** | 未设 ⇒ 回落 `~/.dsh` | `/home/ubuntu/.dsh/.credentials.yaml`（✅ 2026-09-14 已填） |
+| **本机 `harness/scripts/cvm-probes/*.sh`**（探针脚本） | ✅ **2026-09-14 已改**：`export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"`（5 个硬钉；`cvm-step0.sh` 的 `MODE` 默认值由 `explicit` 翻为 `default`） | `/home/ubuntu/.dsh/.credentials.yaml`（✅ 已填 223 B / 600） |
+| **裸跑 `dsh`（默认）** | 未设 ⇒ 回落 `~/.dsh` | 同上（**两条路已合一**） |
+| **`~/larry-dsh-home`（旧）** | 仅当显式传 `DSH_HOME=` | **无凭据** ⇒ 降级为**负向对照器材**，**不是**运行 home |
 
-⇒ 两处**互不相通**（非软链、非同一份）：填哪个取决于"**谁启动 DSH**"，要两边都能起就得两处都填。
-⇒ ⚠️ **CVM 特有风险**：本机脚本钉的 home 与 CVM 已填凭据的 home **不是同一个** ⇒ **照抄 `cvm-probes` 脚本 = 无 key 假绿**（§1 已记录该形态）。处置二选一：**改本机脚本**（指向 `~/.dsh`）或派发时**写死必须注入 env / 显式指定 `DSH_HOME`**。
+（改前形态留痕：5 个脚本硬钉 `$HOME/larry-dsh-home`、`cvm-step0.sh` 默认 `explicit` ⇒ **照抄 = 无 key 假绿**。⚠️ 写 `${DSH_HOME:-…}` 而非字面 `unset` 是**必须的**：脚本内 `$DSH_HOME/profiles/…` 参与路径拼接且带 `set -u`，真 unset 会硬报错。）
+
+⇒ 两处**互不相通**（非软链、非同一份）：填哪个取决于"**谁启动 DSH**"。
+⇒ ⚠️ **CVM 特有风险**（改脚本前）：本机脚本钉的 home 与 CVM 已填凭据的 home **不是同一个** ⇒ **照抄 `cvm-probes` 脚本 = 无 key 假绿**（§1 已记录该形态）。**已按"改脚本指向 `~/.dsh`"处置。**
+
+#### 附一之补：CVM 的 `~/.dsh/profiles/*` 曾是**空壳**（2026-09-14 实测订正）
+
+原记「`~/.dsh/profiles/` 四个全在」是**数目录、没验依赖**得出的。实测：
+
+| home / profile | `dependencies` | `node_modules/@deepseek-ai` |
+|---|---|---|
+| `~/.dsh/profiles/sdk` | **`{}`** | **0** ⇒ **空壳**（bundles 已声明、依赖从没装过） |
+| `~/.dsh/profiles/larry` | api-gateway, host-webserver | 7 |
+| `~/larry-dsh-home/profiles/sdk` | base, sdk-app, storage-sqlite, plugin-storage-probe | 101 |
+
+⇒ **凭据落在 `~/.dsh`、可运行的 profile 落在 `~/larry-dsh-home`** —— 两者被劈开。DSH-3.0 的 D 组（凭据层验真）因此崩在**启动期**（`-32603 cannot create effect on inactive context`），**与凭据无关**。
+
+⇒ 纪律「CVM 以 `~/.dsh` 为准」**结论不变**（其理由本就含"裸跑默认"一条，与依赖无关），但**必须先把 `sdk` profile 装进 `~/.dsh`** 才真正可用（装法见 `exchange/log-trae.md`〈裁定 001〉）。
+
+⭐ **同一形态在本机也存在**（`.dsh-home/profiles/sdk` 99 包 / `~/.dsh/profiles/*` 空壳）⇒ **"凭据落一个 home、profile 落另一个 home"是系统性问题**，不是 CVM 独有。
 
 #### 附二：手工复验 / 脚本驱动时的 `DSH_HOME` 注入（2026-09-14 实测）
 

@@ -2,7 +2,9 @@
 # DSH-2.5 task 2 setup: finish the acp profile (allowBuilds patch + re-add).
 set -u
 export PATH="$HOME/node/bin:$PATH"
-export DSH_HOME="$HOME/larry-dsh-home"
+# 默认落 ~/.dsh（凭据在此）；需隔离时由调用方显式传 DSH_HOME=...
+# （老大 2026-09-14 纪律：同一环境只用一个 home；larry-dsh-home 不再作运行 home）
+export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 cd "$HOME/harness" || exit 1
 D=node_modules/@deepseek-ai/dsh/lib/bin.js
 WS="$DSH_HOME/profiles/acp/pnpm-workspace.yaml"

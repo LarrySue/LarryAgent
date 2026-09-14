@@ -48,22 +48,39 @@
 > **判据 / 验收基准 / 负向对照矩阵 / 采数口径 / 执行范式 → `docs/dsh/dsh-migration.md` §3.6「DSH-3」**；CVM 环境与凭据 → `docs/production-env.md` §12；方言修复件范式 → `docs/local-env.md` §4.3；**派发规格（执行人 / 批次）→ 本文件「待派发」段**。
 > ⚠️ 原详细计划稿 `exchange/dsh-3-plan.md`（含四方评审附 A/A-2/B/C）的实质内容已于 2026-09-14 **全数承接入本文件与 §3.6**，该稿已于 `677523d` 处置（删除）；如需追溯评审原文：`git show 3362f57:exchange/dsh-3-plan.md`。
 
-#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📮 已派发 001（Trae 2026-09-14）
+#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📮 派发 001 → Trae（2026-09-14）｜**回报已收 · 裁定 001 已发**
 
 - [x] ✅ **凭据落位**（2026-09-14）：CVM `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY`（600 / 223 B，`records:` 段完好）
-- [x] ✅ **环境核对**（2026-09-14）：`dsh@0.1.2-rc.1` 双证（CLI + `package.json`）；`~/.dsh/profiles/` 四个全在（acp / larry / sdk / web）；node v22.22.2
-- [ ] **同步本机 `harness/` → CVM**：精确缺口 **30 文件 / 0.13 MB**（`run-real-api.mjs` + `cvm-probes/` + `embed-probe/` + `sandbox-probe/` + `tests/real-api*` + `scan-keys.ts` + 2 个 sentinel + **3 个沙箱探针包**）
-  - ⚠️ **它同时卡着 3.5** —— 缺的三个包里正含 3.5 要用的沙箱探针包
-  - 传输非瓶颈（1.5 s 级）；成本在后置 `pnpm install`（须记墙钟。CVM 已配 npmmirror 源 ⇒「境外源 15 KB/s」场景不适用）
-  - ⭐ **留版本锚点 `SYNC-ANCHOR.txt`**（源 commit `d8cc7c4b` / `HEAD:harness` = `6c268877`）—— 否则将来"CVM 上跑不过"无法区分**环境问题 vs 代码漂移**
+- [x] ⚠️ **环境核对**（2026-09-14，**同日订正**）：`dsh@0.1.2-rc.1` 双证（CLI + `package.json`）；node v22.22.2
+  - ⛔ **原记"`~/.dsh/profiles/` 四个全在"是错的** —— 那是**数目录、没验依赖**。实测：`~/.dsh/profiles/sdk` 的 `dependencies` = **`{}`**、`node_modules/@deepseek-ai` = **0** ⇒ **空壳**；`larry` 有 7 包；**装齐的 profile 全在 `~/larry-dsh-home`**（sdk 101 / acp 100）
+  - ⭐ **本机同一形态**（`.dsh-home/profiles/sdk` 99 包 / `~/.dsh/profiles/*` 空壳）⇒ **"凭据落一个 home、profile 落另一个 home"是系统性问题**，非 CVM 独有
+  - ⇒ 纪律「CVM 以 `~/.dsh` 为准」**结论不变**（其理由本就含"裸跑默认"一条，与依赖无关），但**前提需补真**（见下）。
+- [x] ✅ **同步本机 `harness/` → CVM**（Trae 2026-09-14）：**26 → 61 文件 / 566,393 → 753,485 B**，目标 `/home/ubuntu/harness/`；`SYNC-ANCHOR.txt` 已落（源 commit `57304ac` / `HEAD:harness` = `6c268877`；tar 145.6 KB / 55 条目、`scp` 1.11 s；`pnpm install` exit 0 / 18 s）
+  - ✅ **卡 3.5 的那三个沙箱探针包已到位**（`plugin-sandbox-probe` / `plugin-sandbox-mount-probe` / `plugin-sandbox-dialect`）
+  - ⚠️ CVM **原本无 pnpm / 无 corepack** ⇒ 已 `npm i -g pnpm@11.7.0`（3 s）
+- [ ] ⭐ **装齐 CVM `~/.dsh/profiles/sdk`**（**裁定 001 已授权**，2026-09-14）：两条 `dsh plugin --profile sdk add`（`dsh-base` + `dsh-sdk-app` @ `0.1.2-rc.1`，**全程带 `DSH_HOME=$HOME/.dsh`**）
+  - **这就是完整 composition**：本机 `.dsh-home/profiles/sdk` 的 deps 恰为这两项，`storage` / `session` 类包随传递装齐（`dsh-session-persistence-jsonl` / `dsh-session-query-sqlite` / `dsh-storage-json`）⇒ **无需**手工补 `storage-sqlite`
+  - ⛔ **`larry` 本次不动**：CVM `~/.dsh/profiles/larry` 现 composition（api-gateway + host-webserver）与本地（base + headless）**不同**，属 3.5/3.7 派发时单独定的事
+  - ⛔ **软链方案不采纳**（两个 home 缠在一起 = 正是要消灭的重叠环境）
+  - ⭐ **`~/larry-dsh-home` 降级为「负向对照器材」**：有完整 profile、**无凭据** ⇒ D 组"无 key 态"的理想对照（只变凭据一个变量）。**它不是运行 home**，拿它跑出"绿"即无 key 假绿（D2 已实证）
 - [ ] ⭐ **凭据层验真（2026-09-14 查实后新增，本步最重要）** —— 证明 `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` **确实被读取且真用于调用**：用 `harness/scripts/dsh-prompt.mjs` **裸跑**（它**不覆盖 `DSH_HOME`** ⇒ 落 `~/.dsh`），三态 = 真 key（**不注入** env）/ 无 key（`DSH_HOME=~/larry-dsh-home`：有 profile、无凭据）/ 错 key（隔离 home + 伪造值 + 600）；判据 = **三态互不相同** + 每态记 `(DSH_HOME, profile, 凭据来源层)` 三元组
   - ⚠️ **为什么必须新开这条路径**：`run-real-api.mjs` → vitest → `vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']` **强制把 `DSH_HOME` 覆盖为临时目录**（该文件 `:31-33`）⇒ **real-api 读不到凭据文件**，其 key 只能来自 env（`tests/real-api.ts:28`）。⇒ `production-env.md` §12.5 原写"真生效待 3.0 real-api 复跑"**是错的，已订正**（该文档 §12.5 第三条订正）
   - ⚠️ **不得改动** `~/.dsh/.credentials.yaml`（负向两态一律用隔离 home 造）；回报只写键名 / 是否存在 / 长度
-- [ ] **real-api 在 CVM 侧复跑** —— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）。⚠️ **本组只代表「环境变量层」**，**不得**用于宣称"CVM 凭据文件生效"
+  - 🔴 **Trae 首次尝试 ⛔ 未闭合**（2026-09-14）：D1 ≡ D3（同为 `-32603 cannot create effect on inactive context`，**崩在启动期、不是鉴权**）、D2 exit 0 + stdout 全空（**无 key 假绿**）⇒ **三态不互异，判据不成立**。根因 = `~/.dsh/profiles/sdk` **空壳**（**与凭据无关**）⇒ **裁定 001 已授权装齐后重跑**
+  - ⛔ **判据已被证不敏感的一件**：`dsh --profile <p> --help` **不校验 profile 依赖**（三 home 全绿，1 s 内 exit 0）⇒ **不得**用于"profile 可用性"判定（与附 B §二 `--dump-config` 同类）
+- [ ] **real-api 在 CVM 侧复跑** —— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）
+  - ✅ **Trae 2026-09-14 跑通三态**（互不相同 ✔）：**E1 不注入** → guard **显式失败**（"开关 `DSH_REAL_API=1` 但环境变量未提供"；有效 Key 用例 **5 ms 即抛 = 未发起调用**）/ **E2 错 key** → 走了 API、**AUTH·401** / **E3 真 key** → **OK**（`verdict=OK … turn/end.kind=completed`；`Tests 14 passed | 1 skipped`）。三态各 ~2 s（网络好，**未触发看门狗、无 124**）
+  - ⚠️ **夹具声明**：`real-api.ts` 默认 profile 源是 `<repo>/.dsh-home/profiles`（**本机约定**），CVM 上不存在 ⇒ Trae 用 `DSH_REAL_API_PROFILE_HOME` 指到**唯一装好的** `~/larry-dsh-home/profiles`。**这是夹具来源、不是 home 决定** ⇒ 装齐后**重跑并把夹具改指 `~/.dsh/profiles`**
+  - ⚠️ **本组只代表「环境变量层」**，**不得**用于宣称"CVM 凭据文件生效"
 - [ ] **顺手采数**（白捡的规格账；**老大 2026-09-14 拍：纳入 3.0 验收**，口径见 `docs/dsh/dsh-migration.md` §3.6〈采数口径〉）：cgroup v2 为主口径 + 免轮询三件（`memory.peak` / `memory.events` / `memory.pressure`）+ 带宽（记工具/目标/时段）
+  - 🟡 **Trae 2026-09-14 已在 CVM 后台起采样器**：`/home/ubuntu/trae-evidence/sampler.sh`，**30 s × 240 点 ≈ 2 h**（`~19:06` 满）→ 待取数回传
+  - ⭐ **口径发现：`memory.peak` 是 cgroup 生命周期峰值、不是窗口峰值** —— WB 复核 CSV：峰值在 **17:07:18 由 30.8 MB 跳到 255.5 MB**（= E 组测试运行窗），此后**每行都停在 255.5 MB 再不回落**。⇒ ① 255 MB **有出处**（E 组 vitest/node），**非"原因未知"**；② **引用 `peak` 必须同时给 cgroup 起点 / boot 时间**，否则"这轮没吃紧"是假结论
+  - ⚠️ **与 Claude 昨日读数（`peak≈1234 MB`）对不上**（本机 uptime 4d20h、`peak` 单调不减 ⇒ 今日 17:06 的 30.8 MB 不可能小于昨日值）⇒ 两种解释：① 两次读的**不是同一个 cgroup**；② user slice 在两次读之间被重建过（全登出即销毁）⇒ **并列留痕不合并**，待 Trae 写明取值路径
   - ⚠️ **采数窗口内冻结 CVM 其他活动**（2G 机器；OOM 会把曲线**断掉**、事后被误读成"内存稳定"）
-- [ ] **执行说明就位**：⚠️ `node` / `dsh` **都不在 PATH**（`export PATH=$HOME/node/bin:$PATH`）+ 远程长任务范式（`setsid nohup` + 完成标记 + `echo $? > rc`）
-- [ ] ⚠️ **各执行人各自做一次通道核查、各自出《我方执行说明》**（三种工具形态坑不同，**谁也不能替谁许愿**）
+  - ⚠️ 采样窗**受第三方会话干扰**（Trae 记 `pts/0` 14:01 起；**WB 17:26 实测该会话已不在**、机器空载 load 0.00）⇒ 曲线须标"受干扰"
+  - 📊 带宽实测（17:06）：`registry.npmmirror.com` **784 KB/s**（2.27 MB / 2.90 s）/ `github.com` **121 KB/s**；工具 = 远端 curl 经 ssh
+- [x] ✅ **执行说明就位**（Trae 2026-09-14 出）：`node` / `dsh` **都不在 PATH**（`export PATH=$HOME/node/bin:$PATH`）+ **四条范式实测通过**（PATH 前置 / 后台长任务 `setsid nohup` + 完成标记 + `rc` / 前台长任务 / 非阻塞轮询 30 s 精确）
+  - ⚠️ **Trae 通道独有坑（他自记）**：内联引号 / `$VAR` / 反引号会被本地吃掉（本轮又踩 6 次）⇒ **命令一律走 base64 载体；本地文件操作用字面路径、不用变量**
 
 #### DSH-3.1 · S0 基础链路
 
@@ -216,7 +233,10 @@
 ### 待派发
 
 - [ ] **DSH-3 prototype 派发**（**批次与执行人，老大 2026-09-14 拍定**）
-  - 📮 **派发进度（2026-09-14）**：**001 · DSH-3.0 已发** → `exchange/log-trae.md`（执行人 Trae）；老大定「**一个一个发，不要并行发**」⇒ **3.2 / 3.7 待 001 回报后再发**
+  - 📮 **派发进度（2026-09-14）**：**001 · DSH-3.0 已发** → `exchange/log-trae.md`（执行人 Trae）
+    - **回报已收**（同日）：A/B/C/E/F 完成；**D 组曾阻塞**于 `~/.dsh/profiles/sdk` 空壳
+    - **裁定 001 已发**（WB 同日，见 `log-trae.md`）：授权装齐 `sdk` → 重跑 D 组、重跑 E 组（夹具改指 `~/.dsh/profiles`）、取 2 h 采样
+    - 老大定「**一个一个发，不要并行发**」⇒ **3.2 / 3.7 待 001 收口后再发**
   - **执行人分配**
     - **3.1–3.6 实现侧 + 3.2 定性** → **Trae**（分工原则 + 他 §八 已自认领）
     - **3.5 上机跑** → **Trae**；**器材由 Claude 出**（`landlock_probe.py` 已回归：ABI 自适应 + 负向开关 + `VERDICT=` 机读行）
