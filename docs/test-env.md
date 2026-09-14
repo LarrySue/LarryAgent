@@ -37,6 +37,7 @@
 | 默认用户 | `sularry`（uid 1000，sudo 组） |
 | 工具链 | node **v22.23.2**（nvm `~/.nvm`）／npm 10.9.8／**pnpm 11.7.0**／git 2.43.0／Python 3.12.3／gcc 13.3.0・make 4.3・sqlite3 **3.45.1** |
 | 工具链缺项 | **docker / podman / `bwrap` / strace / uv 均无**；系统级无 pip（venv 内 pip 24.0 可用）⇒ 要测 DSH 的 bwrap rung 须先 `apt install bubblewrap` |
+| 探测期补装 | 🟢 Claude 通道以 apt 补装 **python3-venv ／ python3-pip ／ jq ／ inotify-tools**（root，微小可逆）⇒ **`inotify-tools` 现已可用**，复跑 inotify 对照不用再装 |
 | apt 源 | **USTC** 镜像 |
 | Windows 宿主 | Windows 11 build **26200**（10.0.26200.9445） |
 | 宿主镜像规格 | `nproc=24`／Mem ≈ 15.5 GB／`/` ≈ 1007 GB（可用 ≈ 954 GB）—— WSL 直接镜像宿主资源，**不是沙箱限额**，别当"环境给足了"读 |
@@ -144,6 +145,8 @@ Windows PATH 被注入 WSL（约 30 条 `/mnt/*`）。**两通道观察到的现
 | **无 TTY** | `tty0` / `tty1` 均为 no ⇒ **交互式程序不可用**（`sudo` 要密码也有此原因）；脚本一律非交互写法 |
 | **Windows 防火墙 Public profile** | 局域网设备访问 WSL 服务超时（Windows 侧监听者是 `dllhost.exe`，服务进程的入站规则管不到它）；**loopback 不受影响** ⇒ 需显式入站规则 |
 | **CRLF 污染** | 仓库统一 LF ⇒ WSL 侧 `git config core.autocrlf input`（**已配**，`git status` 干净无噪声） |
+| **git 视图（防御已到位）** | 仓库另配 `core.filemode=false` ⇒ WSL 内权限位变化**不进** `git status`（🟢 Claude 实测）—— 上面两项合起来才是"WSL 内 `git status` 干净"的完整原因，**缺一项就会看到假噪声** |
+| ⚠️ **临时目录口径** | WSL 内 `tempfile.gettempdir()` = **`/tmp`（ext4）** —— 而 `CLAUDE.md` 运维约定里的 `D:\Temp\Sys\larry_test_*` 是 **Windows 侧**口径 ⇒ **两边排查别找错地方**（🟢 Claude） |
 | **空间** | 本次必需约 **3–3.5 GB**；`harness/node_modules` + dsh CLI + 运行时数据 **不能从 Windows 侧拷贝复用**（跨 OS，原生模块不通用），须在 WSL 内 `pnpm install` 重装；建议预留 8–10 GB |
 
 ---
@@ -233,7 +236,7 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 
 #### 8.3.3 两通道共同的坑（与通道无关）
 
-1. **`--cd` 显式定 cwd** —— 别依赖 cwd 继承：**两个通道都因此把文件写进过仓库根**（均已清）。
+1. **`--cd` 显式定 cwd** —— 别依赖 cwd 继承：**两个通道都因此把文件写进过仓库根**（均已清）。⚠️ Trae 通道的具体成因：**`-u root` 下 `~` 解析为 `/root`** ⇒ `cd ~/trae-probe` 静默失败，后续 `dd` 落到继承来的 Windows cwd（即仓库根）。
 2. **`exec 2>&1`** —— 输出混流会损坏结果。
 3. **大结果落文件，再用 `\\wsl.localhost\…` 读回** —— 别指望 stdout 承接长输出。
 
