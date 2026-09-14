@@ -448,3 +448,29 @@ records:
 
 - 该文件**只存凭据**，且**产品绝不把文件路径交给 agent**；但**同 UID 的工具进程照样可读**（官方原话"这是审慎，不是边界"）
 - ⇒ **值不得写进任何受版本控制的文件**；两处 dsh home 与 CVM 的 `~/.dsh` 均在 git 跟踪范围之外
+
+### 12.7 两条轨并存期：本机 Key 落在两处（2026-09-14 补）
+
+> **动机**：§12.1–12.6 只讲 **DSH 侧** ⇒ 易被读成"Key 只有 `.credentials.yaml` 一处"。实际迁移期**两条轨各读各的载体**，漏填任一处都有整条轨起不来。（本节的触发问题：老大问"`backend/config.yaml` 是不是废了"。）
+
+| 轨 | 谁在跑 | 凭据载体 | 键名 | 现状 |
+|---|---|---|---|---|
+| **backend**（现役，Python 自研 agent） | `backend/` 全模块（models / tools / services / memory / rag / api / db / middleware） | **`backend/config.yaml`** | `models.deepseek.api_key` | ✅ 已填，正常服务 |
+| **DSH**（迁移目标，agent runtime） | `harness/` | `$DSH_HOME/.credentials.yaml` | `refs.DEEPSEEK_API_KEY` | ❌ 未填（现靠启动环境注入） |
+
+- **并存是设计、不是重复**：`dsh/dsh-migration.md` 回退条款明写"旧 Python 后端在 **DSH-6 验收通过前保持可用、可回退**" ⇒ **`config.yaml` 里的 Key 在此之前不得移除**（移除 = 现役后端直接起不来）。
+- **终态收敛为一处**：DSH-6 通过、backend 退役后，只剩 `.credentials.yaml`。
+- **取值口径**：两条轨**填同一把 Key** —— Key 按"**环境**"分（dev／wsl／cvm），不按"轨"分 ⇒ 本机两处都用 `larry-dev`。见 §12.5 与 `exchange/dsh-3-plan.md` §6 ①。
+
+⚠️ **`backend/config.yaml` 不止 LLM Key**：另有 `embedding.api_key` / `search.brave_api_key` / `server.api_key`。它们在终态的归属属**迁移映射**范畴（DSH-3/4 处理），本节只钉 LLM Key 一条。
+
+#### 附：本机两个 DSH home —— 决定 `.credentials.yaml` 究竟写哪
+
+`DSH_HOME` 解析优先级（`@deepseek-ai/dsh-home-paths` 包文档）：**显式配置 > `$DSH_HOME` > `~/.dsh`**
+
+| 谁启动 DSH | `DSH_HOME` 来源 | 凭据实际落点 |
+|---|---|---|
+| **client（PC 版 / Tauri）** | ⭐ 显式设成 `<项目根>/.dsh-home`（`client/src-tauri/src/main.rs` 的 `dsh_prompt`） | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml`（当前**不存在**） |
+| **手工跑 `dsh`** | 未设 ⇒ 回落默认 `~/.dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml`（当前存在，仅 `records:`） |
+
+⇒ 两处**互不相通**（非软链、非同一份）：填哪个取决于"**谁启动 DSH**"，要两边都能起就得两处都填。
