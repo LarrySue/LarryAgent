@@ -106,6 +106,7 @@
 - [ ] **前置核查：目标机 `bwrap` 是否存在**（DSH Linux 链 = `['bwrap','landlock']` 两个 rung ⇒ probe 仲裁；不存在则永远只走 landlock rung）
 - [ ] 加判据：**DSH 的 sandbox ruleset 在 CVM 上建立成功**，并**单独判其失败形态**（fail-open 还是 fail-closed —— 决定生产安全）
 - [ ] 器材：`D:\Temp\Sys\claude-wsl-probe\landlock_probe.py`（ABI 自适应 + `--fs-mask` 负向开关 + `VERDICT=` 机读行）
+- [ ] ⭐ **执行姿势：先 dry-run 再判定**（2026-09-14 定「WSL 不参与」的**替代手段**，见 DSH-3 段）—— 探针第一次上 CVM 时**先跑一轮不出判定的 dry-run**（只打印 ABI / 路径映射 / 权限探针 / `bwrap` 存在性），确认场地与预期一致后再跑判定轮。⚠️ 这是替代"WSL 预演"的姿势（CVM 10-09 到期、机会一次性），**不是可省的步骤**
 - ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **判定只能写在 CVM 上，不得互搬**（实测：ABI 5+ 掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）
 
 #### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
