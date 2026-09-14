@@ -475,7 +475,7 @@ records:
 
 - **并存是设计、不是重复**：`dsh/dsh-migration.md` 回退条款明写"旧 Python 后端在 **DSH-6 验收通过前保持可用、可回退**" ⇒ **`config.yaml` 里的 Key 在此之前不得移除**（移除 = 现役后端直接起不来）。
 - **终态收敛为一处**：DSH-6 通过、backend 退役后，只剩 `.credentials.yaml`。
-- **取值口径**：两条轨**填同一把 Key** —— Key 按"**环境**"分（dev／wsl／cvm），不按"轨"分 ⇒ 本机两处都用 `larry-dev`。见 §12.5 与 `exchange/dsh-3-plan.md` §6 ①。
+- **取值口径**：两条轨**填同一把 Key** —— Key 按"**环境**"分（dev／wsl／cvm），不按"轨"分 ⇒ 本机两处都用 `larry-dev`。见 §12.5 与 `TODO.md` DSH-3 段（三环境三把专用 Key）。
 
 ⚠️ **`backend/config.yaml` 不止 LLM Key**：另有 `embedding.api_key` / `search.brave_api_key` / `server.api_key`。它们在终态的归属属**迁移映射**范畴（DSH-3/4 处理），本节只钉 LLM Key 一条。
 
