@@ -199,6 +199,8 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 1. **安全组默认只放行 22** 🟢：起在 8123 的服务公网超时，但 CVM 本机 curl 200（**已做对照，是安全组不是服务**）。需其他端口须控制台开（建议 8000–9000 段）。
 2. **境外资源下载极慢** 🟢：Chroma 默认 embedding 模型 79MB 从境外源下 → **15 KB/s，8 分钟 9%，全量约 1.5 小时**；换 `HF_ENDPOINT` 镜像**无效**（Chroma 走自己的 S3，不经 HuggingFace）。**对生产的直接含义：首次部署必须预置模型或找可用国内镜像/代理，否则卡死在初始化**。这是**源的归属问题**而非网络慢——同机 npmmirror 下 node 31MB **仅 3 秒**，差三个数量级。⇒ **解法已有实测（见 §11.3）**：预置模型文件（国内镜像 ~10 MB/s，95 MB 约 10 s），**不必让 Chroma 自己下**。
 3. **ssh/scp 后台任务拿不到沙箱放行** 🟢：一律**前台跑**；长任务用远程 `nohup ... &` 挂起再轮询日志。
+   - ⚠️ **补层界（2026-09-14 两条通道各自实测）**：这条约束的是**本地发起侧**（沙箱 / 审批），**不是远程进程生命周期**。Claude（MSYS 通道）实测裸 `&` 5/5 存活、`setsid nohup` 6/6 存活；Trae（PowerShell + Windows OpenSSH 通道）实测 `setsid nohup` **跨 ssh 退出仍存活**。⇒ **前台跑的唯一理由是本地审批，别把它误读成"远程长任务跑不了"**。
+   - 相关：远端长任务范式 = `setsid nohup <cmd> >log 2>&1 </dev/null &` + **完成标记 / `echo $? > rc` 落文件**；复入时**先看标记与退出码，再看日志**。
 4. **`pip install chromadb` 撞 PyYAML RECORD 缺失** 🟢：加 `--ignore-installed PyYAML` 绕过。
 5. **`pkill -f "import chromadb"` 会杀掉自己** 🟢：该 pattern 匹配到自身命令行。用更精确 pattern 或直接不 pkill。
 6. **Chroma collection 名 ≥ 3 字符**（SDK 校验，非环境问题）。
@@ -447,12 +449,15 @@ records:
 
 | 环境 | 路径 | 现状 | 要填吗 |
 |---|---|---|---|
-| **CVM** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；**真生效**待 3.0 real-api 复跑 |
+| **CVM · 裸跑（默认 home）** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；**真生效**待 3.0 real-api 复跑 |
+| **CVM · 显式 `DSH_HOME=~/larry-dsh-home`** | `/home/ubuntu/larry-dsh-home/.credentials.yaml` | ⚠️ **不存在**（09-10 建的该 home，profiles / sessions / storages 齐全，**独无凭据**） | ⚠️ **本机 `harness/scripts/cvm-probes/*.sh` 钉死此路径** ⇒ 照抄 = "无 key 假绿" |
 | 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
 | 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
 | WSL | `~/.dsh/.credentials.yaml` | DSH-3 不参与 | 暂不填 |
 
 > ⚠️ **订正一处旧假设**：此前记"CVM 上那份是 09-10 PoC 留下的、Key 早已关闭"—— **实测该文件从来没有 `refs:` 段**（只有 browser-session 记录）⇒ 该机**从未配过 LLM Key**，09-10 的连通来自启动环境注入。⇒ 给 CVM 填 = **新增一段**，不是"替换旧 Key"。
+
+> ⚠️ **再订正一处（同日）**：WB 上一轮口头结论称"**CVM 落点唯一**，没有本机那种两个 home 的歧义"—— **错，已实测推翻**。CVM 的成因与本机**完全相同**：**显式 `DSH_HOME` → 落到指定目录；未设 → 回落 `~/.dsh`**。CVM 上两处并存（见表）⇒ **"填哪个"同样取决于"谁启动 DSH"**，不是无歧义。该口头结论当时指导了 09-14 的落盘动作（选择本身未错——裸跑确实读 `~/.dsh`），但**"无歧义"这半句是错的**。
 
 ### 12.6 与 Tier0 红线 ① 的关系
 
@@ -474,13 +479,23 @@ records:
 
 ⚠️ **`backend/config.yaml` 不止 LLM Key**：另有 `embedding.api_key` / `search.brave_api_key` / `server.api_key`。它们在终态的归属属**迁移映射**范畴（DSH-3/4 处理），本节只钉 LLM Key 一条。
 
-#### 附：本机两个 DSH home —— 决定 `.credentials.yaml` 究竟写哪
+#### 附：两个环境各有两个 DSH home —— 决定 `.credentials.yaml` 究竟写哪
 
 `DSH_HOME` 解析优先级（`@deepseek-ai/dsh-home-paths` 包文档）：**显式配置 > `$DSH_HOME` > `~/.dsh`**
+
+**本机（Windows）**
 
 | 谁启动 DSH | `DSH_HOME` 来源 | 凭据实际落点 |
 |---|---|---|
 | **client（PC 版 / Tauri）** | ⭐ 显式设成 `<项目根>/.dsh-home`（`client/src-tauri/src/main.rs` 的 `dsh_prompt`） | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml`（当前**不存在**） |
 | **手工跑 `dsh`** | 未设 ⇒ 回落默认 `~/.dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml`（当前存在，仅 `records:`） |
 
+**CVM（Linux）—— 同一机制，只是"显式"的那一方换了人**
+
+| 谁启动 DSH | `DSH_HOME` 来源 | 凭据实际落点 |
+|---|---|---|
+| **本机 `harness/scripts/cvm-probes/*.sh`**（探针脚本） | ⭐ 脚本内**钉死** `export DSH_HOME="$HOME/larry-dsh-home"`（`cvm-step0.sh:11` / `cvm-acp-setup.sh:5`） | `/home/ubuntu/larry-dsh-home/.credentials.yaml`（**不存在**）⇒ 静默走"无 key"路径 |
+| **裸跑 `dsh`（默认）** | 未设 ⇒ 回落 `~/.dsh` | `/home/ubuntu/.dsh/.credentials.yaml`（✅ 2026-09-14 已填） |
+
 ⇒ 两处**互不相通**（非软链、非同一份）：填哪个取决于"**谁启动 DSH**"，要两边都能起就得两处都填。
+⇒ ⚠️ **CVM 特有风险**：本机脚本钉的 home 与 CVM 已填凭据的 home **不是同一个** ⇒ **照抄 `cvm-probes` 脚本 = 无 key 假绿**（§1 已记录该形态）。处置二选一：**改本机脚本**（指向 `~/.dsh`）或派发时**写死必须注入 env / 显式指定 `DSH_HOME`**。
