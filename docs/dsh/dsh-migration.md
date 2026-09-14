@@ -640,7 +640,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 > ⚠️ **上表为骨架，判据以〈各切片判据细则〉为准** —— 其中"S0 消息往返成功"、"S2 灌 200+ 轮"两处表述已在 2026-09-14 修订（见下），**勿照骨架字面实现**。
 >
-> 判据修订来源：`exchange/dsh-3-plan.md` 附 A/A-2/B/C 四方评审（Claude 测试视角 / Trae 实现视角 / Qoder 反向举证视角）+ WB 筛选与实测复核。**只吸收经复核立得住的**。
+> 判据修订来源：`exchange/dsh-3-plan.md` 附 A/A-2/B/C **四份评审意见**（出自 3 个 AI：Claude 测试视角 / Trae 实现视角 / Qoder 反向举证视角）+ WB 筛选与实测复核。**只吸收经复核立得住的**。
 
 ---
 
@@ -679,13 +679,38 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | S3 | 加两条：① **`bwrap` 存在性前置**（Linux 链 = `['bwrap','landlock']` 两个 rung）② **DSH 的 ruleset 建立成功** + **失败形态判定**（fail-open / fail-closed 决定生产安全） |
 | S4 | 加 **双写一致性模型** —— ⚠️ SQLite + ChromaDB **双写不是事务** ⇒ 须定义 ChromaDB 不可达时的降级行为与召回路径 |
 
-##### ⚠️ S1 的依赖图缺边（判定依据级，非任务调整）
+##### ⭐ S1 审批三段收敛路径（老大 2026-09-14 拍定：分阶段往 ② 走）
 
-S1 判据写"前端弹 Tauri 对话框"（PC 侧），但 **A 段协议是 DSH-3.8 的产出**，而 B 段 SDK 只有 `initialize / session/prompt / shutdown` 三个 method ⇒ **无法中继 approval request 到 PC 端**（无可用 answerer 时 fail-closed，已由 probe-qoder 反向举证坐实）。
+**原缺口**：S1 判据写"前端弹 Tauri 对话框"（PC 侧），但 **A 段协议是 DSH-3.8 的产出**，而 B 段 SDK 只有 `initialize / session/prompt / shutdown` 三个 method ⇒ **无法中继 approval request 到 PC 端**（无可用 answerer 时 fail-closed，已由 probe-qoder 反向举证坐实）。⇒ 验收条件依赖一个尚不存在的协议层。
 
-⇒ **S1 的验收条件依赖一个尚不存在的协议层**。三条路择一（待拍）：① CVM 侧 native 插件就地回答（代价：取消"Tauri 对话框"的意义）② 等 3.8 的 A 段协议（**依赖图补边 S1 → 3.8**）③ 改判据为 CVM 侧临时替代（CLI prompt / 文件审批）。
+**拍定路线**：**不择一，分三段往 ②（自补反向请求）收敛** —— 前两段都在 DSH-3 内、**都不依赖 3.8**。
 
-> ⚠️ **由此浮现一条产品定位层面的问题**：审批流跨越 A/B 段边界 ⇒ "PC 侧弹框审批"这一产品能力，取决于 A 段协议何时落地。**是否写入 `docs/product-positioning.md` 待与老大讨论**（本稿不擅自改产品定位）。
+| 段 | 做什么 | 验什么 | 依赖 |
+|---|---|---|---|
+| **3.3-a** | 本地策略答者（`ctx.approval` waterfall 的最终应答者）| **机制接入**：scope filter 生效 / 日志可观测 / fail-closed | 无 |
+| **3.3-b** | 答者 → **真出站往返**（薄客户端 ↔ 本地 stub 对端）| **② 的真风险**：跨进程等待 / 超时收尾 / 对端消失 / 取消传播 | 无 |
+| **3.3-c = 3.8** | 对端 → driver + 前端 | 人审批闭环 | A 段协议 |
+
+- ⚠️ **3.3-a 的诚实边界**：5 条用例中**「超时」「渠道断裂」是同进程替身路径**（本地答者即同进程调用，无"渠道"可断）⇒ 3.3-a 单独**不得**声称"审批语义验成立"，那两条的真验在 3.3-b。
+- ⭐ **设计约束（3.3-a 写码时即须满足）**：答者来源须是**可替换接口**（本地策略 ↔ 远端真人），否则 3.3-b 要重写。
+
+**证据（2026-09-14 读包源码，非二手结论）**—— ② 的真实形状是三层，**不需要 fork 任何包**：
+
+1. **传输层已就绪且公开导出**（`@deepseek-ai/dsh-sdk-protocol`，`lib/index.js` 尾 `export { JsonRpcLineTransport, JsonRpcResponseError }`）：
+   - 帧分类：`id`+`method` = 请求 / `id` = 响应 / `method` = 通知
+   - **`onRequest(handler)`** —— 公开的**入站请求处理器**安装口
+   - `request(method, params, signal)` —— 带 **`AbortSignal` 放弃语义**（原话"aborting removes the pending entry (no state is retained for a response that may never come)"）⇒ **超时 / 取消的原始件已在**
+   - **未装 handler 时的行为**：`handleIncomingRequest` 回 **`-32601 method not found`**（**不静默丢弃**）⇒ 天然可观测的 fail-closed 信号，可直接作 3.3-b 的负向对照
+2. **客户端封装层挡住了**（`dsh-sdk-client`，我们目前在用的那层）：`HarnessClient.start()` 内部 `new JsonRpcLineTransport(...)` 后**只挂 `onNotification`、无 `onRequest`**（`lib/index.js:405-411`）；包 `exports` 只有 `"."`，`launch.ts` 的 `resolveDshLaunch` / `installedDshBin` **不在导出面** ⇒ 3.3-b 须**绕开这层封装**（自己起子进程 + 自构启动参数）——代价明确、可控。
+3. **服务端业务层未接线**（`dsh-sdk-jsonrpc-server`）：`HarnessSdkJsonRpcServer` 构造签名 `(ctx, transport: JsonRpcTransportPeer, options?)` —— **transport 是注入的**，而该接口就有 `request()` ⇒ **发请求的能力在手，只是没有调用点**（`handleRequest` 只认 initialize / prompt / shutdown）。
+   - ⚠️ **待查（3.3-b 第一件）**：从"我们自己的 B 段插件"到 transport peer 的通路**目前未见服务暴露**（插件入口 `apply(ctx, config)` 只消费 config，`inject` 未声明服务）⇒ 须确认能否经 `ctx` 取到；取不到则要么另开一条边，要么给上游提需求。
+
+**成本与复用（诚实列出）**：
+- 3.3-b 的**主要成本** = 自己起子进程、自构启动参数（不能复用 `HarnessClient`）
+- ⭐ **产物不是一次性的**：薄客户端 + `onRequest` / `AbortSignal` 用法 = **3.8 driver 的骨架**
+- 📌 **未来替代观察点（不改本次结论）**：`dsh-api-gateway`（typert）本是官方 Client↔Host 双向通道、自带重连 / 心跳 / 取消，且 `dsh-base` 默认启用；但 **2026-09-10 实测其传输面不可达**（`/api/remote.mux` 带 cookie 仍 404、无法独立起 HTTP）。typert 的"进程内载体"**不解决跨进程问题** ⇒ 不影响本次路线。若上游修好传输面，② 有更省事的替代，届时重估。
+
+> ⚠️ **由此浮现一条产品定位层面的问题**：审批流跨越 A/B 段边界 ⇒ "PC 侧弹框审批"这一产品能力，取决于 A 段协议何时落地。**是否写入 `docs/product-positioning.md` 待与老大讨论**（本稿不擅自改产品定位）。**现状补充**：拍定「分阶段往 ②」后，该能力已有一条具体收敛路径（3.3-c / 3.8）⇒ 建议**等 3.8 设计稿出来时再谈定位**，那时能对着具体协议形状谈，比现在空谈准。
 
 ##### 负向对照矩阵（不做则"真的通了"与"判据没生效"不可区分）
 
