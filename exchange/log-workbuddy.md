@@ -169,3 +169,42 @@
 - **复查**：全仓 grep `exchange/dsh-015-capability-mapping` ⇒ **正式文档 0 命中**；存量仅在 `log-*.md`（历史记录，按「log 不留痕」原则不追改）与 `.workbuddy/memory/`（历史存档）。
 - **遗留（均已知、非漏项）**：§7 表中 ⏳ 三项 —— §3.3 依据换口径 ／ §3.4 漂移① 收窄 ／ `TODO.md` DSH-4 段；🅿️ fail-open 一条已归 TODO 层（老大 2026-09-15 裁定）。
 - **顺带发现（未动，待老大）**：`dsh-migration.md` §3.2 表两行与 §3.4 自相矛盾 —— `storage/` 行仍写「外接 SQLite **待实测**」（§3.4 `:294` 已记 ✅ 实测通过）；`sandbox/` 行仍写「仅 Linux/macOS 侧成立」（§3.4 `:285` 已推翻「Windows 非一等」）。两者都是**依据层**文字，非格式瑕疵，未擅自改。
+
+## 2026-09-15 深夜 · 复核 Qoder 首轮巡查（`log-qoder.md`）
+
+**背景**：老大将「文档一致性维护」移交 Qoder，定性为 **筛查 + 初步核实**层；其产出**由 WB 复核**，最终一起处理（2026-09-15 23:04 五条裁定）。本节即首轮复核。
+
+**复核方法**：不看其叙述，逐条回源实测（行号 / 引用 / 存在性 / git 时序 / npm registry）。
+
+**逐条判定**：
+
+| 项 | 判定 | 取证 |
+|---|---|---|
+| H1 `TODO.md` :30 警示行过期 | ✅ **属实** | :30 仍写「决策稿仍记 `0.1.2-rc.1`…尚未随本次订正改」；对照 `dsh-migration.md` :79 已是 `dsh-v0.1.5-rc.2`。**根因＝WB 自己的遗漏**：`2c5db52`（18:25）写警示行 → `4420652`（19:09）改完决策稿却未回清 |
+| H2 `deployment-architecture.md` 状态口径 | ✅ 属实，**实为 4 处**（其报 3 处） | 文件 :4「**方案（待DSH迁移完成后重新制定）**」；未跟上：根 `README.md` `:12` + `:184`、`exchange/README.md` `:23`、`TODO.md` `:290` |
+| M1 Qoder 角色未入两份文档 | ✅ 属实 | `README.md` :197 角色清单无 Qoder；`docs/ai-governance.md` :63-66 载体制无 Qoder。其称「已登记两处」核实无误（`HUMAN_NOTE.md` :19、`exchange/README.md` :16） |
+| M2 README 结构树 / 状态行漂移 | ✅ 属实 | 结构树 :19-54 确无 `harness/`、`ref/`（两者均实际存在）；:14 状态行 = 2026-08-30 硬快照 |
+| M3 npm `latest` 两处矛盾 | ⚠️ **半对：方向对、归属反** | **实测**（直连 registry.npmjs.org）：`@deepseek-ai/dsh` = `{latest: 0.1.5-rc.1, next: 0.1.5-rc.2, alpha: 0.1.6-alpha.1}` ⇒ **docs 侧正确**（`:79`/`:85`），错的是 **log 侧**（本文件 :111 写 `latest=0.0.1-rc.1`）。**根因可定**：`0.0.1-rc.1` 是 **`dsh-api-gateway`** 的 latest ⇒ 当时把两个包的值串了。其建议「以实测订正 `dsh-migration.md`」**不成立** |
+| L1 `roadmap-history.md` 头部 | ✅ 属实 | :3 只写 P0–P3（实含 P4 / DSH-1 / DSH-2）；:5 检索提示同缺；:6 引 `WORKBUDDY.md` —— **实测 MISSING**（死引用）；:395 引 `dsh-local-env.md` / `dsh-cloud-deployment.md` —— **两者均已不存在**（现为 `docs/local-env.md` / `docs/production-env.md`） |
+| L2 `archive/README.md` :27 + `TODO.md` :277 | ✅ 属实 | :27 未提 DSH-1/DSH-2；`TODO.md` :277 引「P0–P5」（同段 :12 用 P0–P4） |
+| L3 派发权限清单未含 `log-qoder` | ✅ 属实 | `exchange/README.md` :4 仅列 log-marvis / log-claude / log-trae / log_design |
+| L4 log 内旧路径引用 | ✅ 属实（按「不留痕」不动） | `log-trae.md` :32、`log-claude.md` :10 / :51 均引 `exchange/dsh-015-capability-mapping.md` |
+| L5 `HUMAN.md` 第 4 条可收口 | ✅ **依据成立** | `roadmap-history.md` :331-339 = 该开关贯通的完整闭环（含提交号 / 三方分工 / 复验结论） |
+
+**WB 补充发现 1 条（Qoder 未报）**：
+
+- **N1 · `HUMAN.md` :43「有 6 项值得测」与表实存 5 行矛盾** —— 老大 2026-09-15 22:5x 自行删掉「015 ACP 缺 `fork`/`load`/`delete`」一行后，**计数未同步**。⚠️ 它未报**不是能力问题**：其巡查快照早于老大改动 ⇒ **正是 WB 早前提示的「建议方无写权限 ⇒ 认知为快照」失效模式的首个实例**。`HUMAN.md` 属人类治理区，WB 不擅改，仅报告。
+
+**总体评价**：9 条中 **8 条完全属实**、1 条方向对而**归属判反**；1 条因快照时效未捕捉（非能力问题）。⇒ **筛查层可用，复核层必要** —— 本轮 M3 若照其建议直接执行，会去改一份**本来正确**的文档。
+
+**待老大裁决（按建议动作排序）**：
+
+1. **H1** —— `TODO.md` :30 警示行（**WB 自己的遗留**，建议改写为「已随 `4420652` 同步 015」的完成记录）
+2. **H2** —— 四处统一到「待 DSH 迁移完成后重新制定」
+3. **N1** —— `HUMAN.md` :43 计数（人类治理区，老大自改）
+4. **M1** —— 是否补 Qoder 角色登记（`ai-governance.md` §3 载体清单 + `README.md` 协作段）
+5. **M2** —— `README.md` 结构树补 `harness/` `ref/` + 状态行改指针式
+6. **M3** —— log 侧错值处置（WB 区，按「不留痕」建议**删除**该半句；docs 侧不动）
+7. **L1 / L2** —— archive 冻结区，仅报（L1 建议头部追加一行订正注记、不改正文）
+8. **L3** —— 是否授权 WB 向 `log-qoder` 派发
+9. **L5** —— `HUMAN.md` 第 4 条收口（人类治理区，老大自决）
