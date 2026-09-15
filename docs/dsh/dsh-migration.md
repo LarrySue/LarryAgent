@@ -249,7 +249,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | DSH 包 | 实质 | LarryAgent 现状 | 接入收益 |
 |---|---|---|---|
 | `compaction/`（compaction-basic + tool-result-pruner）| 上下文压缩（Service Definition + provider）| 🚧 `max_input_tokens` 截断（**机制反向**）| 升 ✅（直接受益 2.9.2）|
-| `sandbox/`（sandbox-local + sandbox-policy）| 进程隔离（bwrap/Landlock/Seatbelt）| 🚧 IP/目录/SSRF（**无分级无审批**）| 升 ✅（直接受益 2.7.1，**仅 Linux/macOS 侧成立**，见 §3.4）|
+| `sandbox/`（sandbox-local + sandbox-policy）| 进程隔离（bwrap / Landlock / Seatbelt / **Windows restricted token**）| 🚧 IP/目录/SSRF（**无分级无审批**）| 升 ✅（直接受益 2.7.1；**三平台后端并列**，⚠️ Windows restricted token **实际生效性待实测**，见 §3.4）|
 | `interaction/`（permission-presets）+ `credentials/` | approval/permission/ask-user + 凭据授权流 | ❌ 无 | 新增 ✅ |
 | `session/` + `session-query/`（SQLite FTS）| 持久化 + 查询 | 🚧 ToolCallCard（仅工具名+结果）| 升 ✅（直接受益 2.8.2）|
 | `llm/`（llm-deepseek 等 provider + llm-retry）| provider 适配器 | ✅ 配置切换（薄薄一层）| 升 ✅ |
@@ -258,7 +258,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | `jobs/` | 后台任务 | ❌ 无 | 新增 ✅ |
 | `preset/`（agent-presets + persona）| per-session agent 组合（cordis.yml）| 部分（config 下发）| 角色机制迁移底座 |
 | `feedback/` | 人类反馈捕获 | ❌ 无 | 新增 ✅ |
-| `storage/`（storage-domain + storage-json）| Non-session 存储 hub + backends | ❌ 无 | 记忆双写的挂载候选（外接 SQLite 待实测）|
+| `storage/`（storage-domain + storage-json）| Non-session 存储 hub + backends | ❌ 无 | 记忆双写的挂载候选（✅ **DSH-2.5 ① 已实测**：`path` 可指任意绝对路径，见 §3.4）|
 | `test-support/llm-replay` | snapshot replay 测试（真实会话录制 → 无 key 重放）| ❌ 无 | 测试范式升级（见 §3.6 DSH-6）|
 | `e2b/` | 云沙箱（POC）| ❌ 无 | 远期候选 |
 
