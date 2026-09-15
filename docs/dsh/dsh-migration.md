@@ -866,7 +866,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 | 子项 | 档位 | DSH 侧（承接内容与边界） | 我方剩余动作 |
 |---|---|---|---|
-| 2.3.1 会话生命周期（回收站）| 🟡 可降级 | `session-title`（durable latest-wins 标题）+ `workspace`（会话有序账户）+ `session-query`（列表 / 过滤 / 分页）+ `persistence`（durability seam，5 个 handle 方法） | **回收站（软删 + 恢复）与批量归档自做**——append-only 事件流语义下无对应。⚪ 待实测：`workspace` 运行时行为 |
+| 2.3.1 会话生命周期（回收站）| 🟡 可降级 | `session-title`（durable latest-wins 标题）+ `workspace`（会话有序账户）+ `session-query`（列表 / 过滤 / 分页）+ `persistence`（durability seam，5 个 handle 方法）；**协议面另有 ACP `session/list`（keyset 分页 / 规范 cwd 过滤 / 排除活跃与后代）· `resume` · `close`** | **回收站（软删 + 恢复）、fork / lineage 与批量归档自做**——append-only 事件流语义下无对应；**上游明确不实现** ACP `load` / `delete` / `fork`（自述理由：transcript / destructive-storage / lineage 属另一类用例），**DSH-2.5 ② 已实测确认**（`-32601`，见 §2 风险表）。⚠️ **fork 并非上游完全没有**——`dsh-api-gateway` 的 HTTP 面有（§3.5 协议面对照表）。⚪ 待实测：`workspace` 运行时行为 |
 | 2.3.2 对话体验（SSE / 停止）| 🟡 可降级 | 我方**保留 Vue/Tauri** ⇒ DSH 的 React 客户端（`ui-conversation` / `slots` / `client-resources`）**不直接承接**；`continuous-client-recovery`（Host 恢复后 3 s 警告 / 15 s 中止的**持续重连**）、`pinned-scroll-delivery-before-layout` 可作设计参照 | 流式 / 中断恢复 / 常驻 banner 自实现（**设计可借鉴**） |
 | ⭐ 2.3.3 会话级作用域（沙盒）| 🟡 可降级 | **`workspace`**——会话↔目录归属：稳定 id + 规范路径 + 有序 session 账户；**membership = id 在账户内 且 session header 的 cwd 等于 workspace path**（一个 session 结构上至多属一个 workspace）+ `scope`（per-agent 可见性）+ `sandbox` / `permission-presets` | **隔离语义自做**——`workspace` 只做分组，原文 root「只是相对路径基准、**不是读边界**」。⚪ 待实测：`workspace` 运行时行为（membership 过滤 / `attachSession` 流程） |
 | 2.3.4 多模态输入 🗣️ | 🟡 可降级 | **`attachment`**（内容寻址 / 图片与文件分存储 / 共用有序附件列表）+ `client/file-upload`（015 新增：**非图片不限类型、不限大小、byte-for-byte 存**） | **上限 + GC + 2.4.6 升级通道自做**——上游原文「Attachments are **never deleted**」且无类型 / 大小限制 |
@@ -904,16 +904,15 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 #### 待实测清单（档位不依赖，但影响**承接收益兑现**与**风险条力度**）
 
-> **结论：本次重划无档位阻塞。** 12 / 15 / 4 的依据全部是「上游契约 / 源码事实」（见 §2.3 复核 + `../exchange/dsh-015-capability-mapping.md` §2）。下列未验项**只影响两件事**：某行的收益是否真能兑现（B 组）、某条风险的力度（B 组 ⑤）。**未测之前不得据此升格或改档**。
+> **结论：本次重划无档位阻塞。** 12 / 15 / 4 的依据全部是「上游契约 / 源码事实」（见 §2.3 复核 + `../exchange/dsh-015-capability-mapping.md` §2）。下列**5 项**未验项只影响两件事：某行的**承接收益能否真兑现**、某条**风险条的力度**。**未测之前不得据此升格或改档**。
 
 | # | 待实测项 | 影响的总表行 | 为什么值得测 | 归属 |
 |---|---|---|---|---|
 | ① | `workspace` **运行时行为**（membership 过滤、`attachSession` 流程）| 2.3.3 | 该行「可降级」**收益的大小**取决于它：兑现 ⇒ 我方只写隔离语义；不兑现 ⇒ 分组底座也要自建 | DSH-3 |
 | ② | `ctx.tools.restrict()` **真 agent 轮** deny 后模型侧行为 | 2.7.2 | 2.7.2 覆盖面的**另一半**（preset 只覆盖两个 knob）；上游无文档，只有实证 | DSH-4 验收 |
 | ③ | `token-meter` **长会话**稳定性与成本 | 2.7.4 / 2.8.3 | 承接的**可靠性**；与 `llm` 组 52 条欠账相关 | DSH-4 验收 |
-| ④ | 0.1.5 的 ACP 是否仍缺 `fork` / `load` / `delete` | 2.3.1 | 「回收站须自做」的旁证；若确有 `fork`，多一条可借鉴路径（读 diff 未见新增 ≠ 实测）| DSH-3 |
-| ⑤ | `settings/*/redact.ts` 是否**真** fail-open（构造用例复现）| 2.7.3 / §5.1 | 决定**风险条力度**：源码标记为真，但「当前确实 fail-open」我方未复现 | DSH-3 |
-| ⑥ | `web-fetch-http` 的 SSRF 行为 + CVM 可达性 | 2.5.2（**已挂起**）| 若将来采纳 `web_fetch` 则**必测**（承接该能力的前置） | 随 §4.1 挂起 |
+| ④ | `settings/*/redact.ts` 是否**真** fail-open（构造用例复现）| 2.7.3 / §5.1 | 决定**风险条力度**：源码标记为真，但「当前确实 fail-open」我方未复现 | DSH-3 |
+| ⑤ | `web-fetch-http` 的 SSRF 行为 + CVM 可达性 | 2.5.2（**已挂起**）| 若将来采纳 `web_fetch` 则**必测**（承接该能力的前置） | 随 §4.1 挂起 |
 
 > **另一类：环境复跑**（数据取自 012 通道、须在 015 复跑：CVM 内存与并发 / Windows 沙箱方言 / Vue↔Tauri 连通 / 反代 T2 / `dsh.exe` 崩溃定性 / **CLI 与 profile 同代**）——**已在 §2.3「015 迁移未闭合项」登记**，不在此重复；它们与本表档位无对应关系。
 
