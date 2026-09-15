@@ -29,3 +29,23 @@
 ## 一些想法，甚至不算待办（普通，不急，先列着
 生产环境维护手段的问题
 和Marvis交流了名词解释是否需要单开文档以降低沟通成本的问题，已进入Marvis交流区，后面有空再说
+
+## Qoder观察到的问题
+
+1. 「加模型零代码」与代码不符：README.md 与 product-positioning.md 2.5.1 都写「models.<name> 任意新增、config.py 自动解析、加模型零代码」。但 llm.py 的 _MODEL_PROVIDER_MAP 是一张显式硬编码的「模型名 → provider」映射表，_resolve_provider_key 对未登记的模型直接抛错。即：新增一个模型必须改这一行代码（代码注释自己也承认「在此处添加一行即可」）。「零代码」只在 config 解析层成立，在模型路由层不成立。建议把口径改成「加 provider 段零代码，加模型需登记一行映射」。
+2. config.example.yaml 与解析结构漂移：models.deepseek 段写了 model: "deepseek-flash"，但 config.py 的 ModelConfig 只解析 api_key / base_url，该字段被静默忽略。（这条 TODO「工程债务」里有个近似条目被标为「延后至 DSH-6」，但那是讲 config.example 与正式版漂移，不完全同一条，供你判断是否同一件事。）
+3. server.host / port 配置实际未被消费：main.py 不含 uvicorn.run，启动靠 make run 命令行参数，配置里的 server.host/port 是死配置。小问题，但属于「说明与实际脱节」类。
+auth.py 的 key 比较用 !=（非恒定时间）——单人+回环场景风险可忽略，但既然要做上云硬前置，顺手用 hmac.compare_digest 是零成本的正解。
+4. 一处「已修复但文档未同步」的可能：复盘报告 §十四 记的「vector_store.enabled=false 被绕过」根因指向 chat_service.py:142 无条件调 get_long_term_memory——但现在 engine.py 第 59 行已有 if not get_config().vector_store.enabled: return [] 守卫，看起来已闭环。如果确实修好了，报告/TODO 里那条「待点将」的状态建议核对一下，避免留下过期的待办。
+
+## 能力承接总表重划之后的待测
+
+有 6 项值得测（已在表内标 ⚪ + 单列〈待实测清单〉）
+| 待测什么 | 影响哪行 | 归属 |
+| workspace 运行时行为（membership 过滤 / attachSession） | 2.3.3 | DSH-3 |
+| ctx.tools.restrict() 真 agent 轮 deny 后模型侧行为 | 2.7.2 | DSH-4 验收 |
+| token-meter 长会话稳定性与成本 | 2.7.4 / 2.8.3 | DSH-4 验收 |
+| 015 的 ACP 是否仍缺 fork/load/delete | 2.3.1 | DSH-3 |
+| settings/*/redact.ts 是否真 fail-open（构造用例） | 2.7.3 / §5.1 | DSH-3 |
+| web-fetch-http SSRF 行为 + CVM 可达性 | 2.5.2（挂起） | 随 §4.1 |
+
