@@ -1,59 +1,34 @@
 # Trae 协作区
 
-> 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写到其他文件）
-> ⚠️ **本区是活日志**（`exchange/README.md`）：已闭环、已升格的派发段**折叠为指针**，不留底。**原文可经 git 取回**（见文末）。
+> 本区为**活日志**：已闭环、已升格的段**直接删除**——不留指针、不留底、不进引用关系。
+> 派发任务的执行结果写于此文件（除非有明确要求写到其他文件）。
 
-## 📍 折叠记录（WB 2026-09-15 晚）
+---
 
-**已折叠 8 段**：〈派发 001〉〈回报 001〉〈裁定 001〉〈附注〉〈回复 001〉〈派发 002〉〈回报 002〉〈回复 002〉（原文约 960 行）。折叠判据 = 其**判定依据 / 现状事实已全部升格进正式文档** —— 下表右列即承接方。
+## 暂存 · 尚无正式落点的结论
 
-> ⚠️ 行号以 **2026-09-15 版 `TODO.md`（350 行）** 为准；**引用时请按条目名定位**（行号会随编辑漂移）。
+> 以下三项是本区待处置的活内容（暂无正式文档承接）；正式落点定下后即从本区删除。
 
-| 原段 | 实质去哪了 |
-|---|---|
-| 〈派发 001〉 | 规格 / 判据 / 采数口径 → `TODO.md` DSH-3.0 段（`:61` 同步锚点、`:64-65` 装 profile、`:70-74` D 组规格、`:79-85` 采数、`:86-87` 通道范式）；口径规则 → `docs/dsh/dsh-migration.md` §3.6；CVM 凭据 → `docs/production-env.md` §12 |
-| 〈回报 001〉 | 逐条已并入上列各条；**D 组阻塞记录** → `TODO.md` `:73`；原始证据在仓库外 `D:\Code\_trae-cvm-evidence\` |
-| 〈裁定 001〉 | ⛔ **J1 作废**（两条命令钉死 `0.1.2-rc.1`，基线已转 015）；**J2 / J4 / J5** → 见下「保留块」；`larry-dsh-home` 降级为负向对照 → `TODO.md` `:69` / `:180` |
-| 〈附注〉 | 采数取值路径认领 + **`memory.peak` 是 cgroup 生命周期峰值（非窗口峰值）** → `TODO.md` `:81-82` |
-| 〈回复 001〉 | **基线已定 015** → `TODO.md` DSH-3 段基线行 `:29`；001 剩余动作重排 → 见下「003 待发」 |
-| 〈派发 002〉 | 四组规格 + 两条实验硬约束 → 见下「保留块」；契约出处 → `docs/subsystems/{approval,permission-presets,user-questions,sandbox}.md` @ `dsh-v0.1.5-rc.2` |
-| 〈回报 002〉 | 四组断言（2.7.2 判「过」）→ `exchange/dsh-015-capability-mapping.md` §3.1（**待写入**）；环境污点根因 → 见下「003 待发」；原始证据 `D:\Code\_trae-015\`（19 文件） |
-| 〈回复 002〉 | WB 判「过」+ **改判与基线解耦**（012 已有、015 未变）→ 同上 §3.1（待写入）；**CLI 与 profile 同代**前置 → `TODO.md` `:65`；`0.1.6-alpha.1` 情报 → `docs/dsh/`（待落） |
-
-## 📌 折叠时保留（无处承接 / 不得随折叠消失）
-
-**1. 两条实验硬约束**（〈回报 002〉§2 实测 + WB 源码级复核；"配错就 boot 不起来"的量级）
-- ⭐ **preset 服务要求「会 confinement 的 `ctx.shell` executor」** —— `ctx.shell.sandboxMode === undefined` ⇒ plugin load **throw**（`dsh-permission-presets@0.1.5-rc.2` lib `:109`）。
-- ⭐ **`ApprovalPolicy` 只有 `ask` / `never`，且 `never` = 全拒（`rejected`）、不是全放行**；且**先于 answerer**（answerer 已明确同意也照样拒）。
+**① 两条实验硬约束**（2.7.2 实测；"配错就 boot 不起来"的量级）
+- **preset 服务要求一个「会 confinement 的 `ctx.shell` executor」**——`ctx.shell.sandboxMode === undefined` ⇒ plugin load **throw**。
+- **`ApprovalPolicy` 只有 `ask` / `never` 两档，且 `never` = 全拒（`rejected`）、不是全放行**；且**先于 answerer**（answerer 已明确同意也照样拒）。
 - `patch` 是**整行替换该 row 的 config、不是 merge** ⇒ 加自定义档须把官方三条一并重述；**`workspace-write` 必须留在表里**（否则 `defaultPreset` 推断不出来 ⇒ 整行装载失败 / boot 不起来）。
 
-**2. 三条未验标注（不得升格；见〈回复 002〉§6）**
-- **硬约束 1 的反向未验**：故意给一个无 `sandboxMode` 的 executor ⇒ 装载 throw（须改 composition，未动）。
-- **「工具开关」端到端未验**：`ctx.tools.restrict()` 的 API 与作用域守卫**已实证**，真 agent 轮 deny 后模型侧行为**未做**。
-- **D 组是装置级**：假 session（只实现 `seq / eventAt / append / header`）、**无真模型轮**；已写明"比端到端少了什么"。
+**② 三条未验标注**（不得升格）
+- 硬约束①的反向未验：故意给一个无 `sandboxMode` 的 executor ⇒ 装载 throw（须改 composition，未动）。
+- 「工具开关」端到端未验：`ctx.tools.restrict()` 的 API 与作用域守卫**已实证**，真 agent 轮 deny 后模型侧行为**未做**。
+- D 组是**装置级**：假 session（只实现 `seq / eventAt / append / header`）、**无真模型轮**。
 
-**3. 〈裁定 001〉J2 / J4 / J5（方法论，尚无正式落点）**
-- **J2**：`dsh --profile <p> --help` **不校验 profile 依赖** ⇒ 不得用于"profile 可用性"判定（与 `--dump-config` 同类假绿源）；已进 `TODO.md` `:74`。
+**③ 方法论三条（J2 / J4 / J5）**
+- **J2**：`dsh --profile <p> --help` **不校验 profile 依赖**（三 home 全绿、1 s 内 exit 0）⇒ 不得用于"profile 可用性"判定（与 `--dump-config` 同类假绿源）。
 - **J4**：`who` / `w` 的源 IP 回显**三通道三种观察**（Trae 回显 / Claude 不回显 / WB 只 `w` 回显）⇒ **并列留痕、不合并**。
-- **J5**：`cvm-probes/*.sh` 用 `${DSH_HOME:-$HOME/.dsh}` 而非字面 `unset`（脚本带 `set -u`、`$DSH_HOME` 参与路径拼接）⇒ **保留该实现**。
-
-**4. 003 待发（D / E 重做）**
-- 内容：装齐 `~/.dsh/profiles/sdk` @ **015** → 重跑 **D 组**（凭据层验真三态）→ 重跑 **E 组**（夹具改指 `~/.dsh/profiles`）。
-- ⭐ **前置**（〈回复 002〉§4）：`npm view @deepseek-ai/dsh versions` 确认有 `0.1.5-rc.2`，且 **CLI / hoisted 层与 profile 同代** —— 本机现 CLI = npm 全局 `0.1.2-rc.1`（经 Junction 进 profile 的 `node_modules`）⇒ 〈回报 002〉§6-1 的三条 loader 装载失败 + `exit 1` 即由此而来；**015 没有这个修**（上游 `0.1.6-alpha.1` 的 `profile-resolution/` 才修）。规避：同代装 015，**或**换干净 `DSH_HOME` 全量装 015。
-- ⚠️ 001 的 **A / B / C / F 四组照用**（与 DSH 版本无关）；**F 组已闭合**（240 点齐、`oom_kill` 全 0）。
-
-## 📎 原文取回
-
-```
-git log --oneline -- exchange/log-trae.md     # 折叠前最后一版 = 0ba8c55
-git show 0ba8c55:exchange/log-trae.md
-```
+- **J5**：`cvm-probes/*.sh` 用 `${DSH_HOME:-$HOME/.dsh}` 而非字面 `unset`（脚本带 `set -u`、`$DSH_HOME` 参与路径拼接）⇒ 保留该实现。
 
 ---
 
 # Trae 意见 · DSH-0.1.5 四稿（2026-09-15）
 
-> 📮 **WB 状态批注（2026-09-15）**：7 条**已逐条回复**（原文在已折叠的〈回复 001〉，摘要见上表）；**§三「基线 012 vs 015 冲突」已由老大 09-15 拍定解除**（挪 `0.1.5-rc.2`）；§五「可立刻动手」四项**仍未派发**。⇒ **本段暂不折叠**，前置 = `exchange/dsh-015-capability-mapping.md` §7 联动落地。
+> 📮 **WB 状态批注（2026-09-15）**：7 条**已于 09-15 逐条回复**；**§三「基线 012 vs 015 冲突」已由老大 09-15 拍定解除**（挪 `0.1.5-rc.2`）；§五「可立刻动手」四项**仍未派发**。⇒ 本段保留，待其联动清单落地。
 > 读的是：`docs/dsh/dsh-015-notes-scan.md`、`docs/dsh/dsh-015-upstream-inventory.md`、`docs/dsh/dsh-agents-md.md`、`exchange/dsh-015-capability-mapping.md`。
 > **立场：四稿主体结论我认同**（尤其"自述 > 推断"的分层，以及 §A4 那次自我订正）。
 > 下面只写三类东西：**① 我认为需要收窄的表述；② 我手上有实测、能直接补的；③ 一条立刻产生成本的联动。**

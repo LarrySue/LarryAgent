@@ -234,7 +234,7 @@
 
 | 项 | 为什么是它 | 执行 |
 |---|---|---|
-| `permission-presets` 自定义表在真实 profile 生效 | **2.7.2 改判的落地前提**（§2 的 ⚪） | ✅ **已实测通过**（原〈派发 002〉C 组，**WB 判「过」**）—— 原文已折叠，见 `exchange/log-trae.md` 折叠记录 |
+| `permission-presets` 自定义表在真实 profile 生效 | **2.7.2 改判的落地前提**（§2 的 ⚪） | ✅ **已实测通过**（002 C 组，**WB 判「过」**） |
 | `ctx.approval` 的 fail-closed 实测 | §2 引用的核心契约 | ✅ **已实测通过**（原 D 组 8/8：无 answerer / 抛错 / 不合规形状 ⇒ 均 `unavailable`；含正向对照 `allowed-once`） |
 | ⚠️ 另：**preset 表管不到「工具开关」** | WB 2026-09-15 读原文发现 ⇒ 改判覆盖面须按实测重划 | ✅ **已实测坐实**：`PresetSpec` 只含 `{sandbox, approval}`；工具级另走 `ctx.tools.restrict()`、**须挂 `agent.ctx`**（端到端未验） |
 

@@ -464,7 +464,7 @@ records:
 > - `harness/scripts/run-real-api.mjs` → vitest → `harness/vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']`，而该文件 `:31-33` 把 `process.env.DSH_HOME` **强制覆盖为 `mkdtempSync` 出的临时目录**，`:44-52` 还有正向白名单断言（指向真实路径会判 FAIL）。
 > - ⇒ **real-api 链路读不到 `~/.dsh/.credentials.yaml`**；它的 Key **只能来自环境变量** `DEEPSEEK_API_KEY`（`tests/real-api.ts:28` 自述"注入值"、`:31` 临时 home 隔离）。
 > - ⇒ 推论：`cvm-probes/*.mjs`、`dsh-prompt.mjs` 的注释也都写"Key 由 caller 注入" ⇒ **CVM 上至今没有任何一条路径消费过那份 `.credentials.yaml`**（与 `:458` 那条"09-10 的连通来自启动环境注入"互为佐证）。
-> - ⇒ **正确验法**：`harness/scripts/dsh-prompt.mjs`（**不覆盖 `DSH_HOME`** ⇒ 裸跑落 `~/.dsh`），且**不注入** `DEEPSEEK_API_KEY` 环境变量 —— 若此时仍成功，即证明**文件层被读**。**规格与三态造法见 `TODO.md` DSH-3.0 段 `:70-74`**（原文派发稿已折叠；`git show 0ba8c55:exchange/log-trae.md`）。
+> - ⇒ **正确验法**：`harness/scripts/dsh-prompt.mjs`（**不覆盖 `DSH_HOME`** ⇒ 裸跑落 `~/.dsh`），且**不注入** `DEEPSEEK_API_KEY` 环境变量 —— 若此时仍成功，即证明**文件层被读**。**规格与三态造法见 `TODO.md` DSH-3.0 段 `:70-74`**。
 
 ### 12.6 与 Tier0 红线 ① 的关系
 
