@@ -61,7 +61,7 @@ AIGC:
 ## 3. Tier 1 角色约束文件
 
 **文件与载体（不对称，按风险面）：**
-- **Claude / Trae / Qoder**：`.claude/CLAUDE.md`、`.trae/TRAE.md`、`.qoder\rules\QODER.md` → 平台会话开始自动加载（强）。
+- **Claude / Trae / Qoder**：`.claude/CLAUDE.md`、`.trae/TRAE.md`、`.qoder/rules/QODER.md` → 平台会话开始自动加载（强）。
 - **WB**：`.workbuddy/memory/MEMORY.md`（另有全局级MEMORY、USER、SOUL文件） 强约束，每次启动WB客户端软件即可无感注入，目前作为WB的约束文件，考虑到该文件需要控制大小否则注入时会被截断，将部分具有全局价值的约束迁移到全局记忆（并非全局MEMORY文件，而是WB的设置面板内的全局记忆，大概率是独立注入方式，注入时机经观察与两级MEMORY.md相同）
 - **Marvis 不进约束体系**：保持"外部审计"定位——唯一不参与实施、能独立怀疑全局的视角，塞进约束反而削弱它。
 
