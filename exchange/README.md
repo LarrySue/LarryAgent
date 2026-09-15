@@ -13,12 +13,11 @@
 - `log_design.md` — UI DESIGN 负责人交流区（全面负责 UI 设计；当前独立于主团队、尚未正式入队，负责人待定）
 - `log-claude.md` — Claude Code（代码检查测试）
 - `log-trae.md` — Trae CN（代码具体编写）
+- `log-qoder.md` — Qoder（文档一致性观察者）
 - `log-marvis.md` — Marvis（产品宏观 / 用户代言）
 - `log-other.md` — 编外 AI 区（老大按需点将，不属固定分工、不受各角色约束文件管辖）；各条标注 AI 名与日期，供 WB 整理采纳
 
 **讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）：
-
-> ⚠️ 2026-09-15：`dsh-015-capability-mapping.md` 已定稿，**移入 `../docs/dsh/`**（索引见该区 README）。
 
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）

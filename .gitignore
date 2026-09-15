@@ -34,7 +34,7 @@ ref/
 *.swp
 *.swo
 
-# Qoder（第三方 IDE 工作目录，不入 git）
+# Qoder自生成文档（Qoder工具自生成的项目文档，暂时不入 git，后续产品稳定后或可考虑维护并随版本发布）
 .qoder/repowiki/
 
 # Node
