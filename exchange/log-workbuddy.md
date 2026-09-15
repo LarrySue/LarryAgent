@@ -155,3 +155,17 @@
   2. **存量 log 引用面**：`docs/ai-governance.md:243`（**机制性** —— 要求 Trae 读 `log-trae.md` 作任务简报）、`docs/ui-reference.md:5/139/147`、`docs/test-env.md:4-5`、`docs/local-env.md:439`、`archive/report-2026-08-30.md`、`archive/roadmap-history.md:354`、`harness/tests/global-setup.ts:77/127`、`backend/tests/test_integration_llm.py:48`
   3. **本文件自身也是 `log-*.md`** ⇒ 按新原则同样待处置（历史行里仍有若干指向已删段的指针）
 - 未动：`docs/dsh/dsh-migration.md`（决策稿侧仍记 012）、003 派发稿、`product-positioning.md`。
+
+## DSH 015 能力树映射 · 定稿移入 `docs/dsh/`（2026-09-15 晚）
+
+- **动作**：`exchange/dsh-015-capability-mapping.md` → **`docs/dsh/dsh-015-capability-mapping.md`**（`git mv`，历史保留）。性质由「🔴 讨论稿」改「✅ **判定稿**」，用途定为 **`dsh-migration.md` §3.6 承接总表的逐条依据**（二者同源，任一侧变更须同步另一侧）。
+- **移区时做的状态区订正**（不订正就会把过期表述带进 `docs/`）：
+  1. `:19` 统计表「对比现行总表 8 → 12 / 23 → 4」→ 改「**旧口径**」列（总表已按本稿重划，原对比列变成自我指涉、读不出差异）
+  2. §7「联动清单（**待裁定后执行，本稿未动**）」→ **执行状态表**（加状态列，✅/⏳/🅿️/⏸/🟡 逐条）
+  3. §9 落点行「本稿继续留 `exchange/`」→ 已移入 `docs/dsh/`
+  4. 头部「本稿**未改动任何 docs / TODO**」→ 该声明已过期，改述移区事实
+- **引用面同步**（移区必做，否则死链）：`dsh-migration.md` ×2（`:862`/`:907`）／`capability-tree-revision.md` ×4（改 `../../exchange/…` 并定义简称「revision 稿」）／`docs/local-env.md` ×1／两区 README 同步（`exchange/README.md` 删索引条 + 留一行「已移入」指针；`docs/dsh/README.md` 新增索引条）。
+  - ⭐ **顺带修好一处原路径错误**：`dsh-migration.md` 原写 `../exchange/dsh-015-capability-mapping.md` —— 从 `docs/dsh/` 出发应解析到不存在的 `docs/exchange/`（`../` 只到根下一层的 `docs/`，`product-positioning.md` 用 `../exchange/` 才对是因为它在 `docs/` 下）。改同目录裸名后既正确又简短。
+- **复查**：全仓 grep `exchange/dsh-015-capability-mapping` ⇒ **正式文档 0 命中**；存量仅在 `log-*.md`（历史记录，按「log 不留痕」原则不追改）与 `.workbuddy/memory/`（历史存档）。
+- **遗留（均已知、非漏项）**：§7 表中 ⏳ 三项 —— §3.3 依据换口径 ／ §3.4 漂移① 收窄 ／ `TODO.md` DSH-4 段；🅿️ fail-open 一条已归 TODO 层（老大 2026-09-15 裁定）。
+- **顺带发现（未动，待老大）**：`dsh-migration.md` §3.2 表两行与 §3.4 自相矛盾 —— `storage/` 行仍写「外接 SQLite **待实测**」（§3.4 `:294` 已记 ✅ 实测通过）；`sandbox/` 行仍写「仅 Linux/macOS 侧成立」（§3.4 `:285` 已推翻「Windows 非一等」）。两者都是**依据层**文字，非格式瑕疵，未擅自改。
