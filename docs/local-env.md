@@ -436,7 +436,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 
 ## 10. 本机环境变量与工具链基线（附：各 AI 运行时差异警示）
 
-> **来源**：Qoder《本机开发与测试调试环境冲突摘要》（`exchange/log-other.md`，2026-09-11）；WB 于同机**逐条实测校验**后校正——**只保留实测成立项**，并**保留证伪项**（防后续 AI 再被误导）。
+> **来源**：QoderWork《本机开发与测试调试环境冲突摘要》（`exchange/log-other.md`，2026-09-11）；WB 于同机**逐条实测校验**后校正——**只保留实测成立项**，并**保留证伪项**（防后续 AI 再被误导）。
 
 ### 10.1 ⭐ 各 AI 工具运行时被注入不同环境 ⇒ 判据必须注明"取自哪棵树"
 
@@ -449,7 +449,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 | `npm` | managed node 自带的 npm | `AppData\Roaming\npm` |
 | PATH | — | 无 `.qoderwork\bin`（对方进程注入物，不在持久 PATH） |
 
-⇒ **纪律**：任何"本机环境"结论**必须写明取自哪个运行时**（与 §7「判据必须取自真实运行时」同源）。拿某一棵树的结果去描述"本机"，会得到互相矛盾且不可复现的结论——这正是 Qoder 报告多处失准的根因。
+⇒ **纪律**：任何"本机环境"结论**必须写明取自哪个运行时**（与 §7「判据必须取自真实运行时」同源）。拿某一棵树的结果去描述"本机"，会得到互相矛盾且不可复现的结论——这正是 QoderWork 报告多处失准的根因。
 
 ### 10.2 实测成立（持久层，与 DSH 开发相关）
 
@@ -467,7 +467,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 | `tauri` / `vite`"未装到全局或当前工程目录" | ❌ PATH 无，但 **`client/node_modules/.bin/` 内有** `tauri`/`vite`/`vitest`（本地依赖，走 `npx`/package script） |
 | PATH 有 `…\.qoderwork\bin` 重复条目 | ❌ 持久 User PATH 无该条 |
 
-**校正经要**：Qoder 报告整体属**"替身运行时"观察**，**不作为本机事实源**；本节为核准版。其余未列项（如全局工具链位置、PATH 顺序）低影响，不落。
+**校正经要**：QoderWork 报告整体属**"替身运行时"观察**，**不作为本机事实源**；本节为核准版。其余未列项（如全局工具链位置、PATH 顺序）低影响，不落。
 
 ---
 

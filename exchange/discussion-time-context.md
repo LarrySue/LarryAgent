@@ -20,7 +20,7 @@
 
 ## 零、项目情况简介（供未介入本项目的 AI 参考）
 
-> 本节为自足背景，目标读者是**完全未参与本项目**的外部 AI——读到这里即可对「这是什么项目、为什么讨论时间上下文」形成完整理解，无需再翻其他文件，Trae、Claude、Marvis、Workbuddy、Qoder可忽略此部分。
+> 本节为自足背景，目标读者是**完全未参与本项目**的外部 AI——读到这里即可对「这是什么项目、为什么讨论时间上下文」形成完整理解，无需再翻其他文件，Trae、Claude、Marvis、Workbuddy、QoderWork可忽略此部分。
 
 **LarryAgent 是什么**：个人 AI Agent，单人使用、**第一版起即面向云部署**（当前本机仅开发+测试环境，尚未达到第一版发版）。PC 版为 C/S——client 在本机不上云（选 C/S 而非 B/S 为本地文件操作能力）、server 部署云端；移动版为 B/S。核心能力三件：管对话、有长期记忆、能调工具（读写文件 / 执行命令 / 联网搜索）。技术栈 **Python FastAPI + SQLite + ChromaDB + Vue 3 + Tauri + HTML5**（PC 端 Tauri 壳，移动端 HTML5 规划中）。
 

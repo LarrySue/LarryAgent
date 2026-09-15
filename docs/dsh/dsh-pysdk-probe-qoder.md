@@ -1,4 +1,4 @@
-# DSH Python SDK 实测：一等 / 二等公民判定（Qoder）
+# DSH Python SDK 实测：一等 / 二等公民判定（QoderWork）
 
 > 🔒 **实证存档 · 永久保留**（老大定，此文档价值高，不参与柔性清理，任何人不得删）
 > ✅ **本报告结论即最终裁定口径**：WB 判 **二等**、老大确认 → 走 **A-framework**，与 `dsh-migration.md` §3.5 一致。
@@ -72,7 +72,7 @@ Final git diff --no-ext-diff:
 (empty; all runtime products are untracked relative to the baseline)
 ```
 
-🟢 所有变化都位于 Qoder 自己的 `probe-qoder/dsh-home`，目录名分别对应 profile 初始化、B1、B2/B3、session persistence 和 storage 初始化；未发现无法解释的外来文件。🟢 LarryAgent 仓库本身未写入 venv、DSH_HOME 或探针运行产物。
+🟢 所有变化都位于 QoderWork 自己的 `probe-qoder/dsh-home`，目录名分别对应 profile 初始化、B1、B2/B3、session persistence 和 storage 初始化；未发现无法解释的外来文件。🟢 LarryAgent 仓库本身未写入 venv、DSH_HOME 或探针运行产物。
 
 ## 2. A 结论与 JSON-RPC 方法面
 
@@ -331,7 +331,7 @@ git -C "%DSH_HOME%" diff --no-ext-diff
 
 B1 从空 profile 重装时需要构建期 Node/pnpm；本次使用的是探针目录内隔离安装的 pnpm，不改系统全局安装。持久安装完成后，`probe_b1_plugin.py` 会先从 PATH 移除系统 Node 再验证运行期。
 
-原始证据位于 Qoder 专属探针目录 `probe-qoder/raw/`：
+原始证据位于 QoderWork 专属探针目录 `probe-qoder/raw/`：
 
 ```text
 environment-facts.txt
