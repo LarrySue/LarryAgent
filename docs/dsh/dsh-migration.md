@@ -85,7 +85,7 @@
 | **官方分发（关键）** | ①npm **`@deepseek-ai/dsh`** 真实发布，latest = **`0.1.5-rc.1`**（2026-09-15 实测：该 tag 自 09-10 起**未再推进**，而 `next` 已 `0.1.5-rc.2`、`alpha` 已 `0.1.6-alpha.1` ⇒ **勿以 latest 判断上游进度**），MIT，bin=`dsh`，70 依赖，官方用法 `npx @deepseek-ai/dsh web`；②PyPI **`deepseek-harness-sdk`**（纯 Python，any 平台）+ **`deepseek-harness-runtime-bin`**（**`0.1.5rc1`**，2026-09-15 实测：**5 平台 wheel** —— Linux x64/arm64 · macOS arm64 **/ x86_64** · Windows x64；**仍无 sdist**），**后者把 `dsh` CLI 与整个 Node 依赖树打包为原生可执行文件，SDK 使用无需系统 Node.js**（`requires no system Node.js`） | 🟢 |
 | **插件生态（关键，前判"生态早期"已推翻）** | 社区精选列表 `awesome-dsh-plugin/awesome-dsh-plugin`（**14.7k star**）共 **3,199 个插件**，25 个分类；官方安装命令 `dsh plugin add`（插件声明 `dsh.bundle` manifest）+ 插件市场 **`dsh-market`**（一键安装/升级）。**与本项目强相关分类**：Tools & Capabilities **425** / Memory **149** / Sessions & Messages **201** / Workflow & Automation **190** / Skills **135** / Models & Providers **130** / Security & Permissions **108** / Remote & Mobile **89**（飞书 bot / LAN access / auth tunnel）/ WSL & Windows Interop **34**。**Identity & Communication 仅 12**（印证 §3.3「用户画像 DSH 不给」—社区也未补上）。**插件装载在 DSH 运行时内，与后端是否用 Python SDK 无关**（两类方案不冲突）。**⚠️ 用法约束见 §3.0：生态对我们是「参考实现库」，不是「能力货架」——只借鉴 / fork，不直接纳入** | 🟡 |
 | **`identity/` 语义** | 存在，但**不是用户画像**：「one anonymous id per harness home… **without identifying the user**」，用于 telemetry / feedback / DeepSeek 请求关联，无配置项 → §3.3「用户画像 DSH 不给」结论**成立** | 🟢 |
-| **云端形态** | AGENTS.md 对 cloud / multi-user / tenant / single-user / personal **零命中**（本地 grep 确认）| 🟢 |
+| **云端形态** | AGENTS.md 对 cloud / multi-user / tenant / single-user / personal **零命中**（本地 grep 确认）—— ⚠️ **零命中 ≠ 无远程能力**：上游已有**单机远程访问**的完整实现（见 §3.3「云端部署」行），差别只在多用户 / 租户语义 | 🟢 |
 
 ### 2.1 关键能力（按与本项目相关度排序）
 
@@ -262,6 +262,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | `test-support/llm-replay` | snapshot replay 测试（真实会话录制 → 无 key 重放）| ❌ 无 | 测试范式升级（见 §3.6 DSH-6）|
 | `e2b/` | 云沙箱（POC）| ❌ 无 | 远期候选 |
 
+> **口径注（2026-09-15）**：本表是**底座层清单，证据等级 = 本地代码复核（见 §2.2）**，成表于 `0.1.2-rc.1` 期。**015 新增件不逐条补入**——我方对新增件只有规格文字级证据（🟡），混入会降低本表口径。**015 全量能力面与档位的唯一权威 = §3.6 承接总表**；本表用途不变（回答"底座层白给什么"）。
 
 ### 3.3 DSH 一概替不了的（产品差异化，A/C 都要自做）
 
@@ -270,7 +271,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | **用户画像** | `identity/` **存在**（本地确认），但语义为「one anonymous id per harness home… **without identifying the user**」——仅用于 telemetry / feedback / provider 请求关联，**无个人维度** | DSH 无用户画像概念，自做（**结论不变**，依据升级为本地实证）|
 | **知识库** | DSH 内核无 BM25/FTS+向量混合检索；但**社区有现成实现**（Memory 分类 149 个：ReMe 自进化知识库 / dsh-tiddlywiki / eli-mode 知识库驱动预设）| **从"自做"降为"借鉴自实现"**（社区方案作**参考实现**：抄 schema / 检索组织思路，**不直装**；需验场景匹配：多为编码/项目知识库，非个人生活知识库）|
 | **单人形态** | AGENTS.md **零论述** personal / private assistant | DSH 没有"私人助理"概念 |
-| **云端部署** | AGENTS.md **零论述** cloud / multi-user / 租户；只有本地 `host/` + 本地 `client/` | DSH 内核无云端形态，但 **Remote & Mobile 分类 89 个插件**提供多端接入（飞书 bot / LAN access / auth tunnel / winrm）→ **"多端接入"可从自做降为选型**；云侧部署与租户隔离仍需自做 |
+| **云端部署** | **有单机远程访问的完整实现**：`workspace-files-service` 原文 *"from a browser that may not be on the Host machine"* + `/api/file` 认证路由 + 持续重连；**缺的是多用户 / 租户语义与传输安全**（出厂形态仍是本机 loopback）| **"单机远程访问"从自做降为配置与加固**（承接总表 2.10.1）；**多用户 / 租户隔离仍需自做**。另有 **Remote & Mobile 分类 89 个插件**提供多端接入（飞书 bot / LAN access / auth tunnel / winrm）可作选型 |
 | **每会话文件沙盒**（2.3.3）| `sandbox/` 是权限沙箱 ≠ 每会话文件沙盒 | 不是 DSH 给的语义 |
 | **回收站** | `session/` fork/resume ≠ 回收站（不同语义）| 不是 DSH 给的语义 |
 | **长期记忆语义化** | DSH 内核 `session/` 是原始事件流水；但**社区插件高度成熟**（`dsh-memory-connect` = SQLite FTS5 + **bge-small-zh-v1.5 本地 embedding** + RRF 融合 + 时间上下文图 valid_from/valid_until/supersedes + 信任模型「召回历史按不可信参考注入」——**与 LarryAgent 现有技术栈与既有设计几乎同构**；另有 `dsh-auto-memory` 双轨检索、`dsh-project-memory` 可追溯引用、`Co-Engram` 原生 Cordis 38 工具）| **从"自做"降为"借鉴自实现"**（社区方案比现有实现更完整：**照其设计重写 / fork 后改造，不直装**——按 §3.0 硬约束）|
@@ -293,7 +294,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | **第三方插件安全** | SAFETY.md 明示：沙箱、审批与权限控制**不能保证隔离**（未接受安全审计）| 第三方插件视为**不可信代码**。**§3.0 后本风险大幅下降**：不直装 = **未经审读的**第三方代码不进运行时（fork 路径下经改造的源码必先审读，措辞前后自洽）；凭据 / 文件 / 网络相关部分按最小权限重写。**缺口（QoderWork 二点，采纳）**：不直装 = 失去上游自动补丁通道 → 须补 **upstream 追踪与 CVE 响应流程**（见 §3.7）|
 | **会话存储外接**（原 §九 保留项）| `storage/` 是 Non-session storage hub + backends | ✅ **DSH-2.5 ① 已实测（2026-09-10）**：官方 `dsh-storage-sqlite` backend 仅需配置，`path` 可指任意绝对路径（脱离 `.dsh-home`）→ 外接 SQLite **可行**（结论见下方 DSH-2 退出条件）|
 | **headless + ACP 契约**（原 §九 保留项）| `acp/` 描述"Automation-only Agent Client Protocol server" | ✅ **DSH-2.5 ② 已实测（2026-09-10）**：`initialize` / `session.new` / `session.list` / `session.close` 均 OK；`fork` / `load` / `delete` = **`-32601` 方法缺失**（对照 `session/resume` = `-32602` 证明非鉴权遮挡）→ 契约面稳定，但**无 fork / replay，不适合前端**（§3.6）|
-| **产品承诺渗透性漂移（层间泄漏）**（Marvis，采纳）| 承接 ≠ 承诺不变，底座机制会悄悄改写产品语义：① **2.4.3 硬删 vs session append-only 留痕**（记忆删了但事件日志仍在，与 2.8.2 行为可见冲突）；② **2.9.2 保真度档位**取决于 compaction 默认策略（不满足则自做策略插件）；③ **三处泄底**：术语（harness 词不得出现在用户可见处）/ 交互（审批须默认聚合、低打扰）/ 能力（接了 8 个子项却没兑成体验）| **换底座对用户观感中性偏加分**——DSH 是原材料，净影响由语义层决定；**"套壳"在用户侧不是风险，真风险是没把白给子项兑成体验**。① 挂 2.4.3 验收注记：删 → 回放 → 断言无残留，不可避免则产品层定夺（轨迹脱敏 vs 级联删）；② 泄底三项由语义层收敛，不进必关清单 |
+| **产品承诺渗透性漂移（层间泄漏）**（Marvis，采纳）| 承接 ≠ 承诺不变，底座机制会悄悄改写产品语义：① **2.4.3 硬删 vs session append-only 留痕**（**仅在「记忆事件写进 session log」这一种设计下成立**，与 2.8.2 行为可见冲突）；② **2.9.2 保真度档位**取决于 compaction 默认策略（不满足则自做策略插件）；③ **三处泄底**：术语（harness 词不得出现在用户可见处）/ 交互（审批须默认聚合、低打扰）/ 能力（接了 8 个子项却没兑成体验）| **换底座对用户观感中性偏加分**——DSH 是原材料，净影响由语义层决定；**"套壳"在用户侧不是风险，真风险是没把白给子项兑成体验**。① **前提已收窄**：记忆本体存自库（`storage` domain / 外接 SQLite，DSH-2.5 ① 已实测）⇒ 硬删**无 append-only 冲突**，须在 DSH-4 写死「记忆本体不入 session log」（承接总表 2.4.3）。仍挂 2.4.3 验收注记：删 → 回放 → 断言 session / trajectory 无残留；② 泄底三项由语义层收敛，不进必关清单 |
 
 **升级 SOP**（取代原"锁版本不升不降"——该表述与立论③"随 DSH 演进"自相矛盾，第 1 轮 Trae/QoderWork/Marvis 三方一致指出）：
 
@@ -463,7 +464,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 > ⭐ **DSH-3 的 S0 通道已定（老大 2026-09-14 拍）：`sdk`。** 它走的就是 **B 段**（服务 ↔ DSH 同机，09-09 定型 SDK/stdio），**不是新开一条面**；依据 = 前置件 1（`harness/tests/real-api.ts`）**已用 `dsh-sdk-client` + `profile: 'sdk'`**（绿/红两侧经 WB 独立复验）⇒ **零新增器材**；S0 四项判据在〈sdk 面实测能力边界〉**逐条覆盖**。
 > **ACP 的用途（一笔记录）**：ACP = **对外"标准 agent server"入口**（第三方 IDE / CI 直驱）+ **子代理 / 测试集成**的协议面；本项目**不在 DSH-3 用它**。⚠️ **它不是 sdk 的升级替代** —— sdk 面虽无具名 `resume`，**续会话语义在 `SessionPromptParams.sessionId` 上**（`packages/sdk/protocol/src/types.ts:36-38`；方法面 `:115-119` 仅 `initialize` / `session/prompt` / `shutdown`），acp 的 `session/resume` 是**同能力的不同承载**，**不构成换面理由**。
 
-**风险（修订）**：① preview 期 API 漂移（锁定 `0.1.5-rc.2`，2026-09-15 前为 `0.1.2-rc.1`）；② **鉴权已内置**（token→签名 cookie），但**多用户 / 租户隔离仍须自做**（§3.3：DSH 内核对 cloud / multi-user / tenant 零论述）；③ 浏览器侧 WS 可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，未实测；④ **L2 反向工具执行仍须自做**（事件流下发指令 + unary 回传结果），此缺口三个官方面都没有。
+**风险（修订）**：① preview 期 API 漂移（锁定 `0.1.5-rc.2`，2026-09-15 前为 `0.1.2-rc.1`）；② **鉴权已内置**（token→签名 cookie），但**多用户 / 租户隔离仍须自做**（§3.3：远程访问已有完整实现，缺的是多用户 / 租户语义与传输安全）；③ 浏览器侧 WS 可行（README 明写 browser 在 WS 协议层答 Pong）→ 对移动版 B/S 有利，未实测；④ **L2 反向工具执行仍须自做**（事件流下发指令 + unary 回传结果），此缺口三个官方面都没有。
 
 > ✅ **可复用性已确认（2026-09-09，推翻一小时前"未知"的判词）**：`dsh-client-connection`、`dsh-client-ui-*` **全部随 npm 分发**（实测 **41 个 `dsh-client-*` 包**，含 chat / theme / brand-official / connection；2026-09-15 复核：`dsh-client-ui-chat` 已到 `0.1.6-alpha.1`，**「包随 npm 分发、可 `pnpm add`」的事实不变**，仅版本号推进）。以 `dsh-client-ui-chat` 为例，其形态为**双面包**：
 > - `lib/index.js` = **node half**；`lib/client.js` = **browser half**（exports 里对应 `"."` 与 `"./client"`）；
