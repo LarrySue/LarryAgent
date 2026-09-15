@@ -2,7 +2,6 @@
 
 > **状态：决策稿（从讨论稿发展而来，经过3轮讨论四方审阅收口，四方一致「同意定稿」，老大 2026-09-08 终审通过）。**
 > 用途：说明 LarryAgent 如何迁移到 DeepSeek Harness（dsh）
-> 路径（换底座）；本文件代表"路径决策。
 >
 > **老大终审结论（2026-09-08）**：§1.5 基准无问题 / §3.0 维持裁定 / §3.7 计划基本合理（后续按实际推进微调）；**§3.5 已终裁**：第 0 项三方实测（Trae 一等 / Claude 一等 / Qoder 二等）→ WB 判 **二等**，**老大 2026-09-08 确认** → 定 **A-framework（全面贴近核心层，含语言）**，路径分岔关闭。除此之外本稿**已定稿**，不再因讨论而改动。
 >
@@ -213,7 +212,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | 5 | `dsh.exe` Windows 崩溃定性（入口 / 安装方式相关） | npm 全局 012 上的反证 | DSH-3 |
 | 6 | ⚠️ **CLI 与 profile 必须同代** | CVM 的 `~/.dsh` profile 与 `harness/scripts/cvm-probes/*.sh` **仍指 `0.1.2-rc.1`** ⇒ **混代未验**，未升级前不得用于 015 判据 | **DSH-3.0 强制前置** |
 
-**本稿内待处置（非实测项）**：① :82 的「9,080 文件」出处不明，已统一为可复现的 `git ls-tree -r` 口径（8,854）；② §3.6 总表统计「白给 8 / 自做 23」**未随 2.7.2 改判重算**，且基于 015 的新口径（可承接 12 / 可降级 15 / 仍须自做 4）**待整体重划后统一落地**。
+**本稿内待处置（非实测项）**：① :82 的「9,080 文件」出处不明，已统一为可复现的 `git ls-tree -r` 口径（8,854）；② ~~§3.6 总表统计「白给 8 / 自做 23」未随 2.7.2 改判重算~~ ✅ **已于 2026-09-15 按 015 口径重划落地**（🟢 12 / 🟡 15 / 🔴 4，见 §3.6 总表）。
 
 **验证纪律**：任何写进本稿**结论区**的 DSH 事实必须标 🟢 / 🟡 / 🔴；**🔴 不得作为决策依据**，只能列入待验证
 
@@ -241,7 +240,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 ### 3.1 一句话结论
 
-**路径强推**——**底座能力开箱获得**（compaction / sandbox / 审批 / trajectory / 多模型 / MCP / ACP，按 31 子项对照共 **8 子项直接承接**，见 §3.6 承接总表；⚠️ **统计为旧口径，未随 2.7.2 改判重算，见 §3.6 总表注**），**产品语义层全部自做**（**23 项**，含长期记忆语义化 / 用户画像 / 知识库 / 单人形态 / 云端 / 回收站；其中长期记忆语义化 / 知识库 / 多端接入 = **借鉴社区设计后自实现**，不直装，见 §3.0 / §3.3）。本文所述路径省的是"造底座"，不是"写代码总量"。
+**路径强推**——**底座能力开箱获得**（compaction / sandbox / 审批 / trajectory / 多模型 / MCP / ACP；31 子项对照 **🟢 可承接 12 / 🟡 可降级 15 / 🔴 仍须自做 4**，见 §3.6 承接总表），**产品语义层全部自做**（🟡 15 + 🔴 4 = **19 项均由我方写实现**，区别只在「有底座可挂 / 有参考可抄」；🔴 4 项是连设计参照都没有的产品语义核心：记忆可管理 / 用户画像 / 自动路由 / 时间感知；其中长期记忆语义化 / 知识库 / 多端接入 = **借鉴社区设计后自实现**，不直装，见 §3.0 / §3.3）。本文所述路径省的是"造底座"，不是"写代码总量"。
 
 **哲学一致性**（底座重 ≠ 产品重）：底座选择走重型（借用 DSH 演进红利 + 底座能力开箱），产品语义层保持轻量派（记忆 / 知识 / 形态三条主线延续产品树结论：不上 KG、不上重护栏、分级触发）；DSH 的 Web GUI / trajectory 全暴露 / 五 profile 等开发者向复杂度，在用户侧收敛回 LarryAgent 的克制界面（保留 Vue/Tauri，见 §3.6 前端路线）。
 
@@ -357,7 +356,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 | 路径 | 决策 | 理由 |
 |---|---|---|
-| **A 换底座** | **✅ 拍板** | 底座能力开箱（8 子项直接承接，口径见 §3.6 总表注）+ 免自造底座 + 演进红利；项目小 + 专属能力薄；能力建设 / 信息流接入层面 A 长期赢；**另加生态红利——但按 §3.0 定性为「设计红利」**：3,199 插件是可查阅的**参考实现库**（省试错与设计：schema / 检索策略 / 时间上下文建模 / 信任模型可直接借鉴），**不是可直装的能力货架**（不省实现、不省维护）|
+| **A 换底座** | **✅ 拍板** | 底座能力开箱（31 子项对照 **🟢 12 / 🟡 15 / 🔴 4**，见 §3.6 承接总表）+ 免自造底座 + 演进红利；项目小 + 专属能力薄；能力建设 / 信息流接入层面 A 长期赢；**另加生态红利——但按 §3.0 定性为「设计红利」**：3,199 插件是可查阅的**参考实现库**（省试错与设计：schema / 检索策略 / 时间上下文建模 / 信任模型可直接借鉴），**不是可直装的能力货架**（不省实现、不省维护）|
 | B 嵌一层 | ❌ 不推荐 | 与 A 重叠大半收益，但跨语言通信 + 双套状态同步复杂度高一档 |
 | C 借思路 | ⚠️ 备选（**仅适用**等 DSH GA / 不绑 preview 风险）| prototype 可短期升级三个 🚧，但与 DSH 演进的 drift 成本长期无法消除 |
 | D 接能力 | ❌ 不推荐 | A 已满足当前诉求；D 仅在"想要 DSH 独家能力"时启用 |
@@ -827,7 +826,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 知识库 | 📐（2.4.6 三层递进）| 自做插件；BM25/FTS+向量混合检索 |
 | 角色机制 | `config.yaml` + 5 角色 system_prompt | 用 `preset/`（agent-presets + persona）+ `cordis.yml` 配置 |
 | 工具生态 | `tools/` 844 行（shell/file_ops/web_search）| 翻译为 DSH 工具插件；**web_search 暂保留自实现 Brave**（DSH 搜索/抓取包归属待核，且须保留首版范围边界——不配正文抓取，SSRF/清洗成本是刻意规避的）|
-| 回收站 / 每会话文件沙盒 | 🚧（2.3.1 / 2.3.3）| 自做插件；DSH `sandbox/` 语义不同需自定义 |
+| 回收站 / 每会话文件沙盒 | 🚧（2.3.1 / 2.3.3）| 自做插件；**`workspace` 只给「会话↔目录」数据模型**（原文 root「不是读边界」）⇒ 隔离语义仍自定义；回收站 append-only 语义下无对应 |
 
 **附带裁定**：历史会话（messages 表）与 DSH session（JSONL 事件流）**不同构，不进 DSH session 格式**——只读留存或一次性转换脚本；**旧会话只是历史，记忆才是活资产**，转换优先级记忆 > 会话。
 
@@ -859,42 +858,64 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 #### 31 子项承接总表（DSH-4 验收基准）
 
-> 依 `../docs/product-positioning.md` 定稿版逐项对照。**开箱白给 8 项（DSH 直接承接）/ 其余 23 项自做或待定**——§3.1 口径的落点。
-> ⚠️ **该统计为旧口径（2026-09-08）**：① 2.7.2 已于 2026-09-15 由「自做」改判为「**机制承接 + 自做策略**」，本表该行已更新而**统计数未重算**；② 基于 `0.1.5-rc.2` 上游盘点的**新口径（可承接 12 / 可降级 15 / 仍须自做 4）**见 `../exchange/dsh-015-capability-mapping.md`，**待整体重划后统一落地本表**。
+> 依 `../docs/product-positioning.md` 定稿版逐项对照；**基线 `dsh-v0.1.5-rc.2`**（2026-09-15 迁移，复核见 §2.3）。
+> **口径（2026-09-15 按 015 重划）**：🟢 **可承接** 12 / 🟡 **可降级** 15 / 🔴 **仍须自做** 4。判据与逐条依据见 `../exchange/dsh-015-capability-mapping.md`（31 子项 × 上游 53 篇子系统规格）。
+> ⚠️ **档位 ≠ 完成度**：「可承接」仍要配置 / 适配 / 验收；「可降级」只是**自做范围可收窄**，收窄多少由产品层定。
+> ⚠️ 标 **⚪ 待实测** 的单元格表示该处依据含未验项——见本节末〈待实测清单〉。**档位本身不依赖未验项**（依据均为上游契约 / 源码事实）。
+> ⭐ = 相较 2026-09-08 旧表有**实质变化**的条目。
 
-| 子项 | 迁移后承接方 | 说明 |
-|---|---|---|
-| 2.3.1 会话生命周期（回收站）| 自做插件 | DSH fork/resume ≠ 回收站 |
-| 2.3.2 对话体验（SSE/停止）| 前端口径自定 | 保留 Vue/Tauri 侧 |
-| 2.3.3 会话级作用域（沙盒）| 自做插件 | DSH sandbox ≠ 会话文件沙盒 |
-| 2.3.4 多模态 🗣️ | 迁移后仍待定 | 产品层未定案 |
-| 2.3.5 主动触达 🗣️ | 自做为主 | DSH `webhook/`（待核）可作外部触发抓手；**新增可借鉴触发骨架**：`packages/goal` + `packages/schedule` + `packages/jobs` 三原语**锁定版实测存在**（🟢 `git ls-tree dsh-v0.1.5-rc.2 packages/`；2026-09-15 复核 **两版均在**），可作主动触达与 2.4.4 记忆保鲜定期调度的设计参考（§3.0：只借鉴不直装）|
-| 2.4.1 短期记忆 | **DSH session + compaction 承接** | 截断机制被 compaction 取代 |
-| 2.4.2 长期记忆双写+人审 | 自做插件 | 挂 session 事件流，保双写 |
-| 2.4.3 记忆可管理 | 自做 | 硬删语义产品层已裁定；**验收注记**：删 → 回放 → 断言 session / trajectory 无残留（与 append-only 事件流的冲突，见 §3.4「产品承诺渗透性漂移」）|
-| 2.4.4 记忆保鲜 | 自做 | supersede + 状态标签（产品树结论）|
-| 2.4.5 用户画像 | 自做 | DSH 无画像概念 |
-| 2.4.6 知识库 | 自做 | 三层递进（产品树结论）|
-| 2.5.1 多模型切换 | **DSH `llm/` 替换** | 开箱即得 |
-| 2.5.2 工具挂载 | **DSH 工具管道替换** | shell/file_ops 翻 TS 插件 |
-| 2.5.3 扩展性/MCP | **DSH `mcp/` 新增** | 开箱即得 |
-| 2.6.1 角色切换 | DSH `preset/` 迁移底座 | cordis.yml 承接 config 角色。🟢 **复核补强**：官方 `preset/persona` 包本体即 `export const inject = ['systemPrompt']`（`packages/preset/persona/src/index.ts:27`），带 `complete`（完全替换 system prompt）／`includeRuntimeContext` 选项 → **角色机制 = 官方 persona preset，公开面可达** |
-| 2.6.2 自动路由 | 自做/待定 | 产品树仍 📐 |
-| 2.7.1 行为安全 | DSH sandbox 升级 | 三平台后端**均存在**（Windows = restricted token）；待DSH-2 本机实测后升 ✅（上限：同世界隔离）|
-| 2.7.2 边界透明 | **DSH 机制承接 + 自做策略内容**（原判「自做」作废，理由见下） | 🟢 **机制面实测闭合**（2026-09-15，002 探针）：`ctx.approval`（结果集 **fail-closed** —— 缺答 / 抛错 / 不合规 ⇒ `unavailable`，8/8 实测）、`ctx.permissionPresets`（**自定义 preset 在真实 profile 生效**，已实测）、`ctx.userQuestions`（可中继已连接客户端）三者均为 A-framework 下**公开契约** ⇒ **我方自做范围收窄为「策略内容」**，起步可用官方两档 preset **零代码**。⚠️ **覆盖边界（勿外推）**：preset 表**只覆盖 `sandbox` + `approval` 两个 knob**；原文「工具开关」**不在其中**，须另走 `ctx.tools.restrict()`（API 与作用域守卫已实证；**真 agent 轮 deny 后模型侧行为端到端未验** ⇒ 归 DSH-4 验收）。原判据「SDK 请求面无 answer 方法」**挂在 A-service 架构面**，已随 A-framework 拍板失效 |
-| 2.7.3 凭据密钥 | **DSH credentials 承接** | 开箱即得 |
-| 2.7.4 成本约束 | 自做 | DSH 无预算/限额概念 |
-| 2.7.5 数据主权出境 | 自评估 | DSH 不改变出境事实 |
-| 2.7.6 数据可恢复迁移 | 自做 | 备份/导出 |
-| 2.8.1 沉淀信息可见 | 自做 | 记忆浏览器远期 |
-| 2.8.2 AI 行为可见 | **DSH trajectory 升级** | session-query SQLite FTS 开箱 |
-| 2.8.3 资源消耗可见 | 自做 | 与 2.7.4 同底座 |
-| 2.9.1 时间感知 | 自做 | 时间专题讨论稿 |
-| 2.9.2 超长会话一致性 | **DSH compaction 承接** | 机制反向问题获解 |
-| 2.9.3 降级韧性 | 部分 DSH + 自做 | llm-retry/guard 可承接；LarryException 统一出口自做 |
-| 2.10.1 云端部署 | DSH host 上云 + 自做适配 | — |
-| 2.10.2 端侧能力 | 自做下沉 | Windows 沙箱后端**已确认存在**（restricted token + `sandbox-windows-acl/`）。🟢 **复核补强**：`sandbox-local` README 明示 **fail-closed**——无可用 runner 时 provider 报 `SANDBOX_UNAVAILABLE`，**命令绝不静默裸跑**（对 2.7.1 行为安全同效）。待 DSH-2 实测（同世界隔离为已知上限，非阻塞项）|
-| 2.10.3 单人单实例 | 形态事实 | DSH 无关 |
+| 子项 | 档位 | DSH 侧（承接内容与边界） | 我方剩余动作 |
+|---|---|---|---|
+| 2.3.1 会话生命周期（回收站）| 🟡 可降级 | `session-title`（durable latest-wins 标题）+ `workspace`（会话有序账户）+ `session-query`（列表 / 过滤 / 分页）+ `persistence`（durability seam，5 个 handle 方法） | **回收站（软删 + 恢复）与批量归档自做**——append-only 事件流语义下无对应。⚪ 待实测：`workspace` 运行时行为 |
+| 2.3.2 对话体验（SSE / 停止）| 🟡 可降级 | 我方**保留 Vue/Tauri** ⇒ DSH 的 React 客户端（`ui-conversation` / `slots` / `client-resources`）**不直接承接**；`continuous-client-recovery`（Host 恢复后 3 s 警告 / 15 s 中止的**持续重连**）、`pinned-scroll-delivery-before-layout` 可作设计参照 | 流式 / 中断恢复 / 常驻 banner 自实现（**设计可借鉴**） |
+| ⭐ 2.3.3 会话级作用域（沙盒）| 🟡 可降级 | **`workspace`**——会话↔目录归属：稳定 id + 规范路径 + 有序 session 账户；**membership = id 在账户内 且 session header 的 cwd 等于 workspace path**（一个 session 结构上至多属一个 workspace）+ `scope`（per-agent 可见性）+ `sandbox` / `permission-presets` | **隔离语义自做**——`workspace` 只做分组，原文 root「只是相对路径基准、**不是读边界**」。⚪ 待实测：`workspace` 运行时行为（membership 过滤 / `attachSession` 流程） |
+| 2.3.4 多模态输入 🗣️ | 🟡 可降级 | **`attachment`**（内容寻址 / 图片与文件分存储 / 共用有序附件列表）+ `client/file-upload`（015 新增：**非图片不限类型、不限大小、byte-for-byte 存**） | **上限 + GC + 2.4.6 升级通道自做**——上游原文「Attachments are **never deleted**」且无类型 / 大小限制 |
+| 2.3.5 主动触达 🗣️ | 🟡 可降级 | **`schedule`**（`after`/`at`/`every`，最小 5 min；严格时区纪律；**catch-up 只补最近一次、不枚举不重放**；**等 Agent idle，绝不打断当轮**；at-least-once）+ **`webhook`**（认证外部投递 → 按需建 root Session）+ `jobs` | ⭐ **触达通道自做**——`ScheduleDeliveryMode = 'session-local'`，上游原文「**no external notification channel or cold-session scheduler exists**」 |
+| 2.4.1 短期记忆 | 🟢 可承接 | `session`（append-only log 为唯一真相源，**LLM message history 是 derived、从不单独存**）+ `compaction` 取代截断 | 配置阈值 / 验收 |
+| 2.4.2 长期记忆双写 + 人审 | 🟡 可降级 | **`storage`** domain form（`defineDomain(spec)`：zod schema + version + `compatibleVersions` + `invalidRecords: backup-and-skip`；`KvTable` 的 `get`/`entries`/`put`/`delete`/`update`；写后 `domain/changed` 事件）。**DSH-2.5① 已实测可外接任意绝对路径** ✅ | ⚠️ `storage` **只有 KV**（唯一 shipped facet），**无向量、无 FTS** ⇒ 元数据可承接，**向量召回 + 语义层（人审 / 矛盾检测 / 保鲜）自做** |
+| 2.4.3 记忆可管理 | 🔴 仍须自做 | 产品语义已裁定（硬删、不建回收站），DSH 无对应 | 全部。⚠️ 前提：**记忆本体不入 session log**（见 §3.4 澄清）⇒ 硬删**无 append-only 冲突**；验收注记：删 → 回放 → 断言 session / trajectory 无残留 |
+| 2.4.4 记忆保鲜与代谢 | 🟡 可降级（**仅设计**）| DSH 无记忆语义；但 `session-query` 的 `surface: current / shadowed / log-only` fold 语义 + proposed `Recallable compaction`（index checkpoints / state checkpoint / in-session history recall）可作设计参照 | 全部实现（**设计可借鉴**） |
+| 2.4.5 用户画像 | 🔴 仍须自做 | `identity/` 自我描述 = **anonymous**（「one anonymous id per harness home … **without identifying the user**」；两版仅 README 改动，`diff --stat` 已确认）| 全部 |
+| 2.4.6 知识库 | 🟡 可降级 | `storage`（KV 底座可挂）+ `session-query`（FTS 索引生命周期 / cursor 分页 / filter 代数**可作设计参照**）+ proposed `Domain KV storage capability seam and the workspace entity` | 混合检索 / 元数据 schema / 引用体系全自做；**底座可复用** |
+| 2.5.1 多模型切换 | 🟢 可承接 | `llm` seam + providers（`llm-deepseek` / `llm-pi-ai` 等）+ `llm-retry` | 配置。⚠️ `llm` 组 **52 条**欠账（含 `llm-pi-ai` 17 条）⇒ 承接但在演化 |
+| 2.5.2 工具挂载 | 🟢 可承接 | `tools` 管道 + `shell` / `fs` / `subprocess` seam（`shell` 翻 TS 插件）。**`web` seam 含 search 与 fetch 两操作**，`web-fetch-http` 已内建 SSRF 全套（DNS pinning / 拒 NAT64 非公网 / 逐跳复查 / 全部封顶） | 工具插件本身。⭐ 范围可重估（`web_fetch` 已挂起，见 §4.1） |
+| 2.5.3 扩展性 / MCP | 🟢 可承接 | `mcp-client` + `extensions`（agent 定义并运行版本化 Cordis 包）+ `self-modification/` | 配置。⚠️ MCP **只消费 tools**——`acp` 原文「MCP resources and prompts have no DSH consumer」 |
+| 2.6.1 角色切换 | 🟢 可承接 | `preset/`（agent-presets + persona）；`preset/persona` 本体 `inject = ['systemPrompt']`（`:27`，两版同）+ `complete`（完全替换 system prompt）/ `includeRuntimeContext` ⇒ **角色机制 = 官方 preset，公开面可达** | cordis.yml 承接 config 角色。⚠️ 015 **persona 前后缀拆分**（破坏性）⇒ 旧配置要适配 |
+| 2.6.2 自动路由 | 🔴 仍须自做 | **无路由子系统**（53 篇全列表无对应页）；`scope` 只提供 per-agent 可见性载体 | 全部（含「意图 → 角色 + 上下文源 + 工具集」的联合路由） |
+| 2.7.1 行为安全硬护栏 | 🟢 可承接 | `sandbox`（bwrap / Landlock / Seatbelt / Windows restricted token）+ `sandbox-local` **fail-closed**（无 runner 报 `SANDBOX_UNAVAILABLE`，**命令绝不静默裸跑**）+ `permission-presets`（三档：`workspace-write`+`ask` ↔ `danger-full-access`+`never`）| 策略内容。⚠️ 上限：**同世界隔离**，不防恶意代码 |
+| ⭐⭐ 2.7.2 边界透明与用户决策权 | 🟢 可承接（**改判**）| `approval`（**closed + fail-closed** 结果集 `allowed-once`/`rejected`/`cancelled`/`unavailable`；「缺失 / 非属主 / 抛错 / 不合规的答者一律成为 `unavailable`，**而不是打开闸门**」；`approval/asked`·`approval/decided` **log-only 审计对**）+ `permission-presets`（preset 表可配置，客户端渲染成选择器）+ `user-questions`（瀑布 listener **可中继到已连接的客户端**）——A-framework 下**均为公开契约** | **只剩策略内容**：哪些操作要问 / 默认低打扰 / 审批聚合；**可先用官方两档 preset 零代码起步**。⚠️ **覆盖边界（勿外推）**：preset 表**只覆盖 `sandbox` + `approval` 两个 knob**；原文「工具开关」**不在其中**，须另走 `ctx.tools.restrict()`。⚪ 待实测：工具开关**真 agent 轮** deny 后模型侧行为（端到端，归 DSH-4） |
+| 2.7.3 凭据与密钥边界 | 🟢 可承接 | `credentials`：**reference 化**（只存环境变量名）+ 四层 source（`env`/`file`/`project-env`/`user-env`）+ **每次操作重解析**（热更新，轮换 key 下一请求即生效）+ `describe()` 视图**没有能承载值的槽位** + 空值即 absent；对「被进程环境遮蔽」的引用报 `writable: false` | 配置。⚠️⚠️ **上游脱敏是 fail-open**（`settings/*/redact.ts` 的 TODO 自认：经 union / intersection / transform 可达的秘密**原样返回且无记录**）⇒ **不得作为我方红线保障**，见 §5.1。⚪ 待实测：该 fail-open 是否可构造复现 |
+| 2.7.4 成本约束 | 🟡 可降级 | **`token-meter`**：detached replay 快照（`logRevision` / `baseline` / `surfaceDeltaTokens` / `totalTokens` / **逐节点定价 `TokenSurfaceNode`**），按 route 声明定价；上游原文「**Trigger, retention, and range selection all read this price**」 | ⚠️ **无预算 / 限额 / 累计**（是「当前请求压力」快照，不是账户消费）⇒ 计量承接，**累计入库 + 预算 / 告警自做**（与 2.8.3 同底座）。⚪ 待实测：长会话稳定性与成本 |
+| 2.7.5 数据主权与出境边界 | 🟡 可降级 | `util/http-proxy`（**015 新增**：在任何 entry mount **之前**装 global dispatcher，覆盖 9 个调用点及未来全部）+ `session-telemetry`（`session-telemetry/record` redaction；**只有显式反馈事件才授权上传**） | 出境**事实本身不变**；处置口径仍归用户（我方裁定不变）。⚠️ `api/gateway` 转发事件**不脱敏、重连不重放** |
+| 2.7.6 数据可恢复与可迁移 | 🟡 可降级 | `SessionPersistence.export(id)` → **raw artifact**（parsed header + 逻辑文件名 + 解码后逐字文本）；apiproxy **ZIP 下载**，且区分 `501`（后端不支持）/ `404`（会话不存在）| **单会话导出已给**；**整体备份 / 导出 / 迁移仍自做** |
+| 2.8.1 沉淀信息可见与可管理 | 🟡 可降级 | `session-projection`（把 log 派生状态**整体当前值**送到 client carrier）+ `client-resources`（`dsh-resource://` 地址 → provider → 帧流）+ `sidebar-right`（每会话 docking 面）| **展示机制可承接**；**记忆来源（我们的库）与其 schema 自做** |
+| 2.8.2 AI 行为可见 | 🟢 可承接 | **`session-query`**：跨会话全文检索（`searchSessions`/`searchEvents`，cursor 分页）+ **事件关系追溯**（`replacedBy` / `replacementChain` / `sourceEventSeqs` / `derivedEventSeqs`）+ **会话家谱**（`SessionLineageTrace`）+ bounded event reads + `session-projection` + `feedback`（log-only）| 渲染层。✅ 维持且**增强**——关系追溯是我们原先没有的 |
+| 2.8.3 资源消耗可见 | 🟡 可降级 | 同 2.7.4（`token-meter`）| **用户侧展示 + 入库自做**（改造路径依赖不变：需先建表 + 回填）|
+| 2.9.1 时间感知 | 🔴 仍须自做 | **无时间感知子系统**。可借的只有 `schedule` 的**时区纪律**（必须显式给 offset 或 `time_zone`；**绝不读浏览器 / 会话 / 进程 / 模型上下文**；DST gap 拒绝、overlap 取较早瞬间）+ 笔记 `environment-prompt-suffix`（环境事实后置以保 provider prefix cache）| 全部实现（上述两条应作为**设计约束**抄进 2.9.1 稿）|
+| 2.9.2 超长会话一致性 | 🟢 可承接 | `compaction` seam（`ctx.compaction` + `compaction-basic`）+ ⭐⭐ **`compaction-tool-result-pruner`**——**官方默认路径**：`compaction-basic` 在「range selection **之前**」调它 ⇒ 产品树说的「①**工具结果遮蔽 = 最划算的第一步**」**正好就是官方默认顺序**；另 `toolPairingBalancedBefore/After` 实现「工具调用与结果同存同弃」| 阈值 / 保留尾部策略（`compaction-basic` 拥有，可配）。⚠️ **保真度档位**（生成式摘要 37% vs 逐字 ~98%）若不达标 ⇒ 自做策略插件 |
+| 2.9.3 降级与韧性 | 🟢 可承接 | `guard/`（loop-hygiene + tool-timeout）+ `llm-retry` + `subprocess-native-containment`（逃逸子孙进程 containment：Linux 临时 user-systemd scope / Windows kill-on-close Job；不支持则降级并给一次警告）| `LarryException` 统一出口自做 |
+| 2.10.1 云端部署多端使用 | 🟡 可降级 | 出厂形态 = **本机 loopback 浏览器客户端**；**但远程形态已有完整实现**：`workspace-files-service`（原文 *"from a browser that **may not be on the Host machine**"*）+ `/api/file` 认证路由 + **持续重连** + Electron 壳走 `dsh-app://`；`web-server`（`ctx.webServer`：named-route registry / gzip / index.html transform）+ `api-gateway` + `client-connection` + `api-remotes` | 云侧部署 + **多用户 / 租户语义**（`identity` 仍是 anonymous）自做。⚠️ 出厂**无登出 + cookie 未标 `Secure`** ⇒ 上公网须自补（见 §5.2）|
+| ⭐ 2.10.2 端侧能力保留 | 🟡 可降级 | ⭐ **capability seam 模型**（Service Definition + Provider）**天然支持「同一能力、不同位置、不同 provider」** ⇒ 「下沉」= **给 DSH 写一个端侧 Provider**，不是对抗框架。先例：`sandbox-local` 三平台后端并列 / `subagent` 多家 provider / `shell` 的 local+sandbox 双 provider / `e2b/`（反向位置的同类）| 端侧执行器本体 + shell 鉴权重构（IP 白名单 → API Key）。**架构路径已由上游证明可行** |
+| 2.10.3 单人单实例 | 🟢 可承接 | `identity` = anonymous（**无用户维度**）⇒ 与「单人」同向 | 形态事实，无需动作 |
+
+**档位分布**：🟢 12（2.4.1 / 2.5.1 / 2.5.2 / 2.5.3 / 2.6.1 / 2.7.1 / 2.7.2 / 2.7.3 / 2.8.2 / 2.9.2 / 2.9.3 / 2.10.3）｜🟡 15（2.3.1 / 2.3.2 / 2.3.3 / 2.3.4 / 2.3.5 / 2.4.2 / 2.4.4 / 2.4.6 / 2.7.4 / 2.7.5 / 2.7.6 / 2.8.1 / 2.8.3 / 2.10.1 / 2.10.2）｜🔴 4（2.4.3 / 2.4.5 / 2.6.2 / 2.9.1）。
+
+**「迁移必关清单」**：当前**无条目**。上游唯一已识别的「须显式关掉」项是 `web_fetch` 默认放行（不受 sandbox / approval 管辖、无 per-call 确认），但该项**已随 §4.1 挂起**（老大 2026-09-15：具体 tool 不在产品定位层判定）⇒ 清单待重启该议题时建立。
+
+#### 待实测清单（档位不依赖，但影响**承接收益兑现**与**风险条力度**）
+
+> **结论：本次重划无档位阻塞。** 12 / 15 / 4 的依据全部是「上游契约 / 源码事实」（见 §2.3 复核 + `../exchange/dsh-015-capability-mapping.md` §2）。下列未验项**只影响两件事**：某行的收益是否真能兑现（B 组）、某条风险的力度（B 组 ⑤）。**未测之前不得据此升格或改档**。
+
+| # | 待实测项 | 影响的总表行 | 为什么值得测 | 归属 |
+|---|---|---|---|---|
+| ① | `workspace` **运行时行为**（membership 过滤、`attachSession` 流程）| 2.3.3 | 该行「可降级」**收益的大小**取决于它：兑现 ⇒ 我方只写隔离语义；不兑现 ⇒ 分组底座也要自建 | DSH-3 |
+| ② | `ctx.tools.restrict()` **真 agent 轮** deny 后模型侧行为 | 2.7.2 | 2.7.2 覆盖面的**另一半**（preset 只覆盖两个 knob）；上游无文档，只有实证 | DSH-4 验收 |
+| ③ | `token-meter` **长会话**稳定性与成本 | 2.7.4 / 2.8.3 | 承接的**可靠性**；与 `llm` 组 52 条欠账相关 | DSH-4 验收 |
+| ④ | 0.1.5 的 ACP 是否仍缺 `fork` / `load` / `delete` | 2.3.1 | 「回收站须自做」的旁证；若确有 `fork`，多一条可借鉴路径（读 diff 未见新增 ≠ 实测）| DSH-3 |
+| ⑤ | `settings/*/redact.ts` 是否**真** fail-open（构造用例复现）| 2.7.3 / §5.1 | 决定**风险条力度**：源码标记为真，但「当前确实 fail-open」我方未复现 | DSH-3 |
+| ⑥ | `web-fetch-http` 的 SSRF 行为 + CVM 可达性 | 2.5.2（**已挂起**）| 若将来采纳 `web_fetch` 则**必测**（承接该能力的前置） | 随 §4.1 挂起 |
+
+> **另一类：环境复跑**（数据取自 012 通道、须在 015 复跑：CVM 内存与并发 / Windows 沙箱方言 / Vue↔Tauri 连通 / 反代 T2 / `dsh.exe` 崩溃定性 / **CLI 与 profile 同代**）——**已在 §2.3「015 迁移未闭合项」登记**，不在此重复；它们与本表档位无对应关系。
 
 #### 风险与退出条件
 
