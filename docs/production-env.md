@@ -464,7 +464,7 @@ records:
 > - `harness/scripts/run-real-api.mjs` → vitest → `harness/vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']`，而该文件 `:31-33` 把 `process.env.DSH_HOME` **强制覆盖为 `mkdtempSync` 出的临时目录**，`:44-52` 还有正向白名单断言（指向真实路径会判 FAIL）。
 > - ⇒ **real-api 链路读不到 `~/.dsh/.credentials.yaml`**；它的 Key **只能来自环境变量** `DEEPSEEK_API_KEY`（`tests/real-api.ts:28` 自述"注入值"、`:31` 临时 home 隔离）。
 > - ⇒ 推论：`cvm-probes/*.mjs`、`dsh-prompt.mjs` 的注释也都写"Key 由 caller 注入" ⇒ **CVM 上至今没有任何一条路径消费过那份 `.credentials.yaml`**（与 `:458` 那条"09-10 的连通来自启动环境注入"互为佐证）。
-> - ⇒ **正确验法**：`harness/scripts/dsh-prompt.mjs`（**不覆盖 `DSH_HOME`** ⇒ 裸跑落 `~/.dsh`），且**不注入** `DEEPSEEK_API_KEY` 环境变量 —— 若此时仍成功，即证明**文件层被读**。派发见 `exchange/log-trae.md` 派发 001 §D（含三态造法）。
+> - ⇒ **正确验法**：`harness/scripts/dsh-prompt.mjs`（**不覆盖 `DSH_HOME`** ⇒ 裸跑落 `~/.dsh`），且**不注入** `DEEPSEEK_API_KEY` 环境变量 —— 若此时仍成功，即证明**文件层被读**。**规格与三态造法见 `TODO.md` DSH-3.0 段 `:70-74`**（原文派发稿已折叠；`git show 0ba8c55:exchange/log-trae.md`）。
 
 ### 12.6 与 Tier0 红线 ① 的关系
 
@@ -522,7 +522,7 @@ records:
 
 ⇒ **凭据落在 `~/.dsh`、可运行的 profile 落在 `~/larry-dsh-home`** —— 两者被劈开。DSH-3.0 的 D 组（凭据层验真）因此崩在**启动期**（`-32603 cannot create effect on inactive context`），**与凭据无关**。
 
-⇒ 纪律「CVM 以 `~/.dsh` 为准」**结论不变**（其理由本就含"裸跑默认"一条，与依赖无关），但**必须先把 `sdk` profile 装进 `~/.dsh`** 才真正可用（装法见 `exchange/log-trae.md`〈裁定 001〉）。
+⇒ 纪律「CVM 以 `~/.dsh` 为准」**结论不变**（其理由本就含"裸跑默认"一条，与依赖无关），但**必须先把 `sdk` profile 装进 `~/.dsh`** 才真正可用（装法见 `TODO.md` DSH-3.0 段 `:64-65`；⚠️ 按**基线 015** 装，且须 **CLI 与 profile 同代** —— 2026-09-15 本机实测的跨版本混合污点即由此而来）。
 
 ⭐ **同一形态在本机也存在**（`.dsh-home/profiles/sdk` 99 包 / `~/.dsh/profiles/*` 空壳）⇒ **"凭据落一个 home、profile 落另一个 home"是系统性问题**，不是 CVM 独有。
 
