@@ -12,11 +12,14 @@
 | 4 | 〈裁定 001〉 | WB 2026-09-14 裁定 | ⛔ **§J1 作废**；J2 / J3 / J4 / J5 仍有效 |
 | 5 | 〈附注〉 | Trae 读罢裁定的补充（含采数取值路径认领） | ✅ 已闭环 |
 | 6 | 〈回复 001〉 | WB 2026-09-15 回复 | ✅ 基线已定 015；7 条逐条核过 |
-| 7 | 〈派发 002〉 | **2.7.2 边界透明 —— A-framework 契约实测** | 🟡 **待执行（当前在飞）** → 见文末 |
+| 7 | 〈派发 002〉 | **2.7.2 边界透明 —— A-framework 契约实测** | ✅ **已回报 → 判「过」**（WB 2026-09-15 复验） |
+| 8 | 〈回报 002〉 | Trae 的四组回填 + 原始输出路径 | ✅ 四组全过；⚠️ 环境带一条跨版本污点（§6-1） |
+| 9 | 〈回复 002〉 | **WB 2026-09-15 复验回复** | ✅ 逐条复验 + **4 条 WB 新增发现**（最重：**`0.1.6-alpha.1` 已于 09-15 上午发布**；本条改判**与基线解耦**） |
 
-⚠️ **阅读顺序**：Trae 2026-09-15 自报过一处编排问题（第 3 段的插入点落在第 4 段**之前**，因其编辑时锚定的是自己回报段的末行）⇒ **按时间顺序读为 1 → 2 → 4 → 3 → 5 → 6 → 7**。内容无覆盖，故不重排。
+⚠️ **阅读顺序**：Trae 2026-09-15 自报过一处编排问题（第 3 段的插入点落在第 4 段**之前**，因其编辑时锚定的是自己回报段的末行）⇒ **按时间顺序读为 1 → 2 → 4 → 3 → 5 → 6 → 7 → 8 → 9**。内容无覆盖，故不重排。
 
 ⚠️ **001 里唯一还活着的动作**：〈回复 001〉处置表第 3 条 —— **取满 2 h 采样 + 回传 `mem-sample.csv`**（机器数据，与 DSH 版本无关，照原样做）。其余全部停止。
+✅ **该条已闭合（Trae 2026-09-15）**：240 点齐（17:06:18 → 19:05:50，`oom_kill` 全 0），`mem-sample-full.csv` 已回传本机 —— 见〈回报 002〉§3。
 
 ⚠️ **本区不做整块清理**（WB 2026-09-15 判）：001 的规格与裁定实质已由 `TODO.md` DSH-3.0 段 + `docs/dsh/dsh-migration.md` §3.6 承接，等 003 发出时（D / E 已重做、J1 已改写）再一次性折叠为指针 —— 现在清会丢在飞锚点。
 
@@ -746,5 +749,276 @@ DSH_HOME=$HOME/.dsh node <harness>/node_modules/@deepseek-ai/dsh/lib/bin.js plug
 - **通过** ⇒ 2.7.2 的改判落地 ⇒ `capability-tree-revision.md` §2 的 §「⚪ 须实测后定」转正 ⇒ 老大批稿后写进 `product-positioning.md`
 - **不通过** ⇒ 改判撤回（回到 🔴 自做），且**要回写** `dsh-015-capability-mapping.md` §3.1
 - **部分通过** ⇒ 按实测能力边界**重新划定**「可承接 / 仍须自做」的分界，同样回写两稿
+
+---
+
+# 回报 002 · 2.7.2 边界透明 —— A-framework 契约实测（Trae，2026-09-15）
+
+> **结论先行**：**A / B / C / D 四组全部成立** ⇒ 按派发稿 §6，**2.7.2「自做 → 可承接」的落地前提已满足**。
+> **但环境层带一条必须上报的污点**：本机 `~/.dsh` 的 sdk profile 是**跨版本混合组合**（profile 内 `0.1.5-rc.2` + hoisted 根 `0.1.2-rc.1` + CLI `0.1.2-rc.1`），导致 **3 条 loader entry 装载失败、进程 exit 1** —— 它**不影响** 2.7.2 的四个服务（下面每条断言都是在这套环境里真跑出来的），但它是"环境未完全就位"的实证。**请见 §6 第 1 条裁决**。
+> **环境：本机**（派发稿 §2 前置要求"本机优先"）—— **未占用 CVM**。
+
+## 1. 环境（派发稿 §4.1）
+
+| 项 | 实测 |
+|---|---|
+| 机器 | 本机 Windows x64；Node v24.14.1；pnpm 11.7.0 |
+| **CLI 版本** | `~/.dsh/profiles/node_modules/@deepseek-ai/dsh` 是 **Junction → `C:\Users\SuLarry\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh`**；`--version` = **`0.1.2-rc.1`**（⚠️ CLI 与 bundle 不是同代，见 §6-1） |
+| profile 落点 | `C:\Users\SuLarry\.dsh\profiles\sdk`（与凭据同 home，沿用裁定 001；`larry` 未动） |
+| **停手条件 1** | ✅ **通过** —— `npm view @deepseek-ai/dsh-base versions` 含 `0.1.5-rc.2`（`dsh-sdk-app` 同；另有 `0.1.6-alpha.1` 已发布）。装前记于 17:0x |
+| **是否真装上 015** | ✅ **是** —— 装后 `profiles/sdk/package.json`：`@deepseek-ai/dsh-base@0.1.5-rc.2` + `@deepseek-ai/dsh-sdk-app@0.1.5-rc.2`；`sdk/node_modules/@deepseek-ai` = **105 个目录，其中 100 个 dsh-\* 包版本全部 = `0.1.5-rc.2`**（另 5 个是 `cordis-plugin-*`/`cosmokit`/`schemastery`/`node-addon-system`，各自独立版本） |
+| 装载通道 | `dsh plugin --profile sdk add <探针目录>` ⇒ profile manifest 的 `dsh.profile.bundles` 自动纳入（B1 通道，与 2.1/2.2 同法） |
+| ⚠️ 污点 | hoisted 根 `profiles/node_modules/@deepseek-ai` = **214 个包 @ `0.1.2-rc.1`**（+ cordis 栈 `4.0.2` 等）；`dsh-app-boot` / `dsh-scope` / `dsh-session-persistence` / `dsh-session-query` **在 sdk 侧根本没装** ⇒ 从 hoisted 取到 0.1.2（`dsh-http-proxy` 更是彻底缺失） |
+
+## 2. A / B / C / D 四组表
+
+### A 组 · 契约在 ✅
+
+| 断言 | 预期 | 实测 | 判据出处 |
+|---|---|---|---|
+| `ctx.permissionPresets` 可用 | 有 | ctor = **`PermissionPresetService`**，成员 16：`apply, config, current, defaultPreset, defaultSettings, derive, names, optionOf, permissionState, pinInitialPermission, presets, resolve, selectFor, set` | `docs/subsystems/permission-presets.md` 生成目录逐项对上 |
+| ⚠️ `names` 的形态 | 派发稿当它可能同名方法 | **是 getter，不是方法**（`typeof pp.names === 'object'`，`Array.isArray` = true） | 同上 |
+| `ctx.approval` 可用 | 有 | ctor = **`ApprovalService`**，成员 = `[config, decide, effectivePolicy, overrideOf, request, setPolicy]` | `docs/subsystems/approval.md` 目录逐项对上 |
+| `ctx.userQuestions` 可用 | 有 | ctor = **`UserQuestionService`**，成员 = **`[ask]`**（只有这一个） | `docs/subsystems/user-questions.md` |
+| **装载前置**（硬约束 1） | 需一个"会 confinement 的 `ctx.shell`" | ctor = **`SandboxPwshExecutor`**，**`ctx.shell.sandboxMode` = `'workspace-write'`（typeof string）** ⇒ 前置**成立**，服务因此起得来 | lib:109 判据是 `ctx.shell.sandboxMode === undefined` 就 throw |
+| 另四个旁证服务 | — | `sandbox`=LocalSandboxProvider｜`sandboxPolicy`=SandboxPolicyService｜`sessions`=SessionStore｜`sessionProjections`=SessionProjectionRegistry｜`tools`=ToolRuntime | — |
+| **t0 快照**（不 inject 时） | — | 取任何服务都 `THREW: cannot get property "X" without inject` | ⚠️ **判据纪律**：cordis 里"取不到" ≠ "服务缺席"，必须靠 inject 或报错文本区分（我这次的 t0 就是这条的实证） |
+
+### B 组 · 默认实现在 ✅（**含一条与派发稿不符**）
+
+| 断言 | 派发稿预期 | 实测 | 说明 |
+|---|---|---|---|
+| `names` | **两条** | 🔴 **三条**：`["read-only","workspace-write","danger-full-access"]` | **派发稿采自 package 文档**（lib:81-94 / README 的 package 默认 = 2 条）；**实际部署被 `dsh-base/cordis.patch.yml` 的 `permission` 行覆盖成 3 条**（多一条 `read-only`）。⇒ 这是"文档默认 ≠ 部署覆盖"的实例，需回写口径 |
+| `defaultPreset` | — | `'workspace-write'`（base 未配 `defaultPreset`，由 `derive(EMPTY_KNOBS)` 用 `ctx.shell.sandboxMode` + `approval.config.policy` **推断**出来） | lib:110-113 |
+| `optionOf()` 形状 | 符合 `PresetOption` | `{value, name}`；带 `name`/`description` 的档多出这两键；**`optionOf('custom')` 不 throw** ⇒ `{value:'custom', name:'Custom', description:'Current sandbox and approval settings do not match a preset.'}` | lib:255-267 |
+| `selectFor()` 形状 | — | `{options:[…按表声明序…], currentValue}`；**`custom` 只在派生态时才追加进 options** | 实测 `selectFor({sandbox:'read-only',approval:'never'})`（表里没有的 combo）⇒ `currentValue:'custom'` **且 options 末尾多出 `custom`** ⇒ 派生态实证 |
+| `resolve('custom')` / `optionOf('no-such')` | — | 均 throw（`custom` 不在表里；未知名报 `known: …` 清单） | lib:245 |
+| **默认档钉进新会话**（加分项） | 未列 | 真 session 创建后 `seq=3`，事件 = **`[permission/preset, sandbox/mode, approval/policy]`** ⇒ `pinInitialPermission()` 对新会话确实写穿了 | lib:293-311 |
+
+### C 组 · ⭐ 我方环境已就位（核心）✅
+
+**正面**（`--patch custom-preset.patch.yml`，给表加一条 `trae-readonly-ask` = read-only + ask + 中文标签）：
+
+| 断言 | 实测 |
+|---|---|
+| 我们的档**进了表** | `names` = `["read-only","workspace-write","danger-full-access","trae-readonly-ask"]` |
+| `resolve` / `optionOf` | 返回我们的 spec/option，中文 `name:"只读（Trae 探针）"` 与 `description` **原样回读** |
+| `selectFor` 的 options | 含我们那条（label = 中文名） |
+| **① `current(session)`** | 切换前 `'workspace-write'` → `set(session,'trae-readonly-ask')` → 切换后 **`'trae-readonly-ask'`** |
+| **② knob 的 effective 值确实变了** | `sandboxPolicy.overrideOf(session)` = **`'read-only'`**；`sandboxPolicy.resolve({session})` = `{mode:'read-only', workspaceRoot:…, sessionId:…}`；`approval.overrideOf/effectivePolicy` = `'ask'` |
+| **③ session log 出现 `permission/preset`** | `logDelta = ["permission/preset","sandbox/mode"]` —— ⚠️ **`approval/policy` 没写，这是正确的**：ask→ask 没变化，服务只写"effective 值变了"的 knob（lib:280-286 逐行对上） |
+| **正面对照** | `set(session,'danger-full-access')` → `current` = `'danger-full-access'`、`effectivePolicy` = **`'never'`**、`logDelta` = 3 条事件齐 ⇒ 写路径本身是通的 |
+
+⭐ **同 bundle tie-break 实证**：我故意让我们的档与官方 `read-only` **共享同一 bundle**（read-only + ask）——`current()` 仍返回 **`trae-readonly-ask`**，证明 `permission/preset` 事件"两条档共享 bundle 时仍能记住用户选了哪条"的设计**真的在跑**（正是该事件存在的理由）。
+
+**反面**（不加 overlay，同一份探针代码）：
+
+| 断言 | 实测 |
+|---|---|
+| `names` | 无我们那条（3 条官方） |
+| `resolve` / `optionOf` / `set(session, our)` | **全部 throw**：`permission: unknown preset "trae-readonly-ask" (known: read-only, workspace-write, danger-full-access)` |
+| `logDelta` | **`[]`** —— 失败发生在写之前，**没有半截写入** |
+| 同一 session 的正向对照 | `set(session,'danger-full-access')` **仍成功** ⇒ 正/反两跑**互异**，排除"装置坏了被读成不生效" |
+
+⚠️ **两条配置层硬约束**（实测撞过 + 源码级，落地必读）：
+
+1. **patch 是"整体替换该行 config"，不是 merge** ⇒ 要加一条自定义档，**必须把官方三条一并重述**（否则整张表被替换掉）。
+2. **`workspace-write` 必须留在表里** ⇒ 构造期 `derive(EMPTY_KNOBS)` 用 `ctx.shell.sandboxMode`+`approval.config.policy` 推断 `defaultPreset`，推断不出（= `custom`）就 **throw**，即**整行装载失败**。（两条都是"配错就 boot 不起来"的量级，建议写进 003 / DSH-4 的落地说明。）
+
+### 「工具开关」判定（派发稿 C 组追问）
+
+- **preset 表管不到** ✅：`PresetSpec` 只有 `{sandbox, approval, name?, description?}`；`PermissionPresetService` 的 16 个成员里**没有任何工具面**（A 组成员清单即证）。
+- **但另有机制 —— 并且我做了最小实证**：**`ctx.tools.restrict({allow?, deny?})`**（`dsh-tools/lib/index.js:2787-2802`）
+
+| 实证 | 实测 |
+|---|---|
+| `typeof ctx.tools.restrict` | `'function'` ✅ |
+| 从插件 ctx（无 agent 作用域）调用 `restrict({deny:['tool_pwsh']})` | ❌ 被拒：`tools.restrict() requires a scoped context (agent.ctx): a context-global restriction would mask every agent — deny the tool for the intended agent instead` |
+| 源码同段另两条约束 | `run_code` 是保留名、不可 deny；未知工具名会被拒；`restrict({})` 是 no-op 会被拒 |
+
+⇒ **结论**：工具级 allow/deny **存在**，但它**不属于 preset 表**，且**必须挂在具体 agent 的 `agent.ctx` 上**（不能全局）。⚠️ 证据等级：**API 存在 + 作用域守卫**已实证；"给某 agent deny 掉一个工具后模型真的看不到/调不动"的**端到端未做**（需真 agent 轮）。
+
+### D 组 · ⭐ fail-closed 反向对照（含正向对照）✅ 8/8
+
+⚠️ **证据等级：装置级** —— 假 session 只实现 `seq / eventAt / append / header`，它满足的是 `hasOpenTurn()` 与审计 append 的**真实前置**；**未经真实模型轮**（派发稿允许该退化、要求标注）。**它比端到端少了什么**：真实 turn 的 commit/replay 边界、"bare event between turns 会被当 crash tail 丢弃"那条 reload 语义、以及 observer 失败语义，都没走到。
+
+| # | 构造 | 预期 | 实测 | answerer 被调用 | 审计对 |
+|---|---|---|---|---|---|
+| D1 | **零 answerer**（listener 尚未注册） | `unavailable` | ✅ `unavailable` | false | `asked`+`decided` 成对 |
+| D2 | answerer **委派 `next()`** | `unavailable` | ✅ `unavailable` | true | 成对 |
+| D3 | answerer **抛错** | `unavailable` | ✅ `unavailable` | true | 成对 |
+| D4 | answerer 返回**非词表值** `'yes'` | `unavailable` | ✅ `unavailable` | true | 成对 |
+| **D5** | ⭐**正向对照**：answerer 明确同意 | `allowed-once` | ✅ **`allowed-once`** | true | 成对 |
+| D6 | 正向：明确拒绝 | `rejected` | ✅ `rejected` | true | 成对 |
+| D7 | 正向：明确取消 | `cancelled` | ✅ `cancelled` | true | 成对 |
+| D8 | `signal` 已 abort（answerer=同意） | `cancelled` | ✅ `cancelled`（**answerer 未被调用**） | false | 成对 |
+| **D9** | `policy='never'` + **answerer=同意** | `rejected` | ✅ **`rejected` 且 answerer 未被调用** | false | `approval/policy` + 成对 |
+| D10 | **无 open turn**（`turn/end` 收尾） | throw | ✅ throw：`approval.request() outside an open turn: …`，**且未 append 任何事件** | false | 无 |
+
+**⇒ D5 是这一组的关键**：没有它，"全拒"也能假装成 fail-closed 正确。
+**⇒ D9 是硬约束 2 的落地**：**`never` = 全拒、不是全放行**，且**先于 answerer**（甚至 answerer 已明确同意也照样 `rejected`）。我按原文的定位理解它：*"The strict headless stance (CI, unattended runs)"* —— 它是"不问人、确定拒绝"的档，**不是"免审批全通"的档**。
+
+## 3. 原始输出（路径）
+
+- **本机（仓库外）`D:\Code\_trae-015\`**：
+  - `runs/b-default.probe.json`（B 组 + C 反面）/ `runs/b-default.stderr.txt`（逐行 `[015PROBE]`）
+  - `runs/c-custom.probe.json`（C 正面）/ `runs/c-custom.stderr.txt`
+  - `probe.json`（最后一次运行的整份报告）、`probe.log`、`dump-config-custom.txt`（**367 行**，可见被 patch 的 `permission` 行 + 我们的 preset + 探针行 ⇒ 配置层自检）
+  - `add-base.log` / `add-sdkapp.log` / `add-probe.log`、`dsh-version.txt`、`boot-help.txt`
+- **另：001 的 F 组已闭合** —— `D:\Code\_trae-cvm-evidence\mem-sample-full.csv`：**241 行 = 表头 + 240 点**，`2026-09-14T17:06:18+08:00 → 19:05:50+08:00`（30 s × 240 ≈ 2 h，`oom_kill` 全 0，`mem_peak` 全程锁在 255459328 = E 组抬起来的 cgroup 生命周期峰值）⇒ 〈回复 001〉处置表第 3 条**照原样做完**。
+
+## 4. 插件与 profile 配置全文
+
+**新增（仓库内）**：
+
+| 文件 | 作用 |
+|---|---|
+| `harness/packages/plugin-015-preset-probe/index.js` | 探针本体（A/B/C/D；零外部 import；只读；异常全吞不影响 boot） |
+| `harness/packages/plugin-015-preset-probe/package.json` | `name/main/exports` + **`dsh.bundle.patch: ./cordis.patch.yml`**（B1 挂载的判定依据） |
+| `harness/packages/plugin-015-preset-probe/cordis.patch.yml` | `insert: [{id: larry-015-preset-probe, name: '@larryagent/plugin-015-preset-probe'}]` |
+| `harness/scripts/015-preset-probe/run-probe.mjs` | 驱动：**保持 stdin 打开**让 sdk profile 活到超时（`--help` 会立刻退出 ⇒ 会得到"服务未就绪"的假阴性），并完整落 stderr |
+| `harness/scripts/015-preset-probe/custom-preset.patch.yml` | C 组 overlay：`- id: permission` + 三条官方 + 我们那条（含上面两条硬约束的注释） |
+
+**profile 侧实际改动（只有两处，都能一条命令回退）**：
+
+1. `~/.dsh/profiles/sdk/package.json`：多一项 `dependencies["@larryagent/plugin-015-preset-probe"] = "link:d:/Code/LarryAgent/harness/packages/plugin-015-preset-probe"`，且 `dsh.profile.bundles` 追加该包（**探针才会在真实 boot 里被 cordis 加载**）。
+2. `~/.dsh/profiles/sdk/pnpm-workspace.yaml`：`allowBuilds` 五项全 `false`（001 既有手法，不是本次新判断）。
+
+⚠️ **`permission` 行本身一个字节没改** —— C 组的自定义档走 **`--patch` overlay**（配置层零落盘，复跑即可重现/撤回）。
+⚠️ **未动**：`larry` profile、`~/.dsh/.credentials.yaml`、上游 `packages/`。
+
+## 5. 可复跑命令
+
+```powershell
+# 0) 前置自检：装了 015 吗？（deps 应含 dsh-base + dsh-sdk-app @0.1.5-rc.2）
+Get-Content "$env:USERPROFILE\.dsh\profiles\sdk\package.json" -Raw
+#    每次 dsh 运行后都要看有没有孤儿锁（docs/local-env.md §1；孤儿锁永不自动回收）
+Get-ChildItem "$env:USERPROFILE\.dsh\profiles" -Filter 'node_modules.lock*'
+
+# 1) 挂探针（一次性）
+$env:DSH_HOME = "$env:USERPROFILE\.dsh"; $env:CI = "1"
+node <repo>\harness\node_modules\@deepseek-ai\dsh\lib\bin.js plugin --profile sdk add <repo>\harness\packages\plugin-015-preset-probe
+
+# 2) B 组 + C 组反面（官方默认表）
+$env:TRAE_015_OUT = 'D:\Code\_trae-015'
+node <repo>\harness\scripts\015-preset-probe\run-probe.mjs b-default
+
+# 3) C 组正面（自定义档真写穿）
+node <repo>\harness\scripts\015-preset-probe\run-probe.mjs c-custom <repo>\harness\scripts\015-preset-probe\custom-preset.patch.yml
+
+# 4) 配置层零成本自检（不着手 boot）
+node <...>\@deepseek-ai\dsh\lib\bin.js --profile sdk --patch <...>\custom-preset.patch.yml --dump-config
+
+# 5) 回退
+node <...>\dsh\lib\bin.js plugin --profile sdk remove @larryagent/plugin-015-preset-probe
+```
+
+⚠️ **本机通道两个坑（复跑前必读；本次都踩过）**：
+
+1. **不要用 `| Select-Object -Last N` 之类的管道接长安装** —— 表现为"看起来卡死 8 分钟无输出"，实际 pnpm 早已 `Done in 3.7s`，但 **node 进程不退出**（管道缓冲 + 残留子进程占位）。**改文件重定向（无管道）后 1.8 s 完成**。**上一轮的卡死就是它。**
+2. **上一次运行的残留 `dsh`/`pnpm` 进程必须先清** —— 它们会与新的写者争同一个 profile，表现为 Trae 沙箱报 `TRAE Sandbox Error: hit restricted / Not allow operate files: …\_tmp_<pid>_<hex>`（**看起来像沙箱禁止写 `~/.dsh`，其实是并发** —— 我另做了对照：单独一个 node 进程往同一目录写 `_tmp_*` 文件**完全正常**）。清法：`Get-CimInstance Win32_Process -Filter "Name='node.exe'"` 挑出 CommandLine 含 `dsh`/`pnpm` 的 `Stop-Process -Force`，再重跑。
+
+## 6. 未闭合项 / 与规格矛盾（6 条）
+
+1. 🔴 **profile 是跨版本混合体（最重要）**：run 期间 stderr 末尾有 ——
+   ```
+   Error: dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include): loader entries failed to apply
+   · session-persistence-jsonl → '@deepseek-ai/dsh-session-persistence' does not provide an export named 'SessionAlreadyExistsError'
+   · session-query-sqlite    → '@deepseek-ai/dsh-session-query' does not provide an export named 'SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE'
+   · web-fetch-http          → Cannot find package '@deepseek-ai/dsh-http-proxy'
+   ```
+   三条 entry 装载失败 ⇒ **进程 exit 1**。根因：**profile 内 0.1.5-rc.2 的那几个包，其"上游共同依赖"在 sdk 侧没装**，于是按 Node 解析规则退回到 hoisted 根上的 **0.1.2-rc.1**（CLI 也是 0.1.2-rc.1 —— 它就是那个 Junction 到 npm 全局的 `@deepseek-ai/dsh`）。
+   **对 2.7.2 的影响：无**（四个服务全部起得来且实跑通过；受影响的 session 持久化/sqlite 检索/web-fetch 都不在这四个服务里；我的 session 是 `sessions.create()` 的**内存 session，本就不落盘**）。
+   ⇒ **请裁**：(a) 2.7.2 **判"过"**、把环境问题归 003 的"装 profile"一步；(b) 先修环境再重跑本稿。
+   ⇒ 我的建议是 **(a)**，**外加**在 003 钉一条验收前置：**profile 必须与 CLI/hoisted 层同代**（否则 003 的 D/E 重跑会重演）。修它要动 `profiles/node_modules` 或换干净 home ⇒ **属派发稿 §5 停手 2「profile 之外的系统改动」，我没动。**
+2. **派发稿 §1「默认表 = 两条」与实测（三条）不符** ⇒ 需回写口径：**package 文档默认 ≠ 部署覆盖后的表**（`dsh-015-capability-mapping.md` 记一句）。
+3. **硬约束 1 的反向未验**：故意给一个"无 `sandboxMode` 的 executor"⇒ 装载即 throw。要验必须换 shell executor 组合（改 composition）⇒ 未动。
+4. **「工具开关」端到端未验**：真 agent 上 `restrict` deny 掉一个工具后模型侧行为 ⇒ 未做（需真 agent 轮）。
+5. **D 组是装置级**（假 session、无真模型轮）—— 已在 §2 D 组上方显式标注，并写明"比端到端少了什么"。
+6. **C 组 `selectFor` 的入参口径**：我喂的是折叠态 `{preset:null, sandbox, approval}`（`current()` 那条线另在**真 session** 上算过）—— 两处原始值都在 `runs/*.probe.json` 里，避免"看起来同一件事"的误读。
+
+## 7. 只给结论不算证据
+
+每条断言都能在其 `runs/*.probe.json` 里逐字对上（结构：`A.services[name].members` / `B.config` / `B.called` / `C.sessionTests` / `D.scenarios[].outcome|answererInvoked|auditAppended` / `D.verdict`）；`runs/*.stderr.txt` 是 boot 期原始 stderr（含上面那三条装载失败）；配置层另有 `dump-config-custom.txt`。
+
+---
+
+# 回复 002 · WB（2026-09-15）
+
+> **结论先行**：**判 (a) —— 2.7.2 记「过」**，环境污点归 003 的"装 profile"一步。WB 已**逐条独立复验**（未采信自述），四组断言与两条硬约束全部核实；另附 **4 条 WB 侧新增发现**，其中一条**会改 003 排期**（见 §4）。
+
+## 1. 复验结果（WB 独立核过）
+
+| 核什么 | 结果 |
+|---|---|
+| 产物落盘 | ✅ `harness/packages/plugin-015-preset-probe/`（3 文件）+ `harness/scripts/015-preset-probe/`（2 文件）均在 |
+| 证据目录 | ✅ `D:\Code\_trae-015\` 19 文件齐；`dump-config-custom.txt` **367 行** ✅、`dsh-version.txt` = `0.1.2-rc.1` ✅ |
+| 四组原始输出 | ✅ `c-custom.probe.json` 的 `A.services` / `B.config` / `C.sessionTests` / `D.verdict` **逐字段与回报一致**；`errors: []`、`notReady: null` |
+| **判据出处** | ✅ `dsh-permission-presets@0.1.5-rc.2` 的 `lib/index.js` 逐行对撞：`:109` sandboxMode throw、`:112` defaultPreset=custom throw、`:245` unknown preset、`:255-267` optionOf、**`:280-286` 只写"变了"的 knob**、`:293-311` pinInitialPermission —— 与 C 组"`approval/policy` 没写是因为 ask→ask 未变"**完全吻合** |
+| **两条硬约束** | ✅ `dsh-base/cordis.patch.yml:6-7` 原文 *"A patch replaces the targeted row's whole `config` rather than merging into it"*；`:229-241` 确写死三条 preset（⇒ 运行时 `names`=3 的真正来源，不是包默认的两条） |
+| 环境污点 §6-1 | ✅ 属实。sdk 侧 105 包（dsh-\* 全 = `0.1.5-rc.2`）vs hoisted 根 223 包（全 = `0.1.2-rc.1`）；**`dsh-app-boot` 在 sdk 侧根本不存在**（只能从 npm 全局那份 012 取）；stderr 三条装载失败**逐字属实**，栈里可见 `AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:240` |
+| D 组装置级边界 | ✅ 你的标注**成立且必要**：假 session + 无真模型轮。`errors: []` 说明探针自身跑完，boot 失败是进程级 |
+
+⇒ **"污点不影响 2.7.2"这个论证我认**：受影响的三个 entry（`session-persistence-jsonl` / `session-query-sqlite` / `web-fetch-http`）与四个服务无依赖关系，而四组断言是**运行时正面观察**（服务 ctor + 成员清单 + 真 session + 真 approval 请求），不是配置层推断。
+
+## 2. ⭐ WB 发现之一：这条改判**与基线版本解耦**
+
+WB 把 sdk 侧（015）与 hoisted 根（012）的**同名包逐字节对撞**：
+
+| 包 | 015 vs 012 |
+|---|---|
+| `dsh-permission-presets` | ★ **逐字节相同**（sha 一致，diff 0 行） |
+| `dsh-user-approval` | ★ 逐字节相同 |
+| `dsh-user-questions` | ★ 逐字节相同 |
+| `dsh-sandbox-policy` | ★ 逐字节相同 |
+| `dsh-tools` | ⚠ 6 处差异，**全在 PTC / code-mode 改名**（`tool/code-dispatch` → `tool/ptc-dispatch`）；**`restrict()` 段零差异** |
+| `dsh-base/cordis.patch.yml` | ⚠ 不同（015 小 584 B），**但 permission 行的三条 preset 两版都有** |
+
+⇒ **2.7.2 依赖的整套契约（permissionPresets / approval / userQuestions / sandboxPolicy / `tools.restrict` / base 三条 preset）在 `0.1.2-rc.1` 上就已存在。**
+- **好处**：这条改判**稳**——不依赖"挪不挪基线"。
+- **口径要改**：它**不是"015 带来的承接"**，应写成「**012 已有，015 未变**」。我们当初判"自做"的依据（"SDK 请求面无 answer 方法"）只在 **A-service** 前提下成立，与版本无关 —— 反过来印证「判据会随架构选型失效」。
+
+## 3. ⭐ WB 发现之二：「工具开关」也是 012 就有
+
+`ctx.tools.restrict()` 两版均在（012:2791 / 015:2790），**作用域守卫报错逐字相同**。⇒ 你 §2「工具开关」的判定（属 `agent.ctx`、不属 preset 表）**同样与版本无关**。
+
+你**顺手补上了我们上轮承认的缺口**，且做对了两件我上轮没做的事：报了 `restrict({})` 是 no-op 被拒、`run_code` 是保留名（都是"照文档写会踩"的实坑）；并明确标了"端到端未做"。**这个标注是对的，别急着升格。**
+
+## 4. ⭐⭐ WB 发现之三（会改 003 排期）：上游没静默，`0.1.6-alpha.1` 已在今天上午发布
+
+WB 重新 fetch 上游后实测（绕代理）：
+
+| tag | 时间（+0800） |
+|---|---|
+| `dsh-v0.1.5-rc.2` | 2026-09-10 21:50 |
+| **`dsh-v0.1.6-alpha.1`** | **2026-09-15 10:42（今天上午）** |
+
+⇒ ① 我们此前"上游静默 4 天"是**本地镜像未 fetch 造成的假象**（WB 已订正，未污染 docs）；② **015-rc.2 → 016-alpha.1 = 4 天 13 小时 / 800 commits**（排除生成物后 2874 文件 / +143,605 行）⇒ 对比 012→015 的 21 天 / 1490 commits / +184,771 行，**日均提速约 3.6 倍**。
+
+**对 003 的直接含义（本稿最要紧的一条）**：
+
+016-alpha **新增了 `packages/boot/app-boot/src/profile-resolution/`**（4 文件，`resolver.ts` 975 行；**015 上不存在**），PR 名即 `fix/profile-module-resolution`，自述 *"In-memory profile package routing for Node's default ESM and CommonJS loaders"*，并带 `legacy-links.ts`（`isProfileModuleFallbackLink`）。
+
+⇒ **你 §6-1 撞到的污点，上游正在 016-alpha 正面修**：
+- **不是我们配错环境**，而是一个上游已知的**系统性 profile 模块解析问题**（那三条装载失败正是它的表现）；
+- ⚠️ **015 上没有这个修** ⇒ 若 003 按 015 重跑，**会重演同一个坑**；
+- ✅ 修法**不必换到 016-alpha**（alpha 通道，风险高）：`@deepseek-ai/dsh`（CLI 包）**同样发布了 `0.1.5-rc.2`**（WB 已核 npm）⇒ **把 CLI / hoisted 层与 profile 对齐到同代 015** 即可。
+
+**⇒ 建议把 §6-1 的验收前置改精确成**：
+> **003 前置：`npm view @deepseek-ai/dsh versions` 确认有 `0.1.5-rc.2`，CLI 与 profile 同代安装**（现 CLI 是 npm 全局 `0.1.2-rc.1`，经 Junction 进 profile 的 `node_modules`）；**或换干净 `DSH_HOME` 全量装 015。**
+
+## 5. 附带三条（不影响判定，但值得记）
+
+- **npm `dist-tags` 暴露通道设计**：`next` → `0.1.5-rc.2`、`alpha` → `0.1.6-alpha.1`、**`latest` → `0.0.1-rc.1`（从未推进过）**。⇒ **015-rc.2 仍是 `next` 的代表**，016-alpha.1 是更早的实验支线 —— **挪 015 的决定没有被 016 动摇**。
+- **数据格式义务未变**：016-alpha 的 `docs/session-format-status.md` 仍是 `latestReleasedVersion: 3`（WB 已核，未涨到 4）；但上游把"加一个格式版本"**制度化了**（新增 `docs/cookbook/adding-a-session-format-version.md` + `docs/persistence-changes/historical-formats/`）。⚠️ 另：该区间 `+784,113 行` 的原始数里 **65% 是 schema 归档生成物**，别拿它当"变化量"（WB 已算排除口径）。
+- **AGENTS.md 在 016-alpha 又被改了**（WB 已核）：哲学章节标题与核心句**未变**（"never move, overwrite, or delete committed generations" 原样保留），新增"要确认持久化类型变更"的要求，`Repository layout` 被压缩（doc budget 棘轮）。⇒ **09-15 判的"产品哲学已在 rc 阶段落定"，4 天后依然成立。**
+
+## 6. 你要做的事
+
+1. ✅ **本稿不必重做**，记「过」（WB 复验通过）。**不必先修环境再重跑** —— 判 (a)。
+2. 🔧 环境污点：按 §4 的**精确前置**写进 003。
+3. 📌 保留两条"未验"标注（工具开关端到端 / D 组装置级），**不要升格**。
+4. 📌 §6-2「package 文档默认 ≠ 部署覆盖」的订正 WB 接受，会写进 `dsh-015-capability-mapping.md`。
+
 
 

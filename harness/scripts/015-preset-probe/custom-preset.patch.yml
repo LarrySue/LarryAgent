@@ -1,0 +1,31 @@
+# 派发 002 · C 组「正面」overlay：给 preset 表加一条**我们的**自定义档。
+#
+# ⚠️ 关键机制（源码级）：patch 是**整体替换该行的 config**，不是 merge。
+#    dsh-base 的 `permission` 行已把三条官方档写进 config.presets ⇒ 本 overlay 必须
+#    **把三条一并重述**，否则被替换掉的是整张表（且 `defaultPreset` 推断会落到 `custom` ⇒ 装载即 throw）。
+#
+# ⚠️ 另一条源码级事实：`workspace-write` 必须留在表里 —— 构造期 `derive(EMPTY_KNOBS)`
+#    用 `ctx.shell.sandboxMode` + `ctx.approval.config.policy`（默认 = workspace-write + ask）
+#    推断 defaultPreset，推断不出（= custom）就 throw。
+#
+# 用法：dsh --profile sdk --patch <本文件绝对路径>
+- id: permission
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+      # ⭐ 我们加的那条：与官方 read-only 同 bundle（read-only + ask）——
+      # 故意如此：`permission/preset` 事件存在的意义正是"两条档共享 bundle 时仍能记住用户选了哪条"
+      #（见 permission-presets.md「Switching and the permission/preset event」）⇒ 顺带验共享 bundle 的 tie-break。
+      trae-readonly-ask:
+        sandbox: read-only
+        approval: ask
+        name: 只读（Trae 探针）
+        description: 探针自定义档：只读沙箱 + 询问式审批（与官方 read-only 同 bundle，用于验 tie-break）

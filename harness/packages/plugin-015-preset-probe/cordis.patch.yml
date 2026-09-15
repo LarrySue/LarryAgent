@@ -1,0 +1,6 @@
+# 派发 002 探针的 bundle 层：把探针插进 profile 的 cordis 行图。
+# 挂载动作：dsh plugin --profile sdk add <本包目录> ⇒ profile manifest 的 dsh.profile.bundles 自动纳入本包。
+# 卸载动作：dsh plugin --profile sdk remove @larryagent/plugin-015-preset-probe
+- insert:
+    - id: larry-015-preset-probe
+      name: '@larryagent/plugin-015-preset-probe'

@@ -93,3 +93,24 @@
   - **其余 exchange 文件判为不动**：`log-claude.md` 已由其自己清过（`bfe168b`，现 120 行）；`discussion-time-context.md` **在飞**（第 2 轮待各方表态）；`deployment-architecture.md` / `web-search-design.md` 是「**未启动**」而非「过期」（前者状态行已写明"待 DSH 迁移完成后重新制定"）；`log-marvis.md` / `log_design.md` 设计定案已固化进 `docs/ui-reference.md`；`log-other.md` 空。
 - **未动** `docs/` 与 `TODO.md`（能力树实改待老大批 `capability-tree-revision.md`）。
 
+## 2026-09-15 傍晚 · 〈回报 002〉复验（2.7.2 A-framework 契约实测）
+
+**结论：四组全过 → 判「过」**。WB 逐条独立复验（未采信自述）+ 4 条 WB 侧新增发现，已写入 `log-trae.md` 文末〈回复 002〉。
+
+**复验证据（本机可复现）**：
+- 产物：`harness/packages/plugin-015-preset-probe/`（3 文件）+ `harness/scripts/015-preset-probe/`（2 文件）
+- 证据：`D:\Code\_trae-015\` 19 文件；`dump-config-custom.txt` **367 行** ✅、`dsh-version.txt` = `0.1.2-rc.1` ✅（与回报一致）
+- 原始：`runs/*.probe.json` 的 `A.services` / `B.config` / `C.sessionTests` / `D.verdict` **逐字段对上**；`errors: []`
+- 判据：`dsh-permission-presets@0.1.5-rc.2` 的 lib 逐行 —— `:109` / `:112` / `:245` / `:255-267` / **`:280-286`（只写"变了"的 knob）** / `:293-311` 全部吻合 C 组观察
+- 硬约束：`dsh-base/cordis.patch.yml:6-7`（整体替换非 merge）+ `:229-241`（三条 preset 写死）
+
+⭐ **新增发现 4 条**：
+1. **改判与基线解耦** —— permission-presets / user-approval / user-questions / sandbox-policy **两版逐字节相同**（sha 一致、diff 0 行）；`dsh-tools` 仅 PTC 改名、**`restrict()` 段零差异**；base 三条 preset 两版都有 ⇒ **012 就已存在**，口径应写「**012 已有，015 未变**」，不是"015 带来的承接"
+2. **工具开关也是 012 就有**（`restrict` 作用域守卫原文两版逐字相同）
+3. ⭐ **上游没静默** —— `dsh-v0.1.6-alpha.1` @ **2026-09-15 10:42**（距 015-rc.2 仅 **4d13h / 800 commits**；排除生成物 +143,605 行，日均提速 3.6×）。**016-alpha 新增 `packages/boot/app-boot/src/profile-resolution/`（015 无，`resolver.ts` 975 行，PR `fix/profile-module-resolution`）** ⇒ **Trae §6-1 的"profile 跨版本混合"是上游已知/正在修的系统性问题**；003 若按 015 重跑会重演 ⇒ 前置钉「**CLI 与 profile 同代**」（`@deepseek-ai/dsh` 也有 015-rc.2），**不必换 alpha 基线**
+4. **npm `dist-tags` 揭示通道** —— `next`=0.1.5-rc.2 / `alpha`=0.1.6-alpha.1 / **`latest`=0.0.1-rc.1（从未推进）** ⇒ stable 通道长期空置是**有意设计**；格式版仍 =3（016-alpha 未变）
+
+⚠️ **口径自警**：016 区间原始 `+784,113 行` 中 **65% 是 schema 归档生成物** ⇒ **不得当"变化量"引用**（已算排除口径 143,605）。
+
+**未动** `docs/` 与 `TODO.md`。**待老大拍**：003 排期 + 是否把"CLI 与 profile 同代"钉进 003 前置。
+
