@@ -20,6 +20,7 @@
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
 - `web-search-design.md` — 网络搜索技术选型与设计规格（**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
+- `dsh-015-notes-scan.md` — DSH 0.1.2-rc.1 → 0.1.5-rc.2 全新笔记扫描（110 篇全过 + 判读；重心是「对手侧状态」，供基线决策与 `product-positioning.md` 常设列复用）
 
 ## 协作规则
 

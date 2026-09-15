@@ -26,3 +26,12 @@
 - 待议（未展开）：本地工具下沉实现路径（双向通道 vs 本地 agent 运行时，倾向后者）、记忆系统分层、多端设备身份、移动端能力不对称。
 - 现状 gap（已纳入方案 §七.1 待议）：file_ops/shell 目前在 backend，上云后会操作云端机器而非本机，需下沉 client 端。
 
+## 0.1.5 全新笔记扫描（2026-09-15 产，讨论稿）
+
+- 新建 `exchange/dsh-015-notes-scan.md`：`ref/dsh-bare` 两 tag 对照，**110 篇**全新笔记（basename 差集 ÷3）逐篇过完 + 判读。
+- ⭐ **最高级发现（改判据）**：`AGENTS.md` 的产品哲学在 **0.1.5 正式转向** —— 012 的 `Pre-release stance: foundation over blast radius`（"Remove at the first tagged release"、"reject old on-disk formats"、"no compatibility promise"）→ 015 的 `Pre-stable APIs and released Session data`（"**never move, overwrite, or delete committed generations**"），且**直接引用** `2026-08-31-released-session-format-migrations` 这篇笔记；同版新增官方治理文档 `docs/session-format-status.md`。⇒ **「等第一个 stable 才体现产品哲学」的理由失去支点——哲学变身已在 rc 阶段发生。**
+- ⭐ **3.2 靶子改判**：015 新增 `packages/session/session-persistence-jsonl/src/lease.ts` + `win32.ts`（012 上不存在，已 `ls-tree` 确认）。**跨进程同 session 写-open** 在 015 上被内核锁保护（POSIX flock / Win32 named semaphore），争用抛 `SessionAlreadyOwnedError`，故意不做 TTL 抢占。⇒ 09-11 判的「0.1.5 没修掉 3.2 要查的行为」**已过时**：进程内 collision 未变，跨进程层已变 ⇒ **3.2 实验设计若挪 015 必须重做，结论不可跨版本引用**。
+- 🟡 其余命中：`2026-08-27-outbound-proxy-policy`（**正是我们踩的 socks5 代理坑，015 已正式解决**，新增 `packages/util/http-proxy`）／`2026-08-26-generic-file-upload` + 新增包 `packages/client/file-upload`（**2.3.4 对手侧已给**，迁移后有从「自做」降为「承接」的空间）／`workspace-files` + `client-resource-model` + `/api/file`（**官方正面承认「浏览器可能不在 Host 机器上」**，远程形态开端，但 `identity/` 两版未变 ⇒ 仍非多租户云）／ACP `src/` 有真实改动（`flush` / `stat` 取代 `ensureMaterialized` / `list`）⇒ `-32601` 结论**待实测重核**。
+- ⚪ 结构性：档位 implemented 96 / archived 13 / proposed 1（012 的 proposed 是 78）⇒ **13 篇「新写即归档」= 「有些特性还没来得及做/被自己推翻」的直接实证**；process/testing 类占 25 篇 ⇒ 工程化基建投入巨大（对「项目长期可持续」是正面证据）；`promote-open-anywhere-plugin` = **社区插件被官方吸收的先例**。
+- 边界：AGENTS.md / identity / acp / lease.ts / 新增包存在性 = **代码复核**；其余机制描述仅笔记自述，进 docs 前须复验。015 的 ACP 是否仍缺 `fork`/`load`/`delete` **未实测**。
+
