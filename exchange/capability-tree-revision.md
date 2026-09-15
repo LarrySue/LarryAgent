@@ -67,7 +67,7 @@
 
 ---
 
-## 2. 2.7.2 边界透明与用户决策权（🗂️ 有挂起，见文末）
+## 2. 2.7.2 边界透明与用户决策权（⚪ 已实测闭合 · 余项见 §11）
 
 ### 现状原文（`product-positioning.md:250`）
 
@@ -83,7 +83,8 @@
 > **机制面由 DSH 承接（0.1.5）**：`ctx.approval`（结果集 **fail-closed**——缺失 / 抛错 / 不合规的答者一律 `unavailable`，**不默认开门**，且 `approval/asked` · `decided` 成审计对）、`ctx.permissionPresets`（preset 表 **config 化**，⚠️ 取值为 `sandbox: SandboxMode` + `approval: ApprovalPolicy` **两个 knob**，**不含工具开关**）、`ctx.userQuestions`（答者可**中继到已连接客户端**）——三者均为 A-framework 下的公开契约。
 > ⇒ **我方自做范围收窄为「策略内容」**，机制不重造；起步可直接用官方两档 preset，**零代码**。
 >
-> ⚠️ **判据出处与状态**：以上取自 `docs/subsystems/` 的 `approval.md` / `permission-presets.md` / `user-questions.md`（`dsh-v0.1.5-rc.2`）。**「自定义 preset 表在真实 profile 里能否生效」尚未实测** ⇒ 本条为 ⚪ 须实测后定（见待办）。
+> ✅ **判据出处与状态**：以上取自 `docs/subsystems/` 的 `approval.md` / `permission-presets.md` / `user-questions.md`（`dsh-v0.1.5-rc.2`）。**「自定义 preset 表在真实 profile 里能否生效」已实测** ⇒ 本条 ⚪ **闭合**（002 探针：自定义 preset 在真实 profile 上生效）。
+> ⚠️ **覆盖边界（勿外推）**：preset 表**只覆盖 `sandbox` + `approval` 两个 knob**；2.7.2 原文的「**工具开关**」**不在其中** —— 工具级须另走 `ctx.tools.restrict()`（API 与作用域守卫已实证，**真 agent 轮 deny 后的模型侧行为端到端未验**）。
 >
 > 📌 **本条留下的一条教训（全树推广）**：**判据会随架构选型失效**——同一个"不可达"，换个架构前提就作废。跨阶段沿用旧判据前，先问「这条论据挂在哪个面上」。
 ```
@@ -222,7 +223,7 @@
 
 | 项 | 状态 | 归属 |
 |---|---|---|
-| 2.7.2 的 ⚪ 须实测后定 | 待跑 | 见 §11 |
+| 2.7.2 的 ⚪ —— **preset 生效性 ✅ 已验** ／ **工具开关（`restrict()`）端到端未验** | 主项闭合，余项待跑 | 见 §11 |
 | 2.3.3 的 ⚪（workspace 运行时行为） | 待跑 | |
 | §1(c) 顶层总览表是否加列 | 待老大 | |
 | §4 的 `web_fetch` 重估 | **老大暂缓**，迁移后按 DSH 挂载形态再议 | |
@@ -230,7 +231,7 @@
 
 ---
 
-## 11. 本稿落地前的前置实测（与 P0 派发同一批）
+## 11. 前置实测结果（002 已完成 · 与 P0 派发同一批）
 
 | 项 | 为什么是它 | 执行 |
 |---|---|---|
