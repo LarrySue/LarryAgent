@@ -80,7 +80,7 @@
 ### 建议改为（在原文字后追加两段）
 
 ```markdown
-> **机制面由 DSH 承接（0.1.5）**：`ctx.approval`（结果集 **fail-closed**——缺失 / 抛错 / 不合规的答者一律 `unavailable`，**不默认开门**，且 `approval/asked` · `decided` 成审计对）、`ctx.permissionPresets`（preset 表 **config 化**）、`ctx.userQuestions`（答者可**中继到已连接客户端**）——三者均为 A-framework 下的公开契约。
+> **机制面由 DSH 承接（0.1.5）**：`ctx.approval`（结果集 **fail-closed**——缺失 / 抛错 / 不合规的答者一律 `unavailable`，**不默认开门**，且 `approval/asked` · `decided` 成审计对）、`ctx.permissionPresets`（preset 表 **config 化**，⚠️ 取值为 `sandbox: SandboxMode` + `approval: ApprovalPolicy` **两个 knob**，**不含工具开关**）、`ctx.userQuestions`（答者可**中继到已连接客户端**）——三者均为 A-framework 下的公开契约。
 > ⇒ **我方自做范围收窄为「策略内容」**，机制不重造；起步可直接用官方两档 preset，**零代码**。
 >
 > ⚠️ **判据出处与状态**：以上取自 `docs/subsystems/` 的 `approval.md` / `permission-presets.md` / `user-questions.md`（`dsh-v0.1.5-rc.2`）。**「自定义 preset 表在真实 profile 里能否生效」尚未实测** ⇒ 本条为 ⚪ 须实测后定（见待办）。
@@ -232,10 +232,11 @@
 
 ## 11. 本稿落地前的前置实测（与 P0 派发同一批）
 
-| 项 | 为什么是它 | 建议执行 |
+| 项 | 为什么是它 | 执行 |
 |---|---|---|
-| `permission-presets` 自定义表在真实 profile 生效 | **2.7.2 改判的落地前提**（§2 的 ⚪） | 见 `log-trae.md` 派发 |
-| `ctx.approval` 的 fail-closed 实测 | §2 引用的核心契约 | 同上（一次派发做完） |
+| `permission-presets` 自定义表在真实 profile 生效 | **2.7.2 改判的落地前提**（§2 的 ⚪） | ✅ **已派** —— `exchange/log-trae.md`〈派发 002〉**C 组** |
+| `ctx.approval` 的 fail-closed 实测 | §2 引用的核心契约 | ✅ 同上（**D 组**，一次派发做完） |
+| ⚠️ 另：**preset 表管不到「工具开关」** | WB 2026-09-15 读原文发现 ⇒ 改判覆盖面须按实测重划 | ✅ 同上，**C 组**交办项 |
 
 ---
 
@@ -244,3 +245,4 @@
 | 日期 | 变更 | 作者 |
 |---|---|---|
 | 2026-09-15 | 开稿：由映射稿 §6 的 8 条展开为「现状原文 → 建议改后」，含老大已给方向的记档与 2 条全树教训 | WB |
+| 2026-09-15 | 订正 §2 的覆盖范围：`PresetSpec` 只有 `sandbox` + `approval` 两个 knob，「工具开关」不在 preset 表内（原写"同构"过强）；§11 标注〈派发 002〉 | WB |

@@ -138,10 +138,13 @@
 
 1. **fail-closed 是官方默认语义**：「A missing, non-owning, throwing, or non-conforming answerer becomes `unavailable` rather than opening the gate」——这**正是**我们 3.3 验收要的「answerer 抛错 / 超时 → 必须 fail-closed」。
 2. **审计对已内置**：`approval/asked` + `approval/decided` 成对，log-only（不入模型转写）⇒ 我们「可观测日志」要求有现成位置。
-3. **`permission-presets` 就是「边界 config 化」的官方形态**：preset 表可自定义（`presets?: Record<string, PresetSpec>`），客户端渲染为一个 Permissions 选择器，`set()` 写 log-only 的 `permission/preset` 事件 + 两个 knob ⇒ 与 2.7.2「白名单 / 黑名单 / 工具开关**全部 config 可调、边界交用户决策**」同构。
+3. **`permission-presets` 是「边界 config 化」的官方形态，但覆盖面比 2.7.2 的措辞窄**：preset 表可自定义（`presets?: Record<string, PresetSpec>`），客户端渲染为一个 Permissions 选择器，`set()` 先写 log-only 的 `permission/preset` 事件，再经**两个 knob 各自的 setter** 写入（`setSandboxMode` / `setApprovalPolicy`）。
+   - ⚠️ **WB 2026-09-15 订正（原写「同构」，过强）**：`PresetSpec` 实测只有两个字段 —— `sandbox: SandboxMode`（`read-only` / `workspace-write` / `danger-full-access`，且**只管文件效果**；原文 *"Network and process visibility are outside this vocabulary"*）+ `approval: ApprovalPolicy`（**只有 `ask` / `never` 两档**，且 `never` = **全拒**不是全放行）。
+   - ⇒ **preset 表管不到「工具开关」**。2.7.2 原文的「白名单 / 黑名单 / 工具开关全部 config 可调」中，**只有"边界档位"这一半有现成机制**；工具级开关需另找出处。
+   - 已列入 **〈派发 002〉C 组**交办项（要求实测后回报「preset 管不到什么」+ 找工具开关的实际机制）。**改判方向不变，覆盖面待实测重划。**
 4. **答者可中继到远端**：`user-questions` 原文「Agent-scoped waterfall listeners compose the available UI surfaces, **including listeners relayed to a connected client**」⇒ 我们 3.3-b / 3.8 要做的「出境 → 人答 → 回填」**官方机制面已支持**（这也与社区件 `dsh-reach` 的 deferred answerer 实证一致）。
 
-**改判后的口径**：2.7.2 从「**自做（因机制面不可达）**」变为「**可承接机制 + 自做策略内容**」。⇒ 分类归 🟢（主要成本从"造一套审批机制"变成"写我们的策略"），**且可先用官方两档 preset 零代码起步**。
+**改判后的口径**：2.7.2 从「**自做（因机制面不可达）**」变为「**可承接机制 + 自做策略内容**」。⇒ 分类归 🟢（主要成本从"造一套审批机制"变成"写我们的策略"），**且可先用官方两档 preset 零代码起步**。⚠️ 机制覆盖面见上条订正（**沙箱模式 + 审批策略两个 knob**，**不含工具开关**）。
 ⚠️ **不等于 2.7.2 已验收**——策略内容（哪些要问 / 低打扰 / 聚合）仍是我们的产品承诺，DSH-4 验收项不变。
 
 ### 3.2 ⭐ 2.3.3 会话级作用域（沙盒）：从「自做插件」→「**可降级**」

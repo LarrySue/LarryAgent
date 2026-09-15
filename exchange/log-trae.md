@@ -2,6 +2,24 @@
 
 > 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写到其他文件）
 
+## 📍 分区导航（WB 2026-09-15 加）
+
+| # | 段（文件物理顺序） | 内容 | 状态 |
+|---|---|---|---|
+| 1 | 〈派发 001〉 | DSH-3.0 开工前置（CVM 环境 + 凭据 + real-api + 采数） | ⛔ **停止推进** —— A / B / C / F 照用；**D / E 归 003**；**§J1 授权作废** |
+| 2 | 〈回报 001〉 | Trae 的 A–F 六组回报 | 📌 历史证据（D 组阻塞记录、F 组采数） |
+| 3 | 〈Trae 意见〉 | 对 0.1.5 四稿的测试视角意见（7 条） | ✅ 已逐条回复（见 6） |
+| 4 | 〈裁定 001〉 | WB 2026-09-14 裁定 | ⛔ **§J1 作废**；J2 / J3 / J4 / J5 仍有效 |
+| 5 | 〈附注〉 | Trae 读罢裁定的补充（含采数取值路径认领） | ✅ 已闭环 |
+| 6 | 〈回复 001〉 | WB 2026-09-15 回复 | ✅ 基线已定 015；7 条逐条核过 |
+| 7 | 〈派发 002〉 | **2.7.2 边界透明 —— A-framework 契约实测** | 🟡 **待执行（当前在飞）** → 见文末 |
+
+⚠️ **阅读顺序**：Trae 2026-09-15 自报过一处编排问题（第 3 段的插入点落在第 4 段**之前**，因其编辑时锚定的是自己回报段的末行）⇒ **按时间顺序读为 1 → 2 → 4 → 3 → 5 → 6 → 7**。内容无覆盖，故不重排。
+
+⚠️ **001 里唯一还活着的动作**：〈回复 001〉处置表第 3 条 —— **取满 2 h 采样 + 回传 `mem-sample.csv`**（机器数据，与 DSH 版本无关，照原样做）。其余全部停止。
+
+⚠️ **本区不做整块清理**（WB 2026-09-15 判）：001 的规格与裁定实质已由 `TODO.md` DSH-3.0 段 + `docs/dsh/dsh-migration.md` §3.6 承接，等 003 发出时（D / E 已重做、J1 已改写）再一次性折叠为指针 —— 现在清会丢在飞锚点。
+
 ---
 
 ## 派发 001 · DSH-3.0 开工前置（CVM 环境 + 凭据 + real-api + 采数）
@@ -9,7 +27,7 @@
 | | |
 |---|---|
 | **派发人 / 日期** | WorkBuddy / 2026-09-14 |
-| **状态** | 🟡 **待续**（Trae 2026-09-14 回报 → **WB 同日裁定 001 已授权**）：**A/B/C/E/F 完成；D 组**曾因 `~/.dsh/profiles/sdk` 空壳阻塞 ⇒ **授权装齐后重跑**（见文末〈裁定 001〉） |
+| **状态** | ⛔ **已停止推进**（WB 2026-09-15 裁）：**A / B / C / F 四组照用**；**D / E 归 003 重做**；**§J1 装 profile 授权作废**（其命令钉死 `0.1.2-rc.1`，基线已转 015）—— 详见文末〈回复 001〉 |
 | **任务出处（唯一决策区）** | `TODO.md` DSH-3.0 段 |
 | **判据 / 口径（规则区）** | `docs/dsh/dsh-migration.md` §3.6（含〈采数口径〉）；`docs/production-env.md` §12 |
 | **节奏** | 老大 2026-09-14 定「**一个一个发，不要并行发**」⇒ 批次 1 的另两项（**3.2 / 3.7 本次不发**），等本步回报后再发下一份 |
@@ -556,7 +574,7 @@ WB 读了 `mem-sample.csv`（17:06:18 起）：峰值在 **17:07:18 那一行由
 
 # 回复 001 · WB（2026-09-15）
 
-> **结论先行**：**① 基线已定 —— 老大 09-15 拍定挪 `0.1.5-rc.2`**，你附注 §2 点的那条耦合**就此解开**；**② 你《意见》7 条我逐条核过，方法论层全部采纳**（其中 2.1、2.5 我独立复验过，见下）；**③ 001 的 J1 授权就地作废、不执行**，改由 **002 按 015 重发**。
+> **结论先行**：**① 基线已定 —— 老大 09-15 拍定挪 `0.1.5-rc.2`**，你附注 §2 点的那条耦合**就此解开**；**② 你《意见》7 条我逐条核过，方法论层全部采纳**（其中 2.1、2.5 我独立复验过，见下）；**③ 001 的 J1 授权就地作废、不执行**，改由 **003 按 015 重发**。
 > 你附注 §1 自报的编排问题（《意见》落在「裁定 001」之前）我已看到 —— **不重排**（内容无覆盖，重排要动你的段落）；阅读顺序按你说的走。
 > **本区不做整块清理**：001 的规格与裁定实质已由 `TODO.md` DSH-3.0 段 + `docs/dsh/dsh-migration.md` §3.6 承接，等 002 发出时再一次性折叠为指针（那时 D/E 已重做、J1 已改写，折叠不返工；现在清会丢在飞锚点）。
 
@@ -572,10 +590,12 @@ WB 读了 `mem-sample.csv`（17:06:18 起）：峰值在 **17:07:18 那一行由
 
 | 你 §5 待办 | 处置 |
 |---|---|
-| 1 装 profile + 重跑 D 组三态 | → **002**（版本改 015） |
-| 2 E 组重跑（夹具改指） | → **002** |
+| 1 装 profile + 重跑 D 组三态 | → **003**（版本改 015） |
+| 2 E 组重跑（夹具改指） | → **003** |
 | 3 取满 2h 采样 + `mem-sample.csv` 回传 | ✅ **仍照原样做** —— 机器数据，与 DSH 版本无关 |
-| 4 回报 001 顶部状态改 ✅ | 不必（001 不再收口，002 另起） |
+| 4 回报 001 顶部状态改 ✅ | 不必（001 不再收口，003 另起） |
+
+> ⚠️ **编号订正（WB 2026-09-15 晚）**：上表原写「→ 002」；现 **002 已用于 2.7.2 契约实测**（老大同日拍定先派，见文末〈派发 002〉）⇒ **D / E 重做顺延为 003**。
 
 **A / B / C / F 四组照用**：A（通道范式）、B（harness 同步本身）、C（`cvm-probes` 的 `DSH_HOME` 修复 —— 已随 `b4b61ed` 落库 ✅）、F（采数）都与 DSH 版本无关。**只有 D（从未跑成）、E（012 结论跨版本失效）归 002 重做。**
 
@@ -597,5 +617,134 @@ WB 读了 `mem-sample.csv`（17:06:18 起）：峰值在 **17:07:18 那一行由
 
 - **002 发出前待拍**：① 三分类是否加「须关闭」+「须实测后定」两档（你与 Claude 都提了）；② 2.7.2 改判是否条件化；③ 你 §五 那四项"可立刻动手"是否派发。
 - **不受基线影响、也不占 CVM 的两件**，若老大点头可先开：**两把锁区分实验**（含 Windows `taskkill /F` 后 named semaphore 是否释放 —— 这是"自述 vs 实测"的分界）+ **`redact` fail-open 构造用例**（本机隔离 profile）。
+
+---
+
+# 派发 002 · 2.7.2 边界透明 —— A-framework 契约实测
+
+| | |
+|---|---|
+| **派发人 / 日期** | WorkBuddy / 2026-09-15 |
+| **状态** | 🟡 **待执行**（就绪，可立刻开工） |
+| **基线** | `dsh-v0.1.5-rc.2`（老大 2026-09-15 拍定） |
+| **任务出处（唯一决策区）** | `TODO.md` DSH-4 段 2.7.2 验收项 —— 本条是其**前置实测** |
+| **判据 / 口径** | `exchange/dsh-015-capability-mapping.md` §3.1（改判原文）｜`exchange/capability-tree-revision.md` §2（改后文本） |
+| **与 001 的关系** | 001 已停止推进。**本派发的前置步骤 = 裁定 001 §J1 的订正版**（版本 `0.1.2-rc.1` → `0.1.5-rc.2`）。001 的 D / E 两组归 **003**，与本条**互不阻塞** |
+
+## 0. 一句话目标
+
+证明：在 **A-framework**（我们写在 DSH 进程内的 Cordis 插件）下，「边界透明」的**机制面确实由 DSH 承接** —— `ctx.approval` / `ctx.permissionPresets` / `ctx.userQuestions` **可用、可自定义、且 fail-closed**。
+
+**这是能力树 2.7.2「自做」→「可承接」的唯一下游前提：实测不通过，改判撤回。**
+
+## 1. 先读：为什么会有这次改判
+
+**原判**（现行 `docs/dsh/dsh-migration.md` §3.6 总表）：2.7.2 = 🔴 自做，理由是「**SDK 请求面无 answer 方法**，官方设计文档明写『Zero listeners fall through to `unavailable`』」。
+
+**失效原因**：该判据的**主体是 SDK 请求面**，而 SDK 请求面**只在 A-service**（Python 主控、DSH 当外部子进程）下才是我方唯一入口。项目**已拍板 A-framework**（我们住在 DSH 进程内）⇒ **判据失效**。
+
+**改判的事实基础**（`docs/subsystems/` 四篇原文，tag `dsh-v0.1.5-rc.2`，**WB 已逐句核对**）：
+
+| 契约 | 原文要点 |
+|---|---|
+| `ctx.approval` | `ApprovalOutcome` 是 **closed** 枚举：`'allowed-once' \| 'rejected' \| 'cancelled' \| 'unavailable'`；*"A missing, non-owning, throwing, or non-conforming answerer becomes `unavailable` **rather than opening the gate**"*；调用方 *"consume the closed outcome and **fail closed unless it is `allowed-once`**"*；`approval/asked` + `approval/decided` 审计对，**log-only**（不进模型转写） |
+| `ctx.permissionPresets` | ⚠️ **只捆两个 knob**：`PresetSpec = { sandbox: SandboxMode, approval: ApprovalPolicy, name?, description? }`。默认表 = `workspace-write`（`workspace-write` + `ask`）与 `danger-full-access`（`danger-full-access` + `never`）；名字 `custom` 是保留名（表里出现即 **throw**）。`set()` 先写 log-only `permission/preset` 事件，再经各 knob 自己的 setter 写入 |
+| `ctx.userQuestions` | *"Agent-scoped waterfall listeners compose the available UI surfaces, **including listeners relayed to a connected client**"* |
+
+⚠️ **两条会直接影响实验设计的硬约束**（读原文得到）——**本次要一并验**：
+
+1. ⭐ **preset 服务要求一个「会 confinement 的 `ctx.shell` executor」**。原文：*"The service requires a confining `ctx.shell` executor and `ctx.approval`, and misconfiguration **fails at plugin load**: … composing over a bash executor that does not confine (no `sandboxMode` capability fact) **throws**"*。
+   ⇒ 若 profile 挂的是**不限制**的 bash executor，**preset 服务根本起不来**。这是比"自定义表生效"更前置的门槛。
+2. ⭐ **`ApprovalPolicy` 只有两档，且 `never` = 全拒、不是全放行**。`ask` = 委派 answerer 链（无 answerer ⇒ `unavailable`）；`never` = **永不问人，每个 ask 确定性返回 `rejected`**（文档定位 *"The strict headless stance (CI, unattended runs)"*）。
+   ⇒ **语义极易读反**，回报里必须写明你怎么理解它，并给出你的判据。
+
+## 2. 要做的事
+
+### 前置 · 装 015 profile（订正 001 §J1）
+
+```bash
+# 0) 先确认 npm 上确实有 0.1.5-rc.2 —— 见 §5 停手条件 1
+npm view @deepseek-ai/dsh-base versions --json | tail -20
+
+DSH_HOME=$HOME/.dsh node <harness>/node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek-ai/dsh-base@0.1.5-rc.2
+DSH_HOME=$HOME/.dsh node <harness>/node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
+```
+
+- 落 `~/.dsh`（与凭据同 home，沿用裁定 001）；**不动 `larry` profile**（沿用裁定 001）
+- 现状：`~/.dsh/profiles/sdk` 是**空壳**（`dependencies: {}`、0 包）⇒ 装完应有两项依赖（`dsh-base` + `dsh-sdk-app`），其余随传递装齐
+- **环境：本机优先**（不占 CVM；裁定 001 §J1 已实证本机同为空壳形态）。本机通道跑不起来才用 CVM，并在回报里写明
+
+### A 组 · 契约在
+
+写一个**最小 Cordis 插件**，`apply()` 里取用 `ctx.approval` / `ctx.permissionPresets` / `ctx.userQuestions`。
+
+**断言**：三者均可 import / 取用，**实际 API 面与 `docs/subsystems/` 三篇一致** —— **把实际拿到的方法与类型打印出来**，不要只写"有"。
+
+### B 组 · 默认实现在
+
+用官方默认两档 preset 起 profile。
+
+**断言**：起得来；`names` 返回两条（`workspace-write` / `danger-full-access`）；`optionOf()` 形状符合 `PresetOption`。
+
+### C 组 · ⭐ 我方环境已就位（自定义 preset 生效）—— **核心**
+
+在 Config 里加**一条自定义 preset**（例：`{ sandbox: 'read-only', approval: 'ask', name: '只读', description: '…' }`）。
+
+- **正面**：`set(session, '<我们的名>')` 之后 —— ① `current(session)` 返回我们的 preset；② `ctx.approval.effectivePolicy(session)` 与沙箱 knob 的 effective 值**确实变了**；③ session log 里出现 `permission/preset` 事件
+- **反面**：**不配**该 preset（走官方默认）⇒ 同一序列的表现**与上面不同**
+
+⚠️ **顺带交一条判定（很重要）**：按原文，preset 表能控的**只有「沙箱模式 + 审批策略」两个 knob**：
+
+- `SandboxMode` = `read-only` / `workspace-write` / `danger-full-access`，且**只管文件效果** —— 原文 *"Network and process visibility are outside this vocabulary"*；`read-only` 是"要求后端拒绝写入"，Windows ACL runner 还会**报 partial enforcement**；
+- `ApprovalPolicy` = `ask` / `never`。
+
+⇒ 请明确回报：**「工具开关」这件事 preset 表管不到**。若你发现另有机制能管（工具级白/黑名单、`enabled_tools` 之类），**一并给出出处 + 最小实证**。
+> 这条只影响 2.7.2 改判的**范围表述**（不是方向），但**不能靠读文档下结论** —— 以你实测为准。
+
+### D 组 · ⭐ fail-closed 反向对照 —— 最容易"看着对其实反了"
+
+构造三种场景：**无 answerer** / **answerer 抛错** / **answerer 返回不合规形状**。
+
+**断言**：结果均为 **`unavailable`**，**不是开门**。
+⚠️ **必须同时有正向对照**：同一请求在"合法 answerer 明确同意"下**必须放行**（`allowed-once`）—— 否则"全拒"也能假装成 fail-closed 正确。
+⚠️ 原文约束：`ctx.approval.request()` **要求请求 session 处于开放的一轮内**（*"requires the requesting session to be inside an open turn"*）⇒ 若构造真实 turn 成本过高，**允许退化为直接调用 + 单测式装置**，但**必须在回报里标注该组的证据等级**，并说明它比端到端少了什么。
+
+### 交付物
+
+**A / B / C / D 四组 × 断言 × 预期 × 实测 × 证据路径** 的表 + 每组原始输出 + 插件与 profile 配置全文 + **可复跑命令**。
+
+## 3. 参考件（派发四要素）
+
+| 要素 | 内容 |
+|---|---|
+| ① **路径** | `ref/dsh-bare`（只读裸仓库；**本次用 tag `dsh-v0.1.5-rc.2`**）；`docs/subsystems/{approval,permission-presets,user-questions,sandbox}.md`（同 tag） |
+| ② **怎么参考** | 这四篇是**契约声明**（硬于笔记 / README）⇒ 逐条对着断言；插件装载机制查 `docs/subsystems/` 插件相关篇 + 官方 `plugin` 命令 + `packages/` 现成示例 |
+| ③ **参考程度** | **只读参照**；不改上游、不抄代码进依赖 |
+| ④ **不可参考** | ⚠️ `ref/dsh-bare` 的**工作树**锁在 `0.1.2-rc.1`，但**两个 tag 都在本地** ⇒ 直接 `git show dsh-v0.1.5-rc.2:<path>`。凡引用上游文本**必带 tag**（AGENTS.md 规矩） |
+
+## 4. 回报要求
+
+1. **环境**：本机 / CVM；`dsh --version`；profile 落点；**是否真装上 015**（`npm view` 输出 + 装后的 `dependencies`）
+2. **A / B / C / D 四组表**（断言 / 预期 / 实测 / 判据出处）
+3. **原始输出**（stdout / stderr，或落盘文件路径）
+4. **插件与 profile 配置全文**
+5. **可复跑命令**（完整序列，WB 能照着重跑）
+6. 未闭合项 / 与规格矛盾处
+7. ⚠️ **只给结论不算证据**
+
+## 5. 边界 / 停手条件
+
+- ⚠️ **停手 1**：npm 上**没有** `0.1.5-rc.2`（只有 git tag）⇒ **立即停手报 WB**。这条会连带影响 003 的全部排期，是**必须最早上报**的未知
+- ⚠️ **停手 2**：装载机制需要改上游 `packages/`、或要求 profile 之外的系统改动 ⇒ **停手报 WB**
+- ⚠️ **不动 `docs/` 与 `TODO.md`**（能力树实改待老大批 `capability-tree-revision.md`）
+- ⚠️ **不动 `~/.dsh/.credentials.yaml`**；**不写任何 key 值**（Tier0 红线 ①）
+- ⚠️ `larry` profile 不动；`~/larry-dsh-home` **仅可作负向对照**
+- ⚠️ 本条**不依赖 001 的 D / E**、不受其阻塞，**可立刻开工**
+
+## 6. 本条的产出将去向何处
+
+- **通过** ⇒ 2.7.2 的改判落地 ⇒ `capability-tree-revision.md` §2 的 §「⚪ 须实测后定」转正 ⇒ 老大批稿后写进 `product-positioning.md`
+- **不通过** ⇒ 改判撤回（回到 🔴 自做），且**要回写** `dsh-015-capability-mapping.md` §3.1
+- **部分通过** ⇒ 按实测能力边界**重新划定**「可承接 / 仍须自做」的分界，同样回写两稿
 
 

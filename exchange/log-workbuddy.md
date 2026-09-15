@@ -75,3 +75,21 @@
 - **下一步待定**：① 2.7.2 的实测**派给谁**（WB 建议：**Trae 执行** + **Claude 审装置**，WB **不参与执行**——该改判是 WB 提的，自测即自证）；② `product-positioning.md` 的实改顺序，待老大批 `capability-tree-revision.md` 后启动。
 - 仍缓：`docs/dsh/` 三份稿的**过期状态区订正**与**合并**（老大：「合并不是目的，先做其他的」）。
 
+## 派发 002（2.7.2 契约实测）+ Trae 交流区结构清理（2026-09-15 晚）
+
+- 老大两问：① 把 2.7.2 **派给 Trae**；② 看 Trae 交流区**要不要清**。
+- **新建〈派发 002〉**（`exchange/log-trae.md` 末尾）：2.7.2 边界透明的 **A-framework 契约实测**，四组断言（A 契约在 / B 默认实现在 / C 自定义 preset 生效 / D fail-closed 反向对照）+ 前置装 015 profile。
+  - **归属**：本条是 2.7.2「自做 → 可承接」改判的**唯一下游前提** —— 不通过即撤回。
+  - **前置 = 裁定 001 §J1 的订正版**（版本 `0.1.2-rc.1` → `0.1.5-rc.2`）；**停手条件 1 = npm 上没有 `0.1.5-rc.2`**（只有 git tag）—— 这条会连带影响 003 全部排期，要求**最早上报**。
+  - **编号订正**：原〈回复 001〉写「D / E → 002」⇒ 现 002 已被 2.7.2 占用，**D / E 顺延 003**；log-trae.md 内三处已同步订正。
+- ⭐ **写稿时读原文挖到两条硬约束 + 一处自我订正**（全部出自 `docs/subsystems/` 四篇 @ `dsh-v0.1.5-rc.2`，**逐句核对**）：
+  1. **preset 服务要求一个「会 confinement 的 `ctx.shell` executor」**，否则 **plugin load 时直接 throw** ⇒ 比"自定义表生效"更**前置**的门槛（已写进派发稿 §1 与 C 组）。
+  2. **`ApprovalPolicy` 只有 `ask` / `never` 两档，且 `never` = 全拒（`rejected`）、不是全放行** —— 语义极易读反（已要求回报里写明其理解与判据）。
+  3. ⚠️ **自我订正（过度声明，本轮同类第 2 次）**：上轮映射稿 §3.1 写 preset「与 2.7.2 的『白名单 / 黑名单 / 工具开关全部 config 可调』**同构**」—— **过强**。`PresetSpec` 实测只有 `sandbox: SandboxMode` + `approval: ApprovalPolicy` **两个 knob**（且 `SandboxMode` **只管文件效果**，原文 *"Network and process visibility are outside this vocabulary"*）⇒ **preset 表管不到「工具开关」**。已订正映射稿 §3.1 及其口径行 + `capability-tree-revision.md` §2 / §11 / 变更记录。
+- **Trae 交流区清理判决：做「结构性清理」，不删内容。**
+  - **加顶部〈分区导航〉**（7 段 + 各段状态 + 按时间序的阅读指引）—— 该文件已 600+ 行，且阅读顺序被 Trae 自报过一次打乱。
+  - **订正过期自述**：〈派发 001〉状态 `🟡 待续` → `⛔ 已停止推进`。
+  - **不删的理由**（沿用上轮判决）：D / E 归 003，**折叠时机未到**；且〈派发 001〉§1 那条发现（real-api 链路读不到 `~/.dsh` 凭据）**仍是 003 的前提**。
+  - **其余 exchange 文件判为不动**：`log-claude.md` 已由其自己清过（`bfe168b`，现 120 行）；`discussion-time-context.md` **在飞**（第 2 轮待各方表态）；`deployment-architecture.md` / `web-search-design.md` 是「**未启动**」而非「过期」（前者状态行已写明"待 DSH 迁移完成后重新制定"）；`log-marvis.md` / `log_design.md` 设计定案已固化进 `docs/ui-reference.md`；`log-other.md` 空。
+- **未动** `docs/` 与 `TODO.md`（能力树实改待老大批 `capability-tree-revision.md`）。
+
