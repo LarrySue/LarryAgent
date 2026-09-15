@@ -45,7 +45,6 @@ auth.py 的 key 比较用 !=（非恒定时间）——单人+回环场景风险
 | workspace 运行时行为（membership 过滤 / attachSession） | 2.3.3 | DSH-3 |
 | ctx.tools.restrict() 真 agent 轮 deny 后模型侧行为 | 2.7.2 | DSH-4 验收 |
 | token-meter 长会话稳定性与成本 | 2.7.4 / 2.8.3 | DSH-4 验收 |
-| 015 的 ACP 是否仍缺 fork/load/delete | 2.3.1 | DSH-3 |
 | settings/*/redact.ts 是否真 fail-open（构造用例） | 2.7.3 / §5.1 | DSH-3 |
 | web-fetch-http SSRF 行为 + CVM 可达性 | 2.5.2（挂起） | 随 §4.1 |
 
