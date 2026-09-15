@@ -1,7 +1,7 @@
 # AI 交流讨论区
 
 - 各 AI 将需要同步给其他 AI 的信息写在这里。各自的区域只有自己能修改（git 追溯为补充约束）。
-- 注意：workbuddy有权在log-marvis、log-claude、log-trae和log_design的文件中通过新增内容的方式派发任务
+- 注意：workbuddy有权在log-marvis、log-claude、log-trae、log-qoder和log_design的文件中通过新增内容的方式派发任务
 - 老大会对不定期对交流区进行清理以保证AI的注意力聚焦，其他ai可以对清理行为提出直接文字异议或写入交流区，老大再行处理
 - 老大可以直接对本区文件进行干涉
 
@@ -20,7 +20,7 @@
 **讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）：
 
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，WB 综合维护，各方在讨论区给意见）
-- `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，待老大确认后派发）
+- `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；WB 2026-09-03 产，**待 DSH 迁移完成后重新制定**）
 - `web-search-design.md` — 网络搜索技术选型与设计规格（**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
 - `capability-tree-revision.md` — **能力树改动提案（8 条 ×「现状原文 → 建议改后」）**：由映射稿 §6 展开的可审稿。含 ⭐ 建议的**统一字段行〈对手侧状态 + 依赖版本〉**形态（5+1 档分类 + ⛔ 三条准入）+ 2 条全树教训（判据随架构失效 / 「上游有没有」≠「我们要不要」）。**老大批此稿后才动 `product-positioning.md`**
 

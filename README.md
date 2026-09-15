@@ -9,10 +9,9 @@
 > **部署定位**：**第一版起即面向云部署**，当前本机仅作开发 + 测试环境。
 > - **PC 版（C/S）**：client 在本机不上云（保留本地文件 / 命令行能力），server 部署云端
 > - **移动版（B/S，规划中）**：浏览器直接访问云端
-> - 云 / 端边界、配置与隔离方案见 `exchange/deployment-architecture.md`（草案，定稿后回 `docs/`）
+> - 云 / 端边界、配置与隔离方案见 `exchange/deployment-architecture.md`（**待 DSH 迁移完成后重新制定**）
 
-> **当前状态（2026-08-30 核对）**：主线阶段 **P0–P4 已完成**，项目进入「能力增强 / 长期迭代」。
-> 进行中的待办与工程债务见 **`TODO.md`**（唯一事实源）；已完成阶段冷存于 `archive/roadmap-history.md`。
+> **当前状态**：主线阶段 **P0–P4 已完成**（历史，详见 `archive/roadmap-history.md`）；**现行在飞阶段与工程债务以 `TODO.md` 为准**（唯一事实源）。
 
 ---
 
@@ -47,6 +46,8 @@ LarryAgent/
 ├── docs/                    # 定案区：活跃权威文档（见 docs/README.md）
 ├── archive/                 # 冷存区：历史路线图 + 事故复盘报告（见 archive/README.md）
 ├── exchange/                # 活区：多 AI 交流日志 + 讨论稿 / 草案（见 exchange/README.md）
+├── harness/                 # DSH 迁移工程区（pnpm workspace：packages / scripts / tests）
+├── ref/                     # 上游 / 社区参考件（dsh-bare 裸仓库、community、awesome 清单；规则见 docs/dsh/README.md）
 ├── HUMAN.md                 # 人类治理文件（最高优先级，AI 只读）
 ├── HUMAN_NOTE.md            # 人类零散记录
 ├── TODO.md                  # 活跃待办（唯一事实源）
@@ -181,7 +182,7 @@ cd client && npm run test:unit
 | 文件 | 用途 |
 |---|---|
 | `log-*.md` / `log_design.md` | 各 AI 交流日志（WorkBuddy / Claude / Trae / Marvis / UI 设计） |
-| `deployment-architecture.md` | 云部署架构方案（待老大确认后派发，定稿回 `docs/`） |
+| `deployment-architecture.md` | 云部署架构方案（**待 DSH 迁移完成后重新制定**） |
 | `discussion-time-context.md` | 时间上下文（时间对齐）专题讨论 |
 | `web-search-design.md` | 网络搜索技术选型与设计规格（**尚未展开讨论**） |
 
@@ -194,7 +195,7 @@ cd client && npm run test:unit
 
 ## 多 AI 协作
 
-本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**Marvis**（产品宏观）、**WorkBuddy**（架构协调与复验），另有独立的 UI 设计角色。
+本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**Marvis**（产品宏观）、**Qoder**（文档一致性观察）、**WorkBuddy**（架构协调与复验），另有独立的 UI 设计角色。
 
 分工定义、约束加载机制与协作规则见 `docs/ai-governance.md`；各 AI 的活日志在 `exchange/`。
 
