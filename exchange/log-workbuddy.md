@@ -34,4 +34,19 @@
 - 🟡 其余命中：`2026-08-27-outbound-proxy-policy`（**正是我们踩的 socks5 代理坑，015 已正式解决**，新增 `packages/util/http-proxy`）／`2026-08-26-generic-file-upload` + 新增包 `packages/client/file-upload`（**2.3.4 对手侧已给**，迁移后有从「自做」降为「承接」的空间）／`workspace-files` + `client-resource-model` + `/api/file`（**官方正面承认「浏览器可能不在 Host 机器上」**，远程形态开端，但 `identity/` 两版未变 ⇒ 仍非多租户云）／ACP `src/` 有真实改动（`flush` / `stat` 取代 `ensureMaterialized` / `list`）⇒ `-32601` 结论**待实测重核**。
 - ⚪ 结构性：档位 implemented 96 / archived 13 / proposed 1（012 的 proposed 是 78）⇒ **13 篇「新写即归档」= 「有些特性还没来得及做/被自己推翻」的直接实证**；process/testing 类占 25 篇 ⇒ 工程化基建投入巨大（对「项目长期可持续」是正面证据）；`promote-open-anywhere-plugin` = **社区插件被官方吸收的先例**。
 - 边界：AGENTS.md / identity / acp / lease.ts / 新增包存在性 = **代码复核**；其余机制描述仅笔记自述，进 docs 前须复验。015 的 ACP 是否仍缺 `fork`/`load`/`delete` **未实测**。
+- 📌 该稿**已移入 `docs/dsh/dsh-015-notes-scan.md`**（老大 2026-09-15 指示，保留 git 历史）。同区另有 `dsh-agents-md.md`（AGENTS.md 参考件 + 机制判读）与 `dsh-015-upstream-inventory.md`（两张只读表）。
+
+## 0.1.5 能力树映射 —— 第 2 步（2026-09-15 产，讨论稿）
+
+- 新建 `exchange/dsh-015-capability-mapping.md`：**31 子项 × 三分类**（🟢 可承接 12 ／ 🟡 可降级 15 ／ 🔴 仍须自做 4）。主料是 **`docs/subsystems/` 53 篇正式规格**（上游对自身能力的权威描述），基线 `dsh-v0.1.5-rc.2`。
+- ⭐⭐ **架构级改判 · 2.7.2 边界透明：自做 → 可承接**。原判「自做」的依据是「SDK 请求面无 answer 方法（Zero listeners fall through to unavailable）」——**该依据只在 A-service 下成立**；已拍板的 **A-framework** 下我们就在 DSH 进程内，`ctx.approval`（closed + **fail-closed** 结果集、`approval/asked`·`decided` 审计对）／`ctx.permissionPresets`（**preset 表可配置**＝边界 config 化的官方形态）／`ctx.userQuestions`（瀑布 listener **可中继到已连接客户端**）全是公开契约。⇒ 自做只剩「策略内容」，且**可先用官方两档 preset 零代码起步**。
+- ⭐ **2.3.3 会话沙盒：自做 → 可降级**。上游 `workspace` 子系统**正是**「会话↔目录归属」的数据模型（稳定 id + 规范路径 + 有序 session 账户；membership = id 在账户内 且 header cwd 等于 workspace path；`session-controller` 已实现「cwd 取自选定 workspace、落 immutable header、再 attach」）。⇒ 我方只做**隔离语义**（`workspace` 明说 root「不是读边界」）。
+- ⭐ **2.10.2 端侧能力：认知改判**——DSH 每项本地副作用能力都是 capability seam（定义与实现分离），「下沉」不是对抗框架，而是**给它写一个端侧 provider**（与 `e2b/` 是同一机制的反向用法）。
+- ⭐⭐ **最重的新增风险：上游凭据脱敏是 fail-open**（`settings/redact.ts` 的 `TODO(settings-wire-redaction)`：经 union/intersection/transform 可达的秘密**原样返回且无记录**）⇒ **「key 不进日志」不得依赖 DSH 的 wire redaction**，撞我方 Tier0 红线 1。
+- ⭐ **新增能力位 3 处**：① `web_fetch`——**SSRF（DNS pinning + NAT64 + 逐跳复查）与资源封顶上游已吃**，我方原判「不做正文抓取」的 4 项成本降到 2 项（反爬 / 清洗仍在）⇒ 范围应重估；② **`compaction-tool-result-pruner` 就是官方默认顺序**（先 pruner 后 range selection）——产品树 §2.9.2「最划算第一步」不必自造；③ **`schedule` 的 catch-up 语义**（只补最近一次 + 不重放 + 批量合并 + 等 idle 不打断当轮）**正面回答**产品树 2.3.5 的「missed-run 是否必答」。
+- 🟡 另两条风险：出厂 **cookie 未标 `Secure` + 无登出**（对 2.7.5「HTTPS 硬前置」是实证支持）；**`web_fetch` 不受 sandbox/approval 管辖、无 per-call 确认**（若承接须挂 `tools/pre-execute` 策略，进「迁移必关清单」）。
+- 🔴 **仍须自做的只剩 4 项：2.4.3 记忆可管理 / 2.4.5 用户画像 / 2.6.2 自动路由 / 2.9.1 时间感知**——恰好全是产品语义核心（与 §3.3「一概替不了的 7 项」高度重合）。
+- 附带澄清：**2.4.3「硬删 vs append-only」的冲突前提不成立**（只成立于"记忆事件留在 session log"；记忆存自己的库即无冲突）⇒ 建议 DSH-4 写死「记忆本体不入 session log」。
+- 边界：契约 / 类型 / 子系统正文 = **代码级复核**；`web-fetch-http` 的 SSRF 行为、`settings/redact.ts` 的 fail-open、`workspace` 运行时行为、自定义 preset 表能否生效 = **读规格未实跑**，采纳前须补测。
+- 待裁定 6 条见稿件 §9（含"是否要再加一档『须关闭』"）。**本稿未改动任何 docs / TODO。**
 
