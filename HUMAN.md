@@ -36,11 +36,10 @@
 2. config.example.yaml 与解析结构漂移：models.deepseek 段写了 model: "deepseek-flash"，但 config.py 的 ModelConfig 只解析 api_key / base_url，该字段被静默忽略。（这条 TODO「工程债务」里有个近似条目被标为「延后至 DSH-6」，但那是讲 config.example 与正式版漂移，不完全同一条，供你判断是否同一件事。）
 3. server.host / port 配置实际未被消费：main.py 不含 uvicorn.run，启动靠 make run 命令行参数，配置里的 server.host/port 是死配置。小问题，但属于「说明与实际脱节」类。
 auth.py 的 key 比较用 !=（非恒定时间）——单人+回环场景风险可忽略，但既然要做上云硬前置，顺手用 hmac.compare_digest 是零成本的正解。
-4. 一处「已修复但文档未同步」的可能：复盘报告 §十四 记的「vector_store.enabled=false 被绕过」根因指向 chat_service.py:142 无条件调 get_long_term_memory——但现在 engine.py 第 59 行已有 if not get_config().vector_store.enabled: return [] 守卫，看起来已闭环。如果确实修好了，报告/TODO 里那条「待点将」的状态建议核对一下，避免留下过期的待办。
 
 ## 能力承接总表重划之后的待测
 
-有 6 项值得测（已在表内标 ⚪ + 单列〈待实测清单〉）
+有以下项值得测
 | 待测什么 | 影响哪行 | 归属 |
 | workspace 运行时行为（membership 过滤 / attachSession） | 2.3.3 | DSH-3 |
 | ctx.tools.restrict() 真 agent 轮 deny 后模型侧行为 | 2.7.2 | DSH-4 验收 |
