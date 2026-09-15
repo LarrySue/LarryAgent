@@ -34,6 +34,9 @@ ref/
 *.swp
 *.swo
 
+# Qoder（第三方 IDE 工作目录，不入 git）
+.qoder/repowiki/
+
 # Node
 node_modules/
 client/dist/
