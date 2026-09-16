@@ -804,10 +804,10 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 停 ChromaDB 进程 | S4 双写**降级行为**是否定义 |
 
 ⭐ **判据抽象（2026-09-16 CVM 实测）**：「环境可用性」类判据，真正在测的是 **plugin tree 能否装载**（`initialize` 会 `await loader.await()`）。
-- 跨代 / 缺 peer ⇒ 装载失败 ⇒ **红**；同代完整 ⇒ **绿**。**与 CLI 代际本身无关** —— 反例实测：`015 CLI ＋ 012 profile 且依赖自洽` = **绿** ⇒「跨代必红」不成立；准确说法是**约束落在 profile ↔ 其回退层 / 自身依赖的同代性上**（CLI 更新无害）。⚠️ 该规则目前仍是**候选**：绿样本带 `plugin-storage-probe` link ＋ `dsh-storage-sqlite@012`，**非干净样本**，需干净重测才能升为结论。
+- 跨代 / 缺 peer ⇒ 装载失败 ⇒ **红**；同代完整 ⇒ **绿**。**与 CLI 代际本身无关** —— 反例实测：`015 CLI ＋ 012 profile 且依赖自洽` = **绿** ⇒「跨代必红」不成立；准确说法是**约束落在 profile ↔ 其依赖图（含回退层所反映的落点树解析结果）的同代性上**（CLI 更新无害；回退层为何会给旧代际，成因见下条 ⭐）。⚠️ 该规则目前仍是**候选**：绿样本带 `plugin-storage-probe` link ＋ `dsh-storage-sqlite@012`，**非干净样本**，需干净重测才能升为结论。
 - **「profile 完全不存在」在 wire 层不可达**：boot 会把不存在的 home **自建成空壳 profile**（`dependencies: {}`，含 `cordis.yml` / `cordis.patch.yml` / `pnpm-workspace.yaml` / `.dsh-module-fallback`）＋ 同一套回退层 ⇒ 与「装了但不完整」的 profile **解析行为等价**。实测：`~/.dsh-015`（同代但缺 3 peer）与「**根本不存在的 home**」的 stderr **归一化后逐字节完全相同**（唯一差异是路径名长度 ⇒ 15247 vs 15499 B，差 6 字符 × 42 次）⇒ **这两类坏不可分**，别指望"空壳"能当独立对照组。
 - **可用的诊断面** = stderr 的 `failed to import loader entry <entry> (<pkg>): … does not provide an export named <sym>`（能读出**代际不匹配**，是本阶段最有信息量的一条错误）＋ **`readlink` 探针**；**缺口**：该错误**不给实际解析到的版本 / 路径** ⇒ 验收脚本应把两者一并收。
-- ⚠️ 也因此，**`~/.dsh-015` 不是"健康同代"样本**（它只有 `dsh-base` ＋ `dsh-sdk-app` 两项，缺 3 个 peer；与 `~/.dsh` 的差别仅 3 个包）—— 它在**旧四项 boot 探针**下 PASS、在 SDK 握手处必红。
+- ⚠️ 也因此，**`~/.dsh-015` 不是"健康同代"样本**（它只有 `dsh-base` ＋ `dsh-sdk-app` 两项，缺 3 个 peer；与 `~/.dsh` 的差别仅 3 个包）—— 它在**旧四项 boot 探针**下 PASS、在 SDK 握手处必红（红因 = 缺的 peer 落到回退层后被给到**旧代际**，成因见下条 ⭐ 四组对照）。
 
 ##### 执行范式与边界（防重复踩）
 
@@ -824,12 +824,23 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   - ③ **必须配负向对照**：拿一个**必然坏的输入**（如**不存在**的 `DSH_HOME`）重跑，观测若**逐值不变** ⇒ 该判据对这类坏**不敏感**。实例：原定四项观测（`exit code` / stderr 行数 / 栈帧版本号 / 3 条 entry）在空壳 home 下与原判**逐值相同**。⇒ **凡「启动 / 加载类」观测，都要问一句"拿必然坏的输入去跑，观测会不会变？"**（这是 §负向对照矩阵 在装置层的前置形态）。
 - ⚠️ **安装 / 启动类命令的退出码也不可信** —— `dsh plugin add` 在 pnpm 报 `Done` 后 **node 不退出**（CVM 实测挂 1:51，本机同）⇒ 范式：**后台 ＋ 轮询日志 ＋ 人工收尾**，不指望退出码（与 `setsid nohup … rc` 同族，但这里是"根本不退"而非"退得慢"）。
 - ⚠️ **通道差异（本机 Windows 侧，2026-09-16 实测 —— 属通道坑，非 dsh 事实，结论不得跨通道外推）**：① **pnpm store 落在盘根会被沙箱拦**（`[ERR_SQLITE_ERROR] unable to open database file`，因默认 `D:\.pnpm-store`）⇒ 显式 `npm_config_store_dir` 挪进允许区即通；② **Node 24 在 Windows 不能直接 spawn `.cmd`**（`spawn EINVAL`）⇒ 跑 npm 须 `shell: true`。
-- ⭐ **`healProfilesModuleFallback()` 会把「CLI 落点树」的代际回填进任意 home 的回退层 ⇒ 隔离 home 会被注射代际污染**（🟢 2026-09-16 CVM 实测 ＋ 源码复核；此条同时**订正** Trae 的机制表述）：
-  - **机制**：回退层 `<home>/profiles/node_modules` 的链接由 **CLI 安装落点树**解析而来（源码 `dsh-app-boot/lib/index.js`：`installAnchor` / `resolveModuleFallbackEntries` / `moduleFallbackEntryCurrent`），**不是**来自 `larry` / `web` / `acp` 三个 profile（该表述与源码不符，**作废**）。
-  - **实测**：`~/.dsh-015/profiles/node_modules/@deepseek-ai/dsh-session-persistence` 的 `readlink` → `~/harness/node_modules/.pnpm/node_modules/@deepseek-ai/…`，而**该目录里** `dsh-session-persistence` / `dsh-session-query` = **`0.1.2-rc.1`**（同层 `dsh-http-proxy` 与两个 session 插件却已是 `0.1.5-rc.2`）⇒ **`~/harness` 依赖树 012 / 015 混装**（顶层 `package.json` 已升 015，`.pnpm` 残留未清）。
-  - **后果**：私有层缺 peer 的 profile 会**静默回退**到这个混装层 ⇒ 症状由「**缺模块**」（清晰、早失败）变成「**装错代际**」（隐蔽、晚失败，且 `-32603` 不含任何代际信息）。
-  - ⇒ **隔离 home ≠ 干净环境**；判「某 home 可用」必须**同时**看它的私有层与**回退层的实际代际**。
-  - **候选修法（未立项，待裁）**：① profile 显式声明全部 peer（`~/.dsh` 的 5 项做法，已证有效）；② 重建 `~/harness` 使 `.pnpm` 纯净（根治 —— 否则下一个缺 peer 的 home 会重复踩）；③ 令 heal 只回填**与 profile 同代**的路径。
+- ⭐ **回退层解析到旧代际 —— 真因是「落点树 lockfile 被冻结」，不是「heal 注射代际污染」**（2026-09-16 二次上机，四组对照；**订正**本文件同日早先的表述）：
+  - **原表述（作废）**：曾记为「`heal` 把 CLI 落点树的**代际**回填进任意 home ⇒ 隔离 home 被注射代际污染」。实测**不成立**：heal 只是**忠实反映落点树的解析结果**，问题在该树自身的 lockfile。
+  - **机制（此部分保留，已由源码复核）**：回退层 `<home>/profiles/node_modules` 的链接由 **CLI 安装落点树**解析而来（源码 `dsh-app-boot/lib/index.js`：`installAnchor` / `resolveModuleFallbackEntries` / `moduleFallbackEntryCurrent`），**不是**来自 `larry` / `web` / `acp` 三个 profile（旧表述作废）。
+  - **四组对照**（观测 `@deepseek-ai/dsh-session-persistence` 的解析版本；registry 上 `0.1.5-rc.2` **确实存在**）：
+
+    | 装置 | 观测 | 含义 |
+    |---|---|---|
+    | 全新 015 项目（`pnpm add`，空目录） | **`0.1.5-rc.2`** | 干净图**无此现象** |
+    | `~/harness` 现状 lockfile | `0.1.2-rc.1` | 冻结在旧代际 |
+    | `~/harness` 保留 lockfile 跑 `install --lockfile-only` | `0.1.2-rc.1` | **不自愈** |
+    | `~/harness` 删 lockfile 重跑 | **`0.1.5-rc.2`** | **一行动作即修** |
+
+  - **成因**：该包的依赖类型在 015 里由 `dependencies` 变为 `peerDependencies`（配 `autoInstallPeers: true`），而 pnpm 的**增量升级（`pnpm add <pkg>@新代`）只重算被改动子树**，不会因「依赖类型变了」回头重算 ⇒ lockfile 冻结旧代际，**后续 `install` 亦不自愈**（对照表第 3 行）。
+  - **正确判据（替换原「看回退层的实际代际」）**：判某 home 可用，须核**回退层反映的解析结果**与 profile 的 peer 要求**是否相容**。「拿到旧代际」是**落点树 lockfile 冻结**的信号，**不是**「heal 注入」的信号 —— `~/.dsh-015` 红 = 其 peer 要求 `^0.1.5-rc.2` 与落点树给的 `0.1.2-rc.1` 不相容。
+  - ⭐ **行事规则：跨代升级 DSH 后必须重算 lockfile** —— `pnpm add` / `pnpm update` 的增量升级会冻结旧代际且**不可自愈**；正确姿势 = **删 `pnpm-lock.yaml` ＋ `node_modules` 后全新 install**，升级后另跑一次版本核对（「`pnpm install` 跑过」**不等于**「图已重算」）。
+  - **原候选修法处置**：③「令 heal 只回填与 profile 同代的路径」**动机不成立 ⇒ 撤销**（heal 行为正确）；①（profile 显式声明全部 peer）**保留**，理由改为「不依赖回退层兜底、让缺件成为清晰早失败」，与代际无关；②（重建 `~/harness`）**降为一次性清理动作**，见 `TODO.md`。
+  - ⚠️ **同源误读要一并销**：`~/harness/.pnpm` 里确有 **192 项无引用旧代际目录**（lockfile 已不含、无任何 readlink 指向）——那是**磁盘残留**（无害、可 prune），与「回退层拿到旧代际」是**两回事**，不可混为一谈。真正的对照组是 **lockfile 解析结果**，「顶层 `package.json` 升了新代」**不能**当作「全套都该是新代」的依据。
 - ⚠️ **boot 类动作不是「只读」**：对任意 home 跑一次 boot，上述 heal 都会**改写该 home 的 `profiles/node_modules`**（实测：空壳 home 由 0 → 240 条链接；`~/.dsh-015` 该目录 mtime = 跑的那一秒，与结果落盘同秒）⇒ 派发「只读观测」类任务时，**要么显式声明会被写、要么改用隔离副本**；**「跑前 / 跑后 `readlink`」应作为标准观测项**。
 
 #### DSH-4：差异化能力迁移
