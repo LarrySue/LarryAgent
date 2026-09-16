@@ -83,7 +83,7 @@
 > **机制面由 DSH 承接（0.1.5）**：`ctx.approval`（结果集 **fail-closed**——缺失 / 抛错 / 不合规的答者一律 `unavailable`，**不默认开门**，且 `approval/asked` · `decided` 成审计对）、`ctx.permissionPresets`（preset 表 **config 化**，⚠️ 取值为 `sandbox: SandboxMode` + `approval: ApprovalPolicy` **两个 knob**，**不含工具开关**）、`ctx.userQuestions`（答者可**中继到已连接客户端**）——三者均为 A-framework 下的公开契约。
 > ⇒ **我方自做范围收窄为「策略内容」**，机制不重造；起步可直接用官方两档 preset，**零代码**。
 >
-> ✅ **判据出处与状态**：以上取自 `docs/subsystems/` 的 `approval.md` / `permission-presets.md` / `user-questions.md`（`dsh-v0.1.5-rc.2`）。**「自定义 preset 表在真实 profile 里能否生效」已实测** ⇒ 本条 ⚪ **闭合**（002 探针：自定义 preset 在真实 profile 上生效）。
+> ✅ **判据出处与状态**：以上取自 `docs/subsystems/` 的 `approval.md` / `permission-presets.md` / `user-questions.md`（`dsh-v0.1.5-rc.2`）。**「自定义 preset 表在真实 profile 里能否生效」已实测** ⇒ 本条 ⚪ **闭合**（DSH-3.0.2 探针：自定义 preset 在真实 profile 上生效）。
 > ⚠️ **覆盖边界（勿外推）**：preset 表**只覆盖 `sandbox` + `approval` 两个 knob**；2.7.2 原文的「**工具开关**」**不在其中** —— 工具级须另走 `ctx.tools.restrict()`（API 与作用域守卫已实证，**真 agent 轮 deny 后的模型侧行为端到端未验**）。
 >
 > 📌 **本条留下的一条教训（全树推广）**：**判据会随架构选型失效**——同一个"不可达"，换个架构前提就作废。跨阶段沿用旧判据前，先问「这条论据挂在哪个面上」。
@@ -231,11 +231,11 @@
 
 ---
 
-## 11. 前置实测结果（002 已完成 · 与 P0 派发同一批）
+## 11. 前置实测结果（DSH-3.0.2 已完成 · 与 P0 派发同一批）
 
 | 项 | 为什么是它 | 执行 |
 |---|---|---|
-| `permission-presets` 自定义表在真实 profile 生效 | **2.7.2 改判的落地前提**（§2 的 ⚪） | ✅ **已实测通过**（002 C 组，**WB 判「过」**） |
+| `permission-presets` 自定义表在真实 profile 生效 | **2.7.2 改判的落地前提**（§2 的 ⚪） | ✅ **已实测通过**（DSH-3.0.2 C 组，**WB 判「过」**） |
 | `ctx.approval` 的 fail-closed 实测 | §2 引用的核心契约 | ✅ **已实测通过**（原 D 组 8/8：无 answerer / 抛错 / 不合规形状 ⇒ 均 `unavailable`；含正向对照 `allowed-once`） |
 | ⚠️ 另：**preset 表管不到「工具开关」** | WB 2026-09-15 读原文发现 ⇒ 改判覆盖面须按实测重划 | ✅ **已实测坐实**：`PresetSpec` 只含 `{sandbox, approval}`；工具级另走 `ctx.tools.restrict()`、**须挂 `agent.ctx`**（端到端未验） |
 
@@ -246,4 +246,4 @@
 | 日期 | 变更 | 作者 |
 |---|---|---|
 | 2026-09-15 | 开稿：由映射稿 §6 的 8 条展开为「现状原文 → 建议改后」，含老大已给方向的记档与 2 条全树教训 | WB |
-| 2026-09-15 | 订正 §2 的覆盖范围：`PresetSpec` 只有 `sandbox` + `approval` 两个 knob，「工具开关」不在 preset 表内（原写"同构"过强）；§11 标注〈派发 002〉 | WB |
+| 2026-09-15 | 订正 §2 的覆盖范围：`PresetSpec` 只有 `sandbox` + `approval` 两个 knob，「工具开关」不在 preset 表内（原写"同构"过强）；§11 标注〈派发 DSH-3.0.2〉 | WB |

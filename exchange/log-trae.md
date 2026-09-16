@@ -5,74 +5,91 @@
 
 ---
 
-## 📮 派发 · 003 · 装 profile + 重跑 D / E（2026-09-16 出稿）
+## 📮 派发 · DSH-3.0.4 · 环境同代化修复 + 重跑 D / E（2026-09-16 出稿）
 
-> **执行人**：Trae ｜ **场地**：CVM ｜ **复验**：WB（回报落本文件）
-> **基线**：`0.1.5-rc.2`（**老大 2026-09-15 拍定**，解除 DSH-2.6「不升基线」——那条按当时状况成立）
-> **前置三项已全部解除**：① 基线已拍；② 001 卡点（D 组 profile 未装）**根因已查明** = `~/.dsh/profiles/sdk` **空壳**（**与凭据无关**）；③ 001 的 J1 装 profile 授权**已作废**（那两条钉死 `0.1.2-rc.1`）
-> **规格原文** → `../TODO.md` DSH-3.0 段 `:64-78`；**判据 / 验收基准 / 执行范式** → `../docs/dsh/dsh-migration.md` §3.6「DSH-3」
+> **执行人**：Trae ｜ **场地**：CVM（可否本机预演见任务 1）｜ **复验**：WB（回报落本文件）
+> **基线**：`0.1.5-rc.2` ｜ **取代**：DSH-3.0.3 派发稿（任务 1 已完成、任务 2 / 3 顺延至本稿）
+> **背景**：DSH-3.0.3 撞墙 —— 根因 = **跨代**（profile `0.1.5-rc.2` ↔ hoisted 根 / CLI / 装置侧均 `0.1.2-rc.1`）
+> **老大 2026-09-16 拍**：修复路**都做**（原「P1 / P2 二选一」解除）—— 本稿展开为「诊断 → 验证 → 修复 → 验收」四步，其中 **P2 兼作验证步**
+> **规格原文** → `../TODO.md` DSH-3.0 段 `:64-78`；**判据 / 假绿源** → `../docs/dsh/dsh-migration.md` §3.6「DSH-3」
 
-### 任务 0 · 前置核对（先做，不通过就停）
+### ⭐ 本稿形态：四步严格串行（不得跳步）
 
-1. `npm view @deepseek-ai/dsh versions` —— 确认 `0.1.5-rc.2` 存在于 registry
-2. **CLI / hoisted 层与 profile 同代** —— 本机已实测到**跨版本混合体**（`.dsh-home` sdk 侧 105 包 @015 ｜ `~/.dsh` hoisted 根 214 包 @012）。这是你 §6-1 报的「profile 跨版本混合」；上游 016-alpha 已新增 `packages/boot/app-boot/src/profile-resolution/`（`resolver.ts` 975 行，PR `fix/profile-module-resolution`）⇒ **上游已知问题，非我们独有**。装前核代际、装后回核。
+**为什么必须分步** —— 两条理由，都是 DSH-3.0.3 教的：
 
-### 任务 1 · 装齐 CVM `~/.dsh/profiles/sdk`
+1. **判据缺前置**：环境不可用时 D / E 只能产出「三态同崩」。本稿把**环境可用性提升为硬前置判据**（DSH-3.0.3 回报 §7 第 2 条的建议，老大已采纳）
+2. **归因**：多层一次改完再测，一旦仍崩就分不清是哪层没修好 ⇒ 只能重来一轮
 
-**两条命令**（**全程带 `DSH_HOME=$HOME/.dsh`**）：
+⭐ **每步必须留观测，不得攒到最后一起测。**
 
-```
-dsh plugin --profile sdk add @deepseek-ai/dsh-base@0.1.5-rc.2
-dsh plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
-```
+### 任务 0 · 全层代际诊断（**只测不改**，产出唯一决策依据）
 
-- **这就是完整 composition**：本机 `.dsh-home/profiles/sdk` 的 deps 恰为这两项，`storage` / `session` 类包**随传递装齐**（`dsh-session-persistence-jsonl` / `dsh-session-query-sqlite` / `dsh-storage-json`）⇒ **无需**手工补
-- 若因 `allowBuilds` 以 exit 1 结束 → 见 `../docs/local-env.md` §8.4 第 3 条
+逐层测，填表交回：
 
-**本任务判据**：
-- `~/.dsh/profiles/sdk/dependencies` ≠ `{}`（现为**空壳**）
-- `~/.dsh/profiles/sdk/node_modules/@deepseek-ai` 包数 > 0（现为 0）
+| 层 | 位置 | 测法 | 为什么关心 |
+|---|---|---|---|
+| ① CLI 本体 | npm 全局 `@deepseek-ai/dsh`（**经 Junction 接入**） | `dsh --version`；`npm ls -g @deepseek-ai/dsh`；`ls -l` 看 Junction 指向 | DSH-3.0.3 崩栈显示它在关键路径上 |
+| ② hoisted 根 | `~/.dsh/profiles/node_modules` | 包数 ＋ `@deepseek-ai/*` **版本分布**（不是只看总数） | 3 条 entry 回落到它 |
+| ③ profile 侧 | `~/.dsh/profiles/sdk/node_modules` | deps ＋ 包数 ＋ 版本分布 | 3 个可选 peer 缺在这层 |
+| ④ 装置侧 | `harness/node_modules` | `dsh-sdk-protocol` / `dsh-app-boot` / 其余 `@deepseek-ai/*` 版本 | DSH-3.0.3 崩栈首行指向它 |
+| ⑤ 对照器材 | `~/larry-dsh-home`（profiles ＋ node_modules） | 同 ② ③ | 它是 DSH-3.0.3 的决定性反证 |
+
+**判据**：表格每格有权版本号；读不出就写「读不出 ＋ 卡在哪」。
+⛔ **本步一个字都不许改。**
+
+### 任务 1 · 最小风险验证（**不动 `~/.dsh`**）
+
+**目的**：先回答一个根本问题 ——「**同代 015 环境到底能不能 boot**」。
+
+**做法**：另建干净的 `DSH_HOME`（如 `/home/ubuntu/.dsh-015`），**全量装 015** —— 含 CLI 侧（若 ① 走 Junction，需一并处理，方式按任务 0 结果定）⇒ 跑 boot 探针。
+
+⭐ **可选：本机预演** —— 若本机 `~/.dsh` 同样跨代（`../TODO.md:65` 记为本机实测崩）⇒ **先在本机做**，成本更低、不动 CVM。⚠️ 但**平台差异是真实变量**（Windows ↔ Linux）⇒ 本机结果**不得直接外推** CVM，结论须注明取自哪条通道。
+
+**boot 探针**（本步的观测装置）：`--profile sdk` ＋ stdin 保持 12 s，记四项：
+`exit code` ｜ `stderr 行数` ｜ **栈帧里出现的版本号** ｜ **3 条 entry 是否还在**（`session-persistence-jsonl` / `session-query-sqlite` / `web-fetch-http`）
+
+**判据**：`exit 0` 且 stderr 中**不再出现 `0.1.2-rc.1`**。
+⛔ **若本步也崩 ⇒ 停下回报** —— 说明修复方向错，**别去动 `~/.dsh`**（凭据在里面，弄坏则 DSH-3.0.3 彻底卡死）。
+
+### 任务 2 · 修 `~/.dsh`（**逐层一改一测**）
+
+按任务 0 的表 ＋ 任务 1 的验证结果，把各层升到同代 015：
+
+| 层 | 动作 | 备注 |
+|---|---|---|
+| ① CLI | 升全局到 `0.1.5-rc.2` | 注意 Junction 语义 |
+| ② hoisted 根 | 升 / 重建到 015 | 方式按任务 0 结果定 |
+| ③ profile 侧 | **P1**：补 3 个 015 可选 peer（`dsh-session-persistence` / `dsh-session-query` / `dsh-http-proxy`；现配 `autoInstallPeers: false`） | 若 ② 已升 015 ⇒ 回落自然匹配，本项**可省** |
+| ④ 装置侧 | `harness/` 依赖升至 015 | ⚠️ 先核 `harness/package.json` 是否钉死 012 |
+
+⭐ **每改一层，立刻跑一次 boot 探针**并记上条四项观测。**不得攒到最后一起测。**
+⛔ 某层改完出现**新症状** ⇒ 停手回报，不要连改。
 
 **⛔ 边界**：
-- **`larry` profile 本次不动** —— CVM `~/.dsh/profiles/larry` 现 composition（api-gateway + host-webserver）与本地（base + headless）**不同**，属 3.5 / 3.7 派发时单独定
-- **软链方案不采纳**（两个 home 缠在一起 = 正是要消灭的重叠环境）
-- **`~/larry-dsh-home` 只作负向对照器材**（有完整 profile、**无凭据**）—— **它不是运行 home**，拿它跑出「绿」即无 key 假绿（D2 已实证）
 
-### 任务 2 · 重跑 D 组（凭据层验真，本步最重要）
+- **`larry` profile 本次不动**（composition 与本地不同，属 3.5 / 3.7 派发时单独定）
+- **不采纳软链**（两个 home 缠在一起 = 正是要消灭的重叠环境）
+- **不得改动** `~/.dsh/.credentials.yaml`（负向态一律用隔离 home 造）
 
-**目标**：证明 `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` **确实被读取且真用于调用**。
+### 任务 3 · 验收 ＋ 重跑 D / E（**前置判据通过后才做**）
 
-**装置**：`harness/scripts/dsh-prompt.mjs` **裸跑**（它**不覆盖 `DSH_HOME`** ⇒ 落 `~/.dsh`）
+**进门判据（新增，硬）**：boot 探针 `exit 0` 且能建 session。**未过 ⇒ 停，不得进 D / E。**
 
-**三态**：
+过则按 DSH-3.0.3 原定规格重跑：三态互异 ＋ 每态记 `(DSH_HOME, profile, 凭据来源层)` 三元组；E 组夹具指 `~/.dsh/profiles`。
 
-| 态 | 造法 |
-|---|---|
-| **真 key** | **不注入** env（走凭据文件） |
-| **无 key** | `DSH_HOME=~/larry-dsh-home`（有 profile、无凭据） |
-| **错 key** | 隔离 home + 伪造值 + 权限 600 |
+**⭐ 本次升级导致的两处必改**：
 
-**判据 = 三态互不相同**，且**每态记 `(DSH_HOME, profile, 凭据来源层)` 三元组**。
+1. **D 组「无 key 态」不得再用 `~/larry-dsh-home`** —— CLI 升 015 后它会跨代，失去「同代对照」的意义。改用**隔离 home ＋ `profiles → ~/.dsh/profiles`**（即 DSH-3.0.3 那轮的 D2b 形态）
+2. **E 组夹具** 同前指 `~/.dsh/profiles`
 
-**⚠️ 为什么必须新开这条路径**：`run-real-api.mjs` → vitest → `vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']` **强制把 `DSH_HOME` 覆盖为临时目录**（该文件 `:31-33`）⇒ **real-api 读不到凭据文件**，其 key 只能来自 env（`tests/real-api.ts:28`）。
+### ⚠️ 连带影响（先知道，别事后惊讶）
 
-**⛔ 红线**：
-- **不得改动** `~/.dsh/.credentials.yaml`（负向两态一律用隔离 home 造）
-- 回报**只写键名 / 是否存在 / 长度**，不写值
-
-**❌ 上一轮（09-14）失败留痕，勿重蹈**：D1 ≡ D3（同为 `-32603 cannot create effect on inactive context`，**崩在启动期、不是鉴权**）、D2 exit 0 + stdout 全空（**无 key 假绿**）⇒ 三态不互异。**根因 = profile 空壳** ⇒ 装齐后重跑。
-
-### 任务 3 · 重跑 E 组（real-api 在 CVM 侧）
-
-**三态**：无 key / 错 key / 真 key，**同一脚本跑**；判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）。
-
-⭐ **夹具改指 `~/.dsh/profiles`**（装齐后）—— 原 `~/larry-dsh-home/profiles` 是 **09-10 建的、当时基线 `0.1.2-rc.1`**，按 015 重跑**不能用它**（用了就是无效重跑）。用 `DSH_REAL_API_PROFILE_HOME` 指向即可；这是**夹具来源、不是 home 决定**。
-
-**为什么重跑**：001 那轮按 `0.1.2-rc.1` 跑的 ⇒ 结论**跨版本失效**，只留「通道 / 环境自证」这一层效力。
-
-**09-14 的 E 三态（012 基线，须按 015 重取）**：E1 不注入 → guard **显式失败**（有效 Key 用例 5 ms 即抛 = **未发起调用**）/ E2 错 key → 走了 API、**AUTH·401** / E3 真 key → **OK**（`verdict=OK … turn/end.kind=completed`）。
-
-**⚠️ 本组只代表「环境变量层」** —— **不得**用于宣称「CVM 凭据文件生效」。
+| # | 影响 | 处置 |
+|---|---|---|
+| 1 | `~/larry-dsh-home`（012 profile）在 CLI 升 015 后跨代 ⇒ **DSH-3.0.3 回报 §3 的「决定性反证」不再可复现** | 证据已固定（DSH-3.0.3 回报）；今后无 key 对照改用隔离 home |
+| 2 | `~/.dsh/profiles/larry`（012 装）同样跨代 | 本次不动；3.5 / 3.7 派发时重装 |
+| 3 | `~/larry-dsh-home` 的 sdk deps 是**四项**（多 `dsh-storage-sqlite` ＋ `@larryagent/plugin-storage-probe`）⇒「base ＋ sdk-app = 完整 composition」**未经 CVM 验证**（`../TODO.md:67`） | 修复后回核，顺手判它 |
+| 4 | `dsh plugin add` 在 pnpm 报 `Done` 后 **node 不退出**（DSH-3.0.3 回报 §7 第 3 条，CVM / 本机同） | 执行范式：后台 ＋ 轮询日志，不要指望退出码 |
 
 ### ⛔ 假绿源清单（判「profile 可用性」一律不得使用）
 
@@ -83,18 +100,18 @@ dsh plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
 
 ### 回报
 
-- 落**本文件**（`exchange/log-trae.md`）
-- 含：**命令原文 / 输出 / 三态判定 / 反例 / 三元组**
-- ⚠️ **产出不得是唯一副本**：CVM **2026-10-09 到期**，产出须回传本机（`D:\Code\_trae-cvm-evidence\`）或入库
+- 落**本文件**
+- 含：**诊断表 / 每步的 boot 探针四项观测 / 命令原文 / 反例 / 三元组**
+- ⚠️ **产出不得是唯一副本**：CVM **2026-10-09 到期**（剩 23 天），回传 `D:\Code\_trae-cvm-evidence\` 或入库
 
 ### 不在本任务内（老大定「一个一个发，不要并行发」）
 
-- **3.2 / 3.7** → 待 003 后再发
-- 3.1 → 批次 2 ｜ 3.3–3.6 → 批次 3（严格串行）｜ 3.8 + 3.9 → 批次 4
+- **3.2 / 3.7** → 待本任务闭合后再发
+- 3.1 → 批次 2 ｜ 3.3–3.6 → 批次 3 ｜ 3.8 ＋ 3.9 → 批次 4
 
 ---
 
-# 回报 003 · 装 profile + 重跑 D / E（Trae，2026-09-16）
+# 回报 DSH-3.0.3 · 装 profile + 重跑 D / E（Trae，2026-09-16）
 
 > **结论先行**：**任务 0 部分通过｜任务 1 ✅ 完成（profile 装齐，判据两条均满足）｜任务 2 / 3 ⛔ 因一条「规格 ↔ 实测」矛盾阻断、三态不可判**。
 > **一句话根因**：**profile 与 hoisted 根跨代** —— `~/.dsh/profiles/sdk` = `0.1.5-rc.2`，而同 home 的 `~/.dsh/profiles/node_modules` = **208 包 @ `0.1.2-rc.1`** ⇒ runtime **启动期即 `plugin tree failed to load`、exit 1** ⇒ 任何真会话 / 真 turn 都起不来（D、E 的真 key 态因此一步都跑不了）。
@@ -121,7 +138,7 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 
 | 轮次 | 现象 | 处置 |
 |---|---|---|
-| ① | **`ERR_PNPM_IGNORED_BUILDS`**（`dsh-subprocess-local` / `@google/genai` / `koffi` / `node-pty` / `protobufjs`）→ **exit 1** | 与 003 预告一致 ⇒ 按既有手法把 `profiles/sdk/pnpm-workspace.yaml` 的 `allowBuilds` 五项全改 `false`（**原件已备份** → `/home/ubuntu/trae-evidence/003/pnpm-workspace.yaml.orig`，sha256 `92e7ef26…`） |
+| ① | **`ERR_PNPM_IGNORED_BUILDS`**（`dsh-subprocess-local` / `@google/genai` / `koffi` / `node-pty` / `protobufjs`）→ **exit 1** | 与 DSH-3.0.3 预告一致 ⇒ 按既有手法把 `profiles/sdk/pnpm-workspace.yaml` 的 `allowBuilds` 五项全改 `false`（**原件已备份** → `/home/ubuntu/trae-evidence/003/pnpm-workspace.yaml.orig`，sha256 `92e7ef26…`） |
 | ② | base `Done in 3.1s`、**无 ERR**；但 **pnpm 报 Done 后 `node` 进程不退出**（挂 **1:51**）⇒ 我 kill 收尾（**exit 143**） | 与我在本机遇到的是同一现象（§7-3） |
 | ③ | base **exit 0**（`Done in 2.5s`）、sdk-app **exit 0**（`Done in 2.7s`） | 判据两条均满足 |
 
@@ -144,7 +161,7 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 | 5 | 于是解析到哪 | 按 Node 解析规则退到**上一级** `~/.dsh/profiles/node_modules` ⇒ **`0.1.2-rc.1`**（导出对不上）；`dsh-http-proxy` 更是**全盘缺失** |
 | 6 | ⭐ **决定性反证** | 09-14 那份**能跑**的 `~/larry-dsh-home`：我逐一核过，**同样缺**这 5 个包（全部 `=MISSING`），但它的 hoisted 根**也是 012**、与 profile **同代** ⇒ 回落拿到的是**匹配版本**，所以不报错 |
 
-⇒ **根因 = 「profile 与 hoisted 根跨代」，不是「漏装包」**。这也与 003 §任务 0.2 提到的上游动向（016-alpha 新增 `profile-resolution/resolver.ts`、PR `fix/profile-module-resolution`）指向同一处。
+⇒ **根因 = 「profile 与 hoisted 根跨代」，不是「漏装包」**。这也与 DSH-3.0.3 §任务 0.2 提到的上游动向（016-alpha 新增 `profile-resolution/resolver.ts`、PR `fix/profile-module-resolution`）指向同一处。
 
 ## 4. 任务 2 · D 组三态 —— ⛔ 不可判
 
@@ -158,12 +175,12 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 | **D3 错 key** | 同上 iso, sdk, **伪造** 209B/600 | 015 | **1** | 空 | 1312 ms | 启动期崩 |
 
 - **三态不互异**（D1 ≡ D2b ≡ D3：同崩、同 exit 1、同 1.3–1.5 s、同客户端栈 `JsonRpcResponseError: cannot create effect on inactive context` **-32603**）⇒ 判据**不成立**
-- ⚠️ **唯一 exit 0 的那一态，恰好是"profile 与 hoisted 同代（012）"的那一态** ⇒ 它既是根因的**反证**，也正是 003 要我别重蹈的**无 key 假绿**：D2 与其它态的差异来自**代际**，**不是凭据**
+- ⚠️ **唯一 exit 0 的那一态，恰好是"profile 与 hoisted 同代（012）"的那一态** ⇒ 它既是根因的**反证**，也正是 DSH-3.0.3 要我别重蹈的**无 key 假绿**：D2 与其它态的差异来自**代际**，**不是凭据**
 - 红线守：真文件全程只读（只取 `present / bytes / mode / 键名 / 值长=35`）；负向两态一律**隔离 home** 造；隔离 home 用完即删（`/tmp/trae-003-iso-*` 已清）
 
 ## 5. 任务 3 · E 组三态 —— ⛔ 不可判（同形）
 
-装置：`run-real-api.mjs`；夹具：**`DSH_REAL_API_PROFILE_HOME=/home/ubuntu/.dsh/profiles`（已按 003 改指 015）**
+装置：`run-real-api.mjs`；夹具：**`DSH_REAL_API_PROFILE_HOME=/home/ubuntu/.dsh/profiles`（已按 DSH-3.0.3 改指 015）**
 
 | 态 | 注入 | exit | 结果行 | R1 哨兵 |
 |---|---|---|---|---|
@@ -172,7 +189,7 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 | E3 | **真 key**（进程内传、落盘前脱敏） | 1 | 同上 | 同上 |
 
 - **三态完全同形**（同 15 项、同 2 failed、同 ~1.24 s）⇒ 判据**不成立**
-- ⚠️ 与 001 的 012 基线**不同形**（那次是 `Tests 1 failed \| 13 passed \| 1 skipped` 且 **R1 ✓ 通过**）⇒ 这轮多出来的那条 failed **就是 R1 自己**：它"判红"了但**没有 `error.code`** ⇒ 说明本轮不是 `AUTH/401` 那种**预期**失败，而是**启动期崩**（同 §3 根因）
+- ⚠️ 与 DSH-3.0.1 的 012 基线**不同形**（那次是 `Tests 1 failed \| 13 passed \| 1 skipped` 且 **R1 ✓ 通过**）⇒ 这轮多出来的那条 failed **就是 R1 自己**：它"判红"了但**没有 `error.code`** ⇒ 说明本轮不是 `AUTH/401` 那种**预期**失败，而是**启动期崩**（同 §3 根因）
 - 机制自检 7 项**全 ✓**（它们不 boot profile）——**"绿了也不代表环境可用"的现成实例**
 - ⚠️ 本组**只代表环境变量层**，且**因阻断而无效**，不得用于任何结论
 
@@ -184,12 +201,12 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 
 ## 7. 未闭合项 / 与规格矛盾
 
-1. 🔴 **003 §任务 1「随传递装齐 ⇒ 无需手工补」与实测矛盾** —— 这是本次停手的直接原因（我**未**自行补）。
-2. 🔴 **003 §任务 2/3 的判据「三态互不相同」在跨代环境下不成立** ⇒ 建议把**环境可用性**提升为判据的**前置**（＝我在 002 回报 §6-1 提的那条：**profile 必须与 CLI / hoisted 层同代**）。否则 D / E 永远只能产出"三态同崩"这种不可判结果。
+1. 🔴 **DSH-3.0.3 §任务 1「随传递装齐 ⇒ 无需手工补」与实测矛盾** —— 这是本次停手的直接原因（我**未**自行补）。
+2. 🔴 **DSH-3.0.3 §任务 2/3 的判据「三态互不相同」在跨代环境下不成立** ⇒ 建议把**环境可用性**提升为判据的**前置**（＝我在 DSH-3.0.2 回报 §6-1 提的那条：**profile 必须与 CLI / hoisted 层同代**）。否则 D / E 永远只能产出"三态同崩"这种不可判结果。
 3. ⚠️ **`dsh plugin add` 在 pnpm 报 `Done` 后 `node` 不退出**（CVM 实测挂 1:51，本机同）⇒ 建议写进执行范式：**后台 + 轮询日志 + 人工收尾**，不要指望退出码。
 4. ⚠️ `Packages: -60` 的含义**未查明**（包数只增不减）。
 5. ⚠️ **本机通道新坑（自留，防后人再踩）**：Windows→ssh 传参**不只吃双引号，也吃反斜杠** ⇒（a）远程命令**别用内层双引号**（要 `|` 模式就用 `grep -e … -e …`，别写 `grep -E "A|B"`）；（b）**别写 `sed s/\r//g` 这类含反斜杠的表达式**（会退化成"删字面 r"）。复杂动作一律**走 scp 上去的脚本**——本轮 4 个 driver（`d-probe` / `e-probe` / `runtime-boot` / `strip-cr`）零引号问题，这是本机通道下最稳的范式。
-6. ⚫ **未做**（老大 2026-09-16 拍「先不补」）：把环境修成同代的三条候选路 —— **P1** 往 `~/.dsh/profiles/sdk` 显式补 3 个 015 可选 peer（最小、守 003 落点，但改 composition）；**P2** 另建全 015 home（不动 `~/.dsh`、不改 composition，但偏离 003 落点）；**P3** 升 CLI＋SDK 到 015（治另一层，单独做**不解决**这 3 条 entry）。**均未执行**。
+6. ⚫ **未做**（老大 2026-09-16 拍「先不补」）：把环境修成同代的三条候选路 —— **P1** 往 `~/.dsh/profiles/sdk` 显式补 3 个 015 可选 peer（最小、守 DSH-3.0.3 落点，但改 composition）；**P2** 另建全 015 home（不动 `~/.dsh`、不改 composition，但偏离 DSH-3.0.3 落点）；**P3** 升 CLI＋SDK 到 015（治另一层，单独做**不解决**这 3 条 entry）。**均未执行**。
 
 
 # Trae 意见 · DSH-0.1.5 四稿（2026-09-15）
@@ -298,7 +315,7 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 
 **基线 012 → 015 与我在做的 DSH-3.0，是冲突的。**
 
-实情：我**今天**刚在 CVM 上按 `0.1.2-rc.1` 完成同步 + 装环境 + 跑 E 组三态（`pnpm install` 后 lock 里全是 `0.1.2-rc.1`、`dsh --version` = `0.1.2-rc.1`），D 组卡在 profile 未装（见上文回报 001 §4）。
+实情：我**今天**刚在 CVM 上按 `0.1.2-rc.1` 完成同步 + 装环境 + 跑 E 组三态（`pnpm install` 后 lock 里全是 `0.1.2-rc.1`、`dsh --version` = `0.1.2-rc.1`），D 组卡在 profile 未装（见上文回报 DSH-3.0.1 §4）。
 
 - 若 **3.0 继续按 012 收口** ⇒ 我今天的证据**继续有效**，D 组装齐 profile 即可闭合；
 - 若 **立刻转 015** ⇒ 按你自己的 A2 纪律（"结论不可跨版本引用"），**我这批 E 组结论必须降级为"通道/环境自证"**，D/E 要重做；且 015 的破坏性清单（Session V2→V3 / 移除 `ctx.agent` / persona 前后缀拆分 / `conversation` slot → `main`）会**同时改掉 3.1 与 3.7 的靶子**。
@@ -326,6 +343,6 @@ node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek
 | 015 的 `sandbox-local.confine()` 契约对照 + 方言自修判定 | 本机（读 `ref/dsh-bare` @ 015） | 无 |
 | `permission-presets` 自定义表 / `workspace` membership 运行时实测 | CVM（通道已验） | 无 |
 | `settings/redact` fail-open 构造用例 | 本机隔离 profile | 无 |
-| D 组收尾（装齐 `~/.dsh` 的 sdk profile） | CVM | ⚠️ **需先裁 §4（回报 001）与 §三（基线）** |
+| D 组收尾（装齐 `~/.dsh` 的 sdk profile） | CVM | ⚠️ **需先裁 §4（回报 DSH-3.0.1）与 §三（基线）** |
 
 **不改任何 docs / TODO 的本稿**——以上全部是意见，等你裁。

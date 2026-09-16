@@ -49,9 +49,9 @@
 > **判据 / 验收基准 / 负向对照矩阵 / 采数口径 / 执行范式 → `docs/dsh/dsh-migration.md` §3.6「DSH-3」**；CVM 环境与凭据 → `docs/production-env.md` §12；方言修复件范式 → `docs/local-env.md` §4.3；**派发规格（执行人 / 批次）→ 本文件「待派发」段**。
 > ⚠️ 原详细计划稿 `exchange/dsh-3-plan.md`（含四方评审附 A/A-2/B/C）的实质内容已于 2026-09-14 **全数承接入本文件与 §3.6**，该稿已于 `677523d` 处置（删除）；如需追溯评审原文：`git show 3362f57:exchange/dsh-3-plan.md`。
 
-#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📮 **D / E 归 003（已出稿）**
+#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📮 **当前块 DSH-3.0.4（已出稿）**
 
-> **派发状态（2026-09-15 订正）**：**001（09-14 → Trae）已停止推进** —— A / B / C / F 四组照用（与 DSH 版本无关）；**D / E 归 003**（按 015 重做）；J1 装 profile 授权**作废**（命令钉死 `0.1.2-rc.1`）。**002（2.7.2 A-framework 契约实测）** 为插入项，已回报并经 WB 判「过」；其环境污点根因已并入本段 `:64-65` 前置。**003 已出稿**（2026-09-16）—— 前置三项全解（基线已拍 / 卡点根因已查实 / J1 授权作废），**稿在 `exchange/log-trae.md` 顶部**。
+> **派发块 · 号 = 一份派发稿（2026-09-16 订正）**：**DSH-3.0.1（09-14 → Trae）已停止推进** —— A / B / C / F 四组照用（与 DSH 版本无关）；**D / E 归 DSH-3.0.3**（按 015 重做）；J1 装 profile 授权**作废**（命令钉死 `0.1.2-rc.1`）。**DSH-3.0.2（2.7.2 A-framework 契约实测）** 为插入项，已回报并经 WB 判「过」；其环境污点根因已并入本段 `:64-65` 前置。**DSH-3.0.3（装 profile + 重跑 D / E）已回报（09-16）⇒ 环境阻断**；老大裁定修复路两条都做 ⇒ **DSH-3.0.4（环境同代化修复 + 重跑 D / E）已出稿**，稿在 `exchange/log-trae.md` 顶部。
 
 - [x] ✅ **凭据落位**（2026-09-14）：CVM `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY`（600 / 223 B，`records:` 段完好）
 - [x] ⚠️ **环境核对**（2026-09-14，**同日订正**）：`dsh@0.1.2-rc.1` 双证（CLI + `package.json`）；node v22.22.2
@@ -61,11 +61,11 @@
 - [x] ✅ **同步本机 `harness/` → CVM**（Trae 2026-09-14）：**26 → 61 文件 / 566,393 → 753,485 B**，目标 `/home/ubuntu/harness/`；`SYNC-ANCHOR.txt` 已落（源 commit `57304ac` / `HEAD:harness` = `6c268877`；tar 145.6 KB / 55 条目、`scp` 1.11 s；`pnpm install` exit 0 / 18 s）
   - ✅ **卡 3.5 的那三个沙箱探针包已到位**（`plugin-sandbox-probe` / `plugin-sandbox-mount-probe` / `plugin-sandbox-dialect`）
   - ⚠️ CVM **原本无 pnpm / 无 corepack** ⇒ 已 `npm i -g pnpm@11.7.0`（3 s）
-- [ ] ⭐ **装齐 CVM `~/.dsh/profiles/sdk`**（**归 003**；001 的 J1 授权**已作废** —— 那两条命令钉死 `0.1.2-rc.1`）：两条 `dsh plugin --profile sdk add`（`dsh-base` + `dsh-sdk-app` @ **`0.1.5-rc.2`**，**全程带 `DSH_HOME=$HOME/.dsh`**）
-  - ⭐ **003 前置（2026-09-15 精确化，来自 002 的本机实测污点）**：先 `npm view @deepseek-ai/dsh versions` 确认有 `0.1.5-rc.2`，且 **CLI / hoisted 层与 profile 同代** —— 本机 `~/.dsh` 现为**跨版本混合体**（sdk 侧 105 包 @015 ｜ hoisted 根 214 包 @`0.1.2-rc.1` ｜ CLI 是 npm 全局 `0.1.2-rc.1` 经 Junction 进来）⇒ **三条 loader entry 装载失败 + `exit 1`**（`session-persistence-jsonl` / `session-query-sqlite` / `web-fetch-http`）。**015 上没有这个修**（上游 `0.1.6-alpha.1` 新增 `boot/app-boot/src/profile-resolution/` 正面修，PR `fix/profile-module-resolution`）⇒ **003 若按 015 原样重跑会重演**。规避：CLI 与 profile 同代装 015，**或**换干净 `DSH_HOME` 全量装 015。**⭐ 2026-09-16 实测：本条预言命中** —— Trae 按 015 原样重跑（CLI 仍 012）⇒ 三条 entry 重演、runtime 启动即崩。⚠️ 两条规避路当时**未同步进 003 派发稿**（派发稿只写「装前核代际、装后回核」，未写「不同代走哪条路」）⇒ 执行人只能现场推导（他独立推出了等价的 P2/P3）。**派发稿完整性教训：规格里的「前置不通过 ⇒ 走哪条路」必须一起承接。**
+- [ ] ⭐ **装齐 CVM `~/.dsh/profiles/sdk`**（**归 DSH-3.0.3 → 续 DSH-3.0.4**；DSH-3.0.1 的 J1 授权**已作废** —— 那两条命令钉死 `0.1.2-rc.1`）：两条 `dsh plugin --profile sdk add`（`dsh-base` + `dsh-sdk-app` @ **`0.1.5-rc.2`**，**全程带 `DSH_HOME=$HOME/.dsh`**）
+  - ⭐ **DSH-3.0.3 前置（2026-09-15 精确化，来自 DSH-3.0.2 的本机实测污点）**：先 `npm view @deepseek-ai/dsh versions` 确认有 `0.1.5-rc.2`，且 **CLI / hoisted 层与 profile 同代** —— 本机 `~/.dsh` 现为**跨版本混合体**（sdk 侧 105 包 @015 ｜ hoisted 根 214 包 @`0.1.2-rc.1` ｜ CLI 是 npm 全局 `0.1.2-rc.1` 经 Junction 进来）⇒ **三条 loader entry 装载失败 + `exit 1`**（`session-persistence-jsonl` / `session-query-sqlite` / `web-fetch-http`）。**015 上没有这个修**（上游 `0.1.6-alpha.1` 新增 `boot/app-boot/src/profile-resolution/` 正面修，PR `fix/profile-module-resolution`）⇒ **DSH-3.0.3 若按 015 原样重跑会重演**。规避：CLI 与 profile 同代装 015，**或**换干净 `DSH_HOME` 全量装 015。**⭐ 2026-09-16 实测：本条预言命中** —— Trae 按 015 原样重跑（CLI 仍 012）⇒ 三条 entry 重演、runtime 启动即崩。⚠️ 两条规避路当时**未同步进 DSH-3.0.3 派发稿**（派发稿只写「装前核代际、装后回核」，未写「不同代走哪条路」）⇒ 执行人只能现场推导（他独立推出了等价的 P2/P3）。**派发稿完整性教训：规格里的「前置不通过 ⇒ 走哪条路」必须一起承接。**
   - **这就是完整 composition**：本机 `.dsh-home/profiles/sdk` 的 deps 恰为这两项，`storage` / `session` 类包随传递装齐（`dsh-session-persistence-jsonl` / `dsh-session-query-sqlite` / `dsh-storage-json`）⇒ **无需**手工补 `storage-sqlite`
     - ⚠️ **2026-09-16 存疑（CVM 实测反例）**：`~/larry-dsh-home/profiles/sdk` 的 deps 是**四项** —— 上述两项 ＋ **`dsh-storage-sqlite`** ＋ **`@larryagent/plugin-storage-probe`(link)** ⇒「两项 = 完整」**未经 CVM 验证**，待核（可能与 `session-query-sqlite` entry 的装载相关）
-  - ⛔ **2026-09-16 实测（003 回报 + WB 复核）**：**装了但不足以 boot** —— deps 已非空（106 包），但 **`dsh-session-persistence` / `dsh-session-query` / `dsh-http-proxy` 三个可选 peer 未装**（profile 配 `autoInstallPeers: false`）⇒ Node 解析回落 hoisted 根（012）⇒ 导出名不符 / 包缺失 ⇒ `plugin tree failed to load`、`exit 1`。**根因 ＝ 跨代，不是漏装**（反证：`~/larry-dsh-home` 同样缺这 5 包、但**同代** ⇒ 不崩）。另缺 `dsh-app-boot` / `dsh-scope`，**未致败**（**缺 ≠ 致败**）
+  - ⛔ **2026-09-16 实测（DSH-3.0.3 回报 + WB 复核）**：**装了但不足以 boot** —— deps 已非空（106 包），但 **`dsh-session-persistence` / `dsh-session-query` / `dsh-http-proxy` 三个可选 peer 未装**（profile 配 `autoInstallPeers: false`）⇒ Node 解析回落 hoisted 根（012）⇒ 导出名不符 / 包缺失 ⇒ `plugin tree failed to load`、`exit 1`。**根因 ＝ 跨代，不是漏装**（反证：`~/larry-dsh-home` 同样缺这 5 包、但**同代** ⇒ 不崩）。另缺 `dsh-app-boot` / `dsh-scope`，**未致败**（**缺 ≠ 致败**）
     - ⭐ **WB 补充：跨代是「三方」，CLI 侧也在关键路径上** —— D 组崩栈首行 = `harness/…/dsh-sdk-protocol@0.1.2-rc.1`、rt-real boot 栈首行 = `harness/…/dsh-app-boot@0.1.2-rc.1` ⇒ **boot 器与装置侧协议库都是 012** ⇒ 评估修复路时须把 CLI 层纳入（P1 / P2 只动 profile 侧）
   - ⛔ **`larry` 本次不动**：CVM `~/.dsh/profiles/larry` 现 composition（api-gateway + host-webserver）与本地（base + headless）**不同**，属 3.5/3.7 派发时单独定的事
   - ⛔ **软链方案不采纳**（两个 home 缠在一起 = 正是要消灭的重叠环境）
@@ -73,9 +73,9 @@
 - [ ] ⭐ **凭据层验真（2026-09-14 查实后新增，本步最重要）** —— 证明 `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` **确实被读取且真用于调用**：用 `harness/scripts/dsh-prompt.mjs` **裸跑**（它**不覆盖 `DSH_HOME`** ⇒ 落 `~/.dsh`），三态 = 真 key（**不注入** env）/ 无 key（`DSH_HOME=~/larry-dsh-home`：有 profile、无凭据）/ 错 key（隔离 home + 伪造值 + 600）；判据 = **三态互不相同** + 每态记 `(DSH_HOME, profile, 凭据来源层)` 三元组
   - ⚠️ **为什么必须新开这条路径**：`run-real-api.mjs` → vitest → `vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']` **强制把 `DSH_HOME` 覆盖为临时目录**（该文件 `:31-33`）⇒ **real-api 读不到凭据文件**，其 key 只能来自 env（`tests/real-api.ts:28`）。⇒ `production-env.md` §12.5 原写"真生效待 3.0 real-api 复跑"**是错的，已订正**（该文档 §12.5 第三条订正）
   - ⚠️ **不得改动** `~/.dsh/.credentials.yaml`（负向两态一律用隔离 home 造）；回报只写键名 / 是否存在 / 长度
-  - 🔴 **Trae 首次尝试 ⛔ 未闭合**（2026-09-14）：D1 ≡ D3（同为 `-32603 cannot create effect on inactive context`，**崩在启动期、不是鉴权**）、D2 exit 0 + stdout 全空（**无 key 假绿**）⇒ **三态不互异，判据不成立**。根因 = `~/.dsh/profiles/sdk` **空壳**（**与凭据无关**）⇒ **装齐后重跑，归 003**（001 的 J1 钉版授权已作废；规格与判据照用，只换版本）
+  - 🔴 **DSH-3.0.1 首次尝试 ⛔ 未闭合**（2026-09-14）：D1 ≡ D3（同为 `-32603 cannot create effect on inactive context`，**崩在启动期、不是鉴权**）、D2 exit 0 + stdout 全空（**无 key 假绿**）⇒ **三态不互异，判据不成立**。根因 = `~/.dsh/profiles/sdk` **空壳**（**与凭据无关**）⇒ **装齐后重跑，归 DSH-3.0.3**（DSH-3.0.1 的 J1 钉版授权已作废；规格与判据照用，只换版本）
   - ⛔ **判据已被证不敏感的一件**（裁定 J2 采纳为口径）：`dsh --profile <p> --help` **不校验 profile 依赖**（三 home 全绿，1 s 内 exit 0）⇒ **不得**用于"profile 可用性"判定（与 `--dump-config` 同类假绿源 —— 后者只组配置树、不激活）
-- [ ] **real-api 在 CVM 侧复跑**（**归 003**：001 那轮是按 `0.1.2-rc.1` 跑的，结论**跨版本失效**，只留下"通道 / 环境自证"这一层效力）—— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）
+- [ ] **real-api 在 CVM 侧复跑**（**归 DSH-3.0.3 → 续 DSH-3.0.4**：DSH-3.0.1 那轮是按 `0.1.2-rc.1` 跑的，结论**跨版本失效**，只留下"通道 / 环境自证"这一层效力）—— ⭐ **三态对照：无 key / 错 key / 真 key，同一脚本跑**，判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）
   - ✅ **Trae 2026-09-14 跑通三态**（互不相同 ✔）：**E1 不注入** → guard **显式失败**（"开关 `DSH_REAL_API=1` 但环境变量未提供"；有效 Key 用例 **5 ms 即抛 = 未发起调用**）/ **E2 错 key** → 走了 API、**AUTH·401** / **E3 真 key** → **OK**（`verdict=OK … turn/end.kind=completed`；`Tests 14 passed | 1 skipped`）。三态各 ~2 s（网络好，**未触发看门狗、无 124**）
   - ⚠️ **夹具声明**：`real-api.ts` 默认 profile 源是 `<repo>/.dsh-home/profiles`（**本机约定**），CVM 上不存在 ⇒ Trae 用 `DSH_REAL_API_PROFILE_HOME` 指到**唯一装好的** `~/larry-dsh-home/profiles`。**这是夹具来源、不是 home 决定** ⇒ 装齐后**重跑并把夹具改指 `~/.dsh/profiles`**
   - ⚠️ **本组只代表「环境变量层」**，**不得**用于宣称"CVM 凭据文件生效"
@@ -199,9 +199,9 @@
 - [ ] 长期记忆双写 + 人审（`memory/archiver.py` + `engine.py` → TS 插件挂 `session/` 事件流，保 SQLite+ChromaDB 双写）
 - [ ] **记忆迁移（活资产，非数据搬运）**：**无需全量重嵌**（DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧漂移 `2.2e-7`、cosine ≥ 0.9999999999；⚠️ **硬前提 = 预处理严格对齐**，任一项不对齐会产生 0.77 级假漂移）+ 召回等价性抽样验收 + 语义字段不降级（`is_active` / `last_hit_at` / `source_role`，ChromaDB 只能重灌、机会只有一次）
 - [ ] **2.7.2 边界透明 → TS answerer 插件**（B1 通道已实测可行；退路 = permission-preset 白名单）
-  - ⛔ **执行前置（002 实测，配错就 boot 不起来）**：`preset` 服务要求会 confinement 的 `ctx.shell`（`sandboxMode === undefined` ⇒ load throw）；`patch` 整行替换非 merge（加自定义档须重述官方三条、`workspace-write` 必留表）。**依据** → `docs/dsh/dsh-015-capability-mapping.md` §3.1
-  - [ ] **未验 ①**：`ctx.tools.restrict()` **真 agent 轮** deny 后模型侧行为（002 只覆盖契约面；对应承接总表〈待实测〉②）
-  - [ ] **未验 ②**：**反向对照** —— 故意给一个无 `sandboxMode` 的 `ctx.shell` executor ⇒ 断言 plugin load **throw**（须改 composition；002 未做）
+  - ⛔ **执行前置（DSH-3.0.2 实测，配错就 boot 不起来）**：`preset` 服务要求会 confinement 的 `ctx.shell`（`sandboxMode === undefined` ⇒ load throw）；`patch` 整行替换非 merge（加自定义档须重述官方三条、`workspace-write` 必留表）。**依据** → `docs/dsh/dsh-015-capability-mapping.md` §3.1
+  - [ ] **未验 ①**：`ctx.tools.restrict()` **真 agent 轮** deny 后模型侧行为（DSH-3.0.2 只覆盖契约面；对应承接总表〈待实测〉②）
+  - [ ] **未验 ②**：**反向对照** —— 故意给一个无 `sandboxMode` 的 `ctx.shell` executor ⇒ 断言 plugin load **throw**（须改 composition；DSH-3.0.2 未做）
 - [ ] 角色机制（`config.yaml` 5 角色 → `preset/` + `cordis.yml`）
 - [ ] 工具生态（`tools/` 844 行 → DSH 工具插件；**web_search 暂保留自实现 Brave**——不配正文抓取，SSRF/清洗成本是刻意规避的）
 - [ ] 用户画像 📐
@@ -244,10 +244,11 @@
 
 - [ ] **DSH-3 prototype 派发**（**批次与执行人，老大 2026-09-14 拍定**）
   - 📮 **派发进度（2026-09-15 订正）**
-    - **001 · DSH-3.0 开工前置**（Trae，09-14）→ ⛔ **停止推进**：A / B / C / F 照用（与版本无关）、**F 组已闭合**；**D / E 归 003**（按 015 重做）；J1 装 profile 授权作废
-    - **002 · 2.7.2 A-framework 契约实测**（Trae，09-15，插入项、不占批次）→ ✅ **已回报 + WB 判「过」**；环境污点根因归 003；**改判与基线解耦**（012 已有、015 未变）
-    - **003 · 装 profile + 重跑 D / E**（Trae）→ 📬 **已回报（2026-09-16）**｜WB 复核：**判定成立** —— 任务 1 ✅（profile 装齐 106 包）；任务 2 / 3 ⛔ **不可判**（环境阻断：CLI / hoisted 根 = `0.1.2-rc.1` ↔ profile = `0.1.5-rc.2` ⇒ runtime 启动即崩）⇒ **待老大裁「环境修复路」（P1 补 peer / P2 另建全 015 home / P3 升 CLI+SDK）后再定是否重跑**
-    - 老大定「**一个一个发，不要并行发**」⇒ **3.2 / 3.7 待 003 后再发**
+    - **DSH-3.0.1 · 开工前置**（Trae，09-14）→ ⛔ **停止推进**：A / B / C / F 照用（与版本无关）、**F 组已闭合**；**D / E 归 DSH-3.0.3**（按 015 重做）；J1 装 profile 授权作废
+    - **DSH-3.0.2 · 2.7.2 A-framework 契约实测**（Trae，09-15，插入项）→ ✅ **已回报 + WB 判「过」**；环境污点根因归 DSH-3.0.3；**改判与基线解耦**（012 已有、015 未变）
+    - **DSH-3.0.3 · 装 profile + 重跑 D / E**（Trae）→ 📬 **已回报（2026-09-16）**｜WB 复核：**判定成立** —— 任务 1 ✅（profile 装齐 106 包）；任务 2 / 3 ⛔ **不可判**（环境阻断：CLI / hoisted 根 = `0.1.2-rc.1` ↔ profile = `0.1.5-rc.2` ⇒ runtime 启动即崩）
+    - **DSH-3.0.4 · 环境同代化修复 + 重跑 D / E**（Trae）→ 📮 **已出稿（2026-09-16）**，稿在 `exchange/log-trae.md` 顶部；老大拍「修复路都做」（原 P1 / P2 二选一解除）⇒ 四步严格串行（诊断 → 验证 → 修复 → 验收），**D / E 为第 4 步**；新增**硬前置** = boot 探针 `exit 0`（未过不得进 D / E）
+    - 老大定「**一个一个发，不要并行发**」⇒ **3.2 / 3.7 待 DSH-3.0.4 后再发**
   - **执行人分配**
     - **3.1–3.6 实现侧 + 3.2 定性** → **Trae**（分工原则 + 他 §八 已自认领）
     - **3.5 上机跑** → **Trae**；**器材由 Claude 出**（`landlock_probe.py` 已回归：ABI 自适应 + 负向开关 + `VERDICT=` 机读行）

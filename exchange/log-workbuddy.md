@@ -24,7 +24,7 @@
 - 待议（未展开）：本地工具下沉实现路径（双向通道 vs 本地 agent 运行时，倾向后者）、记忆系统分层、多端设备身份、移动端能力不对称。
 - 现状 gap（已纳入方案 §七.1 待议）：file_ops/shell 目前在 backend，上云后会操作云端机器而非本机，需下沉 client 端。
 
-## DSH 003 复验结论（2026-09-16）｜⏸ 待老大裁「环境修复路」
+## DSH-3.0.3 复验结论（2026-09-16）｜✅ 已裁 → 转 DSH-3.0.4
 
 **判定：Trae 回报成立。** 任务 1 ✅（profile 装齐，106 包）；任务 2 / 3 ⛔ **不可判**（环境阻断：CLI / hoisted 根 = `0.1.2-rc.1` ↔ profile = `0.1.5-rc.2` ⇒ runtime 启动即 `plugin tree failed to load`）。
 
@@ -39,11 +39,11 @@
 **两条增量（Trae 回报未提）**：
 
 1. ⭐ **跨代是「三方」，且 CLI 侧在关键路径上** —— D 组崩栈首行 = `harness/…/dsh-sdk-protocol@0.1.2-rc.1`；rt-real boot 栈首行 = `harness/…/dsh-app-boot@0.1.2-rc.1`。他的结论先行只写「profile 与 hoisted 根跨代」，但**栈帧直接证明 CLI（harness）也是 012 且参与执行**（boot 器与装置侧协议库皆 012）⇒ **评估修复路时必须把 CLI 层纳入**；P1 / P2 只动 profile 侧，boot 器仍 012。
-2. ⭐ **CVM 参照 profile 是四项不是两项** —— `d-summary.json` 里 `~/larry-dsh-home` 的 sdk deps = `dsh-base` + `dsh-sdk-app` + **`dsh-storage-sqlite`** + **`@larryagent/plugin-storage-probe`(link)**；而 003 稿称「deps 恰为这两项 = 完整 composition」⇒ 该前提**未经 CVM 验证**，疑为失败的第二重原因。
+2. ⭐ **CVM 参照 profile 是四项不是两项** —— `d-summary.json` 里 `~/larry-dsh-home` 的 sdk deps = `dsh-base` + `dsh-sdk-app` + **`dsh-storage-sqlite`** + **`@larryagent/plugin-storage-probe`(link)**；而 DSH-3.0.3 稿称「deps 恰为这两项 = 完整 composition」⇒ 该前提**未经 CVM 验证**，疑为失败的第二重原因。
 3. 小线索：`Packages: -60` 与 `reused 60` **数量一致** ⇒ 疑为 pnpm 统计口径（hoist 复用计负），可按此方向查，不必再实测。
 
 **分清「缺失」与「致败」**：sdk 侧缺 5 包，但只有 3 个引发 entry 失败（`dsh-app-boot` / `dsh-scope` 缺失未致败）。
 
-**我认领的写稿瑕疵**：003 稿任务 0 的门禁「CLI / hoisted 与 profile 同代」在**装前不可满足**（profile 空壳 ⇒ 无代际可比）⇒ 门禁应设在**装后回核**。
+**我认领的写稿瑕疵**：DSH-3.0.3 稿任务 0 的门禁「CLI / hoisted 与 profile 同代」在**装前不可满足**（profile 空壳 ⇒ 无代际可比）⇒ 门禁应设在**装后回核**。
 
-**待老大拍**：① 环境修复路（P1 补 peer / P2 另建全 015 home / P3 升 CLI+SDK —— 已拍「先不补」，是否重议）；② 003 是否按「部分交付」结（任务 1 完成）+ 把「环境修复」拆为独立派发。
+**老大 2026-09-16 裁定**：① 修复路**两条都做**（原 P1 / P2 二选一解除）⇒ 展开为四步串行（诊断 → 验证 → 修复 → 验收）；② DSH-3.0.3 按**部分交付**结（任务 1 完成），环境修复**拆为独立派发** = DSH-3.0.4（稿在 `exchange/log-trae.md` 顶部）。

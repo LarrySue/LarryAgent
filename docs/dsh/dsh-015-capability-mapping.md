@@ -141,9 +141,9 @@
 3. **`permission-presets` 是「边界 config 化」的官方形态，但覆盖面比 2.7.2 的措辞窄**：preset 表可自定义（`presets?: Record<string, PresetSpec>`），客户端渲染为一个 Permissions 选择器，`set()` 先写 log-only 的 `permission/preset` 事件，再经**两个 knob 各自的 setter** 写入（`setSandboxMode` / `setApprovalPolicy`）。
    - ⚠️ **WB 2026-09-15 订正（原写「同构」，过强）**：`PresetSpec` 实测只有两个字段 —— `sandbox: SandboxMode`（`read-only` / `workspace-write` / `danger-full-access`，且**只管文件效果**；原文 *"Network and process visibility are outside this vocabulary"*）+ `approval: ApprovalPolicy`（**只有 `ask` / `never` 两档**，且 `never` = **全拒**不是全放行）。
    - ⇒ **preset 表管不到「工具开关」**。2.7.2 原文的「白名单 / 黑名单 / 工具开关全部 config 可调」中，**只有"边界档位"这一半有现成机制**；工具级开关需另找出处。
-   - ✅ **002 已实测回报**：`PresetSpec` **只含 `{sandbox, approval}`**（坐实上条订正）；**工具开关**另走 **`ctx.tools.restrict()`**（API + 作用域守卫已实证；**真 agent 轮 deny 后的模型侧行为端到端未验**）。**改判方向不变**，覆盖面已按实测重划。
-     - ⚠️ **002 探针的证据边界（勿外推）**：D 组为**装置级** —— 假 session（只实现 `seq` / `eventAt` / `append` / `header`）、**无真模型轮** ⇒ 「已验」覆盖的是**契约存在性与预设生效性**，**不含真 agent 轮行为**（后者见 §8 ⬛ 未验 #2）。
-     - ⛔ **用 preset 的两条硬前提**（002 实测，**配错就 boot 不起来**）：① **`preset` 服务要求一个会 confinement 的 `ctx.shell` executor** —— `ctx.shell.sandboxMode === undefined` ⇒ **plugin load 直接 throw**（比"自定义表能否生效"更前置的门槛）；② **`patch` 是「整行替换该 row 的 config」、不是 merge** ⇒ 加自定义档**必须把官方三条一并重述**，且 **`workspace-write` 必须留在表里**（否则 `defaultPreset` 推断不出来 ⇒ 整行装载失败 / boot 不起来）。
+   - ✅ **DSH-3.0.2 已实测回报**：`PresetSpec` **只含 `{sandbox, approval}`**（坐实上条订正）；**工具开关**另走 **`ctx.tools.restrict()`**（API + 作用域守卫已实证；**真 agent 轮 deny 后的模型侧行为端到端未验**）。**改判方向不变**，覆盖面已按实测重划。
+     - ⚠️ **DSH-3.0.2 探针的证据边界（勿外推）**：D 组为**装置级** —— 假 session（只实现 `seq` / `eventAt` / `append` / `header`）、**无真模型轮** ⇒ 「已验」覆盖的是**契约存在性与预设生效性**，**不含真 agent 轮行为**（后者见 §8 ⬛ 未验 #2）。
+     - ⛔ **用 preset 的两条硬前提**（DSH-3.0.2 实测，**配错就 boot 不起来**）：① **`preset` 服务要求一个会 confinement 的 `ctx.shell` executor** —— `ctx.shell.sandboxMode === undefined` ⇒ **plugin load 直接 throw**（比"自定义表能否生效"更前置的门槛）；② **`patch` 是「整行替换该 row 的 config」、不是 merge** ⇒ 加自定义档**必须把官方三条一并重述**，且 **`workspace-write` 必须留在表里**（否则 `defaultPreset` 推断不出来 ⇒ 整行装载失败 / boot 不起来）。
      - ⚠️ **`ApprovalPolicy` 的另一处易读反**：`never` **先于 answerer** 生效 —— **answerer 已明确同意也照样拒**（两档语义见上条）。
 4. **答者可中继到远端**：`user-questions` 原文「Agent-scoped waterfall listeners compose the available UI surfaces, **including listeners relayed to a connected client**」⇒ 我们 3.3-b / 3.8 要做的「出境 → 人答 → 回填」**官方机制面已支持**（这也与社区件 `dsh-reach` 的 deferred answerer 实证一致）。
 
@@ -313,7 +313,7 @@
 
 **⬛ 未验**
 1. `workspace` 的**运行时行为**（membership 过滤、attach 流程）——只读了类型与规格，未跑
-2. ~~`permission-presets` 自定义 preset 表在真实 profile 里能否生效~~ ✅ **已验**（002 探针：自定义 preset 在真实 profile 生效）—— 接续为 **工具开关（`ctx.tools.restrict()`）真 agent 轮端到端未验**；⚠️ 该探针 **D 组为装置级**（假 session、无真模型轮），边界见 §3.1
+2. ~~`permission-presets` 自定义 preset 表在真实 profile 里能否生效~~ ✅ **已验**（DSH-3.0.2 探针：自定义 preset 在真实 profile 生效）—— 接续为 **工具开关（`ctx.tools.restrict()`）真 agent 轮端到端未验**；⚠️ 该探针 **D 组为装置级**（假 session、无真模型轮），边界见 §3.1
 3. `token-meter` 在长会话下的稳定性与成本（52 条 llm 组欠账相关）
 4. ~~0.1.5 的 ACP 是否真的仍缺 `fork`/`load`/`delete`~~ —— **已闭合，从清单移除**：① DSH-2.5 ② 已实测（2026-09-10，`fork`/`load`/`delete` = `-32601`，对照 `session/resume` = `-32602` 排除鉴权遮挡）；② 上游 implemented 笔记 `2026-08-22-standard-acp-automation-controls`（012/015 Decision 段**逐字相同**）自认实装 `new`/`list`/`resume`/`close`/`prompt`/`cancel`/`set_config_option`，**明确不实现** `load`/`delete`/`fork`（理由：transcript / destructive-storage / lineage 属另一类用例）。⚠️ 但 `fork` 在 `dsh-api-gateway` 的 HTTP 面**存在**，不得写成「上游无 fork」
 5. `web_fetch` 在 CVM 上的实际可达性（可能受网络环境影响）

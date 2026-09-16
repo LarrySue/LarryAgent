@@ -205,8 +205,8 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 | # | 项 | 为什么不能迁移 | 归属 |
 |---|---|---|---|
-| 1 | CVM 侧实测（内存 / 并发探针 / 2 h 采样） | 数据取自 012 环境 | DSH-3（003） |
-| 2 | Windows 沙箱方言（本地化 / 错误码类别 / 编码） | 同上 | DSH-3（003） |
+| 1 | CVM 侧实测（内存 / 并发探针 / 2 h 采样） | 数据取自 012 环境 | DSH-3.0.3 |
+| 2 | Windows 沙箱方言（本地化 / 错误码类别 / 编码） | 同上 | DSH-3.0.3 |
 | 3 | Vue/Tauri → sdk profile 连通（`PROBE-OK-2026`） | 同上 | DSH-3 |
 | 4 | 反代可行性（重估触发线 T2） | 本机实测于 012 期 | DSH-5 |
 | 5 | `dsh.exe` Windows 崩溃定性（入口 / 安装方式相关） | npm 全局 012 上的反证 | DSH-3 |
