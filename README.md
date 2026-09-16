@@ -179,10 +179,10 @@ cd client && npm run test:unit
 
 | 文件 | 用途 |
 |---|---|
-| `HUMAN.md` / `HUMAN_NOTE.md` | 人类治理区：前者为约束（AI 只读），后者为零散记录 |
+| `HUMAN.md` / `HUMAN_NOTE.md` | 人类治理区（AI 只读）：前者为约束，后者为零散记录 |
 | `TODO.md` | **活跃待办，唯一事实源**——未决事项一律以此为准 |
 | `docs/README.md` / `archive/README.md` / `exchange/README.md` | 三区各自规则（落位标准 / 维护归属 / 区域纪律） |
-| `.claude/CLAUDE.md` / `.trae/TRAE.md` / `.qoder/rules/QODER.md` / `.workbuddy/memory/MEMORY.md` | 各 AI 角色约束，会话开始加载 |
+| `.claude/CLAUDE.md` / `.trae/TRAE.md` / `.qoder/rules/QODER.md` / `.workbuddy/memory/MEMORY.md` | 各 AI 角色约束文件 |
 
 **定案区 `docs/`**（活跃权威 / 单一真相源）—— ⚠️ **完整索引见 `docs/README.md`「文件索引」，本表只列最常引用者**（避免两处各列一半而漂移）：
 
@@ -191,10 +191,10 @@ cd client && npm run test:unit
 | `docs/ai-governance.md` | 多 AI 协作治理：Tier 约束模型、角色分工、协作规则 |
 | `docs/ui-reference.md` | UI 设计规格（组件 / 交互 / 视觉 token），单一权威参考 |
 | `docs/product-positioning.md` | 产品功能边界能力树（8 域 / 31 子项，含每条的落地方式与现状） |
-| `docs/production-env.md` / `docs/test-env.md` / `docs/local-env.md` | **环境三份对仗**：server 侧生产（CVM）/ 测试（WSL）/ 本机 Windows（开发 + C 侧测试 + PC 侧生产使用） |
+| `docs/production-env.md` / `docs/test-env.md` / `docs/local-env.md` | **环境三份对仗**：server 侧生产（CVM）/ 测试（WSL）/ 本机 Windows（开发 + C 侧测试 + C 侧生产使用） |
 | `docs/dsh/` | DSH 迁移决策区：`dsh-migration.md`（决策稿）+ 证据报告，细则见 `docs/dsh/README.md` |
 
-**活区 `exchange/`**（各 AI 日志 + 未定稿讨论稿）—— ⚠️ **本区是 AI 间的临时会话空间，`log-*` 不承诺长期保留**：正式文档**不在本区寄居结论**，故此处**只给指针、不逐一罗列文件**（原表按文件列举日志与讨论稿，已与实况漂移，故收回）。**索引与区域纪律见 `exchange/README.md`**。
+**活区 `exchange/`**（各 AI 交流用临时文件 + 未定稿讨论稿）—— ⚠️ **本区是 AI 间的临时会话空间，`log-*` 不承诺长期保留内容**：正式文档**不在本区寄居结论**，**索引与区域纪律见 `exchange/README.md`**。
 
 **冷存区 `archive/`**（已锁定，只复盘不追加）：
 
@@ -205,15 +205,15 @@ cd client && npm run test:unit
 
 ## 多 AI 协作
 
-本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**Marvis**（产品宏观）、**Qoder**（文档一致性观察）、**WorkBuddy**（架构协调与复验），另有独立的 UI 设计角色。
+本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**Marvis**（产品宏观）、**Qoder**（文档一致性维护）、**WorkBuddy**（架构协调与复验），另有独立的 UI 设计角色。
 
-分工定义、约束加载机制与协作规则见 `docs/ai-governance.md`；各 AI 的活日志在 `exchange/`。
+分工定义、约束加载机制与协作规则见 `docs/ai-governance.md`。
 
 ## 设计原则
 
 - **单人使用**：不考虑多用户、并发、权限
 - **简单直接**：不过度抽象，代码直白可读
-- **多 AI 协作**：每个模块职责清晰，便于不同 AI 独立开发
+- **多 AI 协作**：每个模块职责清晰，便于不同 AI 聚焦各自负责的方向
 - **真实凭据不入版本库**：`config.yaml` 含真实 key 且不入库；测试默认占位符，涉 key 路径需显式开启
 
 ## License
@@ -222,4 +222,4 @@ MIT
 
 ---
 
-<sub>本文件最后核对：2026-09-17（Qoder，对照目录 / Makefile / client `package.json` / 后端路由注册 / 三区 README 实况更新；上一版 2026-09-15 WorkBuddy）</sub>
+<sub>本文件最后核对：2026-09-17，Qoder</sub>
