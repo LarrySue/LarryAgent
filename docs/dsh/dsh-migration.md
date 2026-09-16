@@ -210,7 +210,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | 3 | Vue/Tauri → sdk profile 连通（`PROBE-OK-2026`） | 同上 | DSH-3 |
 | 4 | 反代可行性（重估触发线 T2） | 本机实测于 012 期 | DSH-5 |
 | 5 | `dsh.exe` Windows 崩溃定性（入口 / 安装方式相关） | npm 全局 012 上的反证 | DSH-3 |
-| 6 | ⚠️ **CLI 与 profile 必须同代** | CVM 的 `~/.dsh` profile 与 `harness/scripts/cvm-probes/*.sh` **仍指 `0.1.2-rc.1`** ⇒ **混代未验**，未升级前不得用于 015 判据 | **DSH-3.0 强制前置** |
+| 6 | ⚠️ **CLI 与 profile 必须同代** | ✅ **主体已消解（2026-09-16）**：CVM `~/.dsh/profiles/sdk` 已装齐 015、CLI `0.1.5-rc.2` ⇒ 三方同代（WB 上机独立复核）。⚠️ **剩余 1 项**：`harness/scripts/cvm-probes/` 有 **3 个脚本 7 处仍钉 `@0.1.2-rc.1`**（`cvm-setup-profile2.sh` ×3 ／ `cvm-acp-setup.sh` ×2 ／ `cvm-task1-setup.sh` ×1，另 `cvm-step0.sh` 无钉版）⇒ **照抄会装出 012 profile、重演混代崩溃** ⇒ 015 期不得直接复用 | **DSH-3.0 强制前置**（本体已达成；脚本钉版见下） |
 
 **本稿内待处置（非实测项）**：① :82 的「9,080 文件」出处不明，已统一为可复现的 `git ls-tree -r` 口径（8,854）；② ~~§3.6 总表统计「白给 8 / 自做 23」未随 2.7.2 改判重算~~ ✅ **已于 2026-09-15 按 015 口径重划落地**（🟢 12 / 🟡 15 / 🔴 4，见 §3.6 总表）。
 
@@ -349,7 +349,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 - 历史核查留痕（**引文，保留原文**）：`0.1.2-rc.1` 的 notes 只有"改善…"，`0.1.2→0.1.5` 五版全无"性能回退修复"字样 ⇒ 该条**出处仍未找到**。
 
 **【老大裁定 · 2026-09-15 覆盖 09-11 判定】基线挪至 `0.1.5-rc.2`。** 理由（老大原话口径）：**产品哲学上的形态已经确定**，不必再等 stable；015 的变更集中在实现范式，对 DSH-2 机制面结论无威胁（复核见 §2.3）。
-**代价记账**：① **破坏性清单已落档**（本节 ②）；② **DSH-3 起写码按 `0.1.5-rc.2` API 走**；③ ⚠️ **CLI 与 profile 必须同代** —— CVM 上已装的 `~/.dsh` profile 与 `harness/scripts/cvm-probes/*.sh` 仍指 `0.1.2-rc.1`，**须一并升到 015**（混代未验，见 §2.3 未闭合项 #6）；④ 升级当**独立动作**做（不在阶段内顺手升）。
+**代价记账**：① **破坏性清单已落档**（本节 ②）；② **DSH-3 起写码按 `0.1.5-rc.2` API 走**；③ ⚠️ **CLI 与 profile 必须同代** —— ✅ **CVM 侧已完成（2026-09-16）**：`~/.dsh/profiles/sdk` 与 CLI 均 `0.1.5-rc.2`；⚠️ **剩余 = `harness/scripts/cvm-probes/` 3 个脚本仍钉 `0.1.2-rc.1`**（见 §2.3 未闭合项 #6）；④ 升级当**独立动作**做（不在阶段内顺手升）。
 
 **⑥ 顺带订正**：`sdk` profile 的 manifest 实为 **`patchReload: startup`**，只有 `larry` 是 `live` —— 而 **B 段恰好走 sdk**，决策稿此前只记了 larry 的 `live`（见 §3.6 环境规格表 sdk 行）。
 
@@ -664,7 +664,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | 包名前缀 | `@larryagent/` | 同上 |
 | profile 名 | `larry`（= `dsh-base` + `dsh-headless`） | 同上。⚠️ **manifest 因 bundle 而异**——`patchReload` / 可用命令等结论**不可跨 profile 外推**（第 0 项的 `startup` 即出自 sdk-app） |
 | `DSH_HOME` | `.dsh-home/`（仓库内，已 gitignore——含凭据与会话产物） | 同上 |
-| DSH 入口 | **npm 全局 `dsh@0.1.5-rc.2`**（⚠️ **须与 profile 同代** —— CVM 上已装的 `~/.dsh` profile 与 `cvm-probes/*.sh` 仍指 `0.1.2-rc.1`，须一并升；**混代未验**）；不用源码 `bin.ts` + tsx | DSH-2.2 反证（通道 012）：源码入口在 PowerShell 下偶发卡住；同代要求见 §2.3 未闭合项 #6 |
+| DSH 入口 | **npm 全局 `dsh@0.1.5-rc.2`**（⚠️ **须与 profile 同代** —— 混代未验；CVM 侧 2026-09-16 已完成同代化，剩余 = `cvm-probes/` 3 个脚本的钉版，见 §2.3 未闭合项 #6）；不用源码 `bin.ts` + tsx | DSH-2.2 反证（通道 012）：源码入口在 PowerShell 下偶发卡住；同代要求见 §2.3 未闭合项 #6 |
 | DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
 | sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC）；⚠️ manifest **`patchReload: startup`**（与 `larry` 的 `live` **不同**） | DSH-2.3 连通验证用；**B 段走 sdk → 其配置热重载结论不等于 larry**；与 `larry` 是两个 profile，结论不可互推（`patchReload` 差异 2026-09-11 订正，见 §3.4〈基线收口复核〉） |
 | **端到端动态验证** | **WB 侧可独立完成**：Git Bash 工具 + 环境变量注入测试 key | 🟢 2026-09-09 复测：握手 / 事件流 / **真实 LLM 回包**全部跑通，见下方「WB 复验边界（修订）」 |

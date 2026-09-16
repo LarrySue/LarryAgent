@@ -450,7 +450,7 @@ records:
 
 | 环境 | 路径 | 现状 | 要填吗 |
 |---|---|---|---|
-| **CVM · 裸跑（默认 home）** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；**真生效**待验 —— ⚠️ 但**不能用 real-api 验**（见下条订正），须用 `dsh-prompt.mjs` 裸跑 |
+| **CVM · 裸跑（默认 home）** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；✅ **真生效已验成（2026-09-16）** —— `dsh-prompt.mjs` 裸跑、**不注入** env key，得 `turn/end.kind=completed` ＋ 非空回复（D1 证成；3.0.5 独立复现）｜ ⚠️ 但**不能用 real-api 验**（见下条订正），须用 `dsh-prompt.mjs` 裸跑 |
 | **CVM · 显式 `DSH_HOME=~/larry-dsh-home`** | `/home/ubuntu/larry-dsh-home/.credentials.yaml` | ⚠️ **不存在**（09-10 建的该 home，profiles / sessions / storages 齐全，**独无凭据**） | ⚠️ **本机 `harness/scripts/cvm-probes/*.sh` 钉死此路径** ⇒ 照抄 = "无 key 假绿" |
 | 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
 | 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
@@ -511,7 +511,7 @@ records:
 ⇒ 两处**互不相通**（非软链、非同一份）：填哪个取决于"**谁启动 DSH**"。
 ⇒ ⚠️ **CVM 特有风险**（改脚本前）：本机脚本钉的 home 与 CVM 已填凭据的 home **不是同一个** ⇒ **照抄 `cvm-probes` 脚本 = 无 key 假绿**（§1 已记录该形态）。**已按"改脚本指向 `~/.dsh`"处置。**
 
-#### 附一之补：CVM 的 `~/.dsh/profiles/*` 曾是**空壳**（2026-09-14 实测订正）
+#### 附一之补：CVM 的 `~/.dsh/profiles/*` **曾是**空壳（2026-09-14 实测订正 ／ ✅ 2026-09-16 已装齐）
 
 原记「`~/.dsh/profiles/` 四个全在」是**数目录、没验依赖**得出的。实测：
 
@@ -526,6 +526,11 @@ records:
 ⇒ 纪律「CVM 以 `~/.dsh` 为准」**结论不变**（其理由本就含"裸跑默认"一条，与依赖无关），但**必须先把 `sdk` profile 装进 `~/.dsh`** 才真正可用（装法见 `TODO.md` DSH-3.0 段 `:64-65`；⚠️ 按**基线 015** 装，且须 **CLI 与 profile 同代** —— 2026-09-15 本机实测的跨版本混合污点即由此而来）。
 
 ⭐ **同一形态在本机也存在**（`.dsh-home/profiles/sdk` 99 包 / `~/.dsh/profiles/*` 空壳）⇒ **"凭据落一个 home、profile 落另一个 home"是系统性问题**，不是 CVM 独有。
+
+**✅ 现状（2026-09-16，WB 上机独立复核）**：`~/.dsh/profiles/sdk` = **deps 5 项**（`dsh-base` ＋ `dsh-sdk-app` ＋ 3 个可选 peer：`session-persistence` ／ `session-query` ／ `http-proxy`，**全 `0.1.5-rc.2`**）、`node_modules/@deepseek-ai` **109 包**；CLI 亦 `0.1.5-rc.2` ⇒ **不再是空壳，且三方同代**。「凭据与可运行 profile 被劈开」这一形态**在 CVM 侧已消除**（⚠️ 本机 `.dsh-home` 一侧**未动**）。
+
+- 📐 **015 完整 composition 口径 = `dsh-base` ＋ `dsh-sdk-app` ＋ 3 个可选 peer**：它们在锁文件里是 `peerDependenciesMeta.optional: true`，而 profile 配 `autoInstallPeers: false` ⇒ pnpm 把 32 条列进 `transitivePeerDependencies` **却不安装** ⇒ 运行时回落 fallback 层（**这正是 DSH-3.0.3 崩的机制**；若回退层与 profile **同代**则可省）。
+- ⚠️ **别把 `node-addon-system@0.1.2` 当"旧代际残留"**：它是**独立包**（无 `dsh-` 前缀、与 DSH 代际体系无关），按 `grep 0.1.2` 扫代际时会假命中 ⇒ **判定残留须按 `@deepseek-ai/dsh-*` 前缀筛**。
 
 #### 附二：手工复验 / 脚本驱动时的 `DSH_HOME` 注入（2026-09-14 实测）
 
