@@ -9,9 +9,9 @@
 > **部署定位**：**第一版起即面向云部署**，当前本机仅作开发 + 测试环境。
 > - **PC 版（C/S）**：client 在本机不上云（保留本地文件 / 命令行能力），server 部署云端
 > - **移动版（B/S，规划中）**：浏览器直接访问云端
-> - 云 / 端边界、配置与隔离方案见 `exchange/deployment-architecture.md`（**待 DSH 迁移完成后重新制定**）
+> - 云 / 端边界、配置与隔离方案**待 DSH 迁移完成后重新制定**（现为未定案草案，不作依据）
 
-> **当前状态**：主线阶段 **P0–P4 已完成**（历史，详见 `archive/roadmap-history.md`）；**现行在飞阶段与工程债务以 `TODO.md` 为准**（唯一事实源）。
+> **当前状态**：主线阶段 **P0–P4 已完成**（历史，详见 `archive/roadmap-history.md`）；**现行在飞阶段与工程债务以 `TODO.md` 为准**（唯一事实源）。当前工作主线为 **DSH 迁移**——把后端切到 DeepSeek Harness：决策稿见 `docs/dsh/dsh-migration.md`，工程落位在 `harness/`。
 
 ---
 
@@ -27,7 +27,7 @@ LarryAgent/
 │   ├── requirements.txt     # Python 依赖
 │   ├── logging_config.py    # 日志配置
 │   ├── exceptions.py        # 异常体系（LarryException → 统一 JSON 出口）
-│   ├── api/                 # API 路由（chat / conversations / memory / tools）
+│   ├── api/                 # API 路由（chat / conversations / memory / roles / tools）
 │   ├── services/            # 业务逻辑层（chat_service 等）
 │   ├── models/              # LLM 路由 + Embedding + Token 统计
 │   ├── db/                  # 数据库层（schema / migrations / CRUD）
@@ -69,6 +69,7 @@ LarryAgent/
 │  /api/chat            聊天（SSE 流式 + 工具调用）   │
 │  /api/conversations   会话（归档 / 回收站）         │
 │  /api/memory          长期记忆                     │
+│  /api/roles           角色清单                     │
 │  /api/tools           工具管理                     │
 │                                                   │
 │  services → models（LLM 路由）→ tools              │
@@ -89,6 +90,7 @@ LarryAgent/
 
 - **Python 3.11+**（后端，本机实测 3.11.9）
 - **Node.js 20+**（PC 客户端开发 / 构建）
+- **pnpm 11.7.0**（`harness/` DSH 工程区；版本由 `harness/package.json` 的 `packageManager` 钉定）
 - **Rust 工具链**（仅在需要打包 Tauri 桌面端时）
 
 ### 后端
@@ -130,6 +132,7 @@ npm run test:unit    # Vitest 单元测试
 | `server.api_key` | **放开局域网 / 上云前必须设置**，否则等于无鉴权暴露 shell 工具 |
 | `vector_store.enabled` | 长期记忆开关；关闭时不做向量检索 |
 | `embedding.provider` | `local`（本地 bge-small-zh）或 `openai`（云端） |
+| `roles.<key>` | **场景人格**：`label` / `color` / `system_prompt`，可选 `tools` 限定该角色可用工具；新增角色只改此处、重启生效，前端经 `/api/roles` 动态渲染 |
 | `tools.shell_allowed_ips` | Shell 工具 IP 白名单，单人使用建议只留 `127.0.0.1` |
 | `tools.file_ops_workspace` | 文件工具的工作目录，读写被限制在此目录内 |
 | `llm.max_input_tokens` | 单次请求最大输入 token，超出截断旧消息 |
@@ -165,7 +168,7 @@ cd client && npm run test:unit
 | `HUMAN.md` / `HUMAN_NOTE.md` | 人类治理区：前者为约束（AI 只读），后者为零散记录 |
 | `TODO.md` | **活跃待办，唯一事实源**——未决事项一律以此为准 |
 | `docs/README.md` / `archive/README.md` / `exchange/README.md` | 三区各自规则（落位标准 / 维护归属 / 区域纪律） |
-| `.claude/CLAUDE.md` / `.trae/TRAE.md` / `.qoder\rules\QODER.md` / `.workbuddy\memory\MEMORY.md` | 各 AI 角色约束，会话开始加载 |
+| `.claude/CLAUDE.md` / `.trae/TRAE.md` / `.qoder/rules/QODER.md` / `.workbuddy/memory/MEMORY.md` | 各 AI 角色约束，会话开始加载 |
 
 **定案区 `docs/`**（活跃权威 / 单一真相源）—— ⚠️ **完整索引见 `docs/README.md`「文件索引」，本表只列最常引用者**（避免两处各列一半而漂移）：
 
@@ -177,14 +180,7 @@ cd client && npm run test:unit
 | `docs/production-env.md` / `docs/test-env.md` / `docs/local-env.md` | **环境三份对仗**：server 侧生产（CVM）/ 测试（WSL）/ 本机 Windows（开发 + C 侧测试 + PC 侧生产使用） |
 | `docs/dsh/` | DSH 迁移决策区：`dsh-migration.md`（决策稿）+ 证据报告，细则见 `docs/dsh/README.md` |
 
-**活区 `exchange/`**（各 AI 日志 + 未定稿讨论稿）：
-
-| 文件 | 用途 |
-|---|---|
-| `log-*.md` / `log_design.md` | 各 AI 交流日志（WorkBuddy / Claude / Trae / Marvis / UI 设计） |
-| `deployment-architecture.md` | 云部署架构方案（**待 DSH 迁移完成后重新制定**） |
-| `discussion-time-context.md` | 时间上下文（时间对齐）专题讨论 |
-| `web-search-design.md` | 网络搜索技术选型与设计规格（**尚未展开讨论**） |
+**活区 `exchange/`**（各 AI 日志 + 未定稿讨论稿）—— ⚠️ **本区是 AI 间的临时会话空间，`log-*` 不承诺长期保留**：正式文档**不在本区寄居结论**，故此处**只给指针、不逐一罗列文件**（原表按文件列举日志与讨论稿，已与实况漂移，故收回）。**索引与区域纪律见 `exchange/README.md`**。
 
 **冷存区 `archive/`**（已锁定，只复盘不追加）：
 
@@ -212,4 +208,4 @@ MIT
 
 ---
 
-<sub>本文件最后核对：2026-09-15（WorkBuddy，对照目录 / Makefile / package.json 实况更新）</sub>
+<sub>本文件最后核对：2026-09-17（Qoder，对照目录 / Makefile / client `package.json` / 后端路由注册 / 三区 README 实况更新；上一版 2026-09-15 WorkBuddy）</sub>
