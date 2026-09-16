@@ -834,14 +834,30 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
     | 全新 015 项目（`pnpm add`，空目录） | **`0.1.5-rc.2`** | 干净图**无此现象** |
     | `~/harness` 现状 lockfile | `0.1.2-rc.1` | 冻结在旧代际 |
     | `~/harness` 保留 lockfile 跑 `install --lockfile-only` | `0.1.2-rc.1` | **不自愈** |
-    | `~/harness` 删 lockfile 重跑 | **`0.1.5-rc.2`** | **一行动作即修** |
+    | `~/harness` **只**删 lockfile 重跑（`node_modules` 尚在） | `0.1.2-rc.1` | ⚠️ **仍冻结**（≠ 早先结论） |
+    | `~/harness` 删 lockfile **＋** 删 `node_modules` 重装 | **`0.1.5-rc.2`** | ✅ **真修法**（2026-09-16 落地） |
+    | 副本目录（**无** `node_modules`）删 lockfile 重跑 | `0.1.5-rc.2` | 与上两条**不矛盾** —— 差异只在有无物理树 |
 
-  - **成因**：该包的依赖类型在 015 里由 `dependencies` 变为 `peerDependencies`（配 `autoInstallPeers: true`），而 pnpm 的**增量升级（`pnpm add <pkg>@新代`）只重算被改动子树**，不会因「依赖类型变了」回头重算 ⇒ lockfile 冻结旧代际，**后续 `install` 亦不自愈**（对照表第 3 行）。
+  - **成因（两层）**：① 该包的依赖类型在 015 里由 `dependencies` 变为 `peerDependencies`（配 `autoInstallPeers: true`），而 pnpm 的**增量升级（`pnpm add <pkg>@新代`）只重算被改动子树**，不会因「依赖类型变了」回头重算 ⇒ lockfile 冻结旧代际，**后续 `install` 亦不自愈**（对照表第 3 行）；② ⭐ **`node_modules` 本身是解析输入**：pnpm 会**复用磁盘上已有的物理版本**作解析偏好（日志实证：`[WARN] Could not find preferred package …`）⇒ **只删 lockfile 不足以重算**，必须连 `node_modules` 一起删（对照表第 4 行 vs 第 5 行）。
+    - ⚠️ **同族教训（路径不可外推）**：早先「删 lockfile 一行动作即修」的结论取自**无 `node_modules` 的副本目录**，把它搬到真树就失效 —— 与 `.workbuddy/memory/MEMORY.md` 里「修正性实验的结论必须限定路径」是同一条。
   - **正确判据（替换原「看回退层的实际代际」）**：判某 home 可用，须核**回退层反映的解析结果**与 profile 的 peer 要求**是否相容**。「拿到旧代际」是**落点树 lockfile 冻结**的信号，**不是**「heal 注入」的信号 —— `~/.dsh-015` 红 = 其 peer 要求 `^0.1.5-rc.2` 与落点树给的 `0.1.2-rc.1` 不相容。
   - ⭐ **行事规则：跨代升级 DSH 后必须重算 lockfile** —— `pnpm add` / `pnpm update` 的增量升级会冻结旧代际且**不可自愈**；正确姿势 = **删 `pnpm-lock.yaml` ＋ `node_modules` 后全新 install**，升级后另跑一次版本核对（「`pnpm install` 跑过」**不等于**「图已重算」）。
+  - ⭐ **修法（2026-09-16 已落地并验收）**：`mv pnpm-lock.yaml <备份>` → `rm -rf node_modules` → `pnpm install`（CVM 实测 14.8s）。**验收四项**：① lockfile 解析 = 目标代际（本次 `persistence` / `query` / `fs` 三处 012 → 015）；② `.pnpm` 里旧代际物理目录数 = **0**（本次 215 → 0，物理目录总数 793 → 550）；③ `node_modules/.bin/dsh` 重建、`dsh --version` = `0.1.5-rc.2`；④ **端到端探针跑通**（见本段末条实测）。
+  - ⚠️ **代价：落点树重装 ⇒ 各 home 的回退层链接大面积悬空**（pnpm 的 peer-hash 目录名随图变化：`@deepseek-ai+dsh@0.1.5-rc.2_cfa263…` → `_0351730…`）。实测：`~/.dsh-015` 悬空 **74**、`~/.dsh` 悬空 **98**。**修法 = 对该 home 跑一次 boot 触发 heal**（`DSH_HOME=<home> dsh --profile <p> --help` 即可 —— 触发门槛比想象低）；heal 后 `~/.dsh-015` 悬空 **0**、`~/.dsh` 余 **24**，残项**全是 web 前端包**（`react` / `lexical` / `@tanstack/*` —— 落点树**本就不含**它们，**修前即悬空**，非本次操作引入）。
+  - ⚠️ **旧树可能连 lockfile 都已不可用**：`~/harness/pnpm-lock.yaml.bak-304`（012 态）**不能**喂给 `pnpm install --frozen-lockfile` —— 报 `The importer resolution is broken at dependency "@deepseek-ai/dsh-sandbox-local": version "0.0.1-rc.1" doesn't satisfy range "*"`（该版本由 workspace 的 peer 声明 `*` 引入）。⇒ **「回到旧态」这条路本身不通，只能向前修**；若要留退路，须在升级前备份**整棵 `node_modules`**，只备份 lockfile 不够。
+  - ✅ **修复后实测（2026-09-16）**：主 home `~/.dsh` 的 D1 条件（**不注入 env key**，仅凭 `~/.dsh/.credentials.yaml`）端到端跑通 —— 连跑 **5/5** ＋ 三场景（web 实例共存 / 刚 kill / 完全干净）**3/3** ⇒ **8/8 绿**，`stdout=probe ok`。修前基线可回溯：`~/.dsh/sessions/--home-ubuntu-claude-305--/c305-d1/`（**18:44**，早于本次操作）记录 `turn/end reason=completed` ⇒ 修前亦绿，**本操作未引入功能性回归**。
   - **原候选修法处置**：③「令 heal 只回填与 profile 同代的路径」**动机不成立 ⇒ 撤销**（heal 行为正确）；①（profile 显式声明全部 peer）**保留**，理由改为「不依赖回退层兜底、让缺件成为清晰早失败」，与代际无关；②（重建 `~/harness`）**降为一次性清理动作**，见 `TODO.md`。
-  - ⚠️ **同源误读要一并销**：`~/harness/.pnpm` 里确有 **192 项无引用旧代际目录**（lockfile 已不含、无任何 readlink 指向）——那是**磁盘残留**（无害、可 prune），与「回退层拿到旧代际」是**两回事**，不可混为一谈。真正的对照组是 **lockfile 解析结果**，「顶层 `package.json` 升了新代」**不能**当作「全套都该是新代」的依据。
-- ⚠️ **boot 类动作不是「只读」**：对任意 home 跑一次 boot，上述 heal 都会**改写该 home 的 `profiles/node_modules`**（实测：空壳 home 由 0 → 240 条链接；`~/.dsh-015` 该目录 mtime = 跑的那一秒，与结果落盘同秒）⇒ 派发「只读观测」类任务时，**要么显式声明会被写、要么改用隔离副本**；**「跑前 / 跑后 `readlink`」应作为标准观测项**。
+  - ⚠️ **同源误读要一并销（含一次订正）**：`~/harness/.pnpm` 里确有 **192 项无引用旧代际目录**（lockfile 已不含、无任何 readlink 指向）。原记「磁盘残留、**无害、可 prune**」——**订正：它们不是惰性的**，pnpm 会把磁盘上已有的物理版本当**解析偏好**复用（本条上半段「只删 lockfile 仍得 012」正是它们的效力）⇒ 正确表述为「**是解析偏好的输入**」，须与 `node_modules` 的重装一并清掉，而非「顺手 prune 的无害垃圾」。与「回退层拿到旧代际」仍是两回事；真正的对照组是 **lockfile 解析结果**，「顶层 `package.json` 升了新代」**不能**当作「全套都该是新代」的依据。
+- ⚠️ **`-32603 cannot create effect on inactive context` 曾间歇出现，成因未知**（2026-09-16 留痕；**勿据此下结论**）：本次修复过程中该错在 `~/.dsh` / `~/.dsh-015` 上共出现 3 次，错误栈落在 `dsh-sdk-protocol@0.1.5-rc.2`（**不是** 012 的 boot 器）。已做的排除：
+
+  | 假说 | 对照装置 | 结果 |
+  |---|---|---|
+  | 012↔015 代际变化所致 | 把 `persistence` / `query` / `fs` 钉回 `0.1.2-rc.1` 再跑 | 仍红 ⇒ **不是代际** |
+  | 残留 dsh 进程干扰 | 起 web 实例共存 / 刚 `kill` / 完全干净，三场景 | **三场景全绿** ⇒ **不是进程干扰** |
+  | 修复后树不稳定 | 连跑 5 次 ＋ 上述 3 场景（合 8 次） | **8/8 绿** ⇒ **树稳定** |
+
+  ⇒ **同一棵全 015 树既出过红也出过绿，且绿可稳定复现**。按证据纪律**停在「成因未知」**，不编成因叙事；再遇时先固定「该次运行的完整 stderr ＋ 跑前进程 / 锁状态」，而非直接怀疑版本。
+- ⚠️ **boot 类动作不是「只读」**：对任意 home 跑一次 boot，上述 heal 都会**改写该 home 的 `profiles/node_modules`**（实测：空壳 home 由 0 → 240 条链接；`~/.dsh-015` 该目录 mtime = 跑的那一秒，与结果落盘同秒）⇒ 派发「只读观测」类任务时，**要么显式声明会被写、要么改用隔离副本**；**「跑前 / 跑后 `readlink`」应作为标准观测项**。（触发门槛实测很低：**`dsh --profile <p> --help` 即足以触发 heal** —— 本次两个 home 的回退层就是靠它重建的。）
 
 #### DSH-4：差异化能力迁移
 
