@@ -5,6 +5,120 @@
 
 ---
 
+# DSH-3.0.5 · 独立验收回报（Claude｜2026-09-16）
+
+> 派发单见下方 §📮。器材自造、未跑 Trae 任何装置；真 key 只从 `~/.dsh/.credentials.yaml` 读入内存，未落盘、未回显（所有产物双重脱敏，`sk-` 形态命中数 = 0）。
+> 通道：**CVM** `ubuntu@49.232.129.252`，`sh`（非交互 PATH 手动补 `node`），`DSH_HOME` 逐态指定；CLI 一律 `~/harness/node_modules/@deepseek-ai/dsh` = **0.1.5-rc.2**。本机（Windows/MSYS）未跑 ⇒ 不得外推。
+
+## 结论先行
+
+- **A（独立复现 D / E 三态）：复现成功。** 三态在 `error.code` 上可分：无 key → `MISSING_CREDENTIAL`，错 key → `AUTH/401`；真 key → `completed` + 非空回复。我另加了一组**只差一个变量的受控对**（d1c ↔ d2，同为隔离 home，唯一区别是凭据文件的有无），故因果而非相关。
+- **B（空壳 home 判据盲区）：❌ 无判别力——乙与甲逐值同形。** 但**根因不是「`initialize` 对空壳也盲」，而是「空壳这个样本不存在」**：boot 会把不存在的 home **自建成与甲结构同构的 sdk profile**，两者再走同一条回退路径、撞同一个错。⇒ **「profile 完全不存在」在 wire 层是一个不可达状态。**
+- **附带否证：`~/.dsh-015` 不是健康样本**（WB 指定甲为"同代健康"，实测**红**，根因与乙**相同**：缺 3 个 peer）；**「跨代必红」也被实测否证**（丙实测绿，方向与 Trae 记录相反）。
+- **实测坐实 WB 预警的只读坑**：`healProfilesModuleFallback()` 确实改写目标 home 的 `profiles/node_modules`（逐秒归因见下），Trae 相位 Ⅰ 记的"hoisted 层 ABSENT"在跑过 boot 后**已失效**。
+
+## 一、观测表（逐项，格式 = 派发 §3）
+
+**D 组**（`key-mode=none` ⇒ 子进程 env **显式 `delete DEEPSEEK_API_KEY`**，`parentKey=no` / `childKey=no` 四态全成立；只能读凭据文件）
+
+| 态 | home | 凭据层 | `initialize` | `messageId` | 通知 | asst 消息/字节 | `turn/end` | `error.code` | exit | stdout / stderr | 存活 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| d1 真·原生 | `~/.dsh` | 真文件 223B/600 | ok 1217ms | YES | 18 | 1 / 26 | `completed` | — | **0** | 37232 / 0 B | 2585ms |
+| d1c 真·隔离 | `/tmp/c305/iso-cred` | **符号链接**→真文件 | ok 1255ms | YES | 18 | 1 / 26 | `completed` | — | **0** | 35493 / 0 B | 2583ms |
+| d2 无 key | `/tmp/c305/iso-plain` | **absent** | ok 1223ms | YES | 18 | 0 / 0 | `error` | **`MISSING_CREDENTIAL`** | **0** | 35149 / 0 B | 1388ms |
+| d3 错 key | `/tmp/c305/iso-forge` | 自造 80B/600 | ok 1196ms | YES | 18 | 0 / 0 | `error` | **`AUTH/401`** | **0** | 34837 / 0 B | 1836ms |
+
+**E 组**（环境变量层；home 均 `/tmp/c305/iso-plain`，**无凭据文件**，只经 env 注入）
+
+| 态 | env | `initialize` | `messageId` | 通知 | asst | `turn/end` | `error.code` | exit | stdout / stderr | 存活 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| e2 错 key | 伪造串 | ok 1211ms | YES | 18 | 0 / 0 | `error` | **`AUTH/401`** | **0** | 34837 / 0 B | 1879ms |
+| e3 真 key | 真值（内存） | ok 1176ms | YES | 18 | 1 / 26 | `completed` | — | **0** | 36796 / 0 B | 2049ms |
+
+**B 组**（`key-mode=none`，真实模型未参与）
+
+| 样本 | home | `initialize` | 错码 | `messageId` | 通知 | exit | stdout / stderr | 存活 |
+|---|---|---|---|---|---|---|---|---|
+| 甲 b-jia1 | `~/.dsh-015` | **error** 1240ms | `-32603` | no | **0** | **1** | 102 / **15247** B | 1259ms |
+| 乙a b-yia | `/tmp/c305-empty-a`（**不存在**） | **error** 1209ms | `-32603` | no | **0** | **1** | 102 / **15499** B | 1232ms |
+| 乙b b-yib | 不存在 home + 真凭据 | **error** 1220ms | `-32603` | no | **0** | **1** | 102 / **15499** B | 1241ms |
+| 丙 b-bing | `/tmp/c305/iso-crossgen`（012 profile） | **ok** 1325ms | — | YES | 68 | **0** | 46692 / 359 B | 2637ms |
+
+- **乙与甲同形**（唯一差异 = 路径名长度带来的 stderr 252 B）⇒ 按派发判据：**无判别力，照写**。
+- **乙a 与乙b 逐字节相同**（102 / 15499 B）⇒ **profile 层崩塌时凭据层完全不参与**（plugin tree 先于凭据解析）⇒ 凭据态会被 profile 态**掩蔽**。
+- 两态 stdout 均为同一条 `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"cannot create effect on inactive context"}}`。
+- **stdin 全程保持打开**（`stdio:['pipe','pipe','pipe']`），无「双流全空的假绿」；四态 exit 0 也**再次证明 exit code 不能单独当判据**。
+- D 组内 **stdout 字节数亦无判别力**（d2 35149 vs d3 34837，差 312 B）；判据只能是 `turn/end.reason.error.code`。
+
+## 二、B 的根因链（本单最有价值的部分，逐环有据）
+
+1. `~/.dsh-015/profiles/sdk/node_modules/@deepseek-ai/` **106 项**，健康态 `~/.dsh` **109 项**，**diff 只有 3 行**：缺 `dsh-http-proxy`、`dsh-session-persistence`、`dsh-session-query`。
+2. 而 `dsh-session-persistence-jsonl` / `dsh-session-query-sqlite` 在**两者**私有层里**都是 015** ⇒ **甲不是"缺插件"，是缺 peer**。
+3. `dsh-session-persistence-jsonl@015` 的 `peerDependencies` 要求 `@deepseek-ai/dsh-session-persistence: ^0.1.5-rc.2`。甲私有层没有 ⇒ Node 解析**向上回退**到 `profiles/node_modules` 回退层。
+4. 回退层被 `healProfilesModuleFallback()` 回填成 **CLI 落点树（`~/harness`）的代际**，而该树是 **012/015 混装**（顶层依赖升了，`.pnpm` 里 012 残留未清）⇒ 该位置是 **`@deepseek-ai+dsh-session-persistence@0.1.2-rc.1`**。
+5. ⇒ 015 的 entry 装入 012 的 peer ⇒ `failed to import loader entry session-persistence-jsonl (…): The requested module '@deepseek-ai/dsh-session-persistence' does not provide an export named 'Session…'` ⇒ cordis 报 `-32603 cannot create effect on inactive context`。
+6. **乙走的是同一条路**：boot 把不存在的 home 自建出 `profiles/sdk/{package.json（`dependencies:{}`）、cordis.yml、cordis.patch.yml、pnpm-workspace.yaml、.dsh-module-fallback/}` **＋同一个 240 条回退层** ⇒ 与甲**解析行为等价** ⇒ 同一个错、同一个码。
+
+⇒ **判据含义**：这题的正确问法不是"空壳红不红"，而是"**空壳与不完整 profile 能不能分开**"——**不能**。可用的判据在 **stderr**：`failed to import loader entry <entry> (<pkg>): … does not provide an export named <sym>`（能读出代际不匹配），但它**不给实际解析到的版本/路径** ⇒ **可诊断性缺口**，验收脚本应把 `readlink` 探针与这条错误一并收。
+
+## 三、只读坑：实测坐实（逐秒归因）
+
+- `~/.dsh-015/profiles/node_modules/@deepseek-ai/` **240 条**链接，mtime = **`2026-09-16 18:47:08`**，正落在 b-jia1 运行窗口（结果落盘 `18:47:09`，`initMs=1240`）⇒ **这批回退链接是我这次 boot 建出来的**；Trae 相位 Ⅰ 记的"hoisted 层 ABSENT"当时为真。
+- 空壳 home 上同一现象重复：`/tmp/c305-empty-a/profiles/node_modules/@deepseek-ai/` **0 → 240**，mtime `18:47:10`。⇒ **对任意 home 跑一次 boot 都会改写该 home 的 profiles 回退层**。
+- **归因精度声明**：链接 mtime 与 e3 结果落盘同秒，无法 100% 排除 e3 进程尾段所为；但 e3 的 `DSH_HOME=/tmp/c305/iso-plain`，唯一指向 `~/.dsh-015` 的进程是 b-jia1 ⇒ 归因 b-jia1。
+- 顺带回答 Trae 遗留项 #2：`~/.dsh/profiles/node_modules/@deepseek-ai/dsh` 的 readlink **现在是 015 store**（`@deepseek-ai+dsh@0.1.5-rc.2_cfa263ec…`）⇒「symlink 仍指 012 store」**已不再成立**（状态已变）。d1 的**跑后**值未取到（跑后观测补丁在 wave1 之后才加，如实标注），只给「跑前 = 当前 = 015 store」。
+
+## 四、与 Trae 数据的差异点
+
+1. **丙（跨代）方向相反**：Trae 记录的红是「**012 CLI + 015 profile**」；我实测的绿是「**015 CLI + 012 profile**」⇒ **「跨代必红」不成立**。四观测点可收敛为**方向性规则**：*约束在 profile ↔ 其回退层/自身依赖的同代性，CLI 更新无害*（`~/.dsh` 015/015 ✓；`~/.dsh-015` 015/回退层混装 ✗；`larry-dsh-home` 012/012 在 015 CLI 下 ✓；Trae 改前 012CLI/015profile ✗）。
+   ⚠️ **混淆项声明**：我的丙样本 profile 带 `@larryagent/plugin-storage-probe` link + `dsh-storage-sqlite@012`，是遗留实验 home，**不是干净样本** ⇒ 该规则仍是**候选**，需干净重测。
+2. **`~/.dsh-015` 被判为"健康同代"是误判**：它与 `~/.dsh` 的差别只有 3 个包，不是代际差异；它在**旧四项 boot 探针**下 PASS，在 SDK 握手处必红 ⇒ 旧判据应退役（与 Trae 的反例一致，此处再证一次）。
+3. **退出码**：D/E 四态**全部 exit 0**（与 Trae 一致）；B 组失败态 exit 1。
+4. **E 组我未走 vitest 夹具**（见 §五），只用语义等价的自造路径，故**仅**证明"env 层在本路径上独立充分"，**不代表夹具语义**。
+
+## 五、未做到的部分（不粉饰）
+
+1. **未跑项目 vitest 夹具路线**（`harness/tests/real-api.ts` + `DSH_REAL_API_PROFILE_HOME`）作交叉核对 ⇒ 派发中「E 组只代表环境变量层」那条限定，我**既未证实也未证伪**。
+2. **丙需干净重测**（去掉 probe 插件）才能把"方向性规则"从候选升为结论。
+3. **d1/d1c 缺跑后观测**（补丁时序所致）；只 e3/b-yia 有完整前后值。
+4. **未实测**"若 CLI 树为纯 015，缺 peer 的 profile 是否会被 heal 救活"——这是根因链第 4 步的**推论**，标注为推论。
+5. 全在 CVM 单通道；**未碰** `larry`/`web`/`acp` 三个 profile，也未宣称它们可用。
+
+---
+
+# 📮 附：WB 单列待核项 —— harness 同步核账（Claude｜2026-09-16）
+
+> 你说「我核到的数字与你相反」，我复测后确认：**你的对账成立，我此前记的"缺 30 文件"是 09-14 同步前的过期观测，该条作废。**
+
+- **时点**：`2026-09-16T10:44:38Z`（CVM `date -u` 与本机同时刻取值）
+- **取值路径与一条可复跑命令**：
+  ```sh
+  find <harness_dir> -type f -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*"
+  #   计数： … | wc -l       字节： … | xargs -d'\n' stat -c%s | awk '{s+=$1} END{print s}'
+  ```
+- **结果**：本机 `D:\Code\LarryAgent\harness` = **60 文件 / 758,353 B**；CVM `~/harness` = **64 文件 / 1,308,792 B**
+- **归一化 diff**（`tr -d '\r'` + 去 `/home/ubuntu/` 前缀）：
+  - **本机独有 5**：`packages/plugin-015-preset-probe/{cordis.patch.yml,index.js,package.json}` ＋ `scripts/015-preset-probe/{custom-preset.patch.yml,run-probe.mjs}`
+  - **CVM 独有 9**：6 个 09-10 手工脚本 ＋ `package.json.bak-304` ＋ `pnpm-lock.yaml.bak-304` ＋ `SYNC-ANCHOR.txt`
+- **对账**：60 − 5 = **55** = 64 − 9 ⇒ **与你的记录 reconciled 一致**。`61 / 753,485 B` 是 **`SYNC-ANCHOR.txt` 里 09-14 解包时的锚**（`synced-at: 2026-09-14T17:04:54+08:00`、`tar 145.6 KB / 55 entries`、`Packages: +7 -1`）；此后 CVM 又多了 `.bak-304` 两件与 6 个手工脚本 ⇒ **1.3 MB 的主要增量在 `.bak-304`（pnpm-lock 备份约 527 KB 量级）**，与"多 6 件"不矛盾。
+- **差异成因**（可复核）：本机 5 件是 **Trae 3.0.4 新写的 015-preset-probe**（未同步上 CVM）；CVM 9 件是**升级时按 SYNC-ANCHOR 明记 "kept" 保留的备份与手工脚本**。
+
+---
+
+# 🔧 架构发现（给 WB / Trae，需裁定是否立项）
+
+`healProfilesModuleFallback()` 用 **CLI 落点树**（可能混代）给**任意 home** 回填回退层 ⇒ ① 把宿主的**代际污染注入被隔离的 home**；② 把"缺模块"（清晰、早失败）变成"**装错代际**"（隐蔽、晚失败、错误码误导，`-32603` 不含任何代际信息）。
+- 直接后果：`~/harness` 树**当前仍是 012/015 混装**（顶层升了、`.pnpm` 里 012 残留未清）⇒ **任何以它为 CLI 落点的 home，只要私有层缺 peer，就会被灌 012**。
+- 可选修法（择一或并用）：① profile 显式声明全部 peer（`~/.dsh` 的 5 项做法，已验证有效）；② 重建 `~/harness` 依赖树使 `.pnpm` 纯净；③ 让 heal 只回填**与 profile 同代**的路径。
+- 我倾向 **①＋②**：① 成本最低且已被 `~/.dsh` 实证；② 是根治（否则下一个缺 peer 的 home 会重复踩）。
+
+**器材与产物**（按派发"不改任何仓内文件"，我**未**提交进仓库；需要我落 `harness/scripts/dsh-305-probe/` 请说）：
+- 装置：`D:\Temp\Sys\claude-305\d-raw.mjs`（自造 NDJSON JSON-RPC 客户端，零项目模块依赖，协议面取自上游 `packages/sdk/protocol/README.md`）＋ `prepare.sh` / `run-wave{1,2}.sh` / `sum.mjs` / `scrub.mjs` / `peek.mjs`
+- CVM 落点：`/home/ubuntu/claude-305/`（`results/*.json` 全部脱敏，`sk-` 命中 0）
+- 样本 home：`/tmp/c305/{iso-cred,iso-plain,iso-forge,iso-crossgen}`、`/tmp/c305-empty-a`、`/tmp/c305/shell-cred`（**待清理**：其中 `iso-cred`/`shell-cred`/`iso-crossgen` 的 `.credentials.yaml` 是指向真凭据文件的符号链接）
+
+---
+
 # 📮 派发 DSH-3.0.5 · 独立验收（D / E 三态复现）＋ 判据盲区（空壳 home）（Claude，2026-09-16｜WB 出稿）
 
 > 号按现行口径顺推（DSH-3.0 段内第 5 块）；**编号口径由老大动态维护，以他为准**。
