@@ -333,13 +333,14 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 
 ## 10. 复现资产
 
-- 并发探针（node）：`~/dshprobe/node-sqlite-probe.cjs`（参数：db 路径、busy_timeout ms）
-- 并发探针（python 对照）：`~/dsh-sqlite-probe.py`
-- landlock 正反对照：`~/dshprobe/landlock-test.mjs`（用例 A–E，含 root 对照与网络用例）
-- DSH 安装：`~/dshprobe`（`npm i @deepseek-ai/dsh@0.1.2-rc.1`，303MB；registry 用 `https://registry.npmmirror.com`）
+- 并发探针（node，真实运行时 `node:sqlite`）：`harness/scripts/cvm-probes/cvm-sqlite-probe.cjs`（参数：db 路径、busy_timeout ms）
+- 并发探针（python 对照）：`harness/scripts/cvm-probes/cvm-sqlite-probe.py`
+- landlock 正反对照：`harness/scripts/cvm-probes/cvm-landlock-verify.mjs`（用例 A–E，含网络用例；⚠️ **须在 harness 树内运行** —— 它 import 官方 `@deepseek-ai/node-addon-landlock-run`，由落点树提供）
 - 启动命令（**必须 127.0.0.1，见 §3**）：`dsh --profile web --host 127.0.0.1 --port <p> --no-open`
 
-> 上述文件在 CVM 上，**该机有期限 → 如需长期保留应回传本地**。
+> ⚠️ **2026-09-16 更新（已回传入仓）**：上列三个探针原置于 CVM `~/dshprobe/` 与 `~`，**已回传进仓库 `harness/scripts/cvm-probes/`**（加 `cvm-` 前缀以与同目录既有命名一致），**CVM 侧原件已删** ⇒ 本项不再依赖 CVM 存活（正合下方「该机有期限」一条的要求）。原记「DSH 安装：`~/dshprobe`（303MB，`0.1.2-rc.1`）」**已不存在**（该目录随清理删除）；CVM 现只有**落点树 `~/harness`**（= CLI 落点，代际 `0.1.5-rc.2`）与各 home，结构见 `docs/dsh/dsh-migration.md` §3.6。
+
+> ⚠️ **本项已闭合（2026-09-16）**：上述三个探针**已回传入仓**（见上条），不再依赖 CVM 存活。**仍只在 CVM 上**的产出（会话库 / session 落盘 / 采数曲线 / `~/larry-data/larry.db` 等）由 **3.9「CVM 产出回传核对表」**统一收口 —— 该机 **2026-10-09 到期**。
 
 ---
 

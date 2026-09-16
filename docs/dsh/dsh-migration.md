@@ -844,6 +844,12 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   - ⭐ **行事规则：跨代升级 DSH 后必须重算 lockfile** —— `pnpm add` / `pnpm update` 的增量升级会冻结旧代际且**不可自愈**；正确姿势 = **删 `pnpm-lock.yaml` ＋ `node_modules` 后全新 install**，升级后另跑一次版本核对（「`pnpm install` 跑过」**不等于**「图已重算」）。
   - ⭐ **修法（2026-09-16 已落地并验收）**：`mv pnpm-lock.yaml <备份>` → `rm -rf node_modules` → `pnpm install`（CVM 实测 14.8s）。**验收四项**：① lockfile 解析 = 目标代际（本次 `persistence` / `query` / `fs` 三处 012 → 015）；② `.pnpm` 里旧代际物理目录数 = **0**（本次 215 → 0，物理目录总数 793 → 550）；③ `node_modules/.bin/dsh` 重建、`dsh --version` = `0.1.5-rc.2`；④ **端到端探针跑通**（见本段末条实测）。
   - ⚠️ **代价：落点树重装 ⇒ 各 home 的回退层链接大面积悬空**（pnpm 的 peer-hash 目录名随图变化：`@deepseek-ai+dsh@0.1.5-rc.2_cfa263…` → `_0351730…`）。实测：`~/.dsh-015` 悬空 **74**、`~/.dsh` 悬空 **98**。**修法 = 对该 home 跑一次 boot 触发 heal**（`DSH_HOME=<home> dsh --profile <p> --help` 即可 —— 触发门槛比想象低）；heal 后 `~/.dsh-015` 悬空 **0**、`~/.dsh` 余 **24**，残项**全是 web 前端包**（`react` / `lexical` / `@tanstack/*` —— 落点树**本就不含**它们，**修前即悬空**，非本次操作引入）。
+  - 📌 **当前环境事实（2026-09-16 定格，老大裁定「作为当前事实记录」）：`~/.dsh` 回退层余 24 条悬空 ⇒ 判定「不阻塞、不根治」**：
+    - **构成**：全为 **web 前端依赖**（`react` / `react-dom` / `lexical` / `@tanstack/*` / `prop-types` 等），落点树 `~/harness`（015）**本就不提供**这些包 ⇒ 链接目标不存在。
+    - **非本次操作引入**：修前样本里 `prop-types` / `react-dom` 即在悬空名单 ⇒ 与本轮落点树重装无关。
+    - **不阻塞（实测）**：`web` profile 可正常起服务 —— `dsh --profile web --no-open --port 18999` ⇒ **端口监听成立 ＋ HTTP 可探**。
+    - **不根治的理由**：根治须把 web 前端依赖也装进落点树；而落点树是 **CLI 落点**（只承载 dsh 与其服务端依赖），web 前端属另一条分发路径 ⇒ 为一个「本就悬空、且不阻塞」的状态去改动落点树构成，**成本与收益不成比例**。
+    - ⚠️ 将来若 web profile 真报缺模块（`MODULE_NOT_FOUND` 命中 `react` / `lexical` 一类）⇒ **先回查本条**，不要当新问题从零排查。
   - ⚠️ **旧树可能连 lockfile 都已不可用**：`~/harness/pnpm-lock.yaml.bak-304`（012 态）**不能**喂给 `pnpm install --frozen-lockfile` —— 报 `The importer resolution is broken at dependency "@deepseek-ai/dsh-sandbox-local": version "0.0.1-rc.1" doesn't satisfy range "*"`（该版本由 workspace 的 peer 声明 `*` 引入）。⇒ **「回到旧态」这条路本身不通，只能向前修**；若要留退路，须在升级前备份**整棵 `node_modules`**，只备份 lockfile 不够。
   - ✅ **修复后实测（2026-09-16）**：主 home `~/.dsh` 的 D1 条件（**不注入 env key**，仅凭 `~/.dsh/.credentials.yaml`）端到端跑通 —— 连跑 **5/5** ＋ 三场景（web 实例共存 / 刚 kill / 完全干净）**3/3** ⇒ **8/8 绿**，`stdout=probe ok`。修前基线可回溯：`~/.dsh/sessions/--home-ubuntu-claude-305--/c305-d1/`（**18:44**，早于本次操作）记录 `turn/end reason=completed` ⇒ 修前亦绿，**本操作未引入功能性回归**。
   - **原候选修法处置**：③「令 heal 只回填与 profile 同代的路径」**动机不成立 ⇒ 撤销**（heal 行为正确）；①（profile 显式声明全部 peer）**保留**，理由改为「不依赖回退层兜底、让缺件成为清晰早失败」，与代际无关；②（重建 `~/harness`）**降为一次性清理动作**，见 `TODO.md`。
