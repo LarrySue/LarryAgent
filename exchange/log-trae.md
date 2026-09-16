@@ -94,6 +94,104 @@ dsh plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
 
 ---
 
+# 回报 003 · 装 profile + 重跑 D / E（Trae，2026-09-16）
+
+> **结论先行**：**任务 0 部分通过｜任务 1 ✅ 完成（profile 装齐，判据两条均满足）｜任务 2 / 3 ⛔ 因一条「规格 ↔ 实测」矛盾阻断、三态不可判**。
+> **一句话根因**：**profile 与 hoisted 根跨代** —— `~/.dsh/profiles/sdk` = `0.1.5-rc.2`，而同 home 的 `~/.dsh/profiles/node_modules` = **208 包 @ `0.1.2-rc.1`** ⇒ runtime **启动期即 `plugin tree failed to load`、exit 1** ⇒ 任何真会话 / 真 turn 都起不来（D、E 的真 key 态因此一步都跑不了）。
+> **按 §边界停手**：我**没有**改 composition、**没有**升 CLI/SDK、**没有**动 hoisted 根与 `larry` / `web` / `acp`；老大 2026-09-16 拍「先不补」。
+
+## 1. 任务 0 · 前置核对
+
+| 检查 | 实测 |
+|---|---|
+| 0.1 registry 有无 `0.1.5-rc.2` | ✅ 有（`@deepseek-ai/dsh` 与 `dsh-base` 同；另有 `0.1.6-alpha.1`）；registry = `registry.npmmirror.com` |
+| 0.2 装**前**核代际 | profile = **空壳**（`dependencies: {}`、0 包）｜hoisted 根 = **223 包 / 其中 208 个 `0.1.2-rc.1`**｜CLI = `0.1.2-rc.1`（无 `dsh` on PATH ⇒ 用 `<harness>/node_modules/@deepseek-ai/dsh/lib/bin.js`） |
+| 0.2 装**后**回核 | **跨代依旧**：sdk 侧 99 包 @015 ＋ 5 个工具栈；**`dsh-session-persistence`/`dsh-session-query`/`dsh-http-proxy`/`dsh-app-boot`/`dsh-scope` 在 sdk 侧全部缺失** ⇒ 回落 hoisted 的 012（详见 §3） |
+| 凭据现场 | `~/.dsh/.credentials.yaml` = **223 B / mode 600 / 含 1 行 `DEEPSEEK_API_KEY`**（值未读、未打印） |
+| 负向器材 | `~/larry-dsh-home/profiles` = `acp / node_modules / sdk`（**012**、101 包、**同样缺** §3 那 5 个包） |
+| 孤儿锁 | 无 |
+
+## 2. 任务 1 · 装齐 `~/.dsh/profiles/sdk` ✅
+
+**命令原文**（全程带 `DSH_HOME=$HOME/.dsh`；`CI=1`）：
+```
+node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek-ai/dsh-base@0.1.5-rc.2
+node node_modules/@deepseek-ai/dsh/lib/bin.js plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
+```
+
+| 轮次 | 现象 | 处置 |
+|---|---|---|
+| ① | **`ERR_PNPM_IGNORED_BUILDS`**（`dsh-subprocess-local` / `@google/genai` / `koffi` / `node-pty` / `protobufjs`）→ **exit 1** | 与 003 预告一致 ⇒ 按既有手法把 `profiles/sdk/pnpm-workspace.yaml` 的 `allowBuilds` 五项全改 `false`（**原件已备份** → `/home/ubuntu/trae-evidence/003/pnpm-workspace.yaml.orig`，sha256 `92e7ef26…`） |
+| ② | base `Done in 3.1s`、**无 ERR**；但 **pnpm 报 Done 后 `node` 进程不退出**（挂 **1:51**）⇒ 我 kill 收尾（**exit 143**） | 与我在本机遇到的是同一现象（§7-3） |
+| ③ | base **exit 0**（`Done in 2.5s`）、sdk-app **exit 0**（`Done in 2.7s`） | 判据两条均满足 |
+
+⚠️ 途中有一次**我自己的操作事故**（留痕）：改 `pnpm-workspace.yaml` 时用 `sed -i s/\r//g` 去 CRLF，**反斜杠被本机→ssh 的传参吃掉** ⇒ 退化成"删掉所有 `r`"，`nodeLinke`/`subpocess` 之类被改花。已用 scp 上去的 node 脚本（`strip-cr.mjs`）重写并核对：`crlf=0 bytes=197`，sha256 `f25f534d…`。
+
+**任务 1 判据**：
+- `dependencies` ≠ `{}` ✅ → `{ "@deepseek-ai/dsh-base": "0.1.5-rc.2", "@deepseek-ai/dsh-sdk-app": "0.1.5-rc.2" }`
+- `sdk/node_modules/@deepseek-ai` > 0 ✅ → **106**
+
+⚠️ **一处观测异常（未闭合）**：每次 install 都打印 **`Packages: -60`**，但 profile 包数只增不减（0 → 106）、hoisted 根恒为 223 ⇒ 这 60 的归属**没查明**。记此以防后人把它读成"删了 60 个包"。
+
+## 3. ⛔ 阻断取证链（本回报的核心）
+
+| # | 环节 | 原始证据 |
+|---|---|---|
+| 1 | **runtime 单独 boot**（`--profile sdk`，stdin 保持 12 s） | `Error: dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include): loader entries failed to apply` → **exit 1**；stderr **21856 B / 125 行**（`rt-real.rt-stderr.txt`） |
+| 2 | **三条失败 entry** | ① `session-persistence-jsonl` ← `'@deepseek-ai/dsh-session-persistence' does not provide an export named 'SessionAlreadyExistsError'`；② `session-query-sqlite` ← `… no export named 'SESSION_QUERY_DEFAULT_PREPARED_SESSION_CACHE_SIZE'`；③ `web-fetch-http` ← `Cannot find package '@deepseek-ai/dsh-http-proxy'` |
+| 3 | 这些包**在 sdk 侧根本没装** | `ls sdk/node_modules/.pnpm \| grep -c session-persistence` = **0**；`@deepseek-ai/` 下无该目录 |
+| 4 | 为什么没装 | 锁文件里它们是**可选 peer**：`peerDependenciesMeta: {'@deepseek-ai/dsh-session-persistence': {optional: true}}`，且 profile 配了 `autoInstallPeers: false` ⇒ pnpm 把它们列进 **`transitivePeerDependencies`（32 条：25 个 `@deepseek-ai/dsh-*` ＋ ws/zod/…）并不安装** |
+| 5 | 于是解析到哪 | 按 Node 解析规则退到**上一级** `~/.dsh/profiles/node_modules` ⇒ **`0.1.2-rc.1`**（导出对不上）；`dsh-http-proxy` 更是**全盘缺失** |
+| 6 | ⭐ **决定性反证** | 09-14 那份**能跑**的 `~/larry-dsh-home`：我逐一核过，**同样缺**这 5 个包（全部 `=MISSING`），但它的 hoisted 根**也是 012**、与 profile **同代** ⇒ 回落拿到的是**匹配版本**，所以不报错 |
+
+⇒ **根因 = 「profile 与 hoisted 根跨代」，不是「漏装包」**。这也与 003 §任务 0.2 提到的上游动向（016-alpha 新增 `profile-resolution/resolver.ts`、PR `fix/profile-module-resolution`）指向同一处。
+
+## 4. 任务 2 · D 组三态 —— ⛔ 不可判
+
+装置 = `harness/scripts/dsh-prompt.mjs` **裸跑**；**四态**（env 里 `DEEPSEEK_API_KEY` 一律删除）：
+
+| 态 | 三元组 (DSH_HOME, profile, 凭据层) | profile 代际 | exit | stdout | 耗时 | 判读 |
+|---|---|---|---|---|---|---|
+| **D1 真 key** | `~/.dsh`, sdk, **真文件** 223B/600 | **015** | **1** | 空 | 1280 ms | 启动期崩 |
+| **D2 无 key** | `~/larry-dsh-home`, sdk, 无 | **012** | **0** | 空（stderr `session=… events=12 notifications=14`） | 2497 ms | **能起 —— 但是"无 key 假绿"形态** |
+| **D2b 无 key**（补的对照） | `/tmp/…-iso-nokey`(profiles→`~/.dsh/profiles`), sdk, 无 | 015 | **1** | 空 | 1512 ms | 启动期崩 |
+| **D3 错 key** | 同上 iso, sdk, **伪造** 209B/600 | 015 | **1** | 空 | 1312 ms | 启动期崩 |
+
+- **三态不互异**（D1 ≡ D2b ≡ D3：同崩、同 exit 1、同 1.3–1.5 s、同客户端栈 `JsonRpcResponseError: cannot create effect on inactive context` **-32603**）⇒ 判据**不成立**
+- ⚠️ **唯一 exit 0 的那一态，恰好是"profile 与 hoisted 同代（012）"的那一态** ⇒ 它既是根因的**反证**，也正是 003 要我别重蹈的**无 key 假绿**：D2 与其它态的差异来自**代际**，**不是凭据**
+- 红线守：真文件全程只读（只取 `present / bytes / mode / 键名 / 值长=35`）；负向两态一律**隔离 home** 造；隔离 home 用完即删（`/tmp/trae-003-iso-*` 已清）
+
+## 5. 任务 3 · E 组三态 —— ⛔ 不可判（同形）
+
+装置：`run-real-api.mjs`；夹具：**`DSH_REAL_API_PROFILE_HOME=/home/ubuntu/.dsh/profiles`（已按 003 改指 015）**
+
+| 态 | 注入 | exit | 结果行 | R1 哨兵 |
+|---|---|---|---|---|
+| E1 | **不注入** | 1 | `Test Files 1 failed (1)`｜`Tests 2 failed \| 12 passed \| 1 skipped (15)` | **× 判红**（拿不到 `error.code`） |
+| E2 | `sk-invalid-probe-003`（明示无效） | 1 | 同上 | 同上 |
+| E3 | **真 key**（进程内传、落盘前脱敏） | 1 | 同上 | 同上 |
+
+- **三态完全同形**（同 15 项、同 2 failed、同 ~1.24 s）⇒ 判据**不成立**
+- ⚠️ 与 001 的 012 基线**不同形**（那次是 `Tests 1 failed \| 13 passed \| 1 skipped` 且 **R1 ✓ 通过**）⇒ 这轮多出来的那条 failed **就是 R1 自己**：它"判红"了但**没有 `error.code`** ⇒ 说明本轮不是 `AUTH/401` 那种**预期**失败，而是**启动期崩**（同 §3 根因）
+- 机制自检 7 项**全 ✓**（它们不 boot profile）——**"绿了也不代表环境可用"的现成实例**
+- ⚠️ 本组**只代表环境变量层**，且**因阻断而无效**，不得用于任何结论
+
+## 6. 交付物 · 原始输出 · 红线自检
+
+- **CVM**：`/home/ubuntu/trae-evidence/003/`（**30 件**）＋ `003.tgz`（14360 B）
+- **本机（已回传，非唯一副本）**：`D:\Code\_trae-cvm-evidence\003-cvm\003\`（30 件）；装置源码另存 `D:\Code\_trae-cvm-evidence\003\`：`d-probe.mjs` / `e-probe.mjs` / `runtime-boot.mjs` / `strip-cr.mjs` / `pnpm-workspace.yaml`
+- ⛔ **Tier0 自检**：对全部回传件扫 `sk-[A-Za-z0-9_-]{4,}` ⇒ 命中**仅**在我自己 driver 的源码里（伪造标签 + 脱敏正则），**任何日志/输出文件里都没有 key 值** ✅
+
+## 7. 未闭合项 / 与规格矛盾
+
+1. 🔴 **003 §任务 1「随传递装齐 ⇒ 无需手工补」与实测矛盾** —— 这是本次停手的直接原因（我**未**自行补）。
+2. 🔴 **003 §任务 2/3 的判据「三态互不相同」在跨代环境下不成立** ⇒ 建议把**环境可用性**提升为判据的**前置**（＝我在 002 回报 §6-1 提的那条：**profile 必须与 CLI / hoisted 层同代**）。否则 D / E 永远只能产出"三态同崩"这种不可判结果。
+3. ⚠️ **`dsh plugin add` 在 pnpm 报 `Done` 后 `node` 不退出**（CVM 实测挂 1:51，本机同）⇒ 建议写进执行范式：**后台 + 轮询日志 + 人工收尾**，不要指望退出码。
+4. ⚠️ `Packages: -60` 的含义**未查明**（包数只增不减）。
+5. ⚠️ **本机通道新坑（自留，防后人再踩）**：Windows→ssh 传参**不只吃双引号，也吃反斜杠** ⇒（a）远程命令**别用内层双引号**（要 `|` 模式就用 `grep -e … -e …`，别写 `grep -E "A|B"`）；（b）**别写 `sed s/\r//g` 这类含反斜杠的表达式**（会退化成"删字面 r"）。复杂动作一律**走 scp 上去的脚本**——本轮 4 个 driver（`d-probe` / `e-probe` / `runtime-boot` / `strip-cr`）零引号问题，这是本机通道下最稳的范式。
+6. ⚫ **未做**（老大 2026-09-16 拍「先不补」）：把环境修成同代的三条候选路 —— **P1** 往 `~/.dsh/profiles/sdk` 显式补 3 个 015 可选 peer（最小、守 003 落点，但改 composition）；**P2** 另建全 015 home（不动 `~/.dsh`、不改 composition，但偏离 003 落点）；**P3** 升 CLI＋SDK 到 015（治另一层，单独做**不解决**这 3 条 entry）。**均未执行**。
+
+
 # Trae 意见 · DSH-0.1.5 四稿（2026-09-15）
 
 > 📮 **WB 状态批注（2026-09-15）**：7 条**已于 09-15 逐条回复**；**§三「基线 012 vs 015 冲突」已由老大 09-15 拍定解除**（挪 `0.1.5-rc.2`）；§五「可立刻动手」四项**仍未派发**。⇒ 本段保留，待其联动清单落地。
