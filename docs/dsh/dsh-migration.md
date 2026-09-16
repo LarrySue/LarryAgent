@@ -989,7 +989,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 切片 | 要解决什么 | 官方参考（`@deepseek-ai/`） | 社区参考 | 本地落位 |
 |---|---|---|---|---|
 | **3.0** 三态对照 / 采数 / 凭据 | 判据有效性 + 环境口径 | 五个 profile 模板 `dsh-web-app` / `dsh-headless` / `dsh-sdk-app` / `dsh-sdk-minimal` / `dsh-acp-app`；`dsh-home-paths`（`DSH_HOME` 解析） | `omdsh-dev/dsh-security-audit`（配置 / 插件来源 / 网络暴露的**只读审计清单**，可作采数项参照） | — |
-| **3.1** S0 基础链路（首个产品插件） | 工具插件的**最小注册面** + e2e | `dsh-sdk-protocol` / `dsh-sdk-client` / `dsh-sdk-jsonrpc-server` / `dsh-sdk-app`（sdk 面四件）；`packages/fs/tool-fs`（工具注册范式）；`dsh-sdk-minimal`（最小组合） | ⭐ `kun2-5code/dsh-plugin-template`；`omdsh-dev/plugin-template`（官方 turtle-ui 派生）；`iiwish/dsh-testkit`（Docker 隔离的真宿主生命周期测试）、`PerryLink/dsh-test-drive`（一次性 profile 冒烟） | ✅ 模板已落位 |
+| **3.1** S0 基础链路（首个产品插件） | 工具插件的**最小注册面** + e2e | `dsh-sdk-protocol` / `dsh-sdk-client` / `dsh-sdk-jsonrpc-server` / `dsh-sdk-app`（sdk 面四件）；`packages/fs/tool-fs`（工具注册范式）；`dsh-sdk-minimal`（最小组合） | ⭐ `kun2-5code/dsh-plugin-template`；`omdsh-dev/plugin-template`（官方 turtle-ui 派生）；`iiwish/dsh-testkit`（Docker 隔离的真宿主生命周期测试）、`PerryLink/dsh-test-drive`（一次性 profile 冒烟） | ✅ 模板已落位 · ✅ **借鉴点已回填**（见下表 5 / 8 / **9 / 10**，2026-09-17 复跑所得） |
 | **3.2** resume id collision | 复现与定性 | `packages/core/session`；`dsh-session-persistence-sqlite` / `-jsonl`、`dsh-session-query-sqlite` | `EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令）——复现件的形态参考 | — |
 | **3.3** S1 审批（三段） | 答者接口 + 出境往返 + fail-closed | `dsh-user-approval`（机制）/ `dsh-permission-presets`（预设答者）/ `dsh-client-ui-approval` / `dsh-client-ui-permission-presets` / `dsh-headless`；出境面 `dsh-api-remotes` / `dsh-client-connection` | ⭐⭐ **最富的一类（50+ 件）**：**答者链** `PerryLink/dsh-auto-review`、`Letter2025/dsh-approval-llm`、`simon300000/dsh-auto`、`ilharp/dsh-tool-approval`、`SeverusZh/dsh-yolo-mode`（fail-closed 兜底）；**出境到人** `PerryLink/dsh-reach`、`moyu-good/dsh-lark-bridge`、`452926826/dsh-feishu-bot`；**规则引擎** `940842546/dsh-permissions`、`PerryLink/dsh-permission-rules` | ✅ `dsh-reach` 已落位 |
 | **3.4** S2 compaction | 换 Provider + 保原文 | `dsh-compaction`（契约）/ `dsh-compaction-basic`（默认 Provider）/ `dsh-compaction-tool-result-pruner` | `aerince/dsh-active-context-pruning`（**经官方 compaction API** 做模型自定剪枝）、`giter00/dsh-headroom`（压 tool 输出、保原文） | — |
@@ -1012,18 +1012,20 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | `Security & Permissions` | 2962 | 3.3 / 3.5 |
 | `Remote & Mobile` | 3073 | 3.8 |
 
-**⭐ 从已落位三件读到的可借鉴事实（含 4 条真坑，2026-09-14 读码所得 🟡）**
+**⭐ 从已落位三件读到的可借鉴事实（含 4 条真坑，2026-09-14 读码所得 🟡；9 / 10 为 2026-09-17 3.1 复跑新增 🟢）**
 
 | # | 事实 | 为什么对我们有用 |
 |---|---|---|
 | 1 | ⭐ `dsh-reach` 监听 **`approval/request`** 与 **`user-questions/request`** 两个 waterfall，并做成 **"deferred answerer"** —— **答案是稍后（人从 IM 回）才兑现的** | ⇒ **3.3-b 的关键疑点有第三方实证**：审批"出境 → 人答 → 回填"**可在 DSH 插件模型内完成**，不必改 SDK、不必等官方补 `server→client` 请求。我方仍须自己复跑（🟡） |
 | 2 | 同件 `src/bridge.ts` / `decision.ts` 出现 **`onRequest`**；配置含 **`cardTimeoutSec`（0 = 永不过期）**；`bridge.dispose()` **结清待决请求** | ⇒ **超时 / 取消 / 卸载**三处语义都有现成参照 —— 对应 3.3-b 的判据，以及 3.3-a 那条"超时 / 断链是同进程替身路径"的诚实边界 |
-| 3 | 同件声明 **`inject: []`（零硬依赖）**，每项能力用 `ctx.get(...)` 探测、缺失即降级，并附一张**降级矩阵**（能力 / 依赖服务 / 缺失时行为 / 卸载行为） | ⇒ 可直接抄的设计纪律：**我方插件也应在任意组合下可加载、可完全卸载**（对 `larry` / `sdk` 两个 profile 的差异、以及 3.7 的 overlay 场景都实用） |
+| 3 | 同件声明 **`inject: []`（零硬依赖）**，每项能力用 `ctx.get(...)` 探测、缺失即降级，并附一张**降级矩阵**（能力 / 依赖服务 / 缺失时行为 / 卸载行为） | ⇒ 可直接抄的设计纪律：**我方插件也应在任意组合下可加载、可完全卸载**（对 `larry` / `sdk` 两个 profile 的差异、以及 3.7 的 overlay 场景都实用）。⚠️ **边界见事实 9** —— 该纪律只管"加载"，不能管"注册时序" |
 | 4 | 模板 `dev/cordis.yml` 明写：**开发 overlay 只加载 host 半边**（模块解析到源码文件，**发现不了 `dsh.client` 包级声明**）；要测浏览器半边**必须把包装进 profile** | ⇒ **3.7 / 3.8 的开发回路坑**：用 overlay 跑出"看起来通了"，其实 client 半边从没加载 |
-| 5 | 模板 `test/smoke.mjs` 用手写的**最小假 `ctx`**（只实现该插件用到的成员）做单测，断言 `inject` 数组、工具注册、settings 命名空间实时接线 | ⇒ **3.1 / 3.3 的廉价单测范式**：逻辑层不必真起 DSH，把"必须真跑"的部分压到 e2e（`dsh-testkit` / `dsh-test-drive` 同思路） |
+| 5 | 模板 `test/smoke.mjs` 用手写的**最小假 `ctx`**（只实现该插件用到的成员）做单测，断言 `inject` 数组、工具注册、settings 命名空间实时接线 | ⇒ **3.1 / 3.3 的廉价单测范式**：逻辑层不必真起 DSH，把"必须真跑"的部分压到 e2e（`dsh-testkit` / `dsh-test-drive` 同思路）。✅ 3.1 已照此落地（`packages/plugin-tool-readfile/test/smoke.mjs`） |
 | 6 | 模板 `cordis.patch.yml` 原话：**"后层按 id 覆盖前层，覆盖整行 config 而非深合并"** | ⇒ 与 3.7「落盘是追加不是覆盖」+ 跨 profile 的 `patchReload` 差异互证：**patch 是行级覆盖语义，不能假设深合并** |
 | 7 | `dsh-memory-connect` CHANGELOG 记的两个"**静默不生效**"根因：① **Cordis 惰性构造服务** —— 把类交给 `ctx.provide()` 时构造器从不执行（v0.3.0 注册了服务却从未实例化）② **召回结果写进了一个没人读的字段** | ⇒ **与 3.6 判据"事件确实被消费（不是只注册了监听）"同源** —— 第三方替我们踩过；也说明"注册成功"离"生效"还有两步 |
-| 8 | 同件 README：patch 里**没有 `config:` 块时 Cordis 传 `undefined` config**，裸 `dsh plugin add` 会崩 ⇒ `apply()` 必须填默认值（该件 v0.4.0 才修） | ⇒ **我方每个插件都要容忍 `undefined` config**（3.1 / 3.3 / 3.4 / 3.5 / 3.6 全适用），否则"装上即崩"却看起来像环境问题 |
+| 8 | 同件 README：patch 里**没有 `config:` 块时 Cordis 传 `undefined` config**，裸 `dsh plugin add` 会崩 ⇒ `apply()` 必须填默认值（该件 v0.4.0 才修） | ⇒ **我方每个插件都要容忍 `undefined` config**（3.1 / 3.3 / 3.4 / 3.5 / 3.6 全适用），否则"装上即崩"却看起来像环境问题。✅ 3.1 已按此实现并单测覆盖 |
+| 9 | 🟢 ⭐ **"零硬依赖 + `ctx.get` 探测降级"不能当"注册前置"**：`inject: []` ⇒ `apply()` 在 **boot 极早期**执行，此刻 `ctx.get('tools')` 为 `undefined`；**照事实 3 直接拿探测结果决定"要不要注册"，工具将永不注册**。3.1 首跑实测正是此形态：`②_toolRegistered=false`，打点只剩 `activate`（连 `register-failed` 都没有 ⇒ 静默不注册，最像"环境问题"的那种失败）。**正解 = 注册一律走 `ctx.inject(['tools'], cb)` 回调；`ctx.get` 只用于打点 / 降级判断** | ⇒ **订正事实 3 的适用边界**：零硬依赖是**加载策略**，不是**注册时序**。3.3 / 3.5 / 3.6 凡"得先有 tools（或别的服务）才能注册"的插件全适用；**且这类失败必须留打点**（`inject-requested` / `inject-fired` / `tool-registered` / `register-failed`），否则证据链断在"什么都没发生"上 |
+| 10 | 🟢 ⭐ **`ctx.tools.register()` 的 schema 口径 = 标准 JSON Schema，不是 `defineTool` 的输入 spec**：`dsh-tools/lib/index.js:2773` 的硬校验只要求 `output.{schema,render}`；**属性内 `required: true` 不支持**，须写成**顶层 `required: [...]` 数组**（`assertSupportedJsonSchema` 只收标准子集）。报错原文：`unsupported JSON schema: schema.properties.path.required is not supported on type "string"` | ⇒ 两个结论：① **手搓工具不必 `defineTool` 包装**（⇒ 可做到**零外部 import** —— 插件以 link 挂载时模块从仓库目录解析，**天然取不到 profile 的 `@deepseek-ai/*`**）；② 这类"结构性失败"要配**单测结构防线**（如断言 schema 串里不出现 `"required":true`），否则只在真跑时才炸 |
 
 > ⚠️ **本表只登记"可借鉴点"，不构成采纳决定**。凡打算抄进产品的设计，仍走 §3.0：**fork → 本仓库 → review / 测试**。
 

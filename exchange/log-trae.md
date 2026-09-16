@@ -2,10 +2,8 @@
 
 > 本区为**活日志**：已闭环、已升格的段**直接删除**——不留指针、不留底、不进引用关系。
 > 派发任务的执行结果写于此文件（除非有明确要求写到其他文件）。
->
-> 📌 **2026-09-16 清理**：DSH-3.0.3 / 3.0.4 的派发稿与三段回报（原 `:8-386`）已按上条删除；其结论已承接进 `TODO.md` DSH-3.0 段、`docs/dsh/dsh-migration.md` §3.6、`docs/dsh/dsh-015-capability-mapping.md` §5.1 / §8，执行范式与通道坑进了 §3.6〈执行范式与边界〉。原始全文（524 行）：`git show 8f86de8:exchange/log-trae.md`。
 
-> 📮 **当前派发（2026-09-17）→ DSH-3.1 · S0 基础链路**（WB 出稿，⬜ 待执行）。**这是本文件当前唯一在飞的任务，正文在文件末尾**〈DSH-3.1 派发稿〉段。
+> 📮 **当前派发（2026-09-17）→ DSH-3.1 · S0 基础链路**（WB 出稿）—— ✅ **Trae 已执行完毕并回报**（本文件后段〈DSH-3.1 回报〉，含四项判据／四条负向对照／三元组／复跑命令／坑与订正），**待 WB 复核**。
 
 ---
 
@@ -53,7 +51,7 @@
 
 # 📮 DSH-3.1 · S0 基础链路 — 派发稿（WB 2026-09-17 出稿）
 
-> **状态**：⬜ **待执行** · 本文件当前唯一在飞任务
+> **状态**：✅ **已执行完毕（Trae 2026-09-17）· 回报见本段下方** · 结论 = 四项硬判据全成立 ＋ 四条负向对照逐条变红
 > **执行人**：**Trae** ｜ **场地**：**CVM 单跑**（老大 2026-09-11 拍定；理由：S0–S4 的判定标的全在 Linux 侧，本机对照省）
 > **判据源**：`TODO.md` DSH-3.1 段（四项硬判据）＋ `docs/dsh/dsh-migration.md` §3.6（〈各切片判据细则〉/〈负向对照矩阵〉/〈执行范式与边界〉/〈参考实现登记表〉3.1 行）
 > **回报**：写到本段**下方**（含负向对照与三元组），不另开文件
@@ -176,3 +174,125 @@ host 49.232.129.252 · user ubuntu · ssh -i ~/.ssh/id_ed25519_cvm
 | ① | `harness/tests/global-setup.ts:75-77` | **就地自足化**：把语义写进注释本体 —— 「**方案 A —— 按真实退出码退出 ＋ 打印诊断，不因残留本身判红**；另一候选「残留即判红」因会制造假红而被否，**假红比没护栏更糟**」＋ 裁决日期。**内容源 = `TODO.md:40`**（原出处已消失，archive 两份归档件均无） |
 | ② | `harness/tests/global-setup.ts:127` | **删**「，见 exchange/log-claude.md 裁决记录」括注，其余不动 |
 | ③ | `backend/tests/test_integration_llm.py:48` | **改指** `archive/report-2026-08-30.md`（该 aiosqlite 事故复盘的**永久落点**，内容在）—— 这处**不该删、该改指** |
+
+---
+
+# ✅ DSH-3.1 回报 · S0 基础链路（Trae 2026-09-17）
+
+> **结论：四项硬判据同时成立；四条负向对照逐条把目标判据打红** —— CVM 上 base ＋ 4 变体**全 PASS**（每条负向变体的 PASS 口径 = "测试内部断言该判据确实变红"成立）。
+> 基线 `0.1.5-rc.2`｜场地 **CVM 单跑**｜`DSH_REAL_API=1`｜真 Key 只存在于子进程 env，**不落盘**。
+
+## 一 · 交付物（已进本仓库 · **未提交 git**）
+
+| # | 路径 | 说明 |
+|---|---|---|
+| 1 | `harness/packages/plugin-tool-readfile/` | ⭐ **首个产品插件**：`src/index.ts`（零外部 import，只用 `node:`）＋ `package.json`（`dsh.bundle.patch` 包级声明）＋ `cordis.patch.yml` ＋ `tsconfig.json` ＋ `test/smoke.mjs`（假 ctx 单测，`smoke ok`） |
+| 2 | `harness/tests/s0-e2e.test.ts` | 四项判据 ＋ 四条负向对照的一体化装置（变体开关 `S0_VARIANT`），头部含姿态自证 |
+| 3 | `harness/tests/s0-session-log.ts` | 判据 ④ 的回读助手：多帧 zstd **逐帧**解码 ＋ `findToolCalls()`（取 `tool/call` 的**工具名**） |
+| 4 | `harness/scripts/run-s0-e2e.mjs` | 一键复跑（默认全 5 变体，每变体 12 分钟上限） |
+| 5 | `harness/scripts/s0-kill-child.mjs` · `s0-run-with-file-key.mjs` | 负向 4 的子进程；「凭据文件 → 环境变量」桥（**不打印 Key 值**） |
+| 6 | `harness/tests/global-setup.ts` · `backend/tests/test_integration_llm.py` | §8 顺带项三处 log 指针（见第七节） |
+
+**证据**（CVM 产出，**已回传本机** → `D:\Code\_trae-cvm-evidence\s0\`）：`*.evidence.json` / `*.marker.log` / `*.session.txt` ＋ 各轮原日志 `s0-base{,2,3,4,5}.log` / `s0-neg{,2}.log`。
+
+## 二 · 判据逐条（base）
+
+| # | 判据 | 实测值 | 绿灯证据 |
+|---|---|---|---|
+| ① | 往返 ＋ **`PING-<nonce>` 内容断言** | ✅ | nonce = `PING-b5cb8c74f73f`（17 字符），`finalResponseLength=17` ⇒ 回包**就是**那串；nonce **只写在文件里、不进 prompt** |
+| ② | plugin **确实被激活** | ✅ | 打点五连齐：`activate → inject-requested → inject-fired → tool-registered → tool-call`（原文见下） |
+| ③ | 真实回包非空 ＋ `turn/end.reason.kind==='completed'` | ✅ | `ok=true turnEndKind="completed" errorCode=undefined assistantMessageCount=2 finalResponseLength=17 failures=[]`；事件直方图含 `tool/call`×1、`tool/result`×1 |
+| ④ | session **落盘 ＋ 回读可查同一 nonce** | ✅ | `session.v3.jsonl.zstd` / `37634 B` / `containsNonce=true`；解码后 tool/result 正文即 `<content>\nS0 e2e nonce file (this token is NOT in the prompt)\nPING-b5cb8c74f73f\n</content>` |
+
+**② activate 打点原文**（`/tmp/larry-s0-ks02sg/plugin-tool-readfile.activate.log`）：
+
+```json
+{"t":"2026-09-16T23:55:22.126Z","event":"activate","plugin":"plugin-tool-readfile","pid":2497785,"dshHome":"/tmp/larry-s0-ks02sg","configWasUndefined":false,"caps":{"toolsSeam":false,"fsSeam":false}}
+{"t":"2026-09-16T23:55:22.127Z","event":"inject-requested","plugin":"plugin-tool-readfile","deps":["tools"]}
+{"t":"2026-09-16T23:55:22.313Z","event":"inject-fired","plugin":"plugin-tool-readfile","hasTools":true}
+{"t":"2026-09-16T23:55:22.314Z","event":"tool-registered","plugin":"plugin-tool-readfile","tool":"read_file"}
+{"t":"2026-09-16T23:55:23.661Z","event":"tool-call","tool":"read_file","path":"/tmp/larry-s0-ks02sg/s0-nonce.txt","bytes":70,"truncated":false}
+```
+
+⭐ **① 的防假绿（差点踩上，这是本次最值钱的一条）**：`①` 绿灯**不能证明是我们的工具**。base 的 tool/call 原文是
+
+```json
+{"type":"tool/call","seq":14,"data":{"turn":1,"step":1,"callId":"call_00_ET_vNxjq09dYFcU7npB84MH8219","name":"read_file","arguments":"{\"path\": \"/tmp/larry-s0-ks02sg/s0-nonce.txt\"}"}}
+```
+
+⇒ 故 ① 拆成**两半**断言：内容断言 ＋ **工具名归属**（`①_toolNameInLog=["read_file"]`、`①_toolNameIsOurs=true`）。依据见坑 3。
+
+> 上面引的是**复跑确认轮**（改完 ①②③④ 断言与 kill-client 破坏动作之后重跑的 base）—— 两轮 base **均全绿**（首轮 `session-44f83f35…` / nonce `PING-1fcc072be456`；确认轮 `session-6c7c4d3f…` / nonce `PING-b5cb8c74f73f`）。交付的 `base.*` 文件 = 确认轮。
+
+## 三 · 负向对照（4/4 全部把目标判据打红）
+
+| # | 破坏动作 | 期望变红 | 实测 | 红灯原文（节选） |
+|---|---|---|---|---|
+| 1 | 从 profile manifest 摘掉自做 bundle | ② | ✅ | `no-bundle: bundles ["@deepseek-ai/dsh-base","@deepseek-ai/dsh-sdk-app","@larryagent/plugin-tool-readfile"] -> ["@deepseek-ai/dsh-base","@deepseek-ai/dsh-sdk-app"]`；`"activation":{"events":[],"raw":""}`（**一条打点都没有**）；`②_activated=false ②_injectFired=false ②_toolRegistered=false` |
+| 2 | 换成明示无效 Key | ③（＋ 3.0 红灯组） | ✅ | `③_verdictOk=false ③_turnEndKind="error" ③_errorCode="AUTH"`；`failures=[…,"turn/end.reason.kind=error（非 completed）code=AUTH status=401"]`；同时 `②_activated=true` ⇒ **证明红的是 ③，不是环境没起来** |
+| 3 | `<home>/sessions` chmod 500（只读） | ④ | ✅ | `"sessionLog":{"path":"(none)","logPresent":false,"bytes":0,"containsNonce":false}`（连带 `turn/end.kind=error code=UNKNOWN`） |
+| 4 | 轮询到**会话日志首次落字节**即 SIGKILL **整进程组** | ④ | ✅ | `killedBy=first-session-log-byte bytesAtKill=636 signal=SIGKILL`；`"logPresent":true,"bytes":995,"containsNonce":false`，日志尾部停在 `{"type":"agent/inbox/spliced","seq":5,…}` ⇒ **文件在 / 内容在 / nonce 不在** —— 顺带否掉"文件存在即 ④ 过"的弱判据 |
+
+## 四 · 三元组（每态显式记）
+
+| 变体 | DSH_HOME | profile | 凭据来源层 |
+|---|---|---|---|
+| `base` | `/tmp/larry-s0-ks02sg`（每轮 `mkdtemp`） | `sdk`（**`cp -r` 真副本，源 profile 全程未改写**） | 环境变量 `DEEPSEEK_API_KEY`（real-api 链路读不到 `.credentials.yaml`） |
+| `no-bundle` | `/tmp/larry-s0-lgtlJO` | 同上 | 同上 |
+| `wrong-key` | `/tmp/larry-s0-gV5FVt` | 同上 | 同上（值换成 `sk-invalid-…` 占位串） |
+| `no-session-dir` | `/tmp/larry-s0-mKElgS` | 同上 | 同上 |
+| `kill-client` | `/tmp/larry-s0-Ua1QBO` | 同上 | 同上（真 Key 才能真跑到一半） |
+
+## 五 · 复跑命令（一条，含全部环境变量）
+
+```bash
+cd ~/harness && export PATH=$HOME/node/bin:$PATH \
+  && export DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles \
+  && export S0_EVIDENCE_DIR=$HOME/trae-evidence/s0 \
+  && node scripts/s0-run-with-file-key.mjs
+```
+
+不带参数 = `base no-bundle wrong-key no-session-dir kill-client` 全跑；单跑某变体：`… s0-run-with-file-key.mjs base`。
+（`s0-run-with-file-key.mjs` 只把 `~/.dsh/.credentials.yaml` 的 Key 接进子进程 env，**不读值、不打印、不落盘**。）
+
+## 六 · 姿态自证行（`harness/tests/s0-e2e.test.ts` 头部原文）
+
+> - 模拟的真实链路：客户端 → `sdk` JSON-RPC（stdio） → session create → agent loop 挂**自做工具 `read_file`** → 真实 LLM 调用 → 回客户端 → session 落盘 → 回读
+> - **执行器**：`harness/node_modules/@deepseek-ai/dsh`（0.1.5-rc.2，即 profile 的 CLI）｜**前导：无**（不经 CLI 子命令，直接走 SDK 的 stdio 通道）
+> - **home ＋ profile**：`<临时 home>` 里 `cp -r` 出来的 sdk profile **真副本**（**不穿透源 profile**，见派发稿 §5(a)）｜**凭据来源层**：环境变量
+> - **nonce 设计**：nonce 只写在文件里、**不进 prompt** ⇒ ① 一旦绿灯即证明"工具真的读到并回了内容"，而不是"模型把 prompt 里的串复述了一遍"
+
+## 七 · §8 顺带项（三处 log 指针，全部已处置）
+
+| # | 位置 | 处置 |
+|---|---|---|
+| ① | `harness/tests/global-setup.ts:76-97`（注释块） | ✅ **就地自足化**：写入「**方案 A** = 按真实退出码退出 ＋ 打印诊断，**不因"有残留"本身判红**」＋「**方案 B（否决）** = 残留即判红 —— 根因在 SDK 侧时会把绿跑判成红，**假红比没护栏更糟**」＋ 裁决日期 2026-09-10 ＋ 备查源 `TODO.md:40` |
+| ② | `harness/tests/global-setup.ts:135`（运行时输出） | ✅ **删**「，见 exchange/log-claude.md 裁决记录」括注，其余不动（改为 `（方案 A：不因残留本身判红）`） |
+| ③ | `backend/tests/test_integration_llm.py:48` | ✅ **改指** `archive/report-2026-08-30.md`（该 aiosqlite 事故复盘的永久落点） |
+
+⚠️ 两点订正：**行号**——原稿写 `75-77` / `127`，实测是 `76-97`（①改后仍在此区间）/ `135`；**范围**——仓库内**代码侧已无 `log-claude.md` 活指针**，其余命中只剩 `.claude/CLAUDE.md` 的流程约定、`archive/` 冷存件、`.workbuddy/memory/` 历史日志（均非"代码内失活指针"，未动）。
+
+## 八 · 坑与订正（本次最有价值的部分）
+
+| # | 坑 | 订正 |
+|---|---|---|
+| 1 | ⭐ **`inject: []`（零硬依赖）≠ 可在 `apply()` 里探测 `tools` 后注册**：首跑 `②_toolRegistered=false`，打点**只剩 `activate`**（连 `register-failed` 都没有 ⇒ **静默不注册**，最像"环境问题"的那种失败）。根因：零硬依赖 ⇒ `apply()` 在 boot **极早期**执行，此刻 `ctx.get('tools')` 为 `undefined`，而我把探测结果当成了**注册前置** | **注册一律走 `ctx.inject(['tools'], cb)` 回调；`ctx.get` 只用于打点/降级判断**。已回填 `docs/dsh/dsh-migration.md` 事实表**第 9 条**，并标注它**订正事实 3 的适用边界**：零硬依赖是**加载策略**，不是**注册时序** |
+| 2 | ⭐ **`ctx.tools.register()` 的 schema 口径 = 标准 JSON Schema**，不是 `defineTool` 的输入 spec：我照抄了**属性内** `required: true` ⇒ 真错原文 `unsupported JSON schema: schema.properties.path.required is not supported on type "string"`（`dsh-tools/lib/index.js:2773` 的 `assertSupportedJsonSchema` 只收标准子集，`required` 须是**顶层数组**） | 改成顶层 `required: [...]`；并在 `test/smoke.mjs` 加**结构防线**（断言 schema 串里不出现 `"required":true`）。已回填事实表**第 10 条**：**手搓工具不必 `defineTool` 包装 ⇒ 可做到零外部 import**（插件以 link 挂载时天然取不到 profile 的 `@deepseek-ai/*`，这是硬约束不是偏好） |
+| 3 | ⭐ **① 的假绿风险实测成立**：负向 1（摘 bundle）里模型改用**官方 `read`** 工具把同一个 nonce 读了出来（`①_toolNameInLog=["read"]`、`①_pingInResponse=true`）⇒ **"回包含 nonce"本身完全不敏感**于"这工具是不是我们的" | ① 必须拆两半断言：内容断言 ＋ **工具名归属**。已修（base 与负向 1 各加一条断言） |
+| 4 | ⭐ **负向 4 的原设计（固定 2.5 s 后杀）不成立**：单工具回合 ~1.5 s 就整段落盘，定时杀落在**回合结束之后** ⇒ 日志完整含 nonce、④ 依旧绿（当时亮红的是**我自己写错的断言**，不是被测判据）。另：**只杀直接子进程不够** —— harness 的 dsh CLI 是**孙进程**，会继续把回合写完 | 改成**事件驱动**：轮询到会话日志**首次出现且字节 > 0** 立刻以 `detached` ＋ `kill(-pid)` **杀整进程组**，杀完等 2 s 再回读。红灯形态因此升级为"**文件在/内容在/nonce 不在**"，顺带否掉"文件存在即 ④ 过" |
+| 5 | **`dsh plugin add` 在 pnpm 报 `Done in …` 后 node 不退出**（本次复现） | e2e 按"见到 `Done` 即视为装成功"＋ 600 s 超时兜底；**其退出码不得当判据** |
+| 6 | **CVM 通道**：Windows→ssh 的**内层引号/括号会被吃**（`awk '{print …}'`、`echo (…)`、`grep -E "…"` 全部变形；本次连"扫 Key 自查"都得先 scp 脚本上去跑）；**`node` 不在非交互 shell 的 PATH 里** | 一律 **scp 脚本 → 远程执行**；远程命令只用单层引号、不加括号；node 写全路径 `$HOME/node/bin/node` |
+| 7 | 新增的 `tests/s0-e2e.test.ts` 会被 vitest 默认 `include` 命中 ⇒ 若它在开关关闭时直接抛，**默认 `npm test` 会变红** | 改 `describe.skipIf(!realApiEnabled())`（与 `tests/real-api.test.ts` 同口径：**skip ≠ pass**）。本机实测：不设开关 → `1 skipped`、无红灯 |
+
+## 九 · 安全自查（§7）
+
+- Key **只经环境变量**进子进程；临时 home 由 `afterAll` 删除 ⇒ CVM 上 `ls -d /tmp/larry-s0-* /tmp/larry-test-*` **为空**、`~/.dsh/profiles/node_modules.lock*` **不存在**（孤儿锁已按惯例重命名回收）。
+- 对 `~/trae-evidence` ＋ `harness/tests` ＋ `harness/scripts` 共 **147 个文件**做 `sk-` 形态扫描：**16 处命中全部为占位串**（`sk-invalid-…`、哨兵 fixture 的 `sk-abcdefghijklmnopqrstuvwxyz…`、`sk-not-a-real-key`），**无真实 Key 落盘**。自查脚本 `_trae-cvm-evidence/s0-scan-key.mjs`（**不进仓库**，输出只含前缀 3 字符与长度，不含任何 Key 片段）。
+- 未做任何 git 远程操作；新造件留在工作区（**未提交**）。
+
+## 十 · 与派发稿的差异 / 待裁
+
+1. **判据 ④ 的负向对照口径**：派发稿写「kill SDK 客户端进程 → ④（已写入部分的一致性）」。实测**定时杀不成立**（见坑 4），我改成了"落盘起笔即杀"，红灯形态 =「文件已存在且写了 636 B，但 nonce 不在其中」。若你认为该变体应改成别的形态（例如连"文件已存在即 ④ 过"这一弱判据也要单独出红灯），说一声我改。
+2. **① 的附属断言**：`①_toolNameIsOurs` 是我自己加的防假绿断言（派发稿只要求"内容断言"）。它已实测救过一次红灯（负向 1），建议**升为正式判据**。
+3. `harness/tests/s0-e2e.test.ts` 落 `tests/` 的原因：被 vitest 自动纳入、与 `real-api.test.ts` 同一套开关纪律；代价是**必须 `DSH_REAL_API=1` 才会真跑**（否则 skipped）。
+4. 源 `sdk` profile 全程未被改写（选派发稿 §5 的 **(a) 真副本** 路线）——此处仅作留痕，无需裁定。

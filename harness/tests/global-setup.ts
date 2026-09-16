@@ -73,8 +73,16 @@ function removeDirs(dirs: readonly string[], reason: string): void {
 }
 
 /**
- * 退出安全网（2026-09-10 老大裁决：**方案 A**；两方案详情与裁决记录见
- * exchange/log-claude.md「防挂死安全网」节，勿凭记忆改语义）。
+ * 退出安全网（**2026-09-10 老大裁决：方案 A**；语义就地自足 —— 原出处
+ * `exchange/log-claude.md`「防挂死安全网」节已随该文件整体轮换而消失，故固化在此；
+ * 备查源 = `TODO.md:40`，勿凭记忆改语义）。
+ *
+ * 裁决要点（两方案 + 为何选 A）：
+ *  - **方案 A（采用）**：按 **vitest 的真实退出码**退出 ＋ 打印诊断，**不因"有残留"本身判红**；
+ *  - **方案 B（否决）**："残留即判红" —— 根因在 SDK 侧时它会把**绿跑判成红**，
+ *    而 **"假红比没护栏更糟"**（WB 文档已立此原则）。
+ *  - 同批另落地两件配套：① 启动期清扫过期残留（>2h）；③ 入口脚本**墙钟看门狗 20 分钟**
+ *    （超时杀进程树 ＋ `exit 124`，与"测试失败＝1"区分）。
  *
  * 为什么需要：WB 复验时遇到「测试跑完但进程不退出」（挂到被 timeout 杀掉，
  * CI 拿不到退出码）；本地按同一入口多次复跑未复现，根因未定位 → 先把**症状**
@@ -83,7 +91,7 @@ function removeDirs(dirs: readonly string[], reason: string): void {
  * 机制：**unref'd 定时器**——正常时零成本、不改变任何行为（loop 排空即自然退出，
  * 定时器不触发）；只有当进程被句柄/子进程拖住时才会触发 → 打印诊断后强制退出。
  *
- * 退出码口径（方案 A 的关键，勿改成 B）：**用 vitest 的真实结果**
+ * 退出码口径（方案 A 的关键，勿改成"残留即判红"）：**用 vitest 的真实结果**
  * （`process.exitCode`；测试全绿=0），并打醒目告警。理由：根因在 SDK 侧时把
  * 绿跑判红是**假红**——"假红比没护栏更糟"（WB 文档已立此原则）。
  * ⚠️ 触发即代表"进程没能自退"，告警行必须保留其刺眼程度，不得降级为普通日志。
@@ -124,7 +132,7 @@ function armExitNet(): void {
     writeSync(
       2,
       `[test-isolation] ⚠️ EXIT-NET FIRED: 进程跑完后 ${EXIT_NET_MS / 1000}s 仍未退出（句柄/子进程残留），已按真实退出码强制退出。\n` +
-        `[test-isolation]   退出码=${process.exitCode ?? 0}（方案 A：不因残留本身判红，见 exchange/log-claude.md 裁决记录）\n` +
+        `[test-isolation]   退出码=${process.exitCode ?? 0}（方案 A：不因残留本身判红）\n` +
         `[test-isolation] ${exitNetDiagnostics().replace(/\n/g, '\n[test-isolation] ')}\n`
     )
     process.exit(process.exitCode ?? 0)

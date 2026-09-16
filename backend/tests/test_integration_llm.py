@@ -45,7 +45,7 @@ def _integration_setup():
     - setup：注册工具（DB 由 conftest 临时库隔离）
     - teardown：**必须 close_db**——未关闭的 aiosqlite 全局连接在进程退出时
       GC 清理会挂在已关闭的 pytest-asyncio loop 上（实测挂起 60s~17.5min），
-      这是"测试秒过但进程不退出"之谜的根因（排查记录见 exchange/log-claude.md）
+      这是"测试秒过但进程不退出"之谜的根因（排查记录见 archive/report-2026-08-30.md）
     """
     import asyncio
 
