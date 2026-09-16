@@ -5,6 +5,95 @@
 
 ---
 
+## 📮 派发 · 003 · 装 profile + 重跑 D / E（2026-09-16 出稿）
+
+> **执行人**：Trae ｜ **场地**：CVM ｜ **复验**：WB（回报落本文件）
+> **基线**：`0.1.5-rc.2`（**老大 2026-09-15 拍定**，解除 DSH-2.6「不升基线」——那条按当时状况成立）
+> **前置三项已全部解除**：① 基线已拍；② 001 卡点（D 组 profile 未装）**根因已查明** = `~/.dsh/profiles/sdk` **空壳**（**与凭据无关**）；③ 001 的 J1 装 profile 授权**已作废**（那两条钉死 `0.1.2-rc.1`）
+> **规格原文** → `../TODO.md` DSH-3.0 段 `:64-78`；**判据 / 验收基准 / 执行范式** → `../docs/dsh/dsh-migration.md` §3.6「DSH-3」
+
+### 任务 0 · 前置核对（先做，不通过就停）
+
+1. `npm view @deepseek-ai/dsh versions` —— 确认 `0.1.5-rc.2` 存在于 registry
+2. **CLI / hoisted 层与 profile 同代** —— 本机已实测到**跨版本混合体**（`.dsh-home` sdk 侧 105 包 @015 ｜ `~/.dsh` hoisted 根 214 包 @012）。这是你 §6-1 报的「profile 跨版本混合」；上游 016-alpha 已新增 `packages/boot/app-boot/src/profile-resolution/`（`resolver.ts` 975 行，PR `fix/profile-module-resolution`）⇒ **上游已知问题，非我们独有**。装前核代际、装后回核。
+
+### 任务 1 · 装齐 CVM `~/.dsh/profiles/sdk`
+
+**两条命令**（**全程带 `DSH_HOME=$HOME/.dsh`**）：
+
+```
+dsh plugin --profile sdk add @deepseek-ai/dsh-base@0.1.5-rc.2
+dsh plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
+```
+
+- **这就是完整 composition**：本机 `.dsh-home/profiles/sdk` 的 deps 恰为这两项，`storage` / `session` 类包**随传递装齐**（`dsh-session-persistence-jsonl` / `dsh-session-query-sqlite` / `dsh-storage-json`）⇒ **无需**手工补
+- 若因 `allowBuilds` 以 exit 1 结束 → 见 `../docs/local-env.md` §8.4 第 3 条
+
+**本任务判据**：
+- `~/.dsh/profiles/sdk/dependencies` ≠ `{}`（现为**空壳**）
+- `~/.dsh/profiles/sdk/node_modules/@deepseek-ai` 包数 > 0（现为 0）
+
+**⛔ 边界**：
+- **`larry` profile 本次不动** —— CVM `~/.dsh/profiles/larry` 现 composition（api-gateway + host-webserver）与本地（base + headless）**不同**，属 3.5 / 3.7 派发时单独定
+- **软链方案不采纳**（两个 home 缠在一起 = 正是要消灭的重叠环境）
+- **`~/larry-dsh-home` 只作负向对照器材**（有完整 profile、**无凭据**）—— **它不是运行 home**，拿它跑出「绿」即无 key 假绿（D2 已实证）
+
+### 任务 2 · 重跑 D 组（凭据层验真，本步最重要）
+
+**目标**：证明 `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` **确实被读取且真用于调用**。
+
+**装置**：`harness/scripts/dsh-prompt.mjs` **裸跑**（它**不覆盖 `DSH_HOME`** ⇒ 落 `~/.dsh`）
+
+**三态**：
+
+| 态 | 造法 |
+|---|---|
+| **真 key** | **不注入** env（走凭据文件） |
+| **无 key** | `DSH_HOME=~/larry-dsh-home`（有 profile、无凭据） |
+| **错 key** | 隔离 home + 伪造值 + 权限 600 |
+
+**判据 = 三态互不相同**，且**每态记 `(DSH_HOME, profile, 凭据来源层)` 三元组**。
+
+**⚠️ 为什么必须新开这条路径**：`run-real-api.mjs` → vitest → `vitest.config.ts` 的 `setupFiles: ['tests/isolated-setup.ts']` **强制把 `DSH_HOME` 覆盖为临时目录**（该文件 `:31-33`）⇒ **real-api 读不到凭据文件**，其 key 只能来自 env（`tests/real-api.ts:28`）。
+
+**⛔ 红线**：
+- **不得改动** `~/.dsh/.credentials.yaml`（负向两态一律用隔离 home 造）
+- 回报**只写键名 / 是否存在 / 长度**，不写值
+
+**❌ 上一轮（09-14）失败留痕，勿重蹈**：D1 ≡ D3（同为 `-32603 cannot create effect on inactive context`，**崩在启动期、不是鉴权**）、D2 exit 0 + stdout 全空（**无 key 假绿**）⇒ 三态不互异。**根因 = profile 空壳** ⇒ 装齐后重跑。
+
+### 任务 3 · 重跑 E 组（real-api 在 CVM 侧）
+
+**三态**：无 key / 错 key / 真 key，**同一脚本跑**；判据 = **三态表现互不相同**（⚠️ 无 key 态正是已证会假绿的那一态）。
+
+⭐ **夹具改指 `~/.dsh/profiles`**（装齐后）—— 原 `~/larry-dsh-home/profiles` 是 **09-10 建的、当时基线 `0.1.2-rc.1`**，按 015 重跑**不能用它**（用了就是无效重跑）。用 `DSH_REAL_API_PROFILE_HOME` 指向即可；这是**夹具来源、不是 home 决定**。
+
+**为什么重跑**：001 那轮按 `0.1.2-rc.1` 跑的 ⇒ 结论**跨版本失效**，只留「通道 / 环境自证」这一层效力。
+
+**09-14 的 E 三态（012 基线，须按 015 重取）**：E1 不注入 → guard **显式失败**（有效 Key 用例 5 ms 即抛 = **未发起调用**）/ E2 错 key → 走了 API、**AUTH·401** / E3 真 key → **OK**（`verdict=OK … turn/end.kind=completed`）。
+
+**⚠️ 本组只代表「环境变量层」** —— **不得**用于宣称「CVM 凭据文件生效」。
+
+### ⛔ 假绿源清单（判「profile 可用性」一律不得使用）
+
+| 命令 | 为什么假绿 |
+|---|---|
+| `dsh --profile <p> --help` | **不校验 profile 依赖**（三 home 全绿，1 s 内 exit 0） |
+| `dsh --profile <p> --dump-config` | 只组配置树、**不激活** |
+
+### 回报
+
+- 落**本文件**（`exchange/log-trae.md`）
+- 含：**命令原文 / 输出 / 三态判定 / 反例 / 三元组**
+- ⚠️ **产出不得是唯一副本**：CVM **2026-10-09 到期**，产出须回传本机（`D:\Code\_trae-cvm-evidence\`）或入库
+
+### 不在本任务内（老大定「一个一个发，不要并行发」）
+
+- **3.2 / 3.7** → 待 003 后再发
+- 3.1 → 批次 2 ｜ 3.3–3.6 → 批次 3（严格串行）｜ 3.8 + 3.9 → 批次 4
+
+---
+
 ## 暂存 · 尚无正式落点的结论
 
 > 以下三项是本区待处置的活内容（暂无正式文档承接）；正式落点定下后即从本区删除。
