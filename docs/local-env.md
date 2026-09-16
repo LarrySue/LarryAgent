@@ -322,14 +322,14 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 > 🟢 **WB 独立复验（2026-09-09）**：静态 + 动态证据均本地复现——`dsh --profile larry --dump-config` 见 `larry-probe` 插行、`hmr disabled: false`；`dsh --profile larry --help` 打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)`。**核心结论成立。**
 > ⚠️ **WB 未独立复跑**：官方 demo 完整会话（需真实 key 触发 LLM），采信报告的 exit 0 + stdout + 会话产物说明。
 
-### 8.1 版本基线（🟢 2026-09-09）
+### 8.1 版本基线（🟢 2026-09-09 快照；表内现值已于 2026-09-17 校）
 
 | 项 | 值 |
 |---|---|
 | OS / shell | Windows x64 / PowerShell |
 | Node | **v24.14.1**（`D:\App\node\node.exe`；root `package.json` engines 要求 `^22.19.0 \|\| >=24`） |
 | pnpm | **11.7.0**（`npm i -g`；与 root `packageManager: pnpm@11.7.0` 精确一致） |
-| dsh | `@deepseek-ai/dsh@0.1.2-rc.1`（npm 全局） |
+| dsh | `@deepseek-ai/dsh@0.1.5-rc.2`（npm 全局）〔2026-09-09 快照值 `0.1.2-rc.1`，2026-09-16 随 DSH-3.0 收口升级〕 |
 | DSH_HOME | `D:\Code\LarryAgent\.dsh-home`（仓库内，已 gitignore） |
 | profile | `larry` = `dsh-base` + `dsh-headless` + 我们的 `@larryagent/plugin-probe` |
 | 模型凭证 | 测试 key 仅经**环境变量** `DEEPSEEK_API_KEY` 注入，未落任何文件 |
@@ -338,7 +338,7 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 > **复核注（2026-09-11 DSH-2.6）**：本节基线为 DSH-2 锁定的 `0.1.2-rc.1`；复核时上游最新已到 **`0.1.5-rc.2`**（`latest` = `0.1.5-rc.1`，7 天 2 个 rc）→ **老大拍定不升基线**（升级门槛太低，会导致频繁升级适配）。**本机仍锁 `0.1.2-rc.1`，DSH-3 写码按此 API 走**；0.1.5 破坏性清单与决定见决策稿 §3.4「DSH-2.6 收口复核」。
 >
-> **↑ 该"不升基线"决定已于 2026-09-16 被老大推翻**（DSH-3.0 收口时基线换 `0.1.5-rc.2`）⇒ **本节表格（`dsh` 版本行）与上面的"仍锁 012"均过时**，现值为 `0.1.5-rc.2`；§8.3／§9.2 里 `npm i -g @deepseek-ai/dsh@0.1.2-rc.1` 这类复跑命令同属历史件。现状见文首「代际状态更新」。
+> **↑ 该"不升基线"决定已于 2026-09-16 被老大推翻**（DSH-3.0 收口时基线换 `0.1.5-rc.2`）⇒ 上面的"仍锁 012"已过时；**本节表格的 `dsh` 版本行已按现值修订**（2026-09-17，见表内括注留存快照值）。§8.3／§9.2 里 `npm i -g @deepseek-ai/dsh@0.1.2-rc.1` 这类复跑命令**仍属历史件**（记录当时做法，不回改）。现状见文首「代际状态更新」。
 
 ### 8.2 自做插件如何声明 bundle（B1 挂载的判定依据）
 
