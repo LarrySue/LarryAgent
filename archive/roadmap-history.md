@@ -362,7 +362,7 @@ P3 只做记录告警，DB 表和 API 留给 P4。
 
 **测试层完善（测试环境修复 + 集成测试层恢复）** ✅（2026-08-30 启动，2026-09-03 闭环；老大拍板合并派发 Claude，WB 复验）
 
-> 老大 2026-08-30 拍板：测试环境修复（pytest-asyncio 不兼容）+ 集成测试层恢复合并派发 Claude。原派发规格见 `exchange/log-claude.md`。
+> 老大 2026-08-30 拍板：测试环境修复（pytest-asyncio 不兼容）+ 集成测试层恢复合并派发 Claude。原派发规格原载交流区 `log-claude.md`（**该日志内容此后已轮换，不可再查**）。
 
 - [x] **合并任务**（Claude `0e8d52a`）：① 修复 pytest 9.1.1 ↔ pytest-asyncio 1.4.0 不兼容（插件未加载）② 恢复 `test_integration_llm.py` 3 用例并改 assert/raise 去假绿 ③ `--real-api` marker + conftest 开关（默认跳过防误烧 key）④ 分层原则 + mock 覆盖清单写入 `.claude/CLAUDE.md`
 - [x] **33 个失败事件循环污染评估**（`0e8d52a`）：实为跨文件事件循环污染——FastAPI TestClient 退出销毁当前线程事件循环，后续 sync 测试 `asyncio.get_event_loop()` 抛 RuntimeError，与 pytest-asyncio 无关；conftest `_ensure_event_loop` autouse fixture 重建循环修复，42 failed → 2 failed

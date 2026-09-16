@@ -2,7 +2,7 @@
 
 > 本文件是 LarryAgent 前端 UI 设计的**单一权威参考**。所有 AI（Trae 实现 / Claude 测试 / Marvis 产品 / UI 设计 / WB 复验）以本文件为 UI 约定的最终真相源。
 >
-> **权威层级**：`client/src/styles/tokens.css`（代码数值事实）> 本文件（设计定案）> 交流区（`exchange/log_design.md` / `exchange/log-marvis.md`，过程与讨论）。
+> **权威层级**：`client/src/styles/tokens.css`（代码数值事实）> 本文件（设计定案）> 交流区过程记录（历史讨论，**不承载定案**）；交流区为 AI 间临时会话空间，不做长期保留。
 > 代码与设计不一致时以代码为准，并应回写本文件。
 
 ## 0. 产品调性（约束一切后续选择）
@@ -136,7 +136,7 @@
 
 ## 10. 来源与版本
 
-- **v1（2026-08-21，WB 汇聚）**：来源 = `exchange/log_design.md`（设计精化定案 §3–§7、§8 Logo、§9 过渡）+ `exchange/log-marvis.md`（产品方向 §0–§5、结构层决策）+ `client/src/styles/tokens.css`（代码数值事实，以之为准）
+- **v1（2026-08-21，WB 汇聚）**：来源 = 设计侧过程稿（设计精化定案、Logo 定案、过渡动画）+ 产品侧过程稿（产品方向、结构层决策）+ `client/src/styles/tokens.css`（代码数值事实，以之为准）
 - **v2（2026-08-28，一轮 UI 调整，老大直调）**：`--color-text-primary` #D4D4D8→#bebec0（再灰一档）；`--text-sm`/`--text-base` 0.8125/0.875rem→1rem（sm/base 与 lg 同级 16px）；Inter 字体本地打包（@fontsource/inter latin 400-700）——详见 §1.2 / §2
 - **v3（2026-08-28，二轮 UI 调整，老大直调）**：顶栏统一固定 50px（主窗口 48→50、侧栏内容撑起~56→固定 50）；主窗口顶栏标题 16/500→18px/700（`--text-xl`/`--weight-bold`）；侧栏底部新增 footer 占位区域（48px 固定、border-top，当前仅占位文本 v0.1.0）；ChatInput placeholder 与发送按钮文字 14px（局部值）——详见 §3 / §5.5
 - **v4（2026-08-28，三轮 UI 调整，老大直调）**：侧栏底部 footer 版本号占位 → 设置按钮（齿轮 SVG 临时占位）+ 向上弹出菜单（已归档/回收站/关于，点击事件空函数待接入）；设置入口自 TopBar 正式移至侧栏底部——详见 §5.6
@@ -144,4 +144,4 @@
 - **v6（2026-09-03，角色清单后端下发改造，WB 派发 / Trae 实现）**：角色清单从「前端硬编码 + config 两份、人工同步」改「后端 config 单一数据源 + `GET /api/roles` 下发 + 前端动态渲染」；`--role-default/health/finance` 三个 CSS 变量删除、改下发 hex 直用；前端 `type Role` 联合类型改 string；加新角色只改 config.yaml + 重启，前端零改动——详见 §1.4 / §5.5
 - **v7（2026-09-04，Brave 归属标注，老大直调）**："关于"弹窗末行版权说明下新增一行 about-note "Web Search Powered by Brave"（Brave $5/月信用的条款归属要求；换 provider 改一个词即可）——详见 §5.6
 - **已知局限**：Trae 实现时的部分 UI 决策已固化于 `tokens.css` / 组件代码（如新增 `--weight-semibold/bold`），未单独文档化的细节以代码为准；后续由 Trae 点将时回写补充本文件
-- **过程与未决项**：设计冲突分析、迭代历程见 `exchange/log_design.md`；**未决 / 待办（待拍板、Trae 回写等）已归 `TODO.md`「UI/UX优化」**；产品视角提案与讨论见 `exchange/log-marvis.md`
+- **过程与未决项**：设计冲突分析、迭代历程属过程记录（原载交流区，**已随清理不再可查**）；**未决 / 待办（待拍板、Trae 回写等）已归 `TODO.md`「UI/UX优化」**；产品视角提案与讨论已并入本文件定案
