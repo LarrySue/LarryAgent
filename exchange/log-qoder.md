@@ -6,7 +6,7 @@
 
 ## 🔔 派发中 · 2026-09-16 · 本机环境同代化收尾：harness 树重建 + 工程 home 升 015
 
-**状态**：待接单
+**状态**：已回报（2026-09-17 ｜ 回报段落见本文件下方〈🔔 回报 · 2026-09-17〉）
 **派发**：老大 ｜ **出稿**：WB（架构 · 复验） ｜ **执行**：Qoder
 **开工前置**：老大已手动完成删除（清单见 §2），并已开启 Windows 开发者模式
 **建议先读**：`docs/local-env.md` §4.3.1、`TODO.md` DSH-3.1 前置段
@@ -129,6 +129,300 @@ CVM 的 `~/harness/package.json` 与 `pnpm-lock.yaml` 是 3.0.4 在 CVM **现场
 - 明确写出任务 A 走的是 **(a) 还是 (b)**；若走 (b)，附自检的原始输出
 - 卡住或无法判定的地方：**如实写「未查清 + 卡在哪」**，不要为叙事完整性补一个成因
 - 完成后在段落顶部标 **状态：已回报**，并在 `TODO.md` DSH-3.1 前置段对应条目上打勾（若你无 TODO 写权限，就在回报里说明"待 WB 勾"）
+
+---
+
+## 🔔 回报 · 2026-09-17 · 本机环境同代化收尾（任务 A 树重建 / 任务 B profiles 升 015 / 任务 C 核对）
+
+**状态：已回报**
+**执行**：Qoder ｜ **对应派发**：本文件〈派发中〉段 ｜ **任务 A 装法**：**(a) symlink 可用 ⇒ 默认 `pnpm install`（isolated）**
+
+> 派发稿「建议先读」`docs/local-env.md` §4.3.1 已读；§1/§2 的启动锁章节亦一并核对（本次未撞锁，见 §5.3）。
+
+### 0. 结论摘要
+
+| # | 项 | 结果 |
+|---|---|---|
+| 开工自检 | symlink 可用性 | ✅ **可用**（**与本机既有记载相反**，见 §1）⇒ 走 (a) |
+| 任务 A | `harness/node_modules` 重建 | ✅ 完成，5 条判据全过（§2） |
+| 任务 B | `.dsh-home/profiles/{larry,sdk}` 升 015 | ✅ 完成，3 条判据全过（§4） |
+| 任务 C | 与 CVM lockfile 比对 | ✅ 完成，**差异仅 1 行**且成因闭环（§6） |
+| 红线 | 5 条 | ✅ 未触碰（§8） |
+| 收尾 | `git status --porcelain` | ✅ **空**（受控文件零改动，§7） |
+
+⚠️ **两条须过目的口径偏差**（都不是失败）：
+1. 派发稿 §6 把 `sentinel` 两条也算作"应通过" —— 它们是**负向哨兵，本来就该红**，"三条同上"按字面读会误判成失败（§3）。
+2. `TODO.md` :278-281 载「本机创建真符号链接失败、仅 `%TEMP%` 内可建」—— **与我这条通道实测相反**，我四路径全可建（§1）。⇒ :281 推论「本机 hoisted ↔ CVM isolated」在我这条通道**不成立**，两侧结构已等价。
+
+---
+
+### 1. 开工自检：symlink 判定 = 可用 ⇒ (a)
+
+**自检命令**（派发稿 §3 原文形态，cmd 通道）：
+```
+mkdir D:\_symchk_T
+mklink /D D:\_symchk_L D:\_symchk_T
+dir D:\_symchk_L
+```
+
+**结果（`D:\Temp\symchk.bat`，原始输出）**：
+```
+=== [A] C:\Users\SuLarry ===
+symbolic link created for C:\Users\SuLarry\_symchk_L <<===>> C:\Users\SuLarry\_symchk_T
+MK_EXIT=0
+2026/09/17  00:06    <SYMLINKD>     _symchk_L [C:\Users\SuLarry\_symchk_T]
+
+=== [B] D:\Code\LarryAgent\harness ===
+symbolic link created for D:\Code\LarryAgent\harness\_symchk_L <<===>> D:\Code\LarryAgent\harness\_symchk_T
+MK_EXIT=0
+2026/09/17  00:06    <SYMLINKD>     _symchk_L [D:\Code\LarryAgent\harness\_symchk_T]
+
+=== [C] TEMP ===
+TEMP=D:\Temp\Sys
+symbolic link created for D:\Temp\Sys\_symchk_L <<===>> D:\Temp\Sys\_symchk_T
+MK_EXIT=0
+
+=== [D] file symlink @ project dir ===
+symbolic link created for D:\Code\LarryAgent\harness\_symchk_F <<===>> D:\Code\LarryAgent\harness\package.json
+MK_EXIT=0
+2026/09/17  00:06    <SYMLINK>      _symchk_F [D:\Code\LarryAgent\harness\package.json]
+2026/09/17  00:06    <SYMLINKD>     _symchk_L [D:\Code\LarryAgent\harness\_symchk_T]
+
+=== [E] junction @ project dir ===
+Junction created for D:\Code\LarryAgent\harness\_symchk_J <<===>> D:\Code\LarryAgent\harness\_symchk_T
+MK_EXIT=0
+```
+
+附带确认 reparse tag（`fsutil reparsepoint query D:\_symchk_L`，原始片段）：
+```
+重分析标记值 : 0xa000000c
+标记值: Microsoft
+标记值: Name Surrogate
+```
+⇒ `0xa000000c` = **真 SYMLINK**（junction 为 `0xa0000003`），`dir /AL` 亦显示 `<SYMLINKD>` 而非 `<JUNCTION>`。
+
+**结论**：`D:\` 根、`C:\Users\SuLarry`、项目目录、`%TEMP%` **四处全可建真 symlink**；文件符号链接与 junction 亦可用。**判 symlink 可用 ⇒ 走 (a)**。自检残留 4 处链接 + 4 处目标目录已全部清除（`symchk-clean.bat` + `del` 修文件符号链接，`rmdir` 在文件符号链接上静默失败故易漏），并逐路径复验为 clean。
+
+> ⚠️ **与既有记载的矛盾（主动暴露，不自行消化）**：`TODO.md` :278 记「本机创建真符号链接失败 —— 仅 `%TEMP%` 内可建，其余路径一律 `WinError 2`」，:279 由此推出「pnpm isolated 在本机装不出链接层、顶层全是空壳」。**我这条通道实测相反**（四路径全可建，且任务 A 装出的顶层链接经 `dir /AL` 全部为 `<SYMLINKD>`）。
+> - **我不为叙事完整性补成因** —— **成因未查清**，卡点在于「WB 的测试通道与我这条通道的差异点尚未定位」。
+> - 可排除项（我这侧）：非管理员权限（`net session` → NOT-admin）、非开发者模式（已开）。
+> - **待老大/WB 裁**：是通道差异（进程令牌/完整性级别）、还是两次实测之间的环境变化。**若采纳我的结论**，则 :280 的 `~/.npmrc` 固化 `node-linker=hoisted` **不需要做**（我未做，`~/.npmrc` 仍只有 registry 一行）。
+
+---
+
+### 2. 任务 A：重建 harness 依赖树 —— ✅ 5 条判据全过
+
+**装法**：`cd D:\Code\LarryAgent\harness && pnpm install`（**(a)**，未加任何自定义参数）
+
+**install 原始输出（尾段）**：
+```
+Scope: all 7 workspace projects
+✓ Lockfile passes supply-chain policies (verified 24m ago)
+[WARN] 1 deprecated subdependencies found: node-domexception@1.0.0
+Packages: +544
+dependencies:
++ @deepseek-ai/dsh 0.1.5-rc.2
++ @deepseek-ai/dsh-sdk-client 0.1.5-rc.2
++ zod 4.6.5
+Done in 10s using pnpm v11.7.0
+EXIT=0
+```
+
+**逐条判据**：
+
+| # | 判据 | 实测输出 | 判定 |
+|---|---|---|---|
+| A1 | `require.resolve` 解析成功 | `D:\Code\LarryAgent\harness\node_modules\.pnpm\@deepseek-ai+dsh@0.1.5-rc.2_0351730208d964c7e3b3400f4e092bdd\node_modules\@deepseek-ai\dsh\package.json`（EXIT=0） | ✅ |
+| A2 | dsh 版本 = `0.1.5-rc.2` | `node -e "...version"` → `0.1.5-rc.2`；`dsh-sdk-client` 亦 `0.1.5-rc.2` | ✅ |
+| A3 | 顶层**空壳目录数 = 0** | 自写检测器（判据同派发稿）：`{"topLevelNonDot":5,"symlinks":3,"realDirs":2,"plainFiles":0,"emptyShellDirs":0,"shells":[]}` | ✅ |
+| A4 | `pnpm run test:isolated` 通过且**进程自退出** | `✓ tests/guard.test.ts (1 test) 4ms` / `Tests 1 passed (1)` / `EXIT=0` / **`ELAPSED=2s`**（外层 `timeout 180` 未触发，非 124） | ✅ |
+| A5 | 三条哨兵同上（自退出） | 三条**均 `ELAPSED=2s`**、无 124（结论按 §3 口径，非字面"三条全绿"） | ✅ |
+
+**假绿排查（派发稿"三个坑"）**：
+- 坑 2「假绿」：**已按判据实测**，非以 install 输出当验收 —— A1 用 `require.resolve`、A3 逐条目 `lstat` 判"目录在 + 无 `package.json` + 非链接"。结果 **0 空壳**。
+- 坑 3「状态缓存不自愈」：起点 `node_modules` 为 **空目录（entries=0）**、无 `.modules.yaml` / `.pnpm-workspace-state-v1.json` 残留，故未触发；未出现 `Already up to date`。
+- 坑 1「`pnpm run` 自动 install」：走 (a) 默认布局，自动 install 不带参数亦为同一布局 ⇒ 无危害；四条测试跑完后树仍完好（A1/A3 复验通过）。
+
+**结构与 CVM 一致性**（(a) 的期望形态）：
+```
+D:\Code\LarryAgent\harness\node_modules 的目录
+2026/09/17  00:09    <SYMLINKD>     typescript [.pnpm\typescript@6.0.3\node_modules\typescript]
+2026/09/17  00:09    <SYMLINKD>     vitest [.pnpm\vitest@5.0.1_@opentelemetry_...\node_modules\vitest]
+2026/09/17  00:09    <SYMLINKD>     zod [.pnpm\zod@4.6.5\node_modules\zod]
+（@deepseek-ai/dsh、dsh-sdk-client 同为 <SYMLINKD>）
+```
+`.modules.yaml` 实证：`"nodeLinker": "isolated"`。⇒ **未走 hoisted，未污染 `~/.npmrc`、未改 `harness/pnpm-workspace.yaml`**。
+
+**lockfile 未被改动**：`wc -c` 前后均 **547,540 B**；harness 下 `git status --porcelain` 为空。
+
+**真实库零触碰**（护栏⑤）：`stat .dsh-home` → `mtime=2026-09-09 10:31:40`（与历史记载一致，未变）。
+
+---
+
+### 3. 验收口径订正：两条哨兵**本来就该红**（不是失败）
+
+派发稿 §6 把 `test:isolated:sentinel` / `-unset` 与 `test:isolated` 并列要求"同上（通过）"。**按源码与项目既有口径，这两条是负向哨兵、期望值就是 FAIL**，我实测与其完全吻合：
+
+| 脚本 | 实测 EXIT | 实测现象 | 规范期望 | 出处 |
+|---|---|---|---|---|
+| `test:isolated` | 0 | `✓ guard.test.ts` 1 passed | 绿 | 哨兵 1「隔离生效」 |
+| `test:isolated:sentinel` | **1** | `[test-isolation] FAIL: DSH_HOME 解析为 D:\Code\LarryAgent\.dsh-home，不在临时根 D:\Temp\Sys 下`（守卫 `isolated-setup.ts:56` throw） | **红（护栏在）** | `archive/roadmap-history.md:498` 原文 `# 哨兵：红（护栏在）`；`.workbuddy/memory/2026-09-09.md:232`「哨兵 → **fail**，且失败原因正是守卫拦截」 |
+| `test:isolated:sentinel-key` | 0 | `✓ sentinel-key-residue.test.ts` + `⚠️ KEY RESIDUE: … creds.txt` | 绿 + 告警 | `roadmap-history.md:500`「R1 反向哨兵：绿 + teardown 告警」 |
+| `test:isolated:sentinel-unset` | **1** | `[test-isolation] FAIL: DSH_HOME 解析为 D:\Code\LarryAgent\harness，不在临时根 D:\Temp\Sys 下`（delete env ⇒ `resolve('')` = cwd） | **红（unset 被拦）** | `roadmap-history.md:499`「R2 反向哨兵：红（unset 被拦）」 |
+
+**判定**：**四条全部符合规范期望**，且**四条进程均自退出**（各 2 s，未触发 180 s 外层 timeout）。**建议派发稿措辞订正**为"`test:isolated` 绿；`sentinel`/`-unset` 红且红因须是守卫 throw；`sentinel-key` 绿 + `KEY RESIDUE` 告警"，避免后续复验者按字面把红哨兵当失败。
+
+---
+
+### 4. 任务 B：`.dsh-home/profiles/{larry,sdk}` 升 015 —— ✅ 3 条判据全过
+
+**改动**：只替换版本号，composition 逐字节未动 —— 与修前基线（`D:\Code\_bak-local015\DREPO_.dsh-home_profiles_*_package.json`）逐行 diff：
+
+```
+--- larry 基线 +++ 现状        @@ -2,8 +2,8 @@
+-    "@deepseek-ai/dsh-base": "0.1.2-rc.1",
+-    "@deepseek-ai/dsh-headless": "0.1.2-rc.1",
++    "@deepseek-ai/dsh-base": "0.1.5-rc.2",
++    "@deepseek-ai/dsh-headless": "0.1.5-rc.2",
+（`@larryagent/plugin-probe: link:D:/Code/LarryAgent/harness/packages/plugin-probe` 原样保留）
+--- sdk 基线 +++ 现状          @@ -2,8 +2,8 @@
+-    "@deepseek-ai/dsh-base": "0.1.2-rc.1",
+-    "@deepseek-ai/dsh-sdk-app": "0.1.2-rc.1"
++    "@deepseek-ai/dsh-base": "0.1.5-rc.2",
++    "@deepseek-ai/dsh-sdk-app": "0.1.5-rc.2"
+（`dsh.profile.bundles` / `patchReload` 未动）
+```
+⇒ 两个 diff **各只有 2 行变化**，即"只改版本号，不改 composition"成立。
+
+**install**：两个 profile 各自 `pnpm install` → 均 `Packages: +243` / `Done in ~7s` / **EXIT=0**（`pnpm-workspace.yaml` 自带 `nodeLinker: hoisted` + `autoInstallPeers: false`，照用未改）。
+
+**逐条判据**：
+
+| # | 判据 | 实测输出 | 判定 |
+|---|---|---|---|
+| B1 | 两个 profile 的 `dsh-base` = `0.1.5-rc.2` | `larry: dsh-base=version:0.1.5-rc.2` / `sdk: dsh-base=version:0.1.5-rc.2` | ✅ |
+| B2 | 两个 profile 的 `pnpm-lock.yaml` 中 `0.1.2-rc.1` = **0** 次 | `larry: lock012_occurrences=0` / `sdk: lock012_occurrences=0`（`grep -o … \| wc -l`） | ✅ |
+| B3 | 两条 `dsh --profile X --help` 均正常返回 | 见 §5 —— **需显式设 `DSH_HOME`**，设后两条均 **EXIT=0** | ✅（附条件） |
+
+> `.dsh-home/` 被 `.gitignore:29` 排除 ⇒ 这两处改动**不入仓库**（与派发稿 §5 注一致）。
+
+---
+
+### 5. 途中波折：`--profile larry --help` 静默挂死 ⇒ 定性为**漏设 `DSH_HOME`**（非 015 缺陷）
+
+**现象**：首次按派发稿 §5 执行时，`dsh --profile sdk --help` 正常，但 **`dsh --profile larry --help` 零输出且永不返回**（`timeout 25` → EXIT=124）。`--task hello`、无参调用、`< /dev/null`、`DEBUG='*'` **四种变体全部零输出挂死**。
+
+**定位过程**：① `--dump-config` 正常（332 行，属外层 dsh 拦截、不 boot）；② 全局 `~/.dsh/profiles` 的 mtime 变成 **00:11**（正是我运行时刻）⇒ 反推 dsh 用的是**全局 home** 而非仓库 `.dsh-home`；③ 核对全局 `~/.dsh/profiles/larry/package.json`：`dependencies: {}` + `bundles: ["@deepseek-ai/dsh-base"]` —— **只声明 dsh-base、没有 app 层** ⇒ 无 app 可 boot ⇒ 静默挂死。
+
+**修正后实测**（`export DSH_HOME='D:\Code\LarryAgent\.dsh-home'`）：
+```
+=== [with DSH_HOME] dsh --profile larry --help ===
+EXIT=0
+[B1-PROBE] external bundle loaded by cordis (tag=v1)
+Usage: dsh --profile headless [options] [task...]
+Answer one task, stream reasoning to stderr, print the final assistant message,
+and exit.
+```
+⇒ 正是 `docs/local-env.md:315` / `:373` 记载的**零成本断言**（`[B1-PROBE] external bundle loaded by cordis (tag=v1)`）。`--dump-config` 亦确认 `larry-probe` 插行在、`hmr` 行 `disabled: false`（larry 的 patch 已生效）。
+
+`export DSH_HOME='D:\Code\LarryAgent\.dsh-home'` 后：
+```
+=== dsh --profile sdk --help ===
+EXIT=0
+Usage: dsh --profile sdk [options]
+Serve DeepSeek Harness SDK clients over stdio JSON-RPC.
+```
+
+**副产品订正**：首次运行时 `sdk --help` 打出的 `[015PROBE] …` 诊断，**来自全局 `~/.dsh/profiles/sdk` 的 `plugin-015-preset-probe`**（该 profile 的 deps 里带此 link），**不是**仓库 profile 的输出 —— 仓库 sdk profile 只挂 dsh-base + dsh-sdk-app，`--help` 输出干净。
+
+**5.3 未撞启动锁**：按 `local-env.md` §1/§2 核对 —— 两处 profiles 目录下**均无 `node_modules.lock` 残留**（含 `.bak.*`），本次未出现锁超时。
+
+**5.4 我的误用对全局 home 的副作用（如实登记）**：那几条未设 `DSH_HOME` 的命令在全局 `~/.dsh` 触发了一次 heal，实际写入仅：
+- 新建**两个空目录**：`~/.dsh/profiles/larry/node_modules/`（空）、`~/.dsh/profiles/larry/.dsh-module-fallback/node_modules/`（空），mtime 00:11
+- `~/.dsh/profiles/node_modules/@deepseek-ai` 目录 mtime 被 touch（内部符号链接仍是 09-11 指向 npm 全局 dsh = `0.1.5-rc.2`，未换目标）
+- `~/.dsh/profiles/larry/package.json` **未变**（mtime 仍 09-10 14:47），`cordis.yml` 内容未变
+⇒ 无内容性破坏，**未回滚**（回滚反而可能弄坏一个本来正常的 profile）。**若老大认为不该留，我可以只删那两个空目录。**
+
+---
+
+### 6. 任务 C：与本机 lockfile 一致性核实 —— 差异**仅 1 行**，成因闭环
+
+**方法**：SSH 取 CVM `~/harness/pnpm-lock.yaml` 摘要 + `scp` 一份副本到 `D:\Temp\cvm-harness-pnpm-lock.yaml`（**只读副本，未覆盖任一侧**），与本机逐行 `diff`。
+
+| 指标 | 本机 `harness/pnpm-lock.yaml` | CVM `~/harness/pnpm-lock.yaml` | 同否 |
+|---|---|---|---|
+| size | 547,540 B | 547,500 B | ✗（差 40 B） |
+| sha256 | `02510f76…1831` | `9a4e0b99…d61e` | ✗ |
+| `lockfileVersion` | `9.0` | `9.0` | ✅ |
+| `0.1.5-rc.2` 出现次数 | **4923** | **4923** | ✅ |
+| `0.1.2-rc.1` 出现次数 | **0** | **0** | ✅ |
+| `packages:` 条目 | 637 | 637 | ✅ |
+| `snapshots:` 条目 | 639 | 639 | ✅ |
+| `importers:` 条目 | **7** | **6** | ✗（差 1） |
+| 关键解析 | `dsh@0.1.5-rc.2(035173…)` / `dsh-sdk-client@0.1.5-rc.2(3bcb32…)` / `zod@4.6.5` / `vitest@5.0.1(…)` / `typescript@6.0.3` | 同左（逐字节） | ✅ |
+
+**diff 全文（`grep -c '^@@'` = 1，唯一 hunk）**：
+```
+@@ -28,8 +28,6 @@
+         specifier: ^5.0.0
+         version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@22.20.2)(vite@8.3.0(@types/node@22.20.2)(yaml@2.9.1))
+ 
+-  packages/plugin-015-preset-probe: {}
+-
+   packages/plugin-probe:
+     dependencies:
+       '@deepseek-ai/cordis':
+```
+⇒ **除该 2 行外两侧逐字节相同**；size 差的 40 B 与 importers 差的 1 正是这两行。
+
+**成因闭环**：
+- 本机 `harness/pnpm-workspace.yaml` = `packages: [- packages/*]`；本机 `harness/packages/plugin-015-preset-probe/` **存在**（`package.json` / `index.js` 19543 B / `cordis.patch.yml`），**且三个文件都在 git 跟踪内**（引入于提交 `8aee09b`，**2026-09-15**）⇒ 本机 `pnpm install` 把它计为一个（无依赖的）空 importer。
+- CVM `~/harness/packages/` **无此目录**（`ls: cannot access '…/plugin-015-preset-probe/': No such file or directory`；`packages/` mtime = **09-14 17:03**）⇒ CVM lockfile 无该 importer。
+- ⇒ 差异**不涉及任何依赖解析分歧**，纯属"CVM 尚未同步到 `8aee09b` 之后的仓库状态"，与已知的"两边代码已分叉"同源。
+
+**回报口径**：**只回报差异、未自行覆盖任一侧**（本机文件未动：改动前 547,540 B / sha256 `02510f76…1831`）。
+
+---
+
+### 7. 收尾：`git status --porcelain` 逐条解释
+
+```
+（输出为空）
+```
+**解释：无任何条目** —— 本次任务**未触碰任何受控文件**：
+- 任务 A 只写入 `harness/node_modules/`（gitignore）
+- 任务 B 只写入 `.dsh-home/profiles/{larry,sdk}/`（`.gitignore:29` 排除；其 `package.json` 亦不在版本控制内）
+- `harness/package.json`、`harness/pnpm-lock.yaml` 已由老大在提交 `a974258` 中完成 015 化，我**未改**（install 后 size 不变、`git diff` 为空）
+⇒ 派发稿 §6 预期"逐条解释哪些是必要改动"，实测是**零条目**：受控侧的必要改动已在派发前落定。
+
+---
+
+### 8. 红线遵守情况
+
+| # | 红线 | 状态 |
+|---|---|---|
+| 1 | 不碰任何 `.credentials.yaml` | ✅ 未读取、未修改任何路径下的凭据文件 |
+| 2 | 不改 `harness/pnpm-workspace.yaml`、`harness/package.json` | ✅ 均未改（`git status` 为空） |
+| 3 | 不删 `harness/pnpm-lock.yaml` | ✅ 未删未改（547,540 B 恒定） |
+| 4 | 不动 CVM 的 `~/.dsh/profiles/larry` | ✅ CVM 侧仅只读（`ls`/`wc`/`sha256sum`/`scp` 下行），**未写入** |
+| 5 | 不擅自 `git commit` | ✅ **本单未产生任何 commit**，改动留在工作区/忽略区，待 WB 复验 |
+
+---
+
+### 9. 待办 / 待裁
+
+| # | 事项 | 归属 |
+|---|---|---|
+| 1 | §1 矛盾：WB 记「本机建不出真 symlink」vs 我实测「四路径全可建」⇒ :280 的 `~/.npmrc` hoisted 固化**是否还需要**、:281「本机 hoisted ↔ CVM isolated」推论**是否作废** | **老大/WB 裁** |
+| 2 | §3 派发稿 §6 验收措辞订正（两条负向哨兵应判"红且红因=守卫 throw"） | WB（出稿方） |
+| 3 | §6 CVM `~/harness` 缺 `packages/plugin-015-preset-probe/`（09-14 后未同步）⇒ 是否随下次整树同步补齐 | 老大/Trae |
+| 4 | `TODO.md` DSH-3.1 前置段对应条目打勾 | 已由我打勾（老大已临时授权），见下 |
+| 5 | §5.4 全局 home 的两个空 `node_modules` 目录是否清理 | 老大（我倾向留着，无害） |
+| 6 | `local-env.md` §4.3.1 记「实测整体仍是 0.1.2-rc.1」现已过时（本机 harness + 工程 home 均已 015） | WB（文档主笔） |
+
+**TODO.md 产物**：已将 :277「📮 剩余两项已派发 Qoder」标记为 ✅ 已回报（附指向本段落），未改动 WB 的其余记载。
+
+**临时文件**（均在 `D:\Temp`，可随时删）：`symchk.bat`/`symchk-clean.bat`（自检）、`taskA-install.log`、`taskA-test:isolated*.log`（4 条测试原始输出）、`check-shells.mjs`（空壳检测器）、`taskB-{larry,sdk}-install.log`、`larry-*.log`/`sdk-help-repohome.log`（DSH_HOME 定位过程）、`cvm-harness-pnpm-lock.yaml` + `lockdiff.txt`（任务 C）。
 
 ---
 
