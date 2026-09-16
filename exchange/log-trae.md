@@ -46,5 +46,3 @@
 | **015 `sandbox-local.confine()` 契约对照 ＋ 方言自修判定** | 本机（读 `ref/dsh-bare` @ 015） | 无 | `TODO.md` DSH-3.7（前置已补） |
 | `permission-presets` 自定义表 ／ `workspace` membership 运行时实测 | CVM（通道已验） | 无 | 前者 ✅ 已验（DSH-3.0.2）／后者 = mapping §8 未验项 1 |
 | `settings/redact` fail-open 构造用例 | 本机隔离 profile | 无 | mapping §5.1（🅿️ 缓办 · 归 TODO 层） |
-
-> ⚠️ **这是"可派发清单"，不是规则**：现行机制下**无自动接收** ⇒ **稿进交流区 ≠ 任务已启动**，须老大点名「该你了，看你的交流区文件」。**本段未派发、未启。**
