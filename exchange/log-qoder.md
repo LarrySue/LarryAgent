@@ -4,6 +4,134 @@
 
 ---
 
+## 🔔 派发中 · 2026-09-16 · 本机环境同代化收尾：harness 树重建 + 工程 home 升 015
+
+**状态**：待接单
+**派发**：老大 ｜ **出稿**：WB（架构 · 复验） ｜ **执行**：Qoder
+**开工前置**：老大已手动完成删除（清单见 §2），并已开启 Windows 开发者模式
+**建议先读**：`docs/local-env.md` §4.3.1、`TODO.md` DSH-3.1 前置段
+
+---
+
+### 1. 任务边界
+
+DSH 基线已从 `0.1.2-rc.1` 换到 `0.1.5-rc.2`。本机「环境同代化」共五处，**两处已完成、其余待做**：
+
+| # | 项 | 状态 |
+|---|---|---|
+| ① | `harness/package.json` + `pnpm-lock.yaml` | ✅ 已 015（lock：`0.1.2-rc.1` 出现 0 次 ／ `0.1.5-rc.2` 出现 4923 次） |
+| ② | npm 全局 CLI（`%APPDATA%\npm`） | ✅ `0.1.5-rc.2` |
+| ③ | **`harness/node_modules`（装置侧依赖树）** | ❌ **待重建** → 本单**任务 A** |
+| ④ | **`.dsh-home/profiles/{larry,sdk}`（工程 home）** | ❌ **待升 015** → 本单**任务 B** |
+| ⑤ | `~/.dsh`（全局 home）回退层 | ✅ `0.1.5-rc.2` |
+
+### 2. 起点状态（WB 已实测复验）
+
+**已删净**：`harness/node_modules` 内容、`.dsh-home/profiles/node_modules`、`.dsh-home/profiles/{larry,sdk}/node_modules` 与 `pnpm-lock.yaml`、`D:\Code\_bak-local015\node_modules.bak-*`、managed node 隔离区里误装的那份 dsh
+
+**必须保留**（已核在）：
+- `harness/pnpm-lock.yaml` — 547,540 B，已是 015（**重建时别动它**）
+- `harness/package.json` — 已 015
+- `D:\Code\_bak-local015\` 下 9 个文件（含 `baseline-20260916-222343.md`，修前基线，可作对照）
+
+**当前起点**：`harness/node_modules` = **空目录**（entries=0）；`.dsh-home/profiles/{larry,sdk}` 各剩 5 项（`.dsh-module-fallback` / `cordis.patch.yml` / `cordis.yml` / `package.json` / `pnpm-workspace.yaml`）
+
+### 3. ⚠️ 开工先自检（它决定任务 A 的装法）
+
+WB 在本机实测到：**创建「真符号链接」会失败** —— 只有 `%TEMP%` 目录内可建，其它路径（含 `D:\Code`、`C:\Users\SuLarry`）均报 `WinError 2 系统找不到指定的文件`；而 **junction 与 hardlink 处处可用**。成因**未查清**（已排除：非管理员权限、非卷类型、非开发者模式、非沙箱开关）。**你的通道未必相同**，所以请先自测：
+
+```cmd
+mkdir D:\_symchk_T
+mklink /D D:\_symchk_L D:\_symchk_T
+dir D:\_symchk_L
+```
+
+判定（**要验证结果，别只看报错**——本机见过 `mklink` 报错但目录实际存在的情况）：
+
+- `dir` 能列出 `D:\_symchk_T` 里的内容、或显示 `<SYMLINKD>` / `<JUNCTION>` → **symlink 可用** ⇒ 走 **A-(a)**
+- 报错且 `dir` 为空 → **不可用** ⇒ 走 **A-(b)**
+
+自检完删掉 `D:\_symchk_L`、`D:\_symchk_T` 再开工。
+
+### 4. 任务 A：重建 harness 依赖树
+
+```
+cd D:\Code\LarryAgent\harness
+```
+
+**(a) symlink 可用**（期望路径 —— 与 CVM 结构一致）：
+```
+pnpm install
+```
+
+**(b) symlink 不可用**（兜底路径 —— 本机走扁平布局）：
+```
+pnpm install --config.node-linker=hoisted
+```
+并**必须**在 `C:\Users\SuLarry\.npmrc` 追加一行 `node-linker=hoisted`。
+> **不要**改 `harness/pnpm-workspace.yaml` —— 那是受版本控制的仓库文件，同步过去会把本机的结构妥协传染给 CVM。
+
+**三个坑（WB 已踩过，务必避开）**：
+1. **`pnpm run <script>` 会先自动跑一次 `install`（不带任何自定义参数）** —— 若走 (b) 却没固化 `.npmrc`，跑一次脚本就把树打回坏形态（WB 实测踩中）
+2. **「假绿」**：pnpm 可能报 `Done` / `EXIT=0` / 零 error，但**顶层链接层全是空壳**（目录在、`package.json` 不在）。**不得以 install 输出当验收**，必须用 `require.resolve` 验证
+3. 若报 `Already up to date` 却树不可用 ⇒ 删掉 `node_modules/.modules.yaml` 与 `.pnpm-workspace-state-v1.json` 再装（pnpm 的状态缓存**不校验内容**，外部删过就不自愈）
+
+### 5. 任务 B：`.dsh-home` 两个 profile 升 015
+
+**只改版本号，不改 composition**（CVM 与本机的 composition 本就不同，不属本单范围）：
+
+- `.dsh-home/profiles/larry/package.json`：`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-headless` 由 `0.1.2-rc.1` → `0.1.5-rc.2`；`@larryagent/plugin-probe: link:D:/Code/LarryAgent/harness/packages/plugin-probe` **保留不动**
+- `.dsh-home/profiles/sdk/package.json`：`@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-sdk-app` 由 `0.1.2-rc.1` → `0.1.5-rc.2`
+
+装法：进各自 profile 目录跑 `pnpm install`。两个 profile 的 `pnpm-workspace.yaml` **已自带** `nodeLinker: hoisted` + `autoInstallPeers: false`，照用、别改。
+
+装完各跑一次（会触发 DSH 的 profile heal，属正常）：
+```
+dsh --profile larry --help
+dsh --profile sdk --help
+```
+
+注：`.dsh-home/` 被 `.gitignore` 排除，这两处改动不入仓库。
+
+### 6. 验收判据（逐条附实测输出）
+
+**任务 A**
+- [ ] 在 `harness\` 下 `node -e "console.log(require.resolve('@deepseek-ai/dsh/package.json'))"` 解析成功
+- [ ] `harness\node_modules\@deepseek-ai\dsh\package.json` 的 `version` = `0.1.5-rc.2`
+- [ ] `harness\node_modules` 顶层**空壳目录数 = 0**（判据：目录存在、无 `package.json`、且非链接）
+- [ ] `pnpm run test:isolated` 通过，且**进程能自己退出**（`exit 0` ≠ 进程已退出，须确认无需 timeout 强杀）
+- [ ] `test:isolated:sentinel`、`test:isolated:sentinel-key`、`test:isolated:sentinel-unset` 三条同上
+
+**任务 B**
+- [ ] 两个 profile 的 `node_modules\@deepseek-ai\dsh-base\package.json` = `0.1.5-rc.2`
+- [ ] 两个 profile 的 `pnpm-lock.yaml` 里 `0.1.2-rc.1` 出现 **0** 次
+- [ ] 两条 `dsh --profile X --help` 均正常返回（非报错退出）
+
+**收尾**
+- [ ] `git status --porcelain` 的输出逐条解释（哪些是本次必要改动、哪些是噪声）
+
+### 7. 红线
+
+1. **不碰任何 `.credentials.yaml`**（任何路径下）
+2. **不改 `harness/pnpm-workspace.yaml`**、**不改 `harness/package.json`**（已 015）
+3. **不删 `harness/pnpm-lock.yaml`** —— 除非 install 失败且你判断必须重算；那就先备份、再重算，并在回报里写明
+4. **不动 CVM 的 `~/.dsh/profiles/larry`**（CVM 侧 composition 不同，属 3.5/3.7 范围，不在本单）
+5. **不擅自 `git commit`** —— 改动留在工作区，由 WB 复验后统一提交
+
+### 8. 任务 C（可选）：lockfile 一致性核实
+
+CVM 的 `~/harness/package.json` 与 `pnpm-lock.yaml` 是 3.0.4 在 CVM **现场改**的；本机这份是**删树重算**的。两边版本号都已 015，但**内容是否一致尚未核**。若有余力：SSH 取 CVM lockfile 的摘要（方案数 / `0.1.5-rc.2` 出现次数 / 关键包解析），与本机比对。**只回报差异，不要自行覆盖任一侧。**
+
+### 9. 回报要求
+
+- 写在本文件**新增段落**，沿用你惯用的表格 + 结论格式
+- **每条验收判据附实测输出**（命令 + 原始输出片段），不接受"已完成"式声明
+- 明确写出任务 A 走的是 **(a) 还是 (b)**；若走 (b)，附自检的原始输出
+- 卡住或无法判定的地方：**如实写「未查清 + 卡在哪」**，不要为叙事完整性补一个成因
+- 完成后在段落顶部标 **状态：已回报**，并在 `TODO.md` DSH-3.1 前置段对应条目上打勾（若你无 TODO 写权限，就在回报里说明"待 WB 勾"）
+
+---
+
 ## 2026-09-16 · 精简候选摸底（老大指令「跑一次精简候选摸底」）
 
 **方法**：全仓 md 文件行数统计 + 关键文件头部状态核查 + 引用面扫描。聚焦 exchange/ 讨论稿（最易积压区）与 docs/ 大型文档。
