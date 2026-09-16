@@ -33,7 +33,8 @@
 - 三条失败 entry 的 `[cause]` 原文与栈帧 ✅ 属实（`session-persistence` / `session-query` 导出名不符、`dsh-http-proxy` 包缺失）
 - D 组三态 err **sha256 完全相同**（`e09432824c33`）⇒「三态同崩」坐实
 - E 组三态 out **完全同形**（同 `2 failed | 12 passed | 1 skipped`、同两项、同耗时量级）⇒ 坐实
-- Tier0：我独立扫 30 件回传，命中**全部**为伪造标签 / `sk-REDACTED` 占位 / 脱敏正则（以 sha256 比对确认）⇒ **无真 key 落盘**（另：E 组机制自检本含 `assertNoKeyOnDisk`）
+- Tier0：我独立扫 30 件**回传件**，命中**全部**为伪造标签 / `sk-REDACTED` 占位 / 脱敏正则（以 sha256 比对确认）⇒ **回传件中无真 key**。
+  - ⚠️ **主体钉死（2026-09-16 老大纠正后修）**：**CVM 本机确有真 key 落盘** —— `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY`（600 / 223 B，`TODO.md:56`「凭据落位」；`log-trae.md:172` D1 行同证）⇒ 本条**只说它没随回传件外泄**，**不是**"CVM 上没有 key"。原写「无真 key 落盘」漏掉主体限定，会与 `TODO.md:56` 直接打架。※ 同类前科见 `archive/report-2026-08-30.md` §四边界限定：「凡读到『key 不落盘』四字，请先确认自己处在哪条路径」—— 那次缺的是**路径限定**，这次缺的是**主体限定**。（另：E 组机制自检本含 `assertNoKeyOnDisk`）
 - `pnpm-workspace.yaml` 改前是 **pnpm 11 占位模板**（五处 `set this to true or false`）⇒ Trae 填 `false` 属**必要修复**，非篡改
 
 **两条增量（Trae 回报未提）**：
