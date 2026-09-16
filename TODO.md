@@ -196,6 +196,9 @@
 - [ ] 长期记忆双写 + 人审（`memory/archiver.py` + `engine.py` → TS 插件挂 `session/` 事件流，保 SQLite+ChromaDB 双写）
 - [ ] **记忆迁移（活资产，非数据搬运）**：**无需全量重嵌**（DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧漂移 `2.2e-7`、cosine ≥ 0.9999999999；⚠️ **硬前提 = 预处理严格对齐**，任一项不对齐会产生 0.77 级假漂移）+ 召回等价性抽样验收 + 语义字段不降级（`is_active` / `last_hit_at` / `source_role`，ChromaDB 只能重灌、机会只有一次）
 - [ ] **2.7.2 边界透明 → TS answerer 插件**（B1 通道已实测可行；退路 = permission-preset 白名单）
+  - ⛔ **执行前置（002 实测，配错就 boot 不起来）**：`preset` 服务要求会 confinement 的 `ctx.shell`（`sandboxMode === undefined` ⇒ load throw）；`patch` 整行替换非 merge（加自定义档须重述官方三条、`workspace-write` 必留表）。**依据** → `docs/dsh/dsh-015-capability-mapping.md` §3.1
+  - [ ] **未验 ①**：`ctx.tools.restrict()` **真 agent 轮** deny 后模型侧行为（002 只覆盖契约面；对应承接总表〈待实测〉②）
+  - [ ] **未验 ②**：**反向对照** —— 故意给一个无 `sandboxMode` 的 `ctx.shell` executor ⇒ 断言 plugin load **throw**（须改 composition；002 未做）
 - [ ] 角色机制（`config.yaml` 5 角色 → `preset/` + `cordis.yml`）
 - [ ] 工具生态（`tools/` 844 行 → DSH 工具插件；**web_search 暂保留自实现 Brave**——不配正文抓取，SSRF/清洗成本是刻意规避的）
 - [ ] 用户画像 📐

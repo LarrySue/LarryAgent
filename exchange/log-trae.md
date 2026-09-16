@@ -94,27 +94,6 @@ dsh plugin --profile sdk add @deepseek-ai/dsh-sdk-app@0.1.5-rc.2
 
 ---
 
-## 暂存 · 尚无正式落点的结论
-
-> 以下三项是本区待处置的活内容（暂无正式文档承接）；正式落点定下后即从本区删除。
-
-**① 两条实验硬约束**（2.7.2 实测；"配错就 boot 不起来"的量级）
-- **preset 服务要求一个「会 confinement 的 `ctx.shell` executor」**——`ctx.shell.sandboxMode === undefined` ⇒ plugin load **throw**。
-- **`ApprovalPolicy` 只有 `ask` / `never` 两档，且 `never` = 全拒（`rejected`）、不是全放行**；且**先于 answerer**（answerer 已明确同意也照样拒）。
-- `patch` 是**整行替换该 row 的 config、不是 merge** ⇒ 加自定义档须把官方三条一并重述；**`workspace-write` 必须留在表里**（否则 `defaultPreset` 推断不出来 ⇒ 整行装载失败 / boot 不起来）。
-
-**② 三条未验标注**（不得升格）
-- 硬约束①的反向未验：故意给一个无 `sandboxMode` 的 executor ⇒ 装载 throw（须改 composition，未动）。
-- 「工具开关」端到端未验：`ctx.tools.restrict()` 的 API 与作用域守卫**已实证**，真 agent 轮 deny 后模型侧行为**未做**。
-- D 组是**装置级**：假 session（只实现 `seq / eventAt / append / header`）、**无真模型轮**。
-
-**③ 方法论三条（J2 / J4 / J5）**
-- **J2**：`dsh --profile <p> --help` **不校验 profile 依赖**（三 home 全绿、1 s 内 exit 0）⇒ 不得用于"profile 可用性"判定（与 `--dump-config` 同类假绿源）。
-- **J4**：`who` / `w` 的源 IP 回显**三通道三种观察**（Trae 回显 / Claude 不回显 / WB 只 `w` 回显）⇒ **并列留痕、不合并**。
-- **J5**：`cvm-probes/*.sh` 用 `${DSH_HOME:-$HOME/.dsh}` 而非字面 `unset`（脚本带 `set -u`、`$DSH_HOME` 参与路径拼接）⇒ 保留该实现。
-
----
-
 # Trae 意见 · DSH-0.1.5 四稿（2026-09-15）
 
 > 📮 **WB 状态批注（2026-09-15）**：7 条**已于 09-15 逐条回复**；**§三「基线 012 vs 015 冲突」已由老大 09-15 拍定解除**（挪 `0.1.5-rc.2`）；§五「可立刻动手」四项**仍未派发**。⇒ 本段保留，待其联动清单落地。
