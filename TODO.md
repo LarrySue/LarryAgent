@@ -49,9 +49,9 @@
 > **判据 / 验收基准 / 负向对照矩阵 / 采数口径 / 执行范式 → `docs/dsh/dsh-migration.md` §3.6「DSH-3」**；CVM 环境与凭据 → `docs/production-env.md` §12；方言修复件范式 → `docs/local-env.md` §4.3；**派发规格（执行人 / 批次）→ 本文件「待派发」段**。
 > ⚠️ 原详细计划稿 `exchange/dsh-3-plan.md`（含四方评审附 A/A-2/B/C）的实质内容已于 2026-09-14 **全数承接入本文件与 §3.6**，该稿已于 `677523d` 处置（删除）；如需追溯评审原文：`git show 3362f57:exchange/dsh-3-plan.md`。
 
-#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📬 **DSH-3.0.4 复验：主结论通过（D1 证成）｜1 条订正 + 5 项未闭合 ｜ 📮 DSH-3.0.5 稿已重写、待启**
+#### DSH-3.0 · 开工前置（CVM 环境 + 凭据 + real-api + 采数）📬 **DSH-3.0.4 已复验（主结论通过 · D1 证成 ｜ 1 条订正 + 5 项未闭合）｜⏳ DSH-3.0.5 已派发 Claude（2026-09-16 · 执行中）**
 
-> **派发块 · 号 = 一份派发稿（2026-09-16 订正）**：**DSH-3.0.1（09-14 → Trae）已停止推进** —— A / B / C / F 四组照用（与 DSH 版本无关）；**D / E 归 DSH-3.0.3**（按 015 重做）；J1 装 profile 授权**作废**（命令钉死 `0.1.2-rc.1`）。**DSH-3.0.2（2.7.2 A-framework 契约实测）** 为插入项，已回报并经 WB 判「过」；其环境污点根因已并入本段 `:64-65` 前置。**DSH-3.0.3（装 profile + 重跑 D / E）已回报（09-16）⇒ 环境阻断**；老大裁定修复路两条都做 ⇒ **DSH-3.0.4（环境同代化修复 + 重跑 D / E）09-16 已发 Trae，当日回报「阶段 Ⅰ」**（任务 0 全层代际诊断 ✅ ／ 任务 1 隔离 015 环境 boot 验证 ✅，**未动 `~/.dsh`**）⇒ **阶段 Ⅱ 同日回报**：任务 2 ✅（**①＋④** CLI / 装置升 015 ＋ **③** 补 3 个可选 peer；**② fallback 层未动、待裁**）、任务 3 ✅ **D / E 两组三态判据全部成立** ⇒ **WB 复验中**（见 `:250`）。
+> **派发块 · 号 = 一份派发稿（2026-09-16 订正）**：**DSH-3.0.1（09-14 → Trae）已停止推进** —— A / B / C / F 四组照用（与 DSH 版本无关）；**D / E 归 DSH-3.0.3**（按 015 重做）；J1 装 profile 授权**作废**（命令钉死 `0.1.2-rc.1`）。**DSH-3.0.2（2.7.2 A-framework 契约实测）** 为插入项，已回报并经 WB 判「过」；其环境污点根因已并入本段 `:64-65` 前置。**DSH-3.0.3（装 profile + 重跑 D / E）已回报（09-16）⇒ 环境阻断**；老大裁定修复路两条都做 ⇒ **DSH-3.0.4（环境同代化修复 + 重跑 D / E）09-16 已发 Trae，当日回报「阶段 Ⅰ」**（任务 0 全层代际诊断 ✅ ／ 任务 1 隔离 015 环境 boot 验证 ✅，**未动 `~/.dsh`**）⇒ **阶段 Ⅱ 同日回报**：任务 2 ✅（**①＋④** CLI / 装置升 015 ＋ **③** 补 3 个可选 peer；**② fallback 层未动、待裁**）、任务 3 ✅ **D / E 两组三态判据全部成立** ⇒ **WB 已复验（主结论通过 · D1 证成 · 1 条订正）**（见 `:257`）。
 
 - [x] ✅ **凭据落位**（2026-09-14）：CVM `~/.dsh/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY`（600 / 223 B，`records:` 段完好）
 - [x] ⚠️ **环境核对**（2026-09-14，**同日订正**）：`dsh@0.1.2-rc.1` 双证（CLI + `package.json`）；node v22.22.2
@@ -65,6 +65,7 @@
   - ⭐ **DSH-3.0.3 前置（2026-09-15 精确化，来自 DSH-3.0.2 的本机实测污点）**：先 `npm view @deepseek-ai/dsh versions` 确认有 `0.1.5-rc.2`，且 **CLI / hoisted 层与 profile 同代** —— 本机 `~/.dsh` 现为**跨版本混合体**（sdk 侧 105 包 @015 ｜ hoisted 根 214 包 @`0.1.2-rc.1` ｜ CLI 是 npm 全局 `0.1.2-rc.1` 经 Junction 进来）⇒ **三条 loader entry 装载失败 + `exit 1`**（`session-persistence-jsonl` / `session-query-sqlite` / `web-fetch-http`）。**015 上没有这个修**（上游 `0.1.6-alpha.1` 新增 `boot/app-boot/src/profile-resolution/` 正面修，PR `fix/profile-module-resolution`）⇒ **DSH-3.0.3 若按 015 原样重跑会重演**。规避：CLI 与 profile 同代装 015，**或**换干净 `DSH_HOME` 全量装 015。**⭐ 2026-09-16 实测：本条预言命中** —— Trae 按 015 原样重跑（CLI 仍 012）⇒ 三条 entry 重演、runtime 启动即崩。⚠️ 两条规避路当时**未同步进 DSH-3.0.3 派发稿**（派发稿只写「装前核代际、装后回核」，未写「不同代走哪条路」）⇒ 执行人只能现场推导（他独立推出了等价的 P2/P3）。**派发稿完整性教训：规格里的「前置不通过 ⇒ 走哪条路」必须一起承接。**
   - **这就是完整 composition**：本机 `.dsh-home/profiles/sdk` 的 deps 恰为这两项，`storage` / `session` 类包随传递装齐（`dsh-session-persistence-jsonl` / `dsh-session-query-sqlite` / `dsh-storage-json`）⇒ **无需**手工补 `storage-sqlite`
     - ⚠️ **2026-09-16 存疑（CVM 实测反例）**：`~/larry-dsh-home/profiles/sdk` 的 deps 是**四项** —— 上述两项 ＋ **`dsh-storage-sqlite`** ＋ **`@larryagent/plugin-storage-probe`(link)** ⇒「两项 = 完整」**未经 CVM 验证**，待核（可能与 `session-query-sqlite` entry 的装载相关）
+      - ✅ **已核（2026-09-16 DSH-3.0.4 任务 2 / 3）：原判「两项 = 完整」实测不成立** —— 缺 **3 个「可选 peer」**（`dsh-session-persistence` / `dsh-session-query` / `dsh-http-proxy`）。它们在锁文件里是 `peerDependenciesMeta.optional: true`，而 profile 配 `autoInstallPeers: false` ⇒ pnpm 把 32 条列进 `transitivePeerDependencies` **并不安装** ⇒ 运行时回落 fallback 层（**这正是 DSH-3.0.3 崩的机制**）。⇒ **015 的完整 composition ＝ base ＋ sdk-app ＋ 这 3 个 peer**（⚠️ 若 fallback 层与 profile **同代**则可省）。旁证：dsh 对 `web-fetch-http` 那类另给 warning —— *"declares no dsh.bundle — installed as a plain dependency, not a profile layer"*
   - ⛔ **2026-09-16 实测（DSH-3.0.3 回报 + WB 复核）**：**装了但不足以 boot** —— deps 已非空（106 包），但 **`dsh-session-persistence` / `dsh-session-query` / `dsh-http-proxy` 三个可选 peer 未装**（profile 配 `autoInstallPeers: false`）⇒ Node 解析回落 hoisted 根（012）⇒ 导出名不符 / 包缺失 ⇒ `plugin tree failed to load`、`exit 1`。**根因 ＝ 跨代，不是漏装**（反证：`~/larry-dsh-home` 同样缺这 5 包、但**同代** ⇒ 不崩）。另缺 `dsh-app-boot` / `dsh-scope`，**未致败**（**缺 ≠ 致败**）
     - ⭐ **WB 补充：跨代是「三方」，CLI 侧也在关键路径上** —— D 组崩栈首行 = `harness/…/dsh-sdk-protocol@0.1.2-rc.1`、rt-real boot 栈首行 = `harness/…/dsh-app-boot@0.1.2-rc.1` ⇒ **boot 器与装置侧协议库都是 012** ⇒ 评估修复路时须把 CLI 层纳入（P1 / P2 只动 profile 侧）
   - ⛔ **`larry` 本次不动**：CVM `~/.dsh/profiles/larry` 现 composition（api-gateway + host-webserver）与本地（base + headless）**不同**，属 3.5/3.7 派发时单独定的事
@@ -101,6 +102,11 @@
 - [ ] 反向组（固定 ID 复现 `id collision`）+ 正向组（新 UUID）+ **关键组**（真实 completed 会话、跨进程复用同 ID）
 - [ ] **对照组 0**：grep SDK client 源码确认**是否存在显式 resume 入口** —— 若不存在，"SDK 不支持 resume"与"固定 ID 会 collision"是**两个独立的 bug**，可能同时存在
 - [ ] ⚠️ **复用 3.1 产出的 nonce 会话，不另造**（否则两处会话构造法会漂）
+- [ ] ⚠️ **判据须先区分"两把锁"**（Trae 2026-09-15 提出，原意见稿已清；未裁则按此执行）——本任务靶子是 **015 的 session 写租约**（`session-persistence-jsonl/lease.ts`：POSIX `flock(2)` / Windows named semaphore，**进程死亡即由内核释放**、**故意不做 TTL 抢占**）；而系统里还有**另一把语义相反的锁** —— `$DSH_HOME/profiles/node_modules.lock`（`dsh-atomic-write`，profile 装/修复时持有），**持有者死亡后永不自动回收**（源码原文：*"the contender never removes an existing lock because file age cannot prove that its owner stopped; **orphan recovery is an operator action**"*）
+  - ① 报告里凡"锁残留"**必须标是哪一把**（两把表现不同：A 锁 = 任何 dsh 命令启动即失败 `atomic-write: timed out waiting for the writer lock`，默认只等 2 s，**极易误判成"启动慢/网络问题"**；B 锁 = 第二个写者收 `SessionAlreadyOwnedError`）
+  - ② 实验**前置须先清 A 锁的孤儿**，否则实验根本没跑起来，会得到"租约没生效"的**假阴性**
+  - ③ 追加一条必须实测的子项：**Windows 侧 `taskkill /F` 杀进程后，named semaphore 是否真被内核释放**（这是"自述 vs 实测"的分界点；本机 Windows + WSL 两侧各有条件）
+  - 📖 机制与实测：`docs/dsh/dsh-migration.md` §3.6（锁争用矩阵）、`docs/local-env.md`（本机锁原文与实测）
 - 执行人：**Trae**（他此前判"改 UUID 后成功"，让他自己验自己的判据）
 - 🟡 前置：我方 CVM 通道核查（见 3.0）
 - [ ] 📚 **参考件**（登记表 3.2 行）：`EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令 —— 复现件的形态参照）；官方 `dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`
@@ -147,6 +153,7 @@
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
 
 - [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 profile 的 `cordis.patch.yml` + **一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）
+- [ ] ⚠️ **首项：先判 015 是否已自修**（Trae 2026-09-15 提出，原意见稿已清）—— 我方修复件（`harness/packages/plugin-sandbox-dialect/`）修的是 **012 上**「Windows 沙箱拦得住但信号传不出去」（node `EPERM: operation not permitted` 不命中签名表）；而 015 动过该包（`sandbox-local` 的 import 从需编译的 `fs-ext` 迁到 `@deepseek-ai/node-addon-system`，且 `sandbox-windows-acl` 有 9 条 README 欠账）⇒ **三选一**：① **先读 015 的 `DENIAL_SIGNATURES` 是否已含 `operation not permitted`**；② **已修 ⇒ 修复件应当退役**（否则长期维护一个上游已修之物 —— 正是 `docs/dsh/dsh-migration.md` §3.0 第三方引入原则要拦的形态）；③ **未修 ⇒ 重跑全链路复验**，**不得沿用 012 结论**（判据与 `confine()` 返回结构在 015 是否仍成立同样未验）
 - [x] ✅ **落盘人已定（老大 2026-09-14）**：先由 **Trae 复跑一次**把 `EPERM` 归因定性清楚，**他通道实测可写则由他落盘**（分配明细见「待派发」段）
 - [x] ✅ **落点已定（老大 2026-09-14）**：写**工程 `.dsh-home/profiles/larry/cordis.patch.yml`**（追加）；**不落 `~/.dsh/`**；**`web` profile 不补建**
   - 判据：3.7 的 end-to-end **真实宿主是 client 启动的 DSH**，而 client **显式指工程 home**（`main.rs:291`）⇒ 落全局只能验"手工跑生效"，属**替身路径**；且"手工跑回落全局／client 读工程"正是 09-14 刚定要消灭的重叠环境
@@ -180,7 +187,7 @@
   - `bundle` 注释掉 → 3.1 ②｜换错 Key → 3.1 ③ 与 3.0 红灯组｜摘/只读 session 落盘目录 → 3.1 ④｜answerer 抛错或超时 → 3.3 拒绝路径（须 fail-closed）｜SQLite 路径指回 DSH 默认后端 → 3.6 哨兵｜kill SDK 客户端 → 3.1 ④ 完整性｜停 ChromaDB → 3.6 双写降级
 - [ ] **每个验收脚本头部加一行「姿势自证」**：本脚本模拟的是哪条真实链路（哪个执行器 / 哪层前导 / 哪个 home+profile）—— DSH-2.5 ③ 教训：**判据姿势不对会同时造出假绿与假红**
 - [ ] ⭐ **环境口径统一（老大 2026-09-14 指令）：同一环境内只用一个 DSH home，不再制造重叠环境**
-  - **CVM**：以裸跑默认 **`~/.dsh`** 为准（凭据已在此）⇒ **`~/larry-dsh-home` 不再作运行 home**（**降级为「负向对照器材」**，见 3.0 `:69`；⚠️ 拿它跑出"绿" = **无 key 假绿**）。`harness/scripts/cvm-probes/*.sh` 的钉死写法**已改，`b4b61ed` ✅** —— 5 处硬钉改为 `${DSH_HOME:-$HOME/.dsh}`、`cvm-step0.sh` 默认值改 `default`（不设 `DSH_HOME`），需隔离时由调用方显式传（裁定 J5：**保留** `:-` 写法，不用字面 `unset`）
+  - **CVM**：以裸跑默认 **`~/.dsh`** 为准（凭据已在此）⇒ **`~/larry-dsh-home` 不再作运行 home**（**降级为「负向对照器材」**，见 3.0 `:73`；⚠️ 拿它跑出"绿" = **无 key 假绿**）。`harness/scripts/cvm-probes/*.sh` 的钉死写法**已改，`b4b61ed` ✅** —— 5 处硬钉改为 `${DSH_HOME:-$HOME/.dsh}`、`cvm-step0.sh` 默认值改 `default`（不设 `DSH_HOME`），需隔离时由调用方显式传（裁定 J5：**保留** `:-` 写法，不用字面 `unset`）
   - **本机**：client 显式指 `.dsh-home` ⇒ 手工跑也**显式指同一处**（勿靠默认回落 `~/.dsh`）
 - [ ] ⭐ **参考件先行（老大 2026-09-14 定）：每切片开工前，先在 `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉定位参考件**（官方读 `ref/dsh-bare/` 或 npm；社区读 `ref/community/`，未落位者按需拉取），**用完回填一行「借鉴点」**；找不到就写“无”
   - ⭐ **派发四要素（老大 2026-09-14 定）：派发稿里逐件写明 ① 路径 ② 怎么参考 ③ 参考程度 ④ 哪部分不可参考**（定义见 `docs/dsh/dsh-migration.md` §3.6 规矩；**落位三件的现成清单见同稿 §2.2.2「可参考 / 不可参考」表**，派发时照抄，勿另行转述）
@@ -247,13 +254,13 @@
     - **DSH-3.0.1 · 开工前置**（Trae，09-14）→ ⛔ **停止推进**：A / B / C / F 照用（与版本无关）、**F 组已闭合**；**D / E 归 DSH-3.0.3**（按 015 重做）；J1 装 profile 授权作废
     - **DSH-3.0.2 · 2.7.2 A-framework 契约实测**（Trae，09-15，插入项）→ ✅ **已回报 + WB 判「过」**；环境污点根因归 DSH-3.0.3；**改判与基线解耦**（012 已有、015 未变）
     - **DSH-3.0.3 · 装 profile + 重跑 D / E**（Trae）→ 📬 **已回报（2026-09-16）**｜WB 复核：**判定成立** —— 任务 1 ✅（profile 装齐 106 包）；任务 2 / 3 ⛔ **不可判**（环境阻断：CLI / hoisted 根 = `0.1.2-rc.1` ↔ profile = `0.1.5-rc.2` ⇒ runtime 启动即崩）
-    - **DSH-3.0.4 · 环境同代化修复 + 重跑 D / E**（Trae）→ ✅ **阶段 Ⅰ ＋ Ⅱ 均已回报（2026-09-16）· WB 复验通过（主结论）**；稿与回报在 `exchange/log-trae.md`（稿 `:8` ／ 阶段 Ⅰ 回报 `:114` ／ **阶段 Ⅱ 回报 `:204`**；逐层原始观测在回传件 `D:\Code\_trae-cvm-evidence\304\004\`）；老大拍「修复路都做」⇒ 四步串行已走完；**阶段 Ⅱ 结果**：①＋④ 升 015（CVM 上二者同处；改前已备份 `.bak-304`）＋ ③ 补 3 个可选 peer ⇒ **`~/.dsh` 现已能 boot / 建 session / 跑完真模型回合**；**⭐ D1 首次证成「凭据文件层真被读取且真用于调用」**（两套装置全程 `delete env.DEEPSEEK_API_KEY`，仅凭 `~/.dsh/.credentials.yaml` 拿到 `completed`）
+    - **DSH-3.0.4 · 环境同代化修复 + 重跑 D / E**（Trae）→ ✅ **阶段 Ⅰ ＋ Ⅱ 均已回报（2026-09-16）· WB 复验通过（主结论）**；**稿与两段回报已于 2026-09-16 按交流区规矩清理**（原文 `git show 8f86de8:exchange/log-trae.md`）；逐层原始观测在回传件 `D:\Code\_trae-cvm-evidence\304\004\`；老大拍「修复路都做」⇒ 四步串行已走完；**阶段 Ⅱ 结果**：①＋④ 升 015（CVM 上二者同处；改前已备份 `.bak-304`）＋ ③ 补 3 个可选 peer ⇒ **`~/.dsh` 现已能 boot / 建 session / 跑完真模型回合**；**⭐ D1 首次证成「凭据文件层真被读取且真用于调用」**（两套装置全程 `delete env.DEEPSEEK_API_KEY`，仅凭 `~/.dsh/.credentials.yaml` 拿到 `completed`）
       - ✅ **WB 复验（本机，2026-09-16，三条成立）**：① **D 组根基** —— 回传件里两装置源码 `d-probe2.mjs:70` / `d-codes.mjs:58` 均 `delete env.DEEPSEEK_API_KEY`，且 D2·D3 的 profile 走同一 `symlink` ⇒ **唯一变量 = 凭据文件**，对照干净；② **Tier0 独立重扫**（304 的 73 件 ＋ 整目录）—— 22 处命中全为伪造标签 / 脱敏正则，**零 SUSPECT**；③ **`initialize` 装置确有正反对照**（原先以为只有正向）—— `t2-layer1.log` / `layer1-rpc-probe.out` 显示**改前基线与第 1 层均 `initializeOk:false`**（error `-32603`），第 3 层 `true`
       - ⚠️ **1 条订正 · 待老大裁**：Trae §1.2 称 ② fallback 层的 012「来自 `larry` / `web` / `acp` 三个 profile」—— **WB 读源码（`dsh-app-boot/lib/index.js:588-627`）不符**：fallback 层来源是 **`installAnchor`**（dsh app 包自身，即 **CLI 安装代际**），`moduleFallbackEntryCurrent` 只比 symlink 目标是否等于当前安装代际 ⇒ **「② 与『`larry` 不动』互斥」缺依据**。但「**② 非必要**」**仍成立**（①＋③ 自洽 ＋ D1 结果性证据）。⚠️ 本机源码为 012 版、CVM 为 015 版（**版本不同**）⇒ 本项判「**存疑**」而非「推翻」，**待上机核**
       - ⛔ **原硬前置已证不敏感（Trae 反例，待复验）**：稿定「boot 探针 `exit 0` 且无 `0.1.2-rc.1`」为硬前置；反例 = home 换成**不存在的目录**，四项观测**逐值相同**（exit 0 ／ 双流 0 B ／ entry 不在）⇒ 机制 = dsh 自动把 home 建成空壳 profile（`dependencies: {}`）、CLI 从自身安装树解析包 ⇒ **假绿源**（与 `--dump-config` 同类）。替代装置 = `initialize`（会 `await loader.await()`）＋ `session/prompt`（惰性真建 session），两通道已跑通
       - ⚖️ **2 处待裁 → 阶段 Ⅱ 处置**：① **② fallback 层**（dsh 自维护）→ Trae **未动**，理由「①＋③ 已让 sdk profile 自洽、不再回落」；⚠️ 其理由链**已订正**（见上条「1 条订正」）⇒ **待老大裁**；② **受控文件 `harness/package.json`（钉死 012，`:26-27`）＋ lockfile** → **已执行**（改前备份 `.bak-304`；`~/.dsh/profiles/sdk/package.json` **无备份**、需回退可 `plugin remove` 那 3 项）。阶段 Ⅱ 另报 **5 条未闭合**（含 **② 层未做**、**CLI symlink 仍指 012 store**、**本机 `~/.dsh` 未修**、`Packages: -60` 未查明、`exit 0` 不可单独当判据）
-    - **DSH-3.0.5 · 独立验收（D / E 三态复现）＋ 判据盲区（空壳 home）**（**Claude**，2026-09-16）→ 📮 **稿已重写、待启**（**老大尚未调度** —— 稿进交流区 ≠ 任务已启动）；**本单已重定位**：原题（验 `initialize` 灵不灵）经 WB 复验**已部分作答**（它对跨代**有**正反对照）⇒ 改为两件真正还缺的事 —— **A 独立复现 D / E 三态**（换人换器材，防自证）＋ **B 空壳 home 下 `initialize` 红不红**（boot 探针在该场景已知是盲区）；样本一律**自造 / 自认证**，**不依赖任何现成环境状态**（原稿正栽在这上面）；稿在 `exchange/log-claude.md` 顶部
-    - **3.2 / 3.7 未启** —— 老大 09-14 的安排：同时只跑一块，待 DSH-3.0.4 后
+    - **DSH-3.0.5 · 独立验收（D / E 三态复现）＋ 判据盲区（空壳 home）**（**Claude**，2026-09-16）→ ⏳ **已派发 · Claude 执行中**（**2026-09-16 老大点名启动**；稿在 `exchange/log-claude.md` 顶部）；**本单已重定位**：原题（验 `initialize` 灵不灵）经 WB 复验**已部分作答**（它对跨代**有**正反对照）⇒ 改为两件真正还缺的事 —— **A 独立复现 D / E 三态**（换人换器材，防自证）＋ **B 空壳 home 下 `initialize` 红不红**（boot 探针在该场景已知是盲区）；样本一律**自造 / 自认证**，**不依赖任何现成环境状态**（原稿正栽在这上面）
+    - **3.2 / 3.7 未启** —— 老大 09-14 的安排：同时只跑一块，待 DSH-3.0.5 后
   - **执行人分配**
     - **3.1–3.6 实现侧 + 3.2 定性** → **Trae**（分工原则 + 他 §八 已自认领）
     - **3.5 上机跑** → **Trae**；**器材由 Claude 出**（`landlock_probe.py` 已回归：ABI 自适应 + 负向开关 + `VERDICT=` 机读行）

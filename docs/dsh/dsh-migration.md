@@ -812,6 +812,12 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - **各执行人各自做一次通道核查**、各自出《我方执行说明》（三种工具形态的坑不同，**谁也不能替谁许愿**）。
 - ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **landlock 判定不可互搬**（实测：ABI 5+ 的掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）。
 - ⚠️ **CVM 产出不得是唯一副本**（机器 2026-10-09 到期）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
+- ⚠️ **启动 / 装载类观测的「假绿三连」**（2026-09-16 实测，逐条都有反例 —— 判「环境可用 / profile 可用」前必读）：
+  - ① **`dsh --profile <p>` 在 profile 不存在时同样 `exit 0` ＋ 双流全空** —— dsh 会自动把 home 建成**空壳 profile**（`dependencies: {}`），CLI 再从**自身安装树**解析 bundles ⇒ **`exit 0` 永远不能单独当判据**（与 `--help` / `--dump-config` 同类，只是这次骗过的是 boot 探针本身）。
+  - ② **boot / 启动探针必须保 stdin 打开** —— sdk app 是 stdio 服务，`stdio:'ignore'`（或 stdin 关闭）会得到「`exit 0` ＋ 双流全空」的假绿（实测栽过一次）。
+  - ③ **必须配负向对照**：拿一个**必然坏的输入**（如**不存在**的 `DSH_HOME`）重跑，观测若**逐值不变** ⇒ 该判据对这类坏**不敏感**。实例：原定四项观测（`exit code` / stderr 行数 / 栈帧版本号 / 3 条 entry）在空壳 home 下与原判**逐值相同**。⇒ **凡「启动 / 加载类」观测，都要问一句"拿必然坏的输入去跑，观测会不会变？"**（这是 §负向对照矩阵 在装置层的前置形态）。
+- ⚠️ **安装 / 启动类命令的退出码也不可信** —— `dsh plugin add` 在 pnpm 报 `Done` 后 **node 不退出**（CVM 实测挂 1:51，本机同）⇒ 范式：**后台 ＋ 轮询日志 ＋ 人工收尾**，不指望退出码（与 `setsid nohup … rc` 同族，但这里是"根本不退"而非"退得慢"）。
+- ⚠️ **通道差异（本机 Windows 侧，2026-09-16 实测 —— 属通道坑，非 dsh 事实，结论不得跨通道外推）**：① **pnpm store 落在盘根会被沙箱拦**（`[ERR_SQLITE_ERROR] unable to open database file`，因默认 `D:\.pnpm-store`）⇒ 显式 `npm_config_store_dir` 挪进允许区即通；② **Node 24 在 Windows 不能直接 spawn `.cmd`**（`spawn EINVAL`）⇒ 跑 npm 须 `shell: true`。
 
 #### DSH-4：差异化能力迁移
 
