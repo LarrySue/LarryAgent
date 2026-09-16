@@ -84,7 +84,7 @@ windows-acl-run: CreateProcessAsUserW failed (Win32 2): command: -e
 
 ## 4. Windows 沙箱：**拒绝方言缺口**（🟢 源码 + 实测，影响模型可见性）
 
-**契约**（🟢 `packages/sandbox/sandbox-local/src/index.ts:205-213`，tag `dsh-v0.1.2-rc.1`）：
+**契约**（🟢 `packages/sandbox/sandbox-local/src/index.ts:205-213`，tag `dsh-v0.1.2-rc.1`；**015 复核见 §4.3.1 —— 该表逐字节未变**）：
 
 ```js
 const DENIAL_SIGNATURES = {
@@ -210,6 +210,36 @@ const DENIAL_SIGNATURES = {
 - 🟢 已证：boot 时 `providerCtor=SandboxDialectProvider`；消费方 `SandboxPwshExecutor.confine()` 拿到的签名 = 加宽后 6 条；消费方 argv 含 preamble。
 - ⬛ 未证：**模型真触发一次被拒命令并看到 `[sandbox: file access denied]`** 的真 end-to-end（boot 内的受限 spawn 被工具沙箱拦）→ 留 DSH-3。
 - 适用面：本修复**仅 Windows**（`confine()` 在非 win32 直接返回原值）⇒ CVM(Linux/landlock) 上不需要、也无副作用。
+
+#### 4.3.1 015 复核：上游**未**自修，修复件继续有效（🟢 2026-09-16 WB 本机上机）
+
+**触发**：Trae 2026-09-15 提出「015 动过 `sandbox-local`（import 从需编译的 `fs-ext` 迁到 `@deepseek-ai/node-addon-system`）」⇒ 须先判「015 是否已自修该缺口」，已修则应让修复件退役。
+
+**结论：未自修。** 判据 = 读 015 的 `DENIAL_SIGNATURES`：
+
+| 项 | 012 | 015 |
+|---|---|---|
+| `DENIAL_SIGNATURES['windows-acl']` | `['access is denied','access to the path','permission denied']` | **逐字节相同** |
+| 含 `operation not permitted`？ | ❌ | ❌ |
+| 含 zh-CN 两条？ | ❌ | ❌ |
+| `Config` 字段（有否签名注入点） | 3 项，无 | **相同**（仍无注入点） |
+| `STATIC_ENFORCEMENT['windows-acl']` | `partial` | **相同** |
+| `PLATFORM_CHAINS.win32` | `['windows-acl']` | **相同** |
+
+⭐ **读法陷阱（本项的真正难点）**：`operation not permitted` 在 015 包里**确实出现 1 处** —— 但它属 **`seatbelt`（macOS）名下**（`DENIAL_SIGNATURES.seatbelt`）。**不判归属就会得出"已修"的反向结论**。⇒ 「某字符串在包里存在」与「Windows 问题已修」是两件事，必须**钉住它挂在哪个 runner 名下**。
+
+**证据链（六条，均为 2026-09-16 实测）**：
+
+1. **同文件全量 diff = 1 行**：`dsh-sandbox-local/lib/index.js` 012→015 唯一差异是 import 源 `@deepseek-ai/node-addon-landlock-run` → `@deepseek-ai/node-addon-system/landlock-run`（**包重命名**），其余 **538 行逐字节一致**。⇒ 「015 动过该包」**只是包改名**，与方言无关。
+2. **runner 端也未修**：`dsh-sandbox-windows-acl` 的 012/015 **全部代码文件 sha256 相同**（`lib/index.js` / `lib/runner.js` / 全部 `.d.ts` / `lib/types-*.js`），仅 3 个 README（同一段话的**文案重写**）与 `package.json`（版本号）变 ⇒ 上游**没有**从"改 runner 输出文本"这一侧修。
+3. **无其他扩展点**：扫 015 profile 全树 **12105 个 js/ts** ⇒ `DENIAL_SIGNATURES` **唯一一处**（就是 `sandbox-local`）；`拒绝访问` / `访问被拒绝` **0 命中**。
+4. **非被改副本**：本机 `~/.dsh/profiles/sdk` 与 CVM 两处独立安装点的同文件 sha **一致** = `100c7d169f44da32`。
+5. **修复件接口全部仍成立**：`super.confine()` 可调 ／ `ConfinedArgv.denialSignatures` 字段名未变 ／ gate `enforcement === 'partial'` 仍成立 ／ 默认导出仍是 provider 类（`export { LocalSandboxProvider, LocalSandboxProvider as default }`）⇒ **修复件不需改码**。
+6. `PLATFORM_CHAINS.win32 = ['windows-acl']` 单候选、无 probe ⇒ 选档逻辑不变。
+
+**⇒ 处置**：修复件**不退役**；DSH-3.7 走「**重跑全链路复验**」路径（**不得沿用 012 结论** —— 本项只证了"方言表未变"，`confine()` 的**运行时行为**在 015 上仍属未验）。
+
+⚠️ **一处代际落差（同日实测，待老大定）**：**3.7 的落点 home = 工程 `.dsh-home`，实测整体仍是 `0.1.2-rc.1`**（`profiles/{larry,sdk}` 各 94/99 包 = 012；回退层 213/223 = 012；建于 09-09~09-10），而本项判定基准是主 `~/.dsh/profiles/sdk`（015）。⇒ 3.7 的 end-to-end 真实宿主（client ＋ 工程 home）**实际跑在 012 上** ⇒ 修复件**当下即必需**；本判定的意义是「**将来工程 home 升 015，修复件仍不退役**」。
 
 ---
 
@@ -478,7 +508,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 
 | 开发期观察（🟢 本机实测） | 到 PC 侧生产使用环境的含义（🟡 推论） |
 |---|---|
-| §4：**② 错误码类别层跨语言成立** —— 英文 Windows 下 node 报 `EPERM: operation not permitted`，同样命中不了所备的 `permission denied` 文案 | ⇒ **这不是中文 Windows 的本地化问题** ⇒ 真实用户的 Windows 上同样**"沙箱拦住了、但拒绝信号传不出去"** ⇒ 修复件（§4.3 `plugin-sandbox-dialect`）**必须随客户端发布**，不能指望"用户系统设置"绕开 |
+| §4：**② 错误码类别层跨语言成立** —— 英文 Windows 下 node 报 `EPERM: operation not permitted`，同样命中不了所备的 `permission denied` 文案 | ⇒ **这不是中文 Windows 的本地化问题** ⇒ 真实用户的 Windows 上同样**"沙箱拦住了、但拒绝信号传不出去"** ⇒ 修复件（§4.3 `plugin-sandbox-dialect`）**必须随客户端发布**，不能指望"用户系统设置"绕开（⭐ **015 亦未修**，见 §4.3.1） |
 | §4：**① 层的作用域 = 取决于跑 DSH 的那棵进程树**（`Get-UICulture` 可被上层应用覆盖） | ⇒ 修复件**两种方言都要留**（零成本）—— 不能假设用户机器"就是中文"或"就是英文" |
 | §4.1：子进程输出**一律按 UTF-8 解码**，而 Windows PowerShell 5.1 默认写 OEM 代码页 | ⇒ 用户机器的代码页不可控 ⇒ **必须依赖 `ENCODING_PREAMBLE`**；⚠️ 而 `--mode read-only` 下 preamble **可能被 ConstrainedLanguage 拒**（§4.1 末尾 ⬛ 未测）⇒ **该未测项在 PC 侧生产环境是必答题，不是可选项** |
 | §7：`enforcement` 在 Windows 上静态声明为 **`partial`**（受限令牌须保留 Everyone 才能初始化） | ⇒ 对真实用户同样只能按 `partial` 宣传（2.10.2「Windows 端侧执行器」已按 partial 规划，**勿按 full 宣传**） |
