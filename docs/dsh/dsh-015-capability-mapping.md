@@ -233,6 +233,10 @@
 
 **处置建议**：① 在 `../local-env.md` 或 3.0 凭据验真条目下写明「**上游脱敏不可作为红线保障**」；② 我方 key 卫生靠**自己的路径**保证（config 不入库、日志出口过滤、展示走占位符——现行做法不变）；③ 3.0「凭据层验真」的验收**只验"读取与使用"，不得把"不泄漏"计入 DSH 承接面**。
 
+> ✅ **③ 的达成（2026-09-16）**：**DSH-3.0.4 任务 3 · D 组 D1 首次证成** —— 全程不注入 `env` key（两套装置均 `delete env.DEEPSEEK_API_KEY`），仅凭 `~/.dsh/.credentials.yaml` 拿到 `completed` ＋ 非空回复 ⇒ **「凭据文件层被读取、且真用于模型调用」成立**；同一装置下 D2（无凭据）报 `MISSING_CREDENTIAL`、D3（伪造）报 `AUTH 401` ⇒ 三态互异，**唯一变量 = 凭据文件**。
+> 依据：`exchange/log-trae.md` 阶段 Ⅱ 回报 §2；原始观测与装置源码见 `D:\Code\_trae-cvm-evidence\304\004\`（WB 本机复验：两装置源码确含 `delete env…`，对照干净）。
+> ⚠️ 本条**只证「读取与使用」**，与 ③ 的禁令一致 —— **不得**据此宣称"不泄漏"。
+
 ### 5.2 🟡 出厂传输安全为零：cookie 未标 `Secure` + 无登出
 
 **证据**（`client/connection` 原文，见 `dsh-015-upstream-inventory.md` 表 A ①）：
@@ -300,10 +304,12 @@
 
 ## 8. 证据边界（诚实清单）
 
-**🟢 已用代码 / 契约复核（硬）**
+**🟢 已用代码 / 契约复核 ＋ 我方运行时实测（硬）**
 - 53 篇子系统规格的存在性 + 正文（`git show <tag>:docs/subsystems/<n>.md`，基线 `dsh-v0.1.5-rc.2`）
 - 本稿引用的全部类型定义 / 契约文字：`token-meter`、`storage`（`DomainSpec` / `KvTable` / `StorageBackend`）、`credentials`（`CredentialRef` / `ResolverCredential` / `CredentialInfo`）、`permission-presets`（`PresetSpec` / `Config`）、`approval`（`ApprovalOutcome` / `ApprovalPolicy`）、`user-questions`（`AskUserQuestionIntent`）、`compaction`（`CompactionResult` / `CompactionTrigger` / `PrunedEntry`）、`web`（`WebFetchResult` / `WebFetchBody` / SSRF 段）、`schedule`（`ScheduleRecord` / `ScheduleDeliveryMode` / catch-up 段）、`workspace`（`Workspace` 接口全部成员）、`session-query`（`SessionResultFilter` / `SessionEventTrace` / `SessionLineageTrace`）
 - 前序已复核项：`lease.ts` 源码、`docs/session-format-status.md` 存在性、`packages/identity` 两版仅 README 改动、`client/file-upload` 与 `util/http-proxy` 的 015 存在性
+- ⭐ **我方运行时实测（2026-09-16，DSH-3.0.4 任务 3）**：CVM `~/.dsh` 上 **D 组三态互异**（真 key → `completed` ＋ 非空回复；无凭据 → `error.code=MISSING_CREDENTIAL`；伪造 → `AUTH 401`），**E 组三态互异**且与 001 的 012 基线**同形**（`14 passed | 1 skipped`、R1 反向哨兵 ✓）；环境侧另证 **`~/.dsh` 在 ①＋④ 升 015 并补 3 个 optional peer 后能 boot / 建 session / 跑完真模型回合**。
+  ⚠️ **路径限定**：只覆盖 **CVM 那台机 ＋ `~/.dsh` ＋ 那条装置路径**，**不得**外推本机。⚠️ **E 组只代表环境变量层**（vitest `isolated-setup.ts` 会把 `DSH_HOME` 覆盖为临时目录）——**不得**用来宣称"凭据文件生效"（那是 D 组的结论）。
 
 **🟡 取自上游原文但未独立复跑（软）**
 - 表 A 的全部 README 欠账条目（1048 条中的引用部分）
