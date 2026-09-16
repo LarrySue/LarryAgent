@@ -1,6 +1,6 @@
 # LarryAgent
 
-个人 AI Agent，技术栈：**Python FastAPI + SQLite + ChromaDB + Vue 3 + Tauri + HTML5**。
+个人 AI Agent，技术栈：**Python FastAPI + SQLite + ChromaDB + Vue 3 + Tauri + HTML5**。后端正**迁移到 DeepSeek Harness（dsh）作为 agent 底座**（见下方〈DSH 迁移〉段）。
 
 单人使用的个人助手：管对话、有长期记忆、能调工具（读写文件 / 执行命令 / 联网搜索）。
 
@@ -11,7 +11,7 @@
 > - **移动版（B/S，规划中）**：浏览器直接访问云端
 > - 云 / 端边界、配置与隔离方案**待 DSH 迁移完成后重新制定**（现为未定案草案，不作依据）
 
-> **当前状态**：主线阶段 **P0–P4 已完成**（历史，详见 `archive/roadmap-history.md`）；**现行在飞阶段与工程债务以 `TODO.md` 为准**（唯一事实源）。当前工作主线为 **DSH 迁移**——把后端切到 DeepSeek Harness：决策稿见 `docs/dsh/dsh-migration.md`，工程落位在 `harness/`。
+> **当前状态**：主线阶段 **P0–P4 已完成**（历史，详见 `archive/roadmap-history.md`）；**现行在飞阶段与工程债务以 `TODO.md` 为准**（唯一事实源）。当前工作主线为 **DSH 迁移**（见下方〈DSH 迁移〉段）。
 
 ---
 
@@ -83,6 +83,20 @@ LarryAgent/
 │  └─────────┘  └──────────┘  └──────────────────┘ │
 └───────────────────────────────────────────────────┘
 ```
+
+> ⚠️ 上图为**当前形态**；后端底座正在按下方〈DSH 迁移〉被替换（前端形态不变）。
+
+## DSH 迁移（进行中）
+
+后端从**自建 FastAPI 底座**换到 **DeepSeek Harness（dsh）** 作 agent 底座：底座能力（compaction / sandbox / 审批 / trajectory / 多模型 / MCP / ACP）开箱获得，省的是「造底座」而非「写代码总量」——**产品语义层全部自做**（能力树 31 子项对照：🟢 可承接 12 ／ 🟡 可降级 15 ／ 🔴 仍须自做 4；长期记忆 / 知识库 / 多端接入等走「借鉴社区设计后自实现，不直装」）。**前端形态不变**（保留 Vue / Tauri）。
+
+| 项 | 内容 |
+|---|---|
+| 路径 | **A-framework（全量 TS 化）**——现有 Python 后端核心（约 3.7–4.4k 行）译为 DSH 插件 / 服务形态；**DSH-6 验收前双轨可回退** |
+| 上游基线 | `dsh-v0.1.5-rc.2`（2026-09-15 拍定，原 `0.1.2-rc.1`）；只读源码在 `ref/dsh-bare/` |
+| 阶段 | DSH-1 事实校准 ✅ → DSH-2 代码形态 + 环境 ✅ → **DSH-3 核心能力 prototype**（开工前置已收口、主体待启动）→ DSH-4 差异化能力迁移 → DSH-5 形态适配 → DSH-6 测试 + 验收 |
+| 工程落位 | `harness/`（pnpm workspace：Cordis 插件 / 探针 / 测试）；参考件在 `ref/` |
+| 权威文档 | 决策稿 `docs/dsh/dsh-migration.md`（已定稿）；逐条承接依据 `docs/dsh/dsh-015-capability-mapping.md`；**进度一律以 `TODO.md` 为准** |
 
 ## 快速开始
 
