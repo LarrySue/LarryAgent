@@ -36,7 +36,7 @@
 ### 1.4 传输安全的一条验收法（未来上公网时用）
 
 `2.10.1` 的可复用验收法（Trae 在 WSL 实测）：**绑 `127.0.0.1` 起服务 → 本机侧可达（200）／局域网侧不可达（000）**。它与 mapping §5.2「出厂 cookie 未标 `Secure`、传输是 loopback HTTP」配成一对 ⇒ **上公网前必须有一条"从非本机探测必须失败"的验收**，而不是只写"我们加了 TLS"。
-（同节的网络基线已入 `TODO.md:88`：`registry.npmmirror.com` 784 KB/s ／ `github.com` 121 KB/s，**同机不同目标差 6.5 倍**。）
+（同节的网络基线已入 `TODO.md` DSH-3.0 段〈顺手采数〉：`registry.npmmirror.com` 784 KB/s ／ `github.com` 121 KB/s，**同机不同目标差 6.5 倍**。）
 
 ## 二、未派发 · Trae 能立刻动手的（供派发参考）
 
