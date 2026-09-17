@@ -431,6 +431,17 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 ---
 
+### 8.7 pnpm 树维护与核对口径（🟢 2026-09-17 实测，DSH-3.7.3 复验）
+
+1. **调用通道：本机必须用 `pnpm.cmd`** —— 裸 `pnpm` 在本机 Bash 通道下**必崩**：npm 的 sh 垫片依赖 `sed`/`dirname`/`uname`（PATH shim 下不存在），且即使绕过也会把入口解析到 **`D:\node_modules\pnpm\bin\pnpm.mjs`**（错根）⇒ 报 `Cannot find module 'D:\node_modules\pnpm\bin\pnpm.mjs'` **是通道问题、不是工程问题**。自证式：`pnpm.cmd -v` = **`11.7.0`**（与 `harness/package.json` 的 `packageManager` 一致）。⛔ 不得改用 `npm` / `yarn` —— 会重排整棵树。
+2. **树回收路径：改完 lock 与声明后，常规 `install` 可能不回收到位** —— 实测（3.7.3，本机与 CVM 同形）：lock 与声明都改对后，`install --offline --no-frozen-lockfile` 报 `Packages: -4` ／ `exit 0`，但**遍历复扫树仍见旧包**；**重命名** `node_modules/.modules.yaml` ＋ `.pnpm-workspace-state-v1.json`（→ `*.bak.<ts>`）后再 install，树才回收（`stale = []`）。
+   - ⚠️ **机理未证、勿编**：这两个文件**本身不含旧包条目**（实测 `0.0.1-rc.1` 计数 = **0**；`.modules.yaml` = 98570 B ／ 1674 行 `hoistedDependencies`）⇒ **「缓存里留着旧记录」被证伪**。合理猜测是「删掉它们 ⇒ pnpm 放弃增量短路、走全量校验」，但**该句是推断、未证**。
+   - ⚠️ **`--force` 是否必需未定**（清状态文件后的 install 与随后 `--force` 之间未复扫）⇒ 只可说「该组合起效」，不可断言 `--force` 是必要条件。
+3. **核对口径：判「树里有没有某个包」必须读 `package.json`，不可用目录名匹配**
+   - `.pnpm` 下的目录名是**截断名**（实测 `@deepseek-ai+dsh-sandbox-lo_fc402b20f9faa9a7c02be663a2ee4def`，`local` 被砍掉）⇒ 用包名 glob 匹配**必然 0 命中**；更隐蔽的是**截断名恰为全长名的前缀** ⇒ 用「子串包含」判定会得到**恒为 0 的假命中**（实测踩过两次）。
+   - 正确姿势：遍历 `node_modules/.pnpm/*/node_modules/{@scope/}*/package.json`，读其 `name` / `version` 比对。⚠️ scope 目录（`@deepseek-ai`）**自身没有 `package.json`**，别把它当空壳。
+   - **更强的判据（树 vs lock 全量对齐）**：把树里读出的 `name` 集合与 lock `packages:` 段的 key 比对 ⇒ 「**树有 lock 无**」应为 **0**（无多余包）；「**lock 有树无**」应**全为异平台 optional**（本机实测 91 项，全是 `sharp` ／ `node-addon-system-*` 的 darwin/linux/wasm 支）。
+   - ⚠️ **「物理目录数」≠「版本数」**：同一版本因 **peer 变体**会有多个物理 entry（实测清理后 `dsh-sandbox-local` **3** 个 entry ／ `dsh-storage-domain` **5** 个 ／ `sandbox-windows-acl` **2** 个，而**版本集合各只一支**）⇒ 报「支数」须**注明是版本数还是物理目录数**，否则会把 peer 变体误读成「没清干净」。
 ## 9. Vue/Tauri ↔ DSH 连通复跑（DSH-2.3）
 
 > **来源**：原文为 Trae 实测报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`（2026-09-09，基线 `dsh-v0.1.2-rc.1`）。2026-09-11 吸收至本节，独立报告文件随之删除（内容等价）。
@@ -501,9 +512,11 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 | `python` / `python3` | **3.13.14**（注入 managed `…\.workbuddy\binaries\python\versions\3.13.12`） | `python` → **3.11.9**（`…\Programs\Python\Python311\`），`py -3` → **3.14.3** |
 | `PYTHONUTF8` / `PYTHONIOENCODING` | **已设**（`1` / `utf-8`，工具注入） | User 作用域**未设** |
 | `npm` | managed node 自带的 npm | `AppData\Roaming\npm` |
+| `node` | **`22.22.2`**（managed `…\.workbuddy\binaries\node\versions\22.22.2-3`，`command -v node` 命中它） | 同机 `D:\App\node\node.exe` 直呼 = **`24.14.1`** |
 | PATH | — | 无 `.qoderwork\bin`（对方进程注入物，不在持久 PATH） |
 
-⇒ **纪律**：任何"本机环境"结论**必须写明取自哪个运行时**（与 §7「判据必须取自真实运行时」同源）。拿某一棵树的结果去描述"本机"，会得到互相矛盾且不可复现的结论——这正是 QoderWork 报告多处失准的根因。
+⇒ **纪律**：任何"本机环境"结论**必须写明取自哪个运行时**（与 §7「判据必须取自真实运行时」同源）。
+⭐ **2026-09-17 追加实证（同机两条通道给出不同 node）**：WB 的 Bash 通道 `node -v` = **`22.22.2`**，而 `D:\App\node\node.exe -v` = **`24.14.1`** ⇒ 派发稿若只写「node 22.22.2」而**未注明通道**，执行方在另一条通道上会读到另一版本并**报为矛盾**（DSH-3.7.3 实际发生过一次）⇒ **写器材基线必须写「版本 ＋ 取自哪条通道」**。拿某一棵树的结果去描述"本机"，会得到互相矛盾且不可复现的结论——这正是 QoderWork 报告多处失准的根因。
 
 ### 10.2 实测成立（持久层，与 DSH 开发相关）
 
