@@ -189,7 +189,7 @@
 > 本块**不写 patch、不跑 e2e**（那是 3.7.2）；只把前提清干净 ＋ 把 `EPERM` 归因定性。
 
 - [x] ✅ **① 已答：归因不成立**（他自己的通道 ＋ 正对照 `C:\Windows`；4/4 可写、09-14 那条命令两处都不复现；**没有为不存在的现象编主体** —— 正确姿势）｜原项：`EPERM` 归因定性（必须用他自己的通道复跑） —— 判据**要钉主体**：同一条拒绝，出自 **AI 工具沙箱** 还是 **DSH 自身沙箱**，归属与严重性**完全不同**（09-12 已有一次同类"主体错位"）。须给**触发命令原文 ＋ 完整错误对象（`code` / `errno` / 栈帧里的模块路径）**，并**指出抛出者是谁**。
-  - ⚠️ **两处各测一次**：`~/.dsh/profiles/…`（09-14 那条记录的现场）与**工程 `.dsh-home/profiles/larry/…`**（**现在的落点**）⇒ 判"哪个能写、不能的那个是谁拦的"
+  - ⚠️ **两处各测一次**：`~/.dsh/profiles/…`（09-14 那条记录的现场）与**工程 `.dsh-home/profiles/larry/…`**（**当时的落点**；⚠️ 该面已于 2026-09-17 退役）⇒ 判"哪个能写、不能的那个是谁拦的"
   - ⚠️ 结论**只写在实测过的那条通道上、不得跨通道外推**（WB 通道能写 ≠ Trae 能写，反之亦然）
   - ⚠️ 写探针只允许"**建一个探针文件后立即删除**"；**不得改动现存任何文件**（全局 home 的 profile 勿动）
 - [x] ⚠️ **② 实体安装属实、但「判据成立」被 WB 复验推翻**（详见下方 WB 复验）｜原项：方言插件实体安装（工程 home） —— 现状（WB 2026-09-17 实测）：**挂载点不存在** —— `.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（`~/.dsh` 侧那份是**全局 home**、不是本项落点）
@@ -202,20 +202,22 @@
   - ✅ **junction 归属订正（WB 实测）**：工程 `.dsh-home/profiles/node_modules/@deepseek-ai/` 的 **241 条 junction 全部指向 `harness/node_modules/.pnpm/…`（本工程）**，**无一条指向全局 npm** ⇒ Trae §3.1① 的「依赖实际解析到全局 npm 的 dsh 自带依赖」是**取错了观测对象**（那是**全局 home** 的机制 —— 全局 home 的 junction 才指 `%APPDATA%\npm\…`）。⚠️ 但他**另一条是对的**：他所读那份包与工程指向那份**同版本同字节**（`dsh-session` / `-persistence` / `-jsonl` / `dsh-llm` 四处 sha256 全同）⇒ **他的 §6 源码行号结论不受影响**
 - [x] ✅ **③ 已答：实际凭据层 = 启动环境变量**（两态互异：无 key ⇒ `MISSING_CREDENTIAL`；env 注入 ⇒ `completed`）；**该层就是 client 会走的那层**（`main.rs:274-291` 只设 `DSH_HOME`、不设 key ⇒ 由 Tauri 启动环境带入）。⚠️ **遗留**：B 态 key 取自 `backend/config.yaml`、**不是 client 的真实取值路径**（"谁往 Tauri 启动环境放 key"未找到代码路径）⇒ Trae 已如实标为待核｜原项：凭据路径打通（在工程 `.dsh-home` 上跑通一次真 prompt） —— 现状：`.dsh-home` **无 `.credentials.yaml`**；而 `client/src-tauri/src/main.rs:275-276` 注释写"凭据**继承本进程 env**（由启动环境注入）"、`docs/production-env.md` §12.5 表把该文件标"**可选**"、本段的「配套三件①」却写"**须建**" ⇒ ⚠️ **三处口径不一致，以实测为准**（这不是笔误，是三种说法并存，须落下一条实测结论）
   - **交付** = 在工程 `.dsh-home` 上跑通一次真 prompt，并**写明实际走的是哪一层**（启动环境 ／ 存储文件 ／ 项目 `.env` ／ 主目录 `.env`）＋ **该层是否就是 client 路径会走的那层**
-    - ⚠️ **落点 profile = `larry`，但 `harness/scripts/dsh-prompt.mjs:25` 硬钉 `profile: 'sdk'`** ⇒ **别把「`sdk` 通了」当成「`larry` 通了」**；本块只要求验掉"凭据层通不通"，**但回报须写明跑的是哪个 profile**（3.7.2 需要能指 `larry` 的入口）
+    - ⚠️ **落点 profile = `larry`，但 `harness/scripts/dsh-prompt.mjs:25` 硬钉 `profile: 'sdk'`** ⇒ **别把「`sdk` 通了」当成「`larry` 通了」**；本块只要求验掉"凭据层通不通"，**但回报须写明跑的是哪个 profile**（3.7.2 需要能指 `larry` 的入口）。⚠️ **2026-09-17 修订**：`larry` 面**已退役** ⇒ 落点改 `sdk`（见 3.7.2 硬前置 2）
   - 🔴 key 值**不得**落任何受版本控制的文件 / 日志 / 工具输出；手工复验命令模板与 `pwd -W` 那个坑见本节「落点已定」条
-- [x] ⭐ **④ 附带硬发现（WB 复核属实）：落点 `larry` 根本不是 SDK 面** —— `larry` = `dsh-base` ＋ `dsh-headless`（CLI 面，要位置参数当 task）；`sdk` = `dsh-base` ＋ `dsh-sdk-app`（stdio JSON-RPC）⇒ **"落盘在 larry"与"client 实际跑的 sdk"不是同一条通道**，**3.7.2 起跑前须在三条里选一条（待老大裁）**：① 给 `larry` 加 `dsh-sdk-app`（改该 profile 依赖）② 把落点改到 `sdk` ③ e2e 改用 CLI 直跑 `dsh --profile larry "…"`（**非 SDK 通道，须单独声明**）
-- [x] ⚠️ **另一处冲突（待 3.7.2 处置）**：`larry` 里**已有一个 `link:` 挂载的 `@larryagent/plugin-probe`**（boot 打 `[B1-PROBE] external bundle loaded by cordis`）⇒ 落点 profile **已有"link 挂载"先例**，与 ② 要求的"必须实体复制"并存，落盘前建议一并定口径
+- [x] ⭐ **④ 附带硬发现（WB 复核属实）：落点 `larry` 根本不是 SDK 面** —— `larry` = `dsh-base` ＋ `dsh-headless`（CLI 面，要位置参数当 task）；`sdk` = `dsh-base` ＋ `dsh-sdk-app`（stdio JSON-RPC）⇒ **"落盘在 larry"与"client 实际跑的 sdk"不是同一条通道**，⇒ **3.7.2 起跑前须在三条里选一条**：① 给 `larry` 加 `dsh-sdk-app`（改该 profile 依赖）② 把落点改到 `sdk` ③ e2e 改用 CLI 直跑 `dsh --profile larry "…"`（**非 SDK 通道，须单独声明**）
+  - ⛔ **已裁（老大 2026-09-17）＝ ②**：落点改 `sdk`，且**把 `larry` 面一并退役**（工程 `.dsh-home/profiles/larry` ＋ 全局空壳 `~/.dsh/profiles/larry` 均已重命名备份；CVM 那份**不动** —— 有主，composition 也不同）。**理由**：该面不接生产通道（`dsh-prompt.mjs:25` 硬钉 `sdk`）；且其"零成本冒烟"价值**不是独有** —— 实测 `dsh --profile sdk --dump-config` 同样 `rc=0` / 不需 key / 0.5s。⚠️ **另订正一条**：`larry` 面里挂的是 **`plugin-probe`，不是方言件** ⇒ 它**当不了方言件的正对照**（方言件单独落在已被证坏的共享层，四组对照见 ②）
+- [x] ✅ **该冲突已随 `larry` 面退役一并消失（2026-09-17）**；`@larryagent/plugin-probe` **包本身保留**（`harness/packages/plugin-probe/`，仍是最小自研 bundle 样板，除 `harness/package.json` 的 `build:probe` 脚本外无引用）｜原记：`larry` 里**已有一个 `link:` 挂载的 `@larryagent/plugin-probe`**（boot 打 `[B1-PROBE] external bundle loaded by cordis`）⇒ 落点 profile **已有"link 挂载"先例**，与 ② 要求的"必须实体复制"并存
 - ⛔ **本块禁区**：不写 `cordis.patch.yml`；不碰 `.dsh-home/profiles/{larry,sdk}/package.json` 与 lockfile（刚由 Qoder 升 015）；**不把插件装进全局 `~/.dsh`**（那份已存在、勿动）
 - 执行人：**Trae**
 
 ##### DSH-3.7.2 · 落盘 ＋ 自检 ＋ 真 e2e（**未派**）
 
 - [ ] ⛔ **硬前置 1（WB 2026-09-17 复验新增）：先钉方言件的依赖代际** —— 现 `peerDependencies: "*"` 解析到 `dsh-sandbox-local@0.0.1-rc.1` ⇒ **落点那份插件当前 `import` 即崩**（已实测，见 3.7.1 ②）。**修好前挂 patch 必崩，不得跳过**
-- [ ] ⛔ **硬前置 2（待老大裁）：落点 profile 的"面"** —— `larry` 是 headless CLI 面、**非 SDK 面**（见 3.7.1 ④）⇒ **入口三选一**后才能定 e2e 跑法
-- [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进**工程** `.dsh-home/profiles/larry/cordis.patch.yml`（**追加，不是覆盖**）
+- [x] ✅ **硬前置 2（已裁：老大 2026-09-17 ＝ ②）**：落点 = **`sdk` 面**（headless 的 `larry` 面已退役，见 3.7.1 ④）⇒ e2e 走 **client 同源通道**；`harness/tests/s0-e2e.test.ts` / `s0-resume.test.ts` 骨架本就钉 `profile: 'sdk'`，**可直接沿用**，不必另造装置
+- [ ] ⛔ **硬前置 3（WB 2026-09-17 新增）：落点必须落"该 profile 自身那层"** —— 即 `sdk/node_modules/@larryagent/plugin-sandbox-dialect/`，**不可**落 `profiles/node_modules/…`（后者实测把 `dsh-sandbox-local` 解析到旧代 `0.0.1-rc.1` ⇒ 插件 `import` 即崩）。3.7.1 落在那层的产物**已退役**（重命名备份在 `profiles/node_modules/@larryagent/*.RETIRED-20260917-*`）
+- [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进**工程** `.dsh-home/profiles/sdk/cordis.patch.yml`（**追加，不是覆盖**；该文件现为模板空态 `[]` ⇒ **须把 `[]` 删掉换成条目**，见「已定前提」末条）
 - [ ] **一次真 end-to-end**：模型触发被拒命令 → 看到 `[sandbox: file access denied]` —— 这是 `docs/local-env.md` §4.3 标注的**唯一未证项**
-- [ ] **生效自检**：`dsh --profile larry --dump-config`（须**显式设 `DSH_HOME=工程 .dsh-home`**）⇒ 官方 sandbox 行**保留 ＋ `disabled: true`**、末尾多出 `sandbox-dialect` 行。⚠️ **别拿"行消失"当判据**（会误判成未生效）
+- [ ] **生效自检**：`dsh --profile sdk --dump-config`（须**显式设 `DSH_HOME=工程 .dsh-home`**）⇒ 官方 sandbox 行**保留 ＋ `disabled: true`**、末尾多出 `sandbox-dialect` 行。⚠️ **别拿"行消失"当判据**（会误判成未生效）
 - [ ] **负向对照**（贯穿规则）：破坏它、看它变红 —— 候选：不落 patch ／ 插件改用 link 装 ／ 摘掉方言三项之一 ⇒ 断言"拒命令**未被识别为沙箱拒绝**"。⚠️ **负向变体须双锚**（同时断言"其余仍活"），否则"环境没起来"与"破坏生效"不可区分
 - [ ] ⚠️ **不得沿用 012 结论**：`docs/local-env.md` §4.3.1 只证了"方言表未变"，`confine()` 的**运行时行为**在 015 上仍属未验
 - 执行人：**Trae**
@@ -230,13 +232,14 @@
   - 📚 详见 `docs/local-env.md` §4.3「015 复核（2026-09-16）」
 - [x] ✅ **落盘人已定（老大 2026-09-14）**：先由 **Trae 复跑一次**把 `EPERM` 归因定性清楚，**他通道实测可写则由他落盘**（分配明细见「待派发」段）
 - [x] ✅ **落点已定（老大 2026-09-14）**：写**工程 `.dsh-home/profiles/larry/cordis.patch.yml`**（追加）；**不落 `~/.dsh/`**；**`web` profile 不补建**
+  - ⛔ **⚠️ 本条已被 2026-09-17 修订**：profile 由 `larry` **改 `sdk`**（同工程 home、同样"追加不是覆盖"）。原判据（真实宿主 = client 启动的 DSH ＋ client 显式指工程 home）**不变且仍有效** —— 变的只是"client 实际用哪个 profile"这一具体值
   - 判据：3.7 的 end-to-end **真实宿主是 client 启动的 DSH**，而 client **显式指工程 home**（`main.rs:291`）⇒ 落全局只能验"手工跑生效"，属**替身路径**；且"手工跑回落全局／client 读工程"正是 09-14 刚定要消灭的重叠环境
   - ⭐ **配套三件（缺一即"落点对了却没生效"）**：① `.dsh-home/.credentials.yaml` **须建**并填 `larry-dev`（`refs.DEEPSEEK_API_KEY`）—— ⚠️ **此处"须建"与另外两处口径冲突**（`client/src-tauri/src/main.rs:275-276` 称凭据**继承本进程 env**；`docs/production-env.md` §12.5 表标"**可选**"）⇒ **改判为待实测项 → 见 3.7.1 ③**（若 client 路径确走 env 注入，则"不带该文件也无 key"不成立）；② 手工复验**须显式注入 `DSH_HOME`**（模板见下）；③ 凡启动 DSH 处**一律显式注入、不靠默认回退**
   - 🔧 **手工复验命令模板**：`cd /d/Code/LarryAgent && DSH_HOME="$(pwd -W)/.dsh-home" node harness/scripts/dsh-prompt.mjs "…"`
     - ⚠️ **`pwd -W` 不是可选的**：Git Bash 的 **env 值不做路径转换**（转换只发生在 argv）⇒ `/d/Code/…` 原样给 Windows node，被 resolve 成 **`D:\d\Code\…`**（当前盘根多一层 `d\`）⇒ DSH **自己新建一个空 home** ⇒ **无 key 假绿、判据全绿**（**与 `cvm-probes` 钉错 home 同形态**）。三写法实测对照 → `docs/production-env.md` §12.7 附二
     - ⛔ **跑 harness 测试时禁止注入真实 home**：`tests/isolated-setup.ts` 强制覆盖为临时目录 + 正向白名单守卫；注入真实路径会触发 `sentinel-failfast` 判 FAIL
   - 🔍 **落盘人待定的实况（2026-09-14 WB 实测）**：Trae 报其通道写 `~/.dsh/profiles/*/cordis*.yml` 被拒 `EPERM` —— ⚠️ **该归因待复核**（09-12 曾出现同类"主体错位"：把 **DSH 自身沙箱**的 EPERM 记成 AI 工具沙箱）；**WB 通道实测可写**（`~/.dsh/profiles/sdk/` 试写成功）。⚠️ **三通道结论不可互推**，Trae 那条须他自己复跑定性
-  - ⚠️ 落盘**是追加不是覆盖**：`.dsh-home/profiles/larry/cordis.patch.yml` 现有 477 B，**已含一条 `- id: hmr / disabled: false`**
+  - ⚠️ 落盘**是追加不是覆盖**：~~`.dsh-home/profiles/larry/cordis.patch.yml` 现有 477 B，**已含一条 `- id: hmr / disabled: false`**~~ ⇒ **2026-09-17 修订**：该面已退役，**落点文件换成 `sdk/cordis.patch.yml`（现为模板空态 `[]`，无 hmr 条目）** ⇒ **"追加"的要害改为"先删 `[]` 再写条目"**
     - ⭐ **追加的正确写法 = 把模板里的 `[]` 那行删掉、换成条目**；**不能**在 `[]` 之后再续 `- id: …`（🟢 2026-09-14 用真实解析器实测：`~/.dsh/profiles/node_modules/js-yaml@4.3.2` 下前者报 `end of the stream or a document separator is expected (2:1)`、后者 OK）。模板文件内容 = 4 行注释 + `[]`（217 B）；工程 `larry` 那份的 hmr 条目就是**已删 `[]`** 的实样
   - 📚 **参考件**：模板的 `dev/cordis.yml` 记了一条开发回路坑 —— **overlay 只加载 host 半边**，`dsh.client` 包级声明发现不了（要测 client 半边必须把包装进 profile）；另：`patch` 是**行级覆盖**非深合并（与本项“追加不是覆盖”互证）；病毒式参照 `WSL & Windows Interop` 整类（37 件，登记表 3.7 行）
 
@@ -348,6 +351,8 @@
     - ⚠️ **WB 复验 · 两条驳回（2026-09-17）**：① Trae 自曝「`run-s0-e2e.mjs` 没有构建前置检查」**不成立** —— 本机该文件 `:40-61` **有**（WB 09-17 所加，提交 `cdc0fde`）；他核的应是 **CVM 上那份滞后同步的副本**（CVM 无完整仓库）⇒ **原待裁项「要不要回填 3.1 那只」随之作废**（无需回填）。② Trae commit message 称"订正 `dsh-pysdk-probe-claude.md:157`"，**但 `0f81c04` 未改该文件** ⇒ **WB 本轮已补正**（声明与交付不一致，记一条）
     - ✅ **WB 承认（出稿方义务）**：派发稿 §5 把 TS 客户端实物路径写成 `$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh-sdk-client/`，**CVM 上不存在**（实物在 `harness/node_modules/@deepseek-ai/dsh-sdk-client`）—— Trae 顶住了"照稿执行"的惯性并报出，**本条为回填**
     - ✅ **原记「3.2 / 3.7 未启」已作废（2026-09-17）** —— **3.2 全块 ＋ 3.7.1 已起跑**（两块**互不依赖**，即原批次 1 的分组，非破「同时只跑一块」）；**3.2.1 ／ 3.7.2 待前序回报后起跑**
+      - ✅ **前序已清（2026-09-17）**：3.2 ✅、3.7.1 ✅ **双双回报并复验** ⇒ **3.2.1 ／ 3.7.2 的前置均已满足，待派**
+      - ⛔ **`larry` 面已退役（老大 2026-09-17 裁）**：原「3.7 落点 = `larry`」作废 ⇒ **3.7.2 落点 = `sdk` 面**（硬前置 2 已裁）。工程 `.dsh-home/profiles/larry` ＋ 全局空壳 `~/.dsh/profiles/larry` **两处已重命名备份**（后缀 `.RETIRED-20260917-1808`），**3.7.1 落在共享层的产物同步退役**（该层已实证会取到旧代）。⚠️ **CVM 那份 `larry` 不动**（有主、composition 不同）。`@larryagent/plugin-probe` **包保留**（最小自研 bundle 样板）
     - ✅ **3.1 前置 · 仓库资产缺陷（WB 2026-09-16 发现 → 2026-09-17 已处置）**：`harness/scripts/cvm-probes/` 有 **3 个脚本 6 处曾钉 `@0.1.2-rc.1`**（⚠️ **原记「7 处」有误，2026-09-17 全目录逐字节实测为 6 处**：`cvm-setup-profile2.sh` ×3 ／ `cvm-acp-setup.sh` ×2 ／ `cvm-task1-setup.sh` ×1；`cvm-step0.sh` 等其余 8 个文件无钉版）—— 三者都是「**在 CVM 上装 profile ／ 插件**」的复现脚本，**会被 3.1 起的任务参考** ⇒ **照抄会装出 012 profile、重演混代崩溃**（3.0.3 已踩过一次）。详见 `docs/dsh/dsh-migration.md` §2.3 未闭合项 #6。**老大 2026-09-17 裁：走 ② 参数化** ⇒ ✅ **已执行（WB 同日）**：三脚本在 `export DSH_HOME=…` 之后插入 `DSH_VERSION="${DSH_VERSION:-0.1.5-rc.2}"` ＋ 3 行说明注释，6 处字面量改 `@${DSH_VERSION}`；**双验通过** —— `set -n` 语法检查 RC=0（无语法错）、展开验证「默认 ⇒ 6 处全 `0.1.5-rc.2` ／ 显式 `DSH_VERSION=0.1.2-rc.1` ⇒ 6 处全回 `0.1.2-rc.1`」、行尾纯 LF 未混排。✅ **已回同步 CVM**（scp 三文件；两侧 sha256 逐字节一致 `0484d821…` ／ `5fe6b699…` ／ `77986d45…`；同步前 CVM 侧与仓库 HEAD **同源**、无现场改动被覆盖）
     - ✅ **3.1 前置 · 装置侧两面不同代（WB 2026-09-16 发现 → 同日处置）**：`harness/package.json:26-27` 是**受版本控制**文件，本机原钉 `0.1.2-rc.1`，而 **CVM `~/harness` 那份已被 3.0.4 现场改成 `0.1.5-rc.2`**（`.bak-304` 为证）⇒ **同一份文件两面不同代**；又因同步方式 = **整树 tar**（CVM `SYNC-ANCHOR.txt` 原文 `excluded: node_modules, .git, dist`）⇒ **`package.json` ＋ `pnpm-lock.yaml` 都在覆盖范围内**，3.1 期间任何一次同步都会把 CVM 打回 012、重演 3.0.3 混代崩溃。**老大 2026-09-16 拍「本机整体升 015」（原选项 ①）**：
       - ✅ **已执行（提交 `a974258`）**：`harness/package.json` ＋ `pnpm-lock.yaml` 升 015（lockfile **删树重算**：`0.1.2-rc.1` 出现 0 次 ／ `0.1.5-rc.2` 出现 4923 次）；npm 全局 CLI（`%APPDATA%\npm`）升 `0.1.5-rc.2`；本机 `~/.dsh` 回退层已指 015 ⇒ `:271` ④「本机 `~/.dsh` 未修」**就此结清**
@@ -362,12 +367,12 @@
     - **3.5 上机跑** → **Trae**；**器材由 Claude 出**（`landlock_probe.py` 已回归：ABI 自适应 + 负向开关 + `VERDICT=` 机读行）
     - **3.0 CVM 侧**（本机 harness 同步 + real-api 三态 + 采数）→ **Trae**（他自验通道 ✅ 0.94 s、四范式齐备）；**Claude 只在验收环节上机**做负向对照
     - **3.8 A 段协议设计稿** → **WB 出稿、Trae 承接实现**。依据：分工「WB=架构」；且其核心是"审批请求双向中继"的协议定义（3.3 三段收敛的终点），需**跨段视角**，写码者自定协议易把实现细节当规范
-    - **3.7 落盘** → 先由 **Trae 复跑一次**把 `EPERM` 归因定性清楚（⚠️ 该归因**待复核**；09-12 曾有同类"主体错位"：把 **DSH 自身沙箱**的 EPERM 记成 AI 工具沙箱），**他通道可写则由他落盘**
+    - **3.7 落盘** → ✅ **定性已完成（3.7.1，2026-09-17）：`EPERM` 归因不成立**（Trae 自己通道 4/4 可写、原命令两处均不复现）⇒ **落盘归 3.7.2**，落点 = **`sdk` 面**（不再是 `larry`）
     - **3.9 收口核对表 / `docs/` 维护 / 复验他人结论** → **WB**
   - **批次节奏**
     | 批次 | 内容 | 说明 |
     |---|---|---|
-    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖（凭据已定、落点已定）；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ 已派 ／ 3.7 **拆为 3.7.1（已派）＋ 3.7.2（待 3.7.1 定性后起跑）** |
+    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ **已回报＋复验** ／ 3.7 **拆为 3.7.1（✅ 已回报＋复验）＋ 3.7.2（前序已清、待派）**；⚠️ 3.7.2 落点**已由 `larry` 改 `sdk`**（该面已退役） |
     | **2** | **3.1 S0** | 单发；后续一切的地基 —— ⭐ **已提前至批次 1 之前派发（老大 2026-09-17 拍：编号在前即先做）** |
     | **3** | **3.3 → 3.4 → 3.5 → 3.6** | **严格串行**（逐层叠加、单独验收） |
     | **4** | **3.8** + **3.9** | 3.8 可在批次 3 后期并行 |

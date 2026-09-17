@@ -565,7 +565,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 | # | 事实 | 等级 |
 |---|---|---|
-| 1 | **`larry` profile 不是预置的** —— `dsh --profile larry` 报 `profile does not exist`，须自行 `plugin add` 组装 | 🟢 |
+| 1 | **`larry` profile 不是预置的** —— `dsh --profile larry` 报 `profile does not exist`，须自行 `plugin add` 组装 | 🟢 |〔2026-09-17：该 profile **已退役**（本机工程＋全局两处）；**该事实本身仍成立、且适用于任何自建 profile** —— 换名后判据不变〕
 | 2 | **`plugin add` 依赖 `pnpm`** —— 缺它则命令直接失败（CVM 初始无 pnpm） | 🟢 |
 | 3 | **默认 `add` 会拉到错误版本** —— `@deepseek-ai/dsh-api-gateway` 的 `latest` 指向 **`0.0.1-rc.1`**（2026-09-15 复核：**该 tag 至今未推进**，而主包已到 `0.1.5-rc.2`、该包自身也已有 `0.1.6-alpha.1`）⇒ **「latest tag 不推」是上游多包通病**（`dsh-web-app` / `dsh-sdk-client` 的 latest 同样停在 `0.0.1-rc.1`），非本包个案，其依赖树引用 **`@deepseek-ai/dsh-type-meta`——该包在 npmmirror 与官方 registry 均 404、不存在** → install 直接失败。**必须显式锁版本 `=0.1.2-rc.1`**（与主包同版本） | 🟢 |
 | 4 | **`plugin add` 只写入 `dependencies`，从不写入 `dsh.profile.bundles`** —— 装了不等于加载。实测 layer 数：web profile **145** / 自组 larry **85**（仅 `dsh-base`） | 🟢 |
@@ -649,7 +649,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
     🟢 **WB 本地复核（`git show`）：机制 8/8 属实** —— `0.1.2-rc.1` 首核（行号 2 处偏差：#2 实际 154 行、#3 实际 22 行）；**2026-09-15 在 `0.1.5-rc.2` 上复跑**：8 项机制签名**全部存续**，其中 `interaction/user-approval/src/index.ts` **两版 blob 逐字节相同**（`8e1a8d05d468`），行号漂移仅 2 处（已就地更新）。**报告的行号不可全信，机制结论可信**
   - **反向举证（主动找推翻自己结论的证据，未找到否决项）**：① **运行中热重载 patch 级配置** ❌ 确认不可行（`patchReload: startup` 出自 sdk-app README"Configuration changes require restart"）——**但非 A 案否决**：patch 是启动期组合，运行期可变性由 systemPrompt context 动态注入（#2）+ ctx 服务动态实现（#4/#6/#8）覆盖；需重启的是部署期配置（角色清单、工具启用表），非对话期行为，单用户可接受。② **同会话运行中热切角色（含工具集）** ⚠️ 未找到公开 API（工具集在插件 apply 时经 ctx.tools 注册）——**非否决**：产品树当前无此承诺；会话级角色（新建会话选角色）可经 preset 达成，**记入 DSH-3 首验输入**。③ **运行中替换已注册的 ctx 服务实现** ⚠️ 未查证 cordis 是否支持——**非否决**：服务实现替换是"启动时加载哪个插件"的决策（fs-sandbox 的 swap 语义），部署期选择足够
   - **不选 B 案的理由**：8 项无一项触及 agent loop / session 内核 / 事件存储；fork 的代价（每次上游发版 merge 一个 alpha 框架的破坏性变更）换不来任何必需收益。升级 SOP 在 A 案下 = 更新依赖版本 + replay 回归
-  - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 `larry` profile（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**（⚠️ **仅 `larry`；`sdk` profile 为 `startup` 须重启**，见环境规格表 sdk 行）；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
+  - **已知边界（不阻塞 A 案）**：① ~~`patchReload: startup` → 部署期配置变更需重启~~ **⚠️ 已由 DSH-2 实测修正**：第 0 项判的 `startup` 出自 **sdk-app** bundle；我们实际采用的 profile（**2026-09-17 前为 `larry`，该面已退役 ⇒ 现按 `sdk`**）（`dsh-base` + `dsh-headless`）manifest 为 **`patchReload: live`** 🟢（WB 本地 `cat .dsh-home/profiles/larry/package.json` 核实）。**配置热重载可能可行，不必按"改配置必重启"规划**（⚠️ **仅 `larry`；`sdk` profile 为 `startup` 须重启**，见环境规格表 sdk 行）；② **同会话运行中热切角色（含工具集）未找到公开 API**——当前以「产品树无此承诺」非否决，**属条件性风险：若将来产品树加此承诺，A 案可能不够**，列 DSH-3 首验
 
 **退出条件（5 项实测 · ✅ 全部通过 · 2026-09-10 收口；任一不过则 DSH-3 收益表重估、C 路径回退进入议程）**：
 1. `storage/` 外接 SQLite 可行性 —— ✅ **可行**：官方 backend 仅需配置，`path` 可指任意绝对路径；外部库当日落盘、我们的 `mem-1` 行可读出；反向哨兵证数据走 SQLite 而非默认 json（判据见 `../production-env.md` §5）
@@ -672,7 +672,8 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 | **端到端动态验证** | **WB 侧可独立完成**：Git Bash 工具 + 环境变量注入测试 key | 🟢 2026-09-09 复测：握手 / 事件流 / **真实 LLM 回包**全部跑通，见下方「WB 复验边界（修订）」 |
 | **WB 的 PowerShell 工具** | **不可用**：未启用 ConPTY，原生 exe（`node.exe`）无输出、等同于不执行 | 🟢 WB 实测：`node -v` 返回空、纯 cmdlet（`Set-Content`）正常 |
 
-> **零成本复验法（🟢 WB 独立跑出，可复用）**：`dsh --profile larry --help` **即触发 cordis apply，不需要 LLM key**。凡要验"插件到底加载没加载"，先用这条，不必跑完整会话。
+> **零成本复验法（🟢 WB 独立跑出，可复用）**：`dsh --profile <p> --help` **即触发 cordis apply，不需要 LLM key**。凡要验"插件到底加载没加载"，先用这条，不必跑完整会话。
+> 〔2026-09-17 修订：原写 `--profile larry`，该面已退役 ⇒ **profile 名换成当时在用的那个**；另经实测 `--dump-config` 同样零成本（不需 key、约 0.5s），且**任意 profile 都成立**（`sdk` 面实测 `rc=0`）⇒ 该手法**不绑定 larry**。〕
 >
 > ⚠️ **WB 复验边界（2026-09-09 立，同日修订）**：
 >

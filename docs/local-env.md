@@ -49,7 +49,7 @@ Error: atomic-write: timed out waiting for the writer lock at C:\Users\SuLarry\.
 
 ## 2. `--patch` 引本地路径包会触发 heal → 撞上面那把锁
 
-**现象**：`dsh --profile larry --patch ./packages/<pkg>/cordis.patch.yml` 启动即锁超时。
+**现象**：`dsh --profile larry --patch ./packages/<pkg>/cordis.patch.yml` 启动即锁超时。〔2026-09-17：`larry` 面已退役；**该现象与 profile 名无关**，换任一自建 profile 同样适用〕
 
 **原因**：本地路径包不在 profile 的 `node_modules` 里 → boot 时 `healProfilesModuleFallback` 试图 pnpm install → 争锁（见 §1）。
 
@@ -192,7 +192,7 @@ const DENIAL_SIGNATURES = {
 |---|---|
 | 能否用 `- id: sandbox` + `name:` **原地改名**？ | ❌ **不行** —— loader 的 id 定位**只覆盖 `config`，不改该行加载哪个包**（sandbox 行仍是官方包）。故必须 disable + insert |
 | 新行 id **必须**叫 `sandbox` 吗？ | ✅ **不必** —— 消费方按**服务名**注入（`dsh-pwsh-sandbox` 声明 `static inject = ['subprocess','sandbox','sandboxPolicy']`），不是按 loader 行 id |
-| 插件怎么进 profile？ | **实体复制**进 `$DSH_HOME/profiles/node_modules/@larryagent/…`；`link` 方式下 bare import 从源目录解析，**取不到** `@deepseek-ai/dsh-sandbox-local` |
+| 插件怎么进 profile？ | **实体复制**进 `$DSH_HOME/profiles/<profile>/node_modules/@larryagent/…`（**该 profile 自身那层**，2026-09-17 修订）；`link` 方式下 bare import 从源目录解析，**取不到** `@deepseek-ai/dsh-sandbox-local` |
 
 **生效自检**：`dsh --profile <p> --dump-config` → 官方 sandbox 行**不会消失**，而是**保留 + `disabled: true`**，末尾多出 `sandbox-dialect` 行。⚠️ **别拿"行消失"当判据**（会误判成未生效）。
 
@@ -200,23 +200,26 @@ const DENIAL_SIGNATURES = {
 
 **探针物料现状（2026-09-11）**：仓库外复验物 `D:\Code\sandbox-probe\`（`mount-probe.json` / `v3.json` / `forensics.json` / `dump-config.txt` / `boot-help.txt` 等）已随仓库外清理**整体进回收站**（可恢复窗口内可取回）。⇒ `mount-artifact-replay.mjs` 的**输入产物已不在原位**，要复跑须先用 `*.verify.patch.yml` 重跑一次 boot；**本节结论不依赖该产物，判定不受影响**。
 
-**覆盖面**：`sdk`／`larry`／`web` **三个 profile 都要**（三者 bundles 均含 `@deepseek-ai/dsh-base` ⇒ 均带 sandbox 行 + win32 下启用的 pwsh-sandbox）。插件实体放在 `profiles/node_modules/@larryagent/`，**三个共享，一份足够**。
+**覆盖面**：凡 bundles 含 `@deepseek-ai/dsh-base` 的 profile 都要（带 sandbox 行 + win32 下启用的 pwsh-sandbox）⇒ **按实际启用的面来，不预设名单**。
+
+> ⛔ **2026-09-17 推翻原记「共享层一份够多面」**（🟢 WB 实测 + 四组对照）：原记「插件实体放在 `profiles/node_modules/@larryagent/`，**三个共享，一份足够**」—— **该层是坏的**。同一份插件从该层 `import` 时，`dsh-sandbox-local` 被解析到 **`0.0.1-rc.1`（npm latest 那支）**，而同树 `dsh-llm` 是 `0.1.5-rc.2` ⇒ **`import` 即崩**。**必须落各 profile 自身的 `node_modules`**（那里按 profile 自己的 lock 装，代际正确）。
+> 溯源：`peerDependencies` 写成 `"*"` 是**旧代之所以进树**的原因，**决定命中结果的是落点层级** —— 两因素叠加，不是同一个；引入点 = **`a974258`**（升 015 时 lockfile 重算）。修法见 `TODO.md`「DSH-3.7.2 硬前置 1」。
 
 **落盘状态**：⬛ **未落盘** → **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
 
-> ⚠️ **2026-09-14 订正上句的判据表述**：原记"三个 profile 的 `cordis.patch.yml` 仍为 `[]`"—— **只在全局 home 成立**。实测须分两处看：
+> ⚠️ **2026-09-14 订正上句的判据表述**（⚠️ **`larry` 面已于 2026-09-17 退役**，下述路径为当时事实）：原记"三个 profile 的 `cordis.patch.yml` 仍为 `[]`"—— **只在全局 home 成立**。实测须分两处看：
 > - `~/.dsh/profiles/{larry,sdk,web}/cordis.patch.yml` = **模板空态 `[]`** ✅ 原记正确
 > - **`.dsh-home/profiles/larry/cordis.patch.yml` = 477 B，已含一条 `- id: hmr / disabled: false`**（即 §8.5 的模块级 HMR 开关）⇒ **非空**
 >
 > ⇒ **"未落盘"的结论不变**（两者都不是方言修复件），但**判"是否落盘"要看内容、不看文件是否为空；且必须区分 home**（工程 `.dsh-home/` vs 全局 `~/.dsh/`）。⚠️ 3.7 落盘时**是追加不是覆盖**（该文件已有那条 hmr 条目）。
 >
-> ⚠️ **前置缺项实测（2026-09-17 WB，仅本机 PC 侧）**：3.7 的落盘**前提并非已就绪**，两项缺项如下 ——
-> - **工程 `.dsh-home` 的挂载点不存在**：`.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（插件没装进去）
+> ⚠️ **前置缺项实测（2026-09-17 WB，仅本机 PC 侧）**：3.7 的落盘**前提并非已就绪**，两项缺项如下（两项**均已处置**，见段末）——
+> - **工程 `.dsh-home` 的挂载点不存在**：`.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（插件没装进去）〔2026-09-17：3.7.1 曾落进该共享层，**该产物已随退役移除**；且该层已被证会取到旧代 ⇒ 落点改 profile 自身层〕
 >   ⇒ 只写 patch 而不装插件，patch 里那行 `name: '@larryagent/plugin-sandbox-dialect'` **解析不到**
 > - **全局那份与仓库源「同功能、不同版」**：`~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/index.js`（2962 B）
 >   与仓库 `harness/packages/plugin-sandbox-dialect/index.js`（4087 B）**去掉注释后逐行一致**，差异**只在注释头**
 >   ⇒ 复制**以仓库源为准**，**勿从全局 home 拷**（且全局那份是主 `~/.dsh` 的，本项落点在工程 home）
-> - ⇒ 两项已列入 **DSH-3.7.1**（见 `TODO.md`）；**3.7.2 才落盘**
+> - ⇒ **两项处置（2026-09-17 收口）**：① 落点从「共享层」改为**该 profile 自身层**（`sdk/node_modules`，见 3.7.2 硬前置 1）；② **全局那份不再作参考**（本项只落工程 home，且全局副本同功能不同版）。**落盘仍属 3.7.2**
 
 **已证 / 未证边界（别过度读）**：
 - 🟢 已证：boot 时 `providerCtor=SandboxDialectProvider`；消费方 `SandboxPwshExecutor.confine()` 拿到的签名 = 加宽后 6 条；消费方 argv 含 preamble。
@@ -327,7 +330,7 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 > **来源**：原文为 Trae 实测报告 `docs/dsh/dsh-b1-plugin-probe-trae.md`（2026-09-09）。2026-09-11 吸收至本节，独立报告文件随之删除（内容等价）。
 > **结论（两个"能"，已采纳）**：① **DSH-2.2** 官方 demo 能在本机 Windows 跑通一次完整会话；② **DSH-2.1** 自做 Cordis 插件能经 **B1 通道**挂进 DSH 并被 cordis 实际加载。两者都不是"环境能装/能起服务"，而是**跑通到「LLM 完整回复 + 我们的 `apply` 被实际执行」**。
-> 🟢 **WB 独立复验（2026-09-09）**：静态 + 动态证据均本地复现——`dsh --profile larry --dump-config` 见 `larry-probe` 插行、`hmr disabled: false`；`dsh --profile larry --help` 打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)`。**核心结论成立。**
+> 🟢 **WB 独立复验（2026-09-09）**：静态 + 动态证据均本地复现——`dsh --profile larry --dump-config` 见 `larry-probe` 插行、`hmr disabled: false`；`dsh --profile larry --help` 打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)`。**核心结论成立。**〔该 `larry` 面已于 2026-09-17 退役；结论与手法（`--profile <p> --dump-config/--help`）不随面退役，可换任一 profile 复用〕
 > ⚠️ **WB 未独立复跑**：官方 demo 完整会话（需真实 key 触发 LLM），采信报告的 exit 0 + stdout + 会话产物说明。
 
 ### 8.1 版本基线（🟢 2026-09-09 快照；表内现值已于 2026-09-17 校）
@@ -339,7 +342,7 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 | pnpm | **11.7.0**（`npm i -g`；与 root `packageManager: pnpm@11.7.0` 精确一致） |
 | dsh | `@deepseek-ai/dsh@0.1.5-rc.2`（npm 全局）〔2026-09-09 快照值 `0.1.2-rc.1`，2026-09-16 随 DSH-3.0 收口升级〕 |
 | DSH_HOME | `D:\Code\LarryAgent\.dsh-home`（仓库内，已 gitignore） |
-| profile | `larry` = `dsh-base` + `dsh-headless` + 我们的 `@larryagent/plugin-probe` |
+| profile | ~~`larry` = `dsh-base` + `dsh-headless` + 我们的 `@larryagent/plugin-probe`~~ 〔**2026-09-17 退役**：该面不接生产通道，且开发/冒烟价值已被 `sdk` 面涵盖 ⇒ 现按 `sdk` 面组装，见 §4.3〕 |
 | 模型凭证 | 测试 key 仅经**环境变量** `DEEPSEEK_API_KEY` 注入，未落任何文件 |
 
 （工程规格另见决策稿 §3.6「本阶段已定案的环境规格」表。）
@@ -366,7 +369,7 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 ```
 
 插件骨架 = `export const name` + `export const inject` + `apply(ctx, config)`（范式见 `packages/fs/tool-fs/src/index.ts`，从 `export const inject` 起）。
-挂载动作：`dsh plugin --profile larry add <本地包路径>` → reconcile 后 profile manifest（`package.json` 内）的 `dsh.profile.bundles` **自动纳入该包** —— 这就是"挂进 profile 层"。⚠️ 注意与 B 段 Gateway 判定第 4 条呼应：`plugin add` 默认**只写 dependencies**，走 bundle 声明这条才会进 `bundles`。
+挂载动作：`dsh plugin --profile <p> add <本地包路径>`（`<p>` = 当时在用的 profile；**2026-09-17 前为 `larry`（已退役），现为 `sdk`**）→ reconcile 后 profile manifest（`package.json` 内）的 `dsh.profile.bundles` **自动纳入该包** —— 这就是"挂进 profile 层"。⚠️ 注意与 B 段 Gateway 判定第 4 条呼应：`plugin add` 默认**只写 dependencies**，走 bundle 声明这条才会进 `bundles`。
 
 ### 8.3 复跑步骤（干净状态）
 

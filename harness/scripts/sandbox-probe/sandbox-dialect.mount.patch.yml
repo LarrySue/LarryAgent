@@ -9,7 +9,11 @@
 #
 # ⚠️ 插件须**实体复制**进 profile 的 node_modules（不要 link）：
 #    link 方式下插件的 bare import 会从源目录解析，取不到 @deepseek-ai/dsh-sandbox-local。
-#    安装点：$DSH_HOME/profiles/node_modules/@larryagent/plugin-sandbox-dialect/
+#    ⭐ 安装点：$DSH_HOME/profiles/<profile>/node_modules/@larryagent/plugin-sandbox-dialect/
+#      （2026-09-17 修订：原写 `profiles/node_modules/…`「共享层」—— 实测该层把
+#       `dsh-sandbox-local` 解析到旧代 `0.0.1-rc.1`（同树 `dsh-llm` = `0.1.5-rc.2`）
+#       ⇒ 插件 `import` 即崩（`does not provide an export named 'assertNever'`）。
+#       必须落**该 profile 自身**的 `node_modules`。）
 #
 # 行 id（sandbox-dialect）**不必**叫 sandbox：消费方（dsh-pwsh-sandbox）按**服务名**
 # `sandbox` 注入，不是按 loader 行 id。此结论已由 plugin-sandbox-mount-probe 在
