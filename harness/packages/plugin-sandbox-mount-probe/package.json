@@ -7,11 +7,5 @@
   "exports": {
     ".": "./index.js",
     "./package.json": "./package.json"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-sandbox-local": "*"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-sandbox-local": { "optional": true }
   }
 }

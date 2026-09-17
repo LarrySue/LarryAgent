@@ -7,15 +7,5 @@
   "exports": {
     ".": "./index.js",
     "./package.json": "./package.json"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-storage-domain": "*",
-    "zod": "*"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-storage-domain": { "optional": true },
-    "zod": { "optional": true }
   }
 }

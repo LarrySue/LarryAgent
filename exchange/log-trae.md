@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.7.3** · 工程卫生合并块（旧代依赖清理 ＋ CVM 副本补齐 ＋ 3.2 判据缺陷修复） | **Trae** | **本机 ＋ CVM 双侧** | **🚀 已派发，进行中** | 2026-09-17 |
+| **DSH-3.7.3** · 工程卫生合并块（旧代依赖清理 ＋ CVM 副本补齐 ＋ 3.2 判据缺陷修复） | **Trae** | **本机 ＋ CVM 双侧** | ✅ **已回报（2026-09-17）** · **J1–J11** 逐条见下 · 一句话 = **(a) 已清干净、两侧 lock 逐字节一致** | 2026-09-17 |
 | DSH-3.2.1 · Windows 侧 named semaphore 释放实测 | Trae | 本机 Windows | ⏸️ **仍顺延**（**与 3.7.3 场地相同、争用同一棵 `harness/node_modules` ⇒ 不可并行**；等 3.7.3 交回后起跑） | — |
 
 - 已完成并复验（本段已清）：3.0 ✅ ／ 3.1 ✅ ／ 3.2 ✅ ／ 3.7.1 ✅ ／ **3.7.2 ✅（WB 逐条回源复核：J1–J7 全成立，一句话 = 生效）**。
@@ -278,3 +278,197 @@ node -e "const fs=require('fs'),p=require('path');const R='harness/node_modules/
 - 本块**不得声称**「共享层那支旧代已被迁走」—— 删/改 peer 只消除**引用者**；共享层那 241 条 junction 需另行处置。
 - 本块**不得声称**「resume 已可用」（见 J7 诚实边界）。
 - 本块**不得声称**「两侧环境已完全一致」—— 本次只对齐 `pnpm-lock.yaml` 与列明的补齐件；两面 `node_modules` 的**布局差异**（本机 isolated ／ CVM 侧其余目录）不在范围。
+
+---
+
+# ✅ DSH-3.7.3 回报 · 工程卫生合并块（Trae 2026-09-17）
+
+## 结论先行（一句话）
+
+**(a) 已清干净**：本机与 CVM **两侧** `specifier: '*'` = **0**、`0.0.1-rc.1` = **0**，且物理树遍历 `stale = []`（三包版本集合都只剩 `0.1.5-rc.2`）；**两侧 `pnpm-lock.yaml` 逐字节一致**（541493 B / sha256 前 16 = `a03ede8de3f00ee3`）。
+⛔ **边界**：`(b)` 012 代生产参照 profile 与 `(c)` 共享层 241 条 junction **本次未动** ⇒ **不得**据本块声称"旧代问题已彻底解决"或"共享层那支旧代已被迁走"。
+
+## J1–J11 逐条
+
+### J1 · 声明终态（本机，4 个包）✅
+
+`node scan-pnpm-tree.mjs decl <4 文件>` 原始输出（`D:\Code\_trae-cvm-evidence\373\J1-decl-after.json`）：
+
+| 文件 | `peerDependencies` | `peerDependenciesMeta` | `tsconfig` |
+|---|---|---|---|
+| `plugin-sandbox-mount-probe` | **null** | **null** | 无 |
+| `plugin-storage-probe` | **null** | **null** | 无 |
+| `plugin-probe` | `{ "@deepseek-ai/cordis": "^4.0.2" }` | `{ "@deepseek-ai/cordis": { "optional": true } }` | 有 |
+| `plugin-sandbox-probe` | 同上一行 | 同上 | 有 |
+
+**动手前先复核了依据**（通用纪律：不照抄旧前提）：
+- `plugin-sandbox-mount-probe/index.js`：`grep -n '^\s*(import|export .* from|const .* = require)'` ⇒ 仅 3 行、**全是 `node:`**（`node:child_process` / `node:fs` / `node:path`）⇒ **零裸 import** ✔ 可删
+- `plugin-storage-probe/index.js`：同检索式 ⇒ **0 命中**（唯一命中是头注释里那句 *"any bare import … would fail"*）⇒ 可删
+- `plugin-probe/src/index.ts:12`、`plugin-sandbox-probe/src/index.ts:63` ⇒ `import type { Context } from '@deepseek-ai/cordis'` ✔ **声明不能删**
+
+### J2 · lock 变干净（两侧）✅
+
+| 侧 | 尺寸 | sha256 前 16 | `specifier: '*'` | `0.0.1-rc.1` |
+|---|---|---|---|---|
+| 本机 改前 | 547517 B | `88616e8fdb303a17` | **6** | **16** |
+| 本机 改后 | **541493 B** | `a03ede8de3f00ee3` | **0** | **0** |
+| CVM 改后 | **541493 B** | `a03ede8de3f00ee3` | **0** | **0** |
+
+命令原文：`(Select-String -Path harness/pnpm-lock.yaml -Pattern "specifier: '*'" -SimpleMatch -AllMatches).Count`（旧代同法，pattern `0.0.1-rc.1`）。
+
+### J3 · 物理树变干净（两侧）✅ —— ⚠️ 这里是本块最险的一步
+
+**首装后扫，树竟然没变**（`D:\Code\_trae-cvm-evidence\373\J3-tree-after.json`）：
+
+| 包 | branches（物理目录） | versions |
+|---|---|---|
+| `dsh-sandbox-local` | 4 | `["0.0.1-rc.1","0.1.5-rc.2"]` |
+| `dsh-storage-domain` | 6 | 同上 |
+| `dsh-sandbox-windows-acl` | 4 | 同上 |
+| `stalePackagesStillInTree` | — | `[sandbox-local@0.0.1-rc.1, windows-acl@0.0.1-rc.1 ×2, storage-domain@0.0.1-rc.1]` |
+
+⇒ 即"**lock 变小 ≠ 树变干净**"（派稿坑 2/5）**实测成立**。**起效路径**：
+
+```
+① 常规 pnpm.cmd install --offline --no-frozen-lockfile   → exit 0（Packages: -4）但复扫仍脏
+② 重命名 node_modules/.modules.yaml ＋ .pnpm-workspace-state-v1.json（→ *.bak-373-20260917194716）
+③ 再 install（--offline --no-frozen-lockfile）           → 复扫 stale = []  ✅
+④ 另跑一次 --force（591 ms，Already up to date）—— 无副作用
+```
+
+**改后（本机）**：`sandbox-local` branches 3 / `dsh-storage-domain` 5 / `windows-acl` 2，**versions 全是 `["0.1.5-rc.2"]`**，`stale=[]`。
+**CVM 同形同法**：首装后 stale 仍在（4/6/4）⇒ 同样重命名两个状态文件 → install ⇒ **`stale=[]`**（3/5/2）。
+**检索式与遍历范围**（"没有残留"这句话的可验凭据）：遍历 `node_modules/.pnpm/*/node_modules/{@scope/}*/package.json` 读 `name`/`version` 比对（**不用目录名 glob**，因 pnpm 长包名目录是截断名）—— 本机扫 **2574** 个、CVM 扫 **2579** 个 `package.json`。
+
+> ⚠️ **口径订正**：派稿写"改前**各 2 支**"，我实测是 **2 个版本 × 多个 peer 变体目录**（物理目录 4/6/4）⇒ "支数"若指**物理目录**，清理后仍会 >1（本机 3/5/2）。**本报告以「版本集合」为判据**（同时给物理目录数），避免把"peer 变体"误读成"没清干净"。
+
+### J4 · 正锚 ✅
+
+- `@deepseek-ai/dsh-sandbox-local@0.1.5-rc.2` **仍在树里**（`versions=["0.1.5-rc.2"]`）✔
+- `@deepseek-ai/cordis` 全树**只有 `4.0.2` 一支**（branches 240 → **237**）✔
+- `packages/plugin-sandbox-dialect/node_modules/@deepseek-ai/dsh-sandbox-local/package.json` = **`0.1.5-rc.2`**，且方言件 `import()` = **ok**（`extras` 三条）✔
+
+### J5 · 回归（最强负向对照）✅ ★
+
+`S372_EVIDENCE_DIR=D:\Temp\dsh-probe\373-evidence node harness/scripts/run-372-dialect-e2e.mjs` ⇒ **`E2E_EXIT=0`**（"判据全过（双锚成立）"）：
+
+| 态 | marker | 普通失败词 | patch | dump-config |
+|---|---|---|---|---|
+| `unpatched` | **false** | `["operation not permitted","EPERM"]` | 217 B | sandbox 行在、未 disabled、无 dialect 行 |
+| `patched` | **true** | 同上 | 769 B | sandbox 行在 + `disabled: true`、dialect 行在 |
+
+越界文件两态均未创建 ✔；**证据目录指到临时目录**（未覆盖 3.7.2 交付证据）✔；跑完 `.dsh-home/profiles/sdk/cordis.patch.yml` 复位 = **769 B / sha16 `74400d260d5d4e6c`**，与派稿锚**逐字符一致** ✔
+
+### J6 · 构建不回归 ✅
+
+`pnpm.cmd build` ⇒ **rc = 0**；三个有 build 的包全 **Done**：`packages/plugin-probe build: Done` / `packages/plugin-sandbox-probe build: Done` / `packages/plugin-tool-readfile build: Done` ⇒ **cordis 收紧后 `tsc` 仍能解析到 `@deepseek-ai/cordis`** ✔
+
+### J7 · 3.2 判据缺陷修复 ＋ 实跑自洽 ✅（附诚实边界）
+
+**代码层（`harness/tests/s0-resume.test.ts`）**——订正前后：
+
+```ts
+// 订正前（结构性缺陷：按构造永不可能是 true）
+const p2Log = evidence.sessionLogs.find((l) => l.hasP2 && l.hasP1 === false) ?? null
+evidence.resumeTarget = { p1LogPath: …, p2LandedOnSameLog: p2Log === null ? null : false, p2LogPath: p2Log?.path ?? null }
+
+// 订正后（真语义 = P2 是否落在 P1 那条日志上）
+const p1Log = evidence.sessionLogs.find((l) => l.hasP1) ?? null
+const landedOnP1Log = p1Log !== null && p1Log.hasP2 === true
+evidence.resumeTarget = { p1LogPath: …, p2LandedOnSameLog: p1Log === null ? null : landedOnP1Log, … }
+```
+
+**实跑（CVM，`S0_TARGET_RUNNER=run-s0-resume.mjs … key`，exit = 0；证据 `J7-cvm-key.resume.json`）**：
+
+| `sessionLogs` 分布 | 取值 |
+|---|---|
+| 1 条：`session-a76dc4b314d64fd8b51d2b9b514eda63/session.v3.jsonl.zstd`，11663 B，**`hasP1=true` / `hasP2=false`**，`lastEventType=turn/end` | `resumeTarget = { p1LogPath: <同一条>, p2LandedOnSameLog: **false**, p2LogPath: null }` |
+
+**自洽性**：只有一条日志、且它不含 P2（第二轮被 `-32603 / session "…" already exists` 拒，根本没跑起来）⇒ `p2LandedOnSameLog=false` 与原始分布**一致**；第一轮真拿到框架自产 `sessionId` 且 `turnEndKind=completed`（前置成立）✔
+⛔ **诚实边界（照派稿写明）**：015 现状下该字段**仍观察不到 `true`**（跨进程复用同 ID 被拒 = 真缺口）⇒ 本项**只证两件事**：① 实现**不再排除 `true`**；② 实跑取值与原始分布**自洽**。**不得**据此声称"resume 已可用"或"该字段已能翻转"。
+
+### J8 · lock 双面字节一致 ✅
+
+**本机 sha256 == CVM sha256**（两者都是 541493 B / 前 16 `a03ede8de3f00ee3`）⇒ 上轮那 40 B 差异（CVM 少 `plugin-015-preset-probe` 两行）**已消失**。
+⚠️ **途中一度失败并已定位**：把干净 lock scp 到 CVM 后，CVM 的 install **把 lock 改回旧态**（547517 B / 16 处旧代）—— 根因 = 我**只同步了 lock、漏同步 4 个 `package.json`**（CVM 的 manifest 仍写 `*`）⇒ 补同步 4 件后重装即一致。**这条说明 J9 的"补齐"必须包含 J1 的 4 个 manifest，否则 J8 不可能达成。**
+
+### J9 · CVM 副本补齐 ✅
+
+逐文件 sha16（**11 件两侧完全一致**，原始表见 `J9-cvm-hashes.txt`）：
+
+| 文件 | 尺寸 | sha16 |
+|---|---|---|
+| `packages/plugin-015-preset-probe/{package.json, index.js, cordis.patch.yml}` | 535 / 19543 / 387 | `7c6552639ebf5f76` / `82fd61a2949d1eca` / `916ffccb41ff7624` |
+| `scripts/015-preset-probe/{custom-preset.patch.yml, run-probe.mjs}` | 1642 / 3140 | `110677d31dddc366` / `4e648059d0bac33f` |
+| `packages/{mount-probe, storage-probe, probe, sandbox-probe}/package.json` | 384 / 361 / 920 / 939 | `49cb96905dd32261` / `e4c65b5c8819cee4` / `26a415c9ce217587` / `81c72be6de77d707` |
+| `scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` | 1776 | `d3d7ef8b99073d20` |
+| `pnpm-lock.yaml` | 541493 | `a03ede8de3f00ee3` |
+
+- `~/harness/packages/` = **7 个包** ✔（含 `plugin-015-preset-probe`）
+- `SYNC-ANCHOR.txt` **已更新**：`source-commit: 917f45d4a020f7711171e273711954676fe1b7ce` / `synced-at: 2026-09-17T20:05:00+08:00` / `files: 11 bytes: 571120` / `mode: incremental`
+  - ⚠️ 顺手订正一行：`kept:` 那 4 个手工脚本**在 `~/harness/` 根、不在 `scripts/`**（我自己就曾因 `ls scripts/` 找不到而误以为被覆盖）
+
+### J10 · 基线未污染 ✅
+
+| 对象 | 实测 | 派稿锚 | |
+|---|---|---|---|
+| `harness/package.json` | 1283 B / `e4d338caa2a0431b` | 同 | ✔ |
+| `harness/packages/plugin-sandbox-dialect/package.json` | 551 B / `9d6f4794a8aec191` | 同 | ✔ |
+| 落点 `…/plugin-sandbox-dialect/index.js` | 4087 B / `022b0ff5efd11648` | 同 | ✔ |
+| 落点 `…/plugin-sandbox-dialect/package.json` | 551 B / `9d6f4794a8aec191` | 同 | ✔ |
+
+### J11 · `windows-acl` 旧代传递面 ✅
+
+**已消失**：`stalePackagesStillInTree = []`（两侧）⇒ **无需追引用者**。
+检索式与范围：遍历 `node_modules/.pnpm/*/node_modules/{@scope/}*/package.json`（本机 2574 / CVM 2579 个）读 `name`+`version`，末位判据 `version.includes('0.0.1-rc.1')` ⇒ **0 命中**。
+
+## 改动清单
+
+`git diff --stat`（6 文件 / **+16 −113**）：
+
+```
+harness/packages/plugin-probe/package.json         |  2 +-
+harness/packages/plugin-sandbox-mount-probe/package.json |  6 --
+harness/packages/plugin-sandbox-probe/package.json |  2 +-
+harness/packages/plugin-storage-probe/package.json | 10 ---
+harness/pnpm-lock.yaml                             | 96 +---------------------
+harness/tests/s0-resume.test.ts                    | 13 ++-
+```
+- `mount-probe` / `storage-probe`：**整段删除** `peerDependencies` ＋ `peerDependenciesMeta`（不是留空对象）
+- `probe` / `sandbox-probe`：`"@deepseek-ai/cordis": "*"` → **`"^4.0.2"`**，`peerDependenciesMeta.optional` **保留**
+- `mount.patch.yml` **无 diff** ⇒ 派稿"大概率不需改"成立（3.7.2 已改并提交）
+
+## 实际走的重装路径（通道信息，必报）
+
+| 侧 | 步骤 | 结果 |
+|---|---|---|
+| 本机 | `pnpm install`（frozen 默认 true） | ❌ 拒：`[ERR_PNPM_OUTDATED_LOCKFILE] … (lockfile: *, manifest: ^4.0.2)` |
+| 本机 | `--offline --no-frozen-lockfile` | ✅ exit 0（`Packages: -4`），但**复扫仍脏** |
+| 本机 | **重命名 `.modules.yaml` ＋ `.pnpm-workspace-state-v1.json`** → 再 install | ✅ **树回收**（`stale=[]`） |
+| 本机 | `--force` 补跑 | ✅ 591 ms up-to-date，无副作用 |
+| CVM | `--offline --no-frozen-lockfile` | ✅ exit 0，但**把 lock 改回旧态**（漏同步 manifest）→ 补同步 4 件 → 再 install |
+| CVM | 再 install 后**复扫仍脏** → 同法清状态文件 → install | ✅ **树回收**（`stale=[]`） |
+
+⇒ **`--offline` 全程够用**（未联网）；**起效关键是清 pnpm 状态文件**，不是换命令。
+
+## 未闭合项
+
+| # | 项 | 说明 |
+|---|---|---|
+| 1 | `(b)` 012 代生产参照 profile | `~/larry-dsh-home/profiles/sdk` 仍是 `0.1.2-rc.1`；本块范围外（派稿 §0 已定） |
+| 2 | `(c)` 共享层 241 条 junction | `工程 .dsh-home/profiles/node_modules/` 仍指 `harness/.pnpm`；本块范围外 |
+| 3 | **pnpm"不回收旧 `.pnpm` 目录"的成因未查清** | 我只有现象（首装后残留）＋可行处置（清状态文件）；**未找到官方依据**，故不编成因 |
+| 4 | 备份件仍在 | 本机与 CVM 各留 `node_modules/.{modules.yaml,pnpm-workspace-state-v1.json}.bak-373-*`（按禁区"重命名备份"处置，**未删**）—— 何时清待裁 |
+| 5 | 两面 `node_modules` 布局差异 | 本机 isolated ／ CVM 其余目录，派稿 §8 已声明不在范围 |
+
+## 自曝
+
+1. **3.7.2 的一处顺序失误**：上轮 J6 的 `mount.patch.yml` 同步发生在**去重合并之前** ⇒ CVM 留的是合并前版本（1868 B），本机才是最终版（1776 B）。本轮已覆盖并逐字节核对（`d3d7ef8b99073d20`）。**这条是本次"两侧不一致"的真因，不是别人改的。**
+2. **我扩了 J9 的范围**：派稿 J9 表里没列 4 个 `package.json`，但 J2 要求"两侧都要"干净 ⇒ 不同步它们，CVM 的 install **必然**把 lock 改回旧态（已实测）。**这条扩范围是必须的**，否则 J8 不可能达成。
+3. **派稿 §5 的器材描述有两处与实测不符**：① `node` 实测 **v24.14.1**（派稿写 22.22.2）；② J3 的"改前各 2 支"是**版本数**、不是**物理目录数**（我实测 4/6/4）⇒ 已在 J3 写明口径。
+4. **我多花了两步做"依据复核"**：动手删声明前，先实跑检索式确认两个 JS 包**零裸 import**、两个 TS 包**确有 `import type { Context }`**（派稿已给依据，按"不照抄旧前提"的通用纪律复核一遍）。
+5. **`--force` 到底是必需还是空跑，我没能精确归因**：清状态文件后的 install（1.2–1.5 s）与随后的 `--force`（591 ms）之间**我没有再扫一次**，故只能说"该组合起效"，**不能**断言 `--force` 是必要条件。
+
+## 证据位置
+
+`D:\Code\_trae-cvm-evidence\373\`：`J0-preflight.txt`（前置 0/1/2）／`J1-decl-after.json`／`J2-install-offline*.{out,err}.txt`／`J2-diff-stat.txt`／`J3-tree-{before,after,after-force,CVM}.json`／`J3-install-force.*`／`J5-regression.log`／`J6-build.{out,err}.txt`／`J7-cvm-key.resume.json`／`J9-cvm-hashes.txt`／`J10-anchors.txt`／`SYNC-ANCHOR.txt.new`／`scan-pnpm-tree.mjs`（取证脚本，两侧通用）。CVM 侧另有 `/tmp/373-cvm-install{,2,3}.log`、`/tmp/373-resume-key.log`。

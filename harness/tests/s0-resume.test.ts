@@ -305,12 +305,19 @@ describe.skipIf(!ENABLED)(`S0 resume（variant=${VARIANT}）`, () => {
     evidence.sessionLogs = logsEvidence()
 
     if (VARIANT === 'key') {
+      // ⚠️ 判据订正（2026-09-17，DSH-3.7.3）：原写法是
+      //     p2Log = find(l => l.hasP2 && l.hasP1 === false)   // 只找"含 P2 但不含 P1"的**另一条**日志
+      //     p2LandedOnSameLog: p2Log === null ? null : false  // ⇒ 按构造**永不可能是 true**（结构性缺陷）
+      // 真语义 = **「P2 是否落在 P1 那条日志上」** ⇒ 判据应是同时含 `hasP1 && hasP2` 的那条
+      //（`logsEvidence()` 已按 `text.includes(TAG_P1/P2)` 产出这两个布尔，原始数据本就在 evidence 里）。
       const p1Log = evidence.sessionLogs.find((l) => l.hasP1) ?? null
-      const p2Log = evidence.sessionLogs.find((l) => l.hasP2 && l.hasP1 === false) ?? null
+      const otherP2Log = evidence.sessionLogs.find((l) => l.hasP2 && l.hasP1 === false) ?? null
+      const landedOnP1Log = p1Log !== null && p1Log.hasP2 === true
       evidence.resumeTarget = {
         p1LogPath: p1Log?.path ?? '(none)',
-        p2LandedOnSameLog: p2Log === null ? null : false,
-        p2LogPath: p2Log?.path ?? null,
+        // P1 那条日志都找不到 ⇒ 该字段无观测意义（保持 null）；找得到 ⇒ 如实报 true/false
+        p2LandedOnSameLog: p1Log === null ? null : landedOnP1Log,
+        p2LogPath: landedOnP1Log ? (p1Log?.path ?? null) : (otherP2Log?.path ?? null),
       }
     }
 
