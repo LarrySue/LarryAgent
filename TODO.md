@@ -274,8 +274,9 @@
 >   2. **`--force` 是否必需未定**（执行方自曝：清状态文件后的 install 与随后 `--force` 之间未复扫）⇒ **不可回源**（树已干净、原态无法复现）⇒ **并列留痕、不写 SOP**。
 >   3. **J3 的「改前各 2 支」无法独立验证** —— 改前树是**易失物理状态**，现只剩执行方证据（WB 只核到改后 3 ／ 5 ／ 2）。
 >   4. **`SYNC-ANCHOR` 的清单不完整**：CVM 上 `tests/s0-resume.test.ts`（mtime **19:48 属本轮**、两侧哈希一致 `dab57a0ed2c3f64e`）**不在其记录的 11 件里** ⇒ 实物到位，但**该清单不可当「同步范围」的完整依据**。
->   5. **备份件仍在**（本机与 CVM 各 2 个 `.{modules.yaml,pnpm-workspace-state-v1.json}.bak-373-*`）—— 按禁区以**重命名**处置、**未删**；何时清待裁。
->   6. `(b)` **012 代生产参照 profile** ／ `(c)` **共享层 241 条 junction** —— 均在范围外（见本段诚实边界）。
+>   5. ✅ **备份件已清（老大 2026-09-17 裁「删除」／ WB 同日执行并双向核验）** —— 本机 2 件走**回收站**（`$I` 元数据反查：原始路径与字节数吻合 `.modules.yaml.bak-373-20260917194716` 98692 B ／ `.pnpm-workspace-state-v1.json.bak-373-20260917194716` 2233 B；原处 `exists=False`）；CVM 2 件（后缀 `20260917195029`）**显式文件名直删**（`rm rc=0` 、after 无残留）。两侧 live 文件均完好未动。
+>   6. 📮 **已单开立项（老大 2026-09-17 裁）⇒ 见「待派发 · DSH-3.7.5」** ｜原记：`(b)` **012 代生产参照 profile**（**在 CVM**：`/home/ubuntu/larry-dsh-home/profiles/sdk`，实测三件全 `0.1.2-rc.1`）／ `(c)` **工程共享层 241 条 junction**（**在本机**）—— 均在范围外（见本段诚实边界）。
+>      - ⚠️ **WB 2026-09-17 复核订正（`(c)` 已实质归位）**：241 条 junction 现**逐条有效、悬空 0**；`dsh-sandbox-local` ／ `windows-acl` ／ `storage-domain` 三件均**经 `.pnpm/node_modules/` 汇总层**解析到**唯一存活**的 `0.1.5-rc.2` 支（`.pnpm` 内旧支 `@deepseek-ai+dsh-sandbox-lo_fc402b20…` **已随本块 ① 消失**）⇒ **"镜像旧代"的实质已自动解除**，该条从「待处置」降为「**登记订正 ＋ 一条派生耦合风险**」（共享层是 `harness/node_modules/.pnpm` 的**派生视图**，非独立副本）。详见 DSH-3.7.5。
 >   7. 3.7.2 遗留：**装置脆弱性**（`pwsh` 受限路径 ⇒ fail-safe 假红）＋ **一对归属待认领的运行**（2026-09-17 11:01:19 ／ 11:01:34 UTC）—— **仍未认领**。
 > - 📮 **独立测试件已派 Claude（WB 2026-09-17）⇒ ✅ 已交回并复验（见下「DSH-3.7.3-T」段）**：本块**动了共享依赖树**（影响面超出本块判据）、且 **J7 的目标行为（`p2LandedOnSameLog = true`）从未被观测到** ⇒ 两条都落在「**改的人自证**」的盲区。派发稿 = `exchange/log-claude.md`（**T1** 独立全套回归 ／ **T2** `true` 分支独立触发尝试 ／ **T3** 关键判据独立复算）。
 >
@@ -291,7 +292,7 @@
     - 🔻 **WB 派发稿缺陷（本项暴露）**：我在派稿里写「**哨兵组本就应红**」＋「`tests/sentinel-*.test.ts` **本就是"应当失败"的哨兵**」—— **错**。`sentinel-key-residue.test.ts` 的期望是**落绿**（"此文件全绿、验收看 teardown 的 `⚠️ KEY RESIDUE` 告警"）⇒ **按"组"给口径会把该件判反**。**纪律：应红 ／ 应绿必须逐件读源码定期望，不得按"组"给口径。**
   - `(e)` 增跑件 `run-s0-e2e.mjs`（执行方主动扩面，超出派发清单）⇒ **5 变体 3 红 2 绿**（`base` ／ `wrong-key` ／ `no-session-dir` 红，`no-bundle` ／ `kill-client` 绿）。
     - **根因（WB 独立核实机制 ＋ 时点）＝ `dsh plugin add` 前置失效**：`cp -r` 出的 profile 副本**自带源 profile 的绝对** `virtualStoreDir`（实测 `.modules.yaml`：`"virtualStoreDir": "D:\Code\LarryAgent\.dsh-home\profiles\sdk\node_modules\.pnpm"`、`"nodeLinker": "hoisted"`）⇒ pnpm 算出的副本路径 ≠ 记录值 ⇒ `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`，**在解析依赖之前退出** ⇒ 与"包里有没有旧代"**无关**；**时点**：profile 依赖 mtime = `2026-09-17 00:10~00:11`，早于 3.7.3 交付（`19:52`）约 **19.7 h**。
-    - ⇒ **⭐ 新暴露的存量问题（本项最大增量）**：凡依赖 `installPlugin` 的**本机**装置**都跑不起来**，且**此前无人知道**（`harness/.s0-evidence/` 不存在 ⇒ 本 checkout 从未用默认证据目录完整跑过 `s0-e2e`）⇒ **建议单独立项**（修法方向：复制后清 `virtualStoreDir`，或改 `pnpm install` 重建）。
+    - ⇒ **⭐ 新暴露的存量问题（本项最大增量）** ⇒ ✅ **已单独立项 = DSH-3.7.4（老大 2026-09-17 裁）**。⚠️ **WB 同日把影响面收紧（原记过宽）**：全仓 `installPlugin` **只 `s0-e2e.test.ts` 一处定义**（`:92`；`:246` **无条件调用**）—— `s0-resume.test.ts:269` 同样 `cpSync` 但**不跑 pnpm** ⇒ **不受影响**；`cvm-probes/*.sh` 的 `plugin add` 打**非副本** home ⇒ 亦不受影响。⇒ 准确说法 = 「**本机 `s0-e2e` 跑不起来**」，**不是**「凡依赖 `installPlugin` 的装置都跑不起来」。⭐ **真变量已钉（WB 双侧实测）**：不在机器、不在 pnpm 版本（两侧 `packageManager` 同为 `pnpm@11.7.0`），而在 `.modules.yaml` 的 **`virtualStoreDir` 记录形态** —— **本机写绝对路径**（`harness` 与工程 sdk profile **皆然**）／**CVM 写相对 `.pnpm`**（`harness` 与两个 profile **皆然**）⇒ 相对值随副本走仍自洽（**CVM 绿**）／绝对值仍指源处 ⇒ 失配（**本机红**）。**形态差异的成因未定** ⇒ 立项第一件事是定性，⛔ 不得先改代码再补成因。
     - ⚠️ 装置自身的"负向 2 ／ 3"锚（"插件激活层必须仍是绿的，否则「红」可能只是链路没起来"）**正是挡住假绿的地方** ⇒ **装置判据是对的**；`base.evidence.json` 的 `criteria` 印证：失败**只在插件激活层**（`②_activated=false`），主链路全绿（`③_turnEndKind=completed` ／ `④_sessionContainsNonce=true`）。
 - [x] ✅ **T2 `true` 分支独立触发 ⇒ 本机不可观测（判定成立；WB 另补一条更强的）**
   - 原因一：`resumeTarget` **只在 `VARIANT === 'key'` 分支赋值**（WB 核代码 `harness/tests/s0-resume.test.ts:307`）⇒ `same-proc` 已造出底层条件（单条日志 `hasP1=true` **且** `hasP2=true`，13600 B）却**不产出该字段**；
@@ -461,12 +462,43 @@
   - **批次节奏**
     | 批次 | 内容 | 说明 |
     |---|---|---|
-    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ **已回报＋复验** ／ 3.7 **拆为 3.7.1（✅ 已回报＋复验）＋ 3.7.2（✅ 已回报＋复验）**；⚠️ 3.7.2 落点**已由 `larry` 改 `sdk`**（该面已退役）｜＋ **3.7.3「工程卫生合并块」2026-09-17 派发 → ✅ 已回报＋复验（J1–J11 全成立）**（由 3.7.2 未闭合项 2 ／ 4 ＋ 3.2 判据缺陷 1 合并）｜＋ **3.2.1 已派发（WB 2026-09-17）** |
+    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ **已回报＋复验** ／ 3.7 **拆为 3.7.1（✅ 已回报＋复验）＋ 3.7.2（✅ 已回报＋复验）**；⚠️ 3.7.2 落点**已由 `larry` 改 `sdk`**（该面已退役）｜＋ **3.7.3「工程卫生合并块」2026-09-17 派发 → ✅ 已回报＋复验（J1–J11 全成立）**（由 3.7.2 未闭合项 2 ／ 4 ＋ 3.2 判据缺陷 1 合并）｜＋ **3.2.1 ✅ 已交付并复验（WB 2026-09-17：结论认可、另订正 3 处）**｜＋ **3.7.3-T（Claude 独立测试件）✅ 已交回并复验（T1–T4 四项判定均成立）** ⇒ **批次 1 已全清** |
+    | **1.5** | **3.7.4** + **3.7.5** | **3.7 的下游尾巴**（老大 2026-09-17 裁「两项单开」，WB 同日立项）：**3.7.4** = 本机 `s0-e2e` 装置缺陷（`cp -r` profile ⇒ pnpm 虚拟 store 失配）→ **先派（本机／Trae）**；**3.7.5** = 旧代残留载体处置（`(b)` CVM 012 代参照 profile ／ `(c)` 本机共享层 241 条 junction，`(c)` 已实质归位）→ **待老大裁 `(b)` 选项后起跑**。两者**均不阻断批次 3**，`3.7.4` 宜**与批次 3 并行派出**（它修的是本机唯一的 S0 端到端装置） |
     | **2** | **3.1 S0** | 单发；后续一切的地基 —— ⭐ **已提前至批次 1 之前派发（老大 2026-09-17 拍：编号在前即先做）** |
     | **3** | **3.3 → 3.4 → 3.5 → 3.6** | **严格串行**（逐层叠加、单独验收） |
     | **4** | **3.8** + **3.9** | 3.8 可在批次 3 后期并行 |
   - 「待核（不阻塞拍板）」段各条**全为调研类**（不碰 CVM、不等 Key）⇒ 可与批次 1 并行派出
 - [x] ~~DSH-2 任务 0 派发~~ **已完成**（Claude 2026-09-08，报告已吸收内联至决策稿 §3.6 逐项证据表：A 案成立、8/8 机制属实，WB 复核订正 2 处行号）
+- [ ] **DSH-3.7 收尾两项**（**老大 2026-09-17 裁：两项单开**；WB 同日立项并放入本顺序）—— 来源 = 3.7.3 未闭合项 6 ＋ 3.7.3-T `T1` 暴露的存量装置缺陷
+  - 📮 **派发建议（WB，均未派）**：**不合并** —— ① **性质不同**（`3.7.4` = 装置**代码修复**，属地归 **Trae**；`3.7.5` = **环境处置**，历史归口 = 环境整理类 ／ **Qoder**）；② `3.7.5` 的 `(b)` **须老大先裁处置选项**（升 015 ／ 保留作负向对照器材 ／ 删），裁前**无可干**；③ 合并会把"待裁"与"可干活"绑进同一张稿。⇒ **`3.7.4` 先派（本机／Trae），`3.7.5` 待裁后起跑**。
+  - 📐 **顺序建议**：两者**均不阻断批次 3（3.3→3.6 串行）**，但 `3.7.4` 宜**与批次 3 并行派出** —— 它修的是**本机唯一的 S0 端到端装置**；不修则每次"本机跑一遍 S0"都要先认出"这是存量红、不是新缺陷"（**本次已为此烧掉一轮复验预算**）。
+  - ⚠️ **场地重叠复核（不要照抄旧结论）**：`3.7.4` 只在**临时 home**（`mkdtempSync`）里跑 `dsh plugin add` ⇒ **不动 `harness/node_modules`**；`3.7.5` 的 `(c)` 只读本机共享层 ⇒ 两者**不争同一资源**、理论上可并行，但按「同时只跑一块」惯例**仍建议串行**。
+
+  **DSH-3.7.4 · 本机 `s0-e2e` 装置缺陷（`cp -r` profile ⇒ pnpm 虚拟 store 失配）** 📌 **立项 · 未派**
+  - **要回答的一件事**：本机 `harness/tests/s0-e2e.test.ts` **为什么跑不起来**，以及**为什么同一装置在 CVM 是绿的**。
+  - **现象（可复现 ／ WB 2026-09-17）**：`installPlugin()`（`:92`；`:246` **无条件调用**）在 `cpSync`（`:238`）出的临时 home 副本 profile 上跑 `dsh plugin --profile sdk add …` ⇒ pnpm 报 `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`，**在解析依赖之前退出** ⇒ `base` ／ `wrong-key` ／ `no-session-dir` 三变体落红（装置自身负向锚正常，失败**只在插件激活层**）。
+  - ⭐ **真变量已钉住（WB 双侧实测 ＝ 本轮新证据）**：差异**不在机器、不在 pnpm 版本**（两侧 `packageManager` 同为 `pnpm@11.7.0`），而在 **`.modules.yaml` 里 `virtualStoreDir` 的「记录形态」**：
+    | 侧 | 文件 | `nodeLinker` | `virtualStoreDir` |
+    |---|---|---|---|
+    | 本机 | `harness/node_modules/.modules.yaml` | `isolated` | **绝对** `D:\Code\LarryAgent\harness\node_modules\.pnpm` |
+    | 本机 | `.dsh-home/profiles/sdk/node_modules/.modules.yaml` | `hoisted` | **绝对** `D:\Code\LarryAgent\.dsh-home\profiles\sdk\node_modules\.pnpm` |
+    | CVM | `~/harness/node_modules/.modules.yaml` | `isolated` | **相对** `.pnpm` |
+    | CVM | `~/.dsh/profiles/sdk` ／ `~/larry-dsh-home/profiles/sdk` 的 `.modules.yaml` | `hoisted` | **相对** `.pnpm` |
+    ⇒ **相对值跟着副本走、仍自洽（CVM 绿）；绝对值仍指源处 ⇒ 失配（本机红）**。
+  - ⚠️ **未定项（立项第一件事，别跳）**：**为什么本机 pnpm 写绝对、CVM 写相对** —— 成因**未定**（候选：调用方 cwd ／ 是否显式传 `virtual-store-dir` ／ `dsh plugin add` 内部实现；**pnpm 版本差异已被排除**）。⛔ **不得先改代码再补成因**。
+  - **影响面（已收紧，勿沿用旧口径）**：全仓 `installPlugin` **只此一处定义**；`s0-resume.test.ts:269` 同样 `cpSync` 但**不跑 pnpm** ⇒ 不受影响；`harness/scripts/cvm-probes/*.sh` 的 `plugin add` 打**非副本** home ⇒ 不受影响。⇒ 准确说法 = 「**本机 `s0-e2e` 跑不起来**」。
+  - **修法候选（须实测择一，勿凭推理）**：① 复制后**清 `virtualStoreDir`**（或整删 `.modules.yaml` ＋ `.pnpm-workspace-state-v1.json`）让 pnpm 重建；② 改用 `pnpm install` 替代 `dsh plugin add` 建 profile；③ 让 pnpm 写**相对**值（与本机其它树对齐）。
+  - **判据双锚**：修后 `base` 须**绿**，**同时** `no-bundle` ／ `kill-client` 等变体**仍按其自身期望落位**（**逐件读源码定期望**，⛔ 不得按"组"给口径 —— 见 `dispatch-ai-task` 铁律 17）。⚠️ `harness/.s0-evidence/` 现**不存在**、默认证据目录 = `resolve(repoDir,'.s0-evidence')`（`run-s0-e2e.mjs:36`）⇒ 「本机是否曾完整跑过」本身也是待答项。
+  - **执行人**：**Trae**（装置代码侧）
+  - **未闭合（转出）**：`no-session-dir` 变体在 Windows 上 `chmod 500` 是否真能令 ④ 变红（3.7.3-T 被"负向 3"先拦）→ 随本块一并判定。
+
+  **DSH-3.7.5 · 旧代残留载体处置（`(b)` CVM 012 代参照 profile ／ `(c)` 工程共享层 241 条 junction）** 📌 **立项 · 待裁**
+  - **要回答的一件事**：3.7.3 只清了**引用者**（依赖声明 ＋ lock），**被引用者（旧代本体）是否还有活着的载体**、要不要处置。
+  - ⭐ **`(c)` 已实质归位（WB 2026-09-17 实测，本条订正原登记）**：工程共享层 `.dsh-home/profiles/node_modules` 下 `@deepseek-ai/` **241 条 junction 逐条有效、悬空 0**（`st_reparse_tag = 0xa0000003`）；关键三件 `dsh-sandbox-local` ／ `dsh-sandbox-windows-acl` ／ `dsh-storage-domain` **均不直指某一支**，而是指向 `.pnpm/node_modules/@deepseek-ai/*` **汇总层**，该汇总层现只解析到**唯一存活**的 `0.1.5-rc.2`（实测分片 `@deepseek-ai+dsh-sandbox-lo_afd5a527…` 的 `package.json` = `0.1.5-rc.2`；旧支 `@deepseek-ai+dsh-sandbox-lo_fc402b20…` **已随 3.7.3 ① 消失**）⇒ **"镜像旧代"的实质已自动解除**。
+    - ⚠️ **但暴露一条结构性事实（值得登记）**：该共享层**不是独立副本，是 `harness/node_modules/.pnpm` 的派生视图**（241 条 junction 目标全为 `harness/…` 的**绝对** junction）⇒ **harness 树一旦重装 ／ 换路径，这 241 条就有悬空风险**。⇒ 处置选项应从「清 241 条」改为「**要不要让它与 harness 树解耦**」，属架构选择、非清理动作。
+  - ⚠️ **`(b)` 待裁（真正剩下的那一半）**：**CVM** `/home/ubuntu/larry-dsh-home/profiles/sdk` 实测**仍整体 012 代**（`dsh-base` ／ `dsh-sdk-app` ／ `dsh-storage-sqlite` 三件全 `0.1.2-rc.1`）。三选项：① **升 015**（对齐 3.0.4 的处置）；② **保留作负向对照器材**（`docs/production-env.md` 已将其降级为"有完整 profile、无凭据"的对照件）；③ **删**。⚠️ 附带待核：其 deps 里 `@larryagent/plugin-storage-probe` 是 `link:/home/ubuntu/harness/packages/plugin-storage-probe`，而 CVM `~/harness` 已升 015 ⇒ **012 profile 挂着 015 侧的 link**（3.0.3 混代形态的同类），是否构成隐患待判。
+  - **场地**：CVM（`(b)`）＋ 本机只读复核（`(c)`）
+  - **执行人**：环境整理类，历史归口 **Qoder**（待老大定）
 
 ---
 
