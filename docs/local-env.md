@@ -209,6 +209,14 @@ const DENIAL_SIGNATURES = {
 > - **`.dsh-home/profiles/larry/cordis.patch.yml` = 477 B，已含一条 `- id: hmr / disabled: false`**（即 §8.5 的模块级 HMR 开关）⇒ **非空**
 >
 > ⇒ **"未落盘"的结论不变**（两者都不是方言修复件），但**判"是否落盘"要看内容、不看文件是否为空；且必须区分 home**（工程 `.dsh-home/` vs 全局 `~/.dsh/`）。⚠️ 3.7 落盘时**是追加不是覆盖**（该文件已有那条 hmr 条目）。
+>
+> ⚠️ **前置缺项实测（2026-09-17 WB，仅本机 PC 侧）**：3.7 的落盘**前提并非已就绪**，两项缺项如下 ——
+> - **工程 `.dsh-home` 的挂载点不存在**：`.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（插件没装进去）
+>   ⇒ 只写 patch 而不装插件，patch 里那行 `name: '@larryagent/plugin-sandbox-dialect'` **解析不到**
+> - **全局那份与仓库源「同功能、不同版」**：`~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/index.js`（2962 B）
+>   与仓库 `harness/packages/plugin-sandbox-dialect/index.js`（4087 B）**去掉注释后逐行一致**，差异**只在注释头**
+>   ⇒ 复制**以仓库源为准**，**勿从全局 home 拷**（且全局那份是主 `~/.dsh` 的，本项落点在工程 home）
+> - ⇒ 两项已列入 **DSH-3.7.1**（见 `TODO.md`）；**3.7.2 才落盘**
 
 **已证 / 未证边界（别过度读）**：
 - 🟢 已证：boot 时 `providerCtor=SandboxDialectProvider`；消费方 `SandboxPwshExecutor.confine()` 拿到的签名 = 加宽后 6 条；消费方 argv 含 preamble。

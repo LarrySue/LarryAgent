@@ -45,7 +45,7 @@
   - 🔴 **时间窗**：CVM 有效期至 **2026-10-09**（2026-09-09 起算）→ 到期前须把产出搬回本地/入库，**机器上任何产出不得是唯一副本**（`docs/production-env.md` §1 行事规则）。
   - ✅ **开工第一卡点已解（2026-09-14）**：三环境三把专用 Key（`larry-dev` / `larry-wsl` / `larry-cvm`），**按环境分不按轨分**（同环境内 backend 与 DSH 填同一把）；CVM 那把**已落位**，见 3.0
 
-> **子阶段划分（2026-09-14 定）**：3.0 前置 → 3.1–3.6 主线六切片（**严格串行、逐层叠加**）→ 3.2 首验 / 3.7 方言修复件（支线）→ 3.8 设计产出 → 3.9 收口。
+> **子阶段划分（2026-09-14 定）**：3.0 前置 → 3.1–3.6 主线六切片（**严格串行、逐层叠加**）→ 3.2（＋3.2.1）首验 / 3.7.1–3.7.2 方言修复件（支线）→ 3.8 设计产出 → 3.9 收口。
 > **判据 / 验收基准 / 负向对照矩阵 / 采数口径 / 执行范式 → `docs/dsh/dsh-migration.md` §3.6「DSH-3」**；CVM 环境与凭据 → `docs/production-env.md` §12；方言修复件范式 → `docs/local-env.md` §4.3；**派发规格（执行人 / 批次）→ 本文件「待派发」段**。
 > ⚠️ 原详细计划稿 `exchange/dsh-3-plan.md`（含四方评审附 A/A-2/B/C）的实质内容已于 2026-09-14 **全数承接入本文件与 §3.6**，该稿已于 `677523d` 处置（删除）；如需追溯评审原文：`git show 3362f57:exchange/dsh-3-plan.md`。
 
@@ -109,17 +109,31 @@
 
 #### DSH-3.2 · 首验：跨进程 resume 的 id collision 定性
 
+> 📮 **已派发（Trae 2026-09-17）**｜场地 = **CVM 单环境**（本段只跑 Linux 侧）；**Windows 侧的锁子项已拆出** → **3.2.1（未派）**。
+> **交付物** = 可复跑复现脚本（与 3.1 同族：一行复跑 ＋ 明确退出码）＋ 定性结论；退出码沿用 3.1 约定（`0` 通过 ／ `1` 测试失败 ／ `2` 前置缺失 ／ `124` 看门狗超时）。
+> **本项要回答的一件事**：「固定 ID 撞车 ⇒ 换个 ID 就好」（**姿势问题**）与「同 ID 复用被系统性拒绝」（**真缺口**）**是两回事，且可能同时存在** —— 定论前不得只报其中一支。
+
 - [ ] 反向组（固定 ID 复现 `id collision`）+ 正向组（新 UUID）+ **关键组**（真实 completed 会话、跨进程复用同 ID）
-- [ ] **对照组 0**：grep SDK client 源码确认**是否存在显式 resume 入口** —— 若不存在，"SDK 不支持 resume"与"固定 ID 会 collision"是**两个独立的 bug**，可能同时存在
-- [ ] ⚠️ **复用 3.1 产出的 nonce 会话，不另造**（否则两处会话构造法会漂）
+- [ ] **对照组 0**：grep SDK client 源码确认**是否存在显式 resume 入口** —— 若不存在，"SDK 不支持 resume"与"固定 ID 会 collision"是**两个独立的 bug**，可能同时存在。⚠️ **在 015 实物上核**（参考件锚在 harness master，签名可能漂）；⚠️ 说"没有"须附**检索式 ＋ 遍历范围**，否则不可验
+- [ ] ⚠️ **复用 3.1 产出的 nonce 会话，不另造**（否则两处会话构造法会漂）—— 落实为：**复用 3.1 的会话构造法**（`harness/tests/s0-e2e.test.ts` ＋ `s0-session-log.ts` 的多帧 zstd 回读 ＋ 临时 home 建法）；⚠️ **不要求**复用 3.1 那次的**会话实体**（其 temp home 已随 3.1 收口清理，实体不在了）
 - [ ] ⚠️ **判据须先区分"两把锁"**（Trae 2026-09-15 提出，原意见稿已清；未裁则按此执行）——本任务靶子是 **015 的 session 写租约**（`session-persistence-jsonl/lease.ts`：POSIX `flock(2)` / Windows named semaphore，**进程死亡即由内核释放**、**故意不做 TTL 抢占**）；而系统里还有**另一把语义相反的锁** —— `$DSH_HOME/profiles/node_modules.lock`（`dsh-atomic-write`，profile 装/修复时持有），**持有者死亡后永不自动回收**（源码原文：*"the contender never removes an existing lock because file age cannot prove that its owner stopped; **orphan recovery is an operator action**"*）
   - ① 报告里凡"锁残留"**必须标是哪一把**（两把表现不同：A 锁 = 任何 dsh 命令启动即失败 `atomic-write: timed out waiting for the writer lock`，默认只等 2 s，**极易误判成"启动慢/网络问题"**；B 锁 = 第二个写者收 `SessionAlreadyOwnedError`）
   - ② 实验**前置须先清 A 锁的孤儿**，否则实验根本没跑起来，会得到"租约没生效"的**假阴性**
-  - ③ 追加一条必须实测的子项：**Windows 侧 `taskkill /F` 杀进程后，named semaphore 是否真被内核释放**（这是"自述 vs 实测"的分界点；本机 Windows + WSL 两侧各有条件）
+  - ③ **Windows 侧 named semaphore 的释放实测** → **已拆出为 3.2.1**（同判据体系、但换场地，故独立编号；**本段不跑**）
   - 📖 机制与实测：`docs/dsh/dsh-migration.md` §3.6（锁争用矩阵）、`docs/local-env.md`（本机锁原文与实测）
 - 执行人：**Trae**（他此前判"改 UUID 后成功"，让他自己验自己的判据）
 - 🟡 前置：我方 CVM 通道核查（见 3.0）
-- [ ] 📚 **参考件**（登记表 3.2 行）：`EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令 —— 复现件的形态参照）；官方 `dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`
+- ✅ **参考件已落位（2026-09-17，WB 拉取）**：`ref/community/EvilIrving__dsh-repro`（MIT，浅克隆 HEAD `e51736ba`）—— **四要素（① 路径 ② 怎么参考 ③ 参考程度 ④ 不可参考）见 `docs/dsh/dsh-migration.md` §2.2.2 表，派发稿照抄**
+- [ ] 📚 **官方参考件**（登记表 3.2 行）：`dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`（社区件见上条，**已落位**）
+
+#### DSH-3.2.1 · 锁子项：Windows 侧 named semaphore 的内核释放实测（**未派**）
+
+> **为什么单列**：与 3.2 同属"锁"判据体系，但**换场地**（本机 Windows，非 CVM）⇒ 独立编号、独立跑。**等 3.2 的锁归属结论出来再起跑**（若 3.2 实测显示租约机制与其自述不符，本项的问法要跟着改）。
+
+- [ ] **`taskkill /F` 杀进程后，named semaphore 是否真被内核释放** —— 这是"**自述 vs 实测**"的分界点：015 的 `session-persistence-jsonl/lease.ts` 自述"进程死亡即由内核释放、故意不做 TTL 抢占"，Windows 侧走 named semaphore，**该自述在 Windows 上从未被实测**
+- [ ] 判据须**双锚**：既验"首写者死后第二个写者能拿到"（= 真释放了），**也**验"首写者活着时第二个写者被拒"（`SessionAlreadyOwnedError`，= 租约**真的在起作用**而非根本没生效）—— 缺后锚则"释放"与"锁压根没生效"不可区分
+- ⚠️ 场地：本机 Windows（**WSL 在 DSH-3 期间不参与**，见贯穿规则）；依据 `docs/dsh/dsh-migration.md` §3.6「锁争用矩阵」＋ `docs/local-env.md` 的本机锁原文与实测
+- 执行人：**Trae**
 
 #### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1）
 
@@ -162,17 +176,50 @@
 
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
 
-- [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进 profile 的 `cordis.patch.yml` + **一次真 end-to-end**（模型触发被拒命令 → 看到 `[sandbox: file access denied]`）。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）
+> **本段分两块（2026-09-17 拆）**：**3.7.1 前置就位与定性**（📮 **已派发 Trae 2026-09-17**）→ **3.7.2 落盘 ＋ 自检 ＋ 真 e2e**（**未派**，等 3.7.1 回报后起跑）。
+> **为什么拆**：原规格把"前提已就绪"当前提，而 2026-09-17 WB 实测**三项前提实为缺项**（见 3.7.1）；且 `EPERM` 归因本身**结果开放**（可能反推落盘人结论）⇒ **先定性、再落盘**，避免"落点对了却没生效"。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）。
+
+##### DSH-3.7.1 · 前置就位与定性 📮 **已派发（Trae 2026-09-17）**
+
+> 本块**不写 patch、不跑 e2e**（那是 3.7.2）；只把前提清干净 ＋ 把 `EPERM` 归因定性。
+
+- [ ] ① **`EPERM` 归因定性（必须用他自己的通道复跑）** —— 判据**要钉主体**：同一条拒绝，出自 **AI 工具沙箱** 还是 **DSH 自身沙箱**，归属与严重性**完全不同**（09-12 已有一次同类"主体错位"）。须给**触发命令原文 ＋ 完整错误对象（`code` / `errno` / 栈帧里的模块路径）**，并**指出抛出者是谁**。
+  - ⚠️ **两处各测一次**：`~/.dsh/profiles/…`（09-14 那条记录的现场）与**工程 `.dsh-home/profiles/larry/…`**（**现在的落点**）⇒ 判"哪个能写、不能的那个是谁拦的"
+  - ⚠️ 结论**只写在实测过的那条通道上、不得跨通道外推**（WB 通道能写 ≠ Trae 能写，反之亦然）
+  - ⚠️ 写探针只允许"**建一个探针文件后立即删除**"；**不得改动现存任何文件**（全局 home 的 profile 勿动）
+- [ ] ② **方言插件实体安装（工程 home）** —— 现状（WB 2026-09-17 实测）：**挂载点不存在** —— `.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（`~/.dsh` 侧那份是**全局 home**、不是本项落点）
+  - 目标：`工程 .dsh-home/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`（范式原文 `docs/local-env.md` §4.3「插件怎么进 profile」）
+  - **源 = 仓库 `harness/packages/plugin-sandbox-dialect/`**（`index.js` ＋ `package.json`）；⚠️ **必须实体复制、不得 link**（link 下 bare import 从源目录解析 ⇒ **取不到** `@deepseek-ai/dsh-sandbox-local`）
+  - ⚠️ **不得从全局 home 那份拷**：`~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/` 那份**功能码与源逐行一致、但注释头是旧版**（2962 B vs 源 4087 B）⇒ 以仓库源为准
+  - 判据 = 装完后**从该位置**能解析 `@larryagent/plugin-sandbox-dialect`，**且**其内部 `@deepseek-ai/dsh-sandbox-local` 也解析成功（这正是"实体复制 vs link"的分界点）⇒ **须附实测输出**
+- [ ] ③ **凭据路径打通（在工程 `.dsh-home` 上跑通一次真 prompt）** —— 现状：`.dsh-home` **无 `.credentials.yaml`**；而 `client/src-tauri/src/main.rs:275-276` 注释写"凭据**继承本进程 env**（由启动环境注入）"、`docs/production-env.md` §12.5 表把该文件标"**可选**"、本段的「配套三件①」却写"**须建**" ⇒ ⚠️ **三处口径不一致，以实测为准**（这不是笔误，是三种说法并存，须落下一条实测结论）
+  - **交付** = 在工程 `.dsh-home` 上跑通一次真 prompt，并**写明实际走的是哪一层**（启动环境 ／ 存储文件 ／ 项目 `.env` ／ 主目录 `.env`）＋ **该层是否就是 client 路径会走的那层**
+    - ⚠️ **落点 profile = `larry`，但 `harness/scripts/dsh-prompt.mjs:25` 硬钉 `profile: 'sdk'`** ⇒ **别把「`sdk` 通了」当成「`larry` 通了」**；本块只要求验掉"凭据层通不通"，**但回报须写明跑的是哪个 profile**（3.7.2 需要能指 `larry` 的入口）
+  - 🔴 key 值**不得**落任何受版本控制的文件 / 日志 / 工具输出；手工复验命令模板与 `pwd -W` 那个坑见本节「落点已定」条
+- ⛔ **本块禁区**：不写 `cordis.patch.yml`；不碰 `.dsh-home/profiles/{larry,sdk}/package.json` 与 lockfile（刚由 Qoder 升 015）；**不把插件装进全局 `~/.dsh`**（那份已存在、勿动）
+- 执行人：**Trae**
+
+##### DSH-3.7.2 · 落盘 ＋ 自检 ＋ 真 e2e（**未派**）
+
+- [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进**工程** `.dsh-home/profiles/larry/cordis.patch.yml`（**追加，不是覆盖**）
+- [ ] **一次真 end-to-end**：模型触发被拒命令 → 看到 `[sandbox: file access denied]` —— 这是 `docs/local-env.md` §4.3 标注的**唯一未证项**
+- [ ] **生效自检**：`dsh --profile larry --dump-config`（须**显式设 `DSH_HOME=工程 .dsh-home`**）⇒ 官方 sandbox 行**保留 ＋ `disabled: true`**、末尾多出 `sandbox-dialect` 行。⚠️ **别拿"行消失"当判据**（会误判成未生效）
+- [ ] **负向对照**（贯穿规则）：破坏它、看它变红 —— 候选：不落 patch ／ 插件改用 link 装 ／ 摘掉方言三项之一 ⇒ 断言"拒命令**未被识别为沙箱拒绝**"。⚠️ **负向变体须双锚**（同时断言"其余仍活"），否则"环境没起来"与"破坏生效"不可区分
+- [ ] ⚠️ **不得沿用 012 结论**：`docs/local-env.md` §4.3.1 只证了"方言表未变"，`confine()` 的**运行时行为**在 015 上仍属未验
+- 执行人：**Trae**
+
+##### DSH-3.7 · 已定前提（两块共有，勿重复推导）
+
 - [x] ✅ **首项判定已完成（WB 2026-09-16，本机上机）⇒ 结论 = ③「未修」**：015 **未自修** Windows 沙箱方言缺口 ⇒ **修复件不退役、且无需改码**；**须重跑全链路复验，不得沿用 012 结论**
   - **判据（读 015 `DENIAL_SIGNATURES` 是否已含 `operation not permitted`）**：015 的 `windows-acl` 方言仍是 `['access is denied','access to the path','permission denied']` —— **不含** `operation not permitted`、**也不含** zh-CN 两条
   - ⭐ **读法陷阱（判归属才能定）**：`operation not permitted` 在 015 包里**确实出现 1 处**，但它属 **`seatbelt`（macOS）名下** —— 不判归属就会得出"已修"的反向结论
   - **证据链六条**：① `dsh-sandbox-local/lib/index.js` 012→015 **全量 diff 仅 1 行**（包重命名 `node-addon-landlock-run` → `node-addon-system/landlock-run`），其余 538 行**逐字节一致**（含 `DENIAL_SIGNATURES` / `Config` 三字段 / `STATIC_ENFORCEMENT` / `PLATFORM_CHAINS` / 默认导出）⇒ **015 所谓"动过该包"只是包重命名，与方言无关**；② runner 端 `dsh-sandbox-windows-acl` 的 012/015 **代码文件 sha256 全部相同**（仅 README 文案重写 ＋ 版本号变）⇒ 上游**也未从"改输出文本"侧修**；③ 全树扫 **12105 个 js/ts**：`DENIAL_SIGNATURES` **唯一一处**、zh-CN 文本 **0 命中** ⇒ **无其他扩展点**；④ **三独立安装点 sha 一致**（本机 `~/.dsh/profiles/sdk` ＋ CVM 两处）= `100c7d169f44da32` ⇒ **非被改副本**；⑤ 修复件依赖的接口**全部仍成立**（`super.confine()` 可调、`ConfinedArgv.denialSignatures` 字段名未变、`STATIC_ENFORCEMENT['windows-acl']='partial'` gate 仍成立、默认导出仍是 provider 类）；⑥ `PLATFORM_CHAINS.win32=['windows-acl']` 单候选不变
-  - ⚠️ **附带的真矛盾（待老大定，不在本项范围）**：**3.7 的落点 home = 工程 `.dsh-home`，实测整体仍是 `0.1.2-rc.1`**（`larry` / `sdk` 各 94/99 包 = 012；回退层 213/223 = 012；建于 09-09~09-10）⇒ **3.7 的 end-to-end 宿主（client ＋ 工程 home）实际跑在 012 上**，修复件在**当下即必需**；本判定的实际意义是「**将来工程 home 升 015，修复件仍不退役**」。⇒ 需决策「工程 `.dsh-home` 是否升 015」（与 DSH-3 主线在 015 上推进存在代际落差）
+  - ⚠️ ~~**附带的真矛盾（待老大定，不在本项范围）**~~ ✅ **该矛盾已解除（2026-09-17）**：原记"**3.7 的落点 home = 工程 `.dsh-home`，实测整体仍是 `0.1.2-rc.1`**"（`larry` / `sdk` 各 94/99 包 = 012；回退层 213/223 = 012；建于 09-09~09-10）⇒ 当时 3.7 的 end-to-end 宿主（client ＋ 工程 home）跑在 012 上。**工程 `.dsh-home/profiles/{larry,sdk}` 已由 Qoder 升 015**（与修前基线 diff 各仅 2 行版本号、composition 未动、两个 lockfile 的 `0.1.2-rc.1` 均 0 次；详见 `docs/local-env.md` §4.3.1 末段）⇒ **宿主与判定基准（主 `~/.dsh/profiles/sdk`，015）已同代**。⚠️ 但「**修复件仍不退役**」的结论**不变**（015 未自修）
   - 📚 详见 `docs/local-env.md` §4.3「015 复核（2026-09-16）」
 - [x] ✅ **落盘人已定（老大 2026-09-14）**：先由 **Trae 复跑一次**把 `EPERM` 归因定性清楚，**他通道实测可写则由他落盘**（分配明细见「待派发」段）
 - [x] ✅ **落点已定（老大 2026-09-14）**：写**工程 `.dsh-home/profiles/larry/cordis.patch.yml`**（追加）；**不落 `~/.dsh/`**；**`web` profile 不补建**
   - 判据：3.7 的 end-to-end **真实宿主是 client 启动的 DSH**，而 client **显式指工程 home**（`main.rs:291`）⇒ 落全局只能验"手工跑生效"，属**替身路径**；且"手工跑回落全局／client 读工程"正是 09-14 刚定要消灭的重叠环境
-  - ⭐ **配套三件（缺一即"落点对了却没生效"）**：① `.dsh-home/.credentials.yaml` **须建**并填 `larry-dev`（`refs.DEEPSEEK_API_KEY`）——否则带对 home 也**无 key**；② 手工复验**须显式注入 `DSH_HOME`**（模板见下）；③ 凡启动 DSH 处**一律显式注入、不靠默认回退**
+  - ⭐ **配套三件（缺一即"落点对了却没生效"）**：① `.dsh-home/.credentials.yaml` **须建**并填 `larry-dev`（`refs.DEEPSEEK_API_KEY`）—— ⚠️ **此处"须建"与另外两处口径冲突**（`client/src-tauri/src/main.rs:275-276` 称凭据**继承本进程 env**；`docs/production-env.md` §12.5 表标"**可选**"）⇒ **改判为待实测项 → 见 3.7.1 ③**（若 client 路径确走 env 注入，则"不带该文件也无 key"不成立）；② 手工复验**须显式注入 `DSH_HOME`**（模板见下）；③ 凡启动 DSH 处**一律显式注入、不靠默认回退**
   - 🔧 **手工复验命令模板**：`cd /d/Code/LarryAgent && DSH_HOME="$(pwd -W)/.dsh-home" node harness/scripts/dsh-prompt.mjs "…"`
     - ⚠️ **`pwd -W` 不是可选的**：Git Bash 的 **env 值不做路径转换**（转换只发生在 argv）⇒ `/d/Code/…` 原样给 Windows node，被 resolve 成 **`D:\d\Code\…`**（当前盘根多一层 `d\`）⇒ DSH **自己新建一个空 home** ⇒ **无 key 假绿、判据全绿**（**与 `cvm-probes` 钉错 home 同形态**）。三写法实测对照 → `docs/production-env.md` §12.7 附二
     - ⛔ **跑 harness 测试时禁止注入真实 home**：`tests/isolated-setup.ts` 强制覆盖为临时目录 + 正向白名单守卫；注入真实路径会触发 `sentinel-failfast` 判 FAIL
@@ -284,7 +331,9 @@
     - ⭐ **3.1 提前派发（老大 2026-09-17 拍）**：原批次表把 3.1 排在批次 2（在 3.0 ＋ 3.2 ＋ 3.7 之后）；老大定调「**3.1 编号在前，故应先做**」⇒ **3.1 提前、3.2 / 3.7 顺延**。闸门侧无碍：DSH-3.0.5 已于 09-16 完成，「待 3.0.5 后」已满足、块已空出
     - 📮 **DSH-3.1 · S0 基础链路**（**Trae**，2026-09-17 派发）→ **派发稿 = `exchange/log-trae.md` 末尾〈📮 DSH-3.1 派发稿〉段**（该文件当前唯一在飞任务）；**前置已全清**（`cvm-probes` 参数化 ＋ 本机环境同代化，见 `:275` / `:276`）；**场地 = CVM 单跑**
     - **DSH-3.1 · S0 基础链路**（Trae）→ ✅ **已回报（2026-09-17）· WB 复验通过（主结论）**：四项硬判据 **WB 独立复跑全绿**（CVM，`base` 变体，exit 0 —— 不采信其日志）；四条负向对照核回传证据自洽；**源 `sdk` profile 未被改写**（`plugin-tool-readfile` 出现 0 次 ／ mtime 停在 09-16 17:49 ⇒ §5(a) 真副本路线成立）；默认开关下 `1 skipped` 不红（WB 本机 vitest 实测）；**无真 Key 落盘**（WB 以**哈希比对**独立验证：`config.yaml` 唯一真值，4 处 fixture 与真 key 不同值）；CVM 侧残留 0（`/tmp/larry-s0-*`、孤儿锁）；交付物 = `713c103`（14 文件 ＋1159）；`docs/dsh/dsh-migration.md` 事实表补 9 / 10 两条并回填 3.1 行借鉴点
-    - **3.2 / 3.7 未启** —— 3.1 已收口 ⇒ 该块已空出；**待老大发令起跑**（老大 09-14 的「同时只跑一块」已满足）
+    - **📮 DSH-3.2 · 首验：跨进程 resume 的 id collision 定性**（**Trae**，2026-09-17 派发）→ **场地 = CVM 单环境**；**派发稿 = `exchange/log-trae.md`（在飞任务区）**；⚠️ **Windows 侧锁子项已拆出为 3.2.1（未派）**；**参考件 `ref/community/EvilIrving__dsh-repro` 已落位**（四要素 → `docs/dsh/dsh-migration.md` §2.2.2 新行）
+    - **📮 DSH-3.7.1 · 前置就位与定性**（**Trae**，2026-09-17 派发）→ **场地 = 本机 Windows**；**派发稿 = `exchange/log-trae.md`（在飞任务区）**；三项 = ① `EPERM` 归因定性（**须钉主体**：AI 工具沙箱 vs DSH 自身沙箱）② 方言插件**实体安装进工程 `.dsh-home`**（WB 实测：挂载点不存在）③ 工程 `.dsh-home` 凭据路径打通（**三处口径不一致，以实测为准**）。**3.7.2（落盘 ＋ 自检 ＋ 真 e2e）未派**，等本块回报
+    - ✅ **原记「3.2 / 3.7 未启」已作废（2026-09-17）** —— **3.2 全块 ＋ 3.7.1 已起跑**（两块**互不依赖**，即原批次 1 的分组，非破「同时只跑一块」）；**3.2.1 ／ 3.7.2 待前序回报后起跑**
     - ✅ **3.1 前置 · 仓库资产缺陷（WB 2026-09-16 发现 → 2026-09-17 已处置）**：`harness/scripts/cvm-probes/` 有 **3 个脚本 6 处曾钉 `@0.1.2-rc.1`**（⚠️ **原记「7 处」有误，2026-09-17 全目录逐字节实测为 6 处**：`cvm-setup-profile2.sh` ×3 ／ `cvm-acp-setup.sh` ×2 ／ `cvm-task1-setup.sh` ×1；`cvm-step0.sh` 等其余 8 个文件无钉版）—— 三者都是「**在 CVM 上装 profile ／ 插件**」的复现脚本，**会被 3.1 起的任务参考** ⇒ **照抄会装出 012 profile、重演混代崩溃**（3.0.3 已踩过一次）。详见 `docs/dsh/dsh-migration.md` §2.3 未闭合项 #6。**老大 2026-09-17 裁：走 ② 参数化** ⇒ ✅ **已执行（WB 同日）**：三脚本在 `export DSH_HOME=…` 之后插入 `DSH_VERSION="${DSH_VERSION:-0.1.5-rc.2}"` ＋ 3 行说明注释，6 处字面量改 `@${DSH_VERSION}`；**双验通过** —— `set -n` 语法检查 RC=0（无语法错）、展开验证「默认 ⇒ 6 处全 `0.1.5-rc.2` ／ 显式 `DSH_VERSION=0.1.2-rc.1` ⇒ 6 处全回 `0.1.2-rc.1`」、行尾纯 LF 未混排。✅ **已回同步 CVM**（scp 三文件；两侧 sha256 逐字节一致 `0484d821…` ／ `5fe6b699…` ／ `77986d45…`；同步前 CVM 侧与仓库 HEAD **同源**、无现场改动被覆盖）
     - ✅ **3.1 前置 · 装置侧两面不同代（WB 2026-09-16 发现 → 同日处置）**：`harness/package.json:26-27` 是**受版本控制**文件，本机原钉 `0.1.2-rc.1`，而 **CVM `~/harness` 那份已被 3.0.4 现场改成 `0.1.5-rc.2`**（`.bak-304` 为证）⇒ **同一份文件两面不同代**；又因同步方式 = **整树 tar**（CVM `SYNC-ANCHOR.txt` 原文 `excluded: node_modules, .git, dist`）⇒ **`package.json` ＋ `pnpm-lock.yaml` 都在覆盖范围内**，3.1 期间任何一次同步都会把 CVM 打回 012、重演 3.0.3 混代崩溃。**老大 2026-09-16 拍「本机整体升 015」（原选项 ①）**：
       - ✅ **已执行（提交 `a974258`）**：`harness/package.json` ＋ `pnpm-lock.yaml` 升 015（lockfile **删树重算**：`0.1.2-rc.1` 出现 0 次 ／ `0.1.5-rc.2` 出现 4923 次）；npm 全局 CLI（`%APPDATA%\npm`）升 `0.1.5-rc.2`；本机 `~/.dsh` 回退层已指 015 ⇒ `:271` ④「本机 `~/.dsh` 未修」**就此结清**
@@ -304,7 +353,7 @@
   - **批次节奏**
     | 批次 | 内容 | 说明 |
     |---|---|---|
-    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖（凭据已定、落点已定）；⚠️ 3.7 待"落盘人"定性后起跑 |
+    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖（凭据已定、落点已定）；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ 已派 ／ 3.7 **拆为 3.7.1（已派）＋ 3.7.2（待 3.7.1 定性后起跑）** |
     | **2** | **3.1 S0** | 单发；后续一切的地基 —— ⭐ **已提前至批次 1 之前派发（老大 2026-09-17 拍：编号在前即先做）** |
     | **3** | **3.3 → 3.4 → 3.5 → 3.6** | **严格串行**（逐层叠加、单独验收） |
     | **4** | **3.8** + **3.9** | 3.8 可在批次 3 后期并行 |

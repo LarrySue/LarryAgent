@@ -147,23 +147,25 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 - **性质**：同上，**只读参考、不纳入依赖、不进构建**（§3.0）。真要用其代码 ⇒ 走 **fork → 本仓库 → 本项目 review / 测试**，**不复用这里的目录**
 - **登记**：每个件要记 `LICENSE` 类型与对应切片（见 §3.6〈参考实现登记表〉）；版本以浅克隆当日为准
 
-**已落位（2026-09-14，3 件 / 约 0.9 MB）**
+**已落位（2026-09-14 三件 ／ 2026-09-17 补一件；合计约 1.0 MB）**
 
 | 目录 | 对应切片 | 为什么值得看 |
 |---|---|---|
 | `kun2-5code__dsh-plugin-template/` | 3.1 / 3.7 | 插件脚手架（MIT）：`src/index.ts` + `service` / `hook` / `commands` + `client/` UI 半边 + **`dev/cordis.yml` 开发 overlay** + **`test/smoke.mjs`（假 ctx 单测范式）** |
 | `PerryLink__dsh-reach/` | 3.3 / 3.8 | 决策卡（approval / user-question）**推送到 IM 并从聊天回答**（Apache-2.0）：`src/bridge.ts` 的 **deferred-answerer waterfall** + `decision.ts` + 7 条 IM 适配器 + 降级矩阵 + `client/` 半边（`dsh.client.inject` 声明） |
 | `Asher-2000__dsh-memory-connect/` | 3.6 | 跨会话记忆（MIT）：SQLite FTS5 + 本地 embedding（`scripts/embed_server.py`）+ `systemPrompt.context` 逐轮召回 + 上下文预算测试 |
+| `EvilIrving__dsh-repro/` | 3.2 | 复现件（MIT，2026-09-17 落位；浅克隆 HEAD `e51736ba`）：`docs/implementation-spec.md` 记**会话持久化 seam 的精确签名**（`create` / `append` / `load` / `inspect` / `readFrom` / `list` / `locate` / `supportsRawArtifacts`）＋ `ctx.sessions.create(id, { seed })` 重放 ＋「firehose ≠ 持久化」的分工；`src/scrub.ts` 是一套**值级脱敏规则集**（前缀 token ／ 高熵串 ／ env 键三类，fail-closed） |
 
 - **本地社区名录**：`ref/awesome-dsh-plugin.md` = `awesome-dsh-plugin` 英文版快照，**3,386 行 / 27 个分类含分类行号**；按分类定位候选，**不必重新联网**
 
-**⚠️ 落位三件的「可参考 / 不可参考」**（⭐ **派发任务时须逐件照抄进派发稿** —— 老大 2026-09-14 定；四要素定义见 §3.6〈参考实现登记表〉规矩）
+**⚠️ 落位件的「可参考 / 不可参考」**（⭐ **派发任务时须逐件照抄进派发稿** —— 老大 2026-09-14 定；四要素定义见 §3.6〈参考实现登记表〉规矩）
 
 | 件 | 许可 | ⛔ 不可参考 | ✅ 可参考 |
 |---|---|---|---|
 | `kun2-5code__dsh-plugin-template` | MIT | **`src/client/` 14 个文件全是 React**（`import React from 'react'`）—— 本项目前端是 Vue/Tauri，**UI 代码不可照搬**；**`dev/cordis.yml` overlay 只加载 host 半边**，不能拿它判 client 半边可用（§3.6 事实 4） | host 半边 `dsh.bundle.patch` / `dsh.client` 的**包级声明形状**、`service` / `hook` / `commands` 三半边划分；`test/smoke.mjs` 的**假 ctx 单测范式** |
 | `PerryLink__dsh-reach` | Apache-2.0 | 摘录 / 改写**须保留 `NOTICE` 与许可声明**（另有 `THIRD_PARTY_NOTICES.md`）；`src/client/ReachSettingsTab.tsx` 是 **React**（同上不可照搬）；`src/adapters/` 是 **IM 平台专有**（Lark / 钉钉 / 飞书 / QQ …）—— 本项目出境面走**自做 A 段协议**，不是 IM；**不可 `dsh plugin add` 直装**（§3.0） | `src/bridge.ts` 的 **deferred-answerer 生命周期**（超时 `cardTimeoutSec` / 结清 `dispose()` / 卸载）；`src/decision.ts` 的审批判定形状；`inject: []` **降级矩阵**写法 |
 | `Asher-2000__dsh-memory-connect` | MIT | `scripts/embed_server.py` 走**独立 Python 进程**做 embedding —— 3.6 的路线是 **TS 插件内直接 embedding**（DSH-2.5 ⑤ 已验漂移 `2.2e-7`）⇒ **该脚本不可采用**；其 CHANGELOG 那两个"静默不生效"的**旧写法是反面教材**，不可照抄 | `systemPrompt.context` **逐轮召回**的接线形状；上下文预算测试的构造法 |
+| `EvilIrving__dsh-repro` | MIT | ① **签名与行号锚在 harness `master`（`47f9438`）**，我方基线是 **`0.1.5-rc.2`** ⇒ 用前须**在 015 实物上复核**（`packages/core/session` 的 `create` 签名、`sessionPersistence` 的抽象方法集），**勿把 master 行号当 015 事实**；② 它是**插件**（`/repro` slash 命令），**不是测试装置** —— 3.2 要的是"复现与定性"，**别把它的插件骨架搬进 `harness/`**；③ `lib/` 与 `pnpm-lock.yaml` 是构建产物 / 锁文件，**勿读勿评**；④ 不可 `dsh plugin add` 直装（§3.0） | `docs/implementation-spec.md` §3.1 挂点表 ／ §3.2 精确签名 ／ §3.4 关键约束（**firehose ≠ 持久化**、`seed` 的 replay 校验要求"从 seq 0 连续"、slash 命令与进程级 CLI 是**两条 seam**）；`src/scrub.ts` 的**值级脱敏规则集形态**可抄形状 |
 
 > ⚠️ **拉取时的一个坑（2026-09-14 实测）**：本机 git 全局配了 `http(s).proxy = socks5://127.0.0.1:7890`，而该代理**当时不在运行** ⇒ `git clone` 直接报 `Failed to connect to github.com port 443 via 127.0.0.1`。**github.com 本身 TCP 可达**（实测握手通）。绕法：
 >
@@ -990,7 +992,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 |---|---|---|---|---|
 | **3.0** 三态对照 / 采数 / 凭据 | 判据有效性 + 环境口径 | 五个 profile 模板 `dsh-web-app` / `dsh-headless` / `dsh-sdk-app` / `dsh-sdk-minimal` / `dsh-acp-app`；`dsh-home-paths`（`DSH_HOME` 解析） | `omdsh-dev/dsh-security-audit`（配置 / 插件来源 / 网络暴露的**只读审计清单**，可作采数项参照） | — |
 | **3.1** S0 基础链路（首个产品插件） | 工具插件的**最小注册面** + e2e | `dsh-sdk-protocol` / `dsh-sdk-client` / `dsh-sdk-jsonrpc-server` / `dsh-sdk-app`（sdk 面四件）；`packages/fs/tool-fs`（工具注册范式）；`dsh-sdk-minimal`（最小组合） | ⭐ `kun2-5code/dsh-plugin-template`；`omdsh-dev/plugin-template`（官方 turtle-ui 派生）；`iiwish/dsh-testkit`（Docker 隔离的真宿主生命周期测试）、`PerryLink/dsh-test-drive`（一次性 profile 冒烟） | ✅ 模板已落位 · ✅ **借鉴点已回填**（见下表 5 / 8 / **9 / 10**，2026-09-17 复跑所得） |
-| **3.2** resume id collision | 复现与定性 | `packages/core/session`；`dsh-session-persistence-sqlite` / `-jsonl`、`dsh-session-query-sqlite` | `EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令）——复现件的形态参考 | — |
+| **3.2** resume id collision | 复现与定性 | `packages/core/session`；`dsh-session-persistence-sqlite` / `-jsonl`、`dsh-session-query-sqlite` | `EvilIrving/dsh-repro`（导出**最小可复放的问题包**，含会话日志 / 失败命令）——复现件的形态参考 | ✅ **已落位（2026-09-17）**，四要素见 §2.2.2；借鉴点**待回填**（3.2 复跑后） |
 | **3.3** S1 审批（三段） | 答者接口 + 出境往返 + fail-closed | `dsh-user-approval`（机制）/ `dsh-permission-presets`（预设答者）/ `dsh-client-ui-approval` / `dsh-client-ui-permission-presets` / `dsh-headless`；出境面 `dsh-api-remotes` / `dsh-client-connection` | ⭐⭐ **最富的一类（50+ 件）**：**答者链** `PerryLink/dsh-auto-review`、`Letter2025/dsh-approval-llm`、`simon300000/dsh-auto`、`ilharp/dsh-tool-approval`、`SeverusZh/dsh-yolo-mode`（fail-closed 兜底）；**出境到人** `PerryLink/dsh-reach`、`moyu-good/dsh-lark-bridge`、`452926826/dsh-feishu-bot`；**规则引擎** `940842546/dsh-permissions`、`PerryLink/dsh-permission-rules` | ✅ `dsh-reach` 已落位 |
 | **3.4** S2 compaction | 换 Provider + 保原文 | `dsh-compaction`（契约）/ `dsh-compaction-basic`（默认 Provider）/ `dsh-compaction-tool-result-pruner` | `aerince/dsh-active-context-pruning`（**经官方 compaction API** 做模型自定剪枝）、`giter00/dsh-headroom`（压 tool 输出、保原文） | — |
 | **3.5** S3 sandbox 三档 | seam 可替换 + 中间档 | `dsh-sandbox` / `-policy` / `-local` / `-windows-acl`、`dsh-fs-sandbox`、`dsh-bash-sandbox`、`dsh-pwsh-sandbox` | ⭐ `omdsh-dev/sandbox-micro` / `sandbox-mxc` / `sandbox-nono`（**三个第三方 backend ⇒ 证明 `ctx.sandbox` 是可替换 seam**）；中间档预设 `Alnita-M/dsh-Almost_Full_Access`、`a903067276-rgb/dsh-perm-guard`、`Jiao-XXX/dsh-auto-approve` | — |
