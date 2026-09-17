@@ -206,7 +206,7 @@ const DENIAL_SIGNATURES = {
 > 溯源：`peerDependencies` 写成 `"*"` 是**旧代之所以进树**的原因，**决定命中结果的是落点层级** —— 两因素叠加，不是同一个；引入点 = **`a974258`**（升 015 时 lockfile 重算）。修法见 `TODO.md`「DSH-3.7.2 硬前置 1」。
 > ⭐ **跨机同形（2026-09-17 CVM 实测追加）**：CVM 的 `~/.dsh/profiles/node_modules/` 共享层**同样含 `dsh-sandbox-local@0.0.1-rc.1`**（该层由 09-16 装 `sdk` 时生成，**非人为复刻产物**）。解析实测（`createRequire.resolve`，只读）：从 `profiles/larry/`（当时仍在的 012 面）与 `profiles/node_modules/` 起点 → **`0.0.1-rc.1`**；从 `profiles/sdk/` 起点 → **`0.1.5-rc.2`** ✓。⇒ ① 旧代**不是本机某次操作的产物，而是依赖解析本身**（peer `*` → npm latest）—— **跨机同形即证**；② **3.7.2 落 `sdk` 自身层会被解析到 015**，该落点判断**正反两面均有实测**（正：会绿 ／ 反：落共享层即取旧代）。
 
-**落盘状态**：⬛ **未落盘** → **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
+**落盘状态**：🟢 **已落盘（2026-09-17 DSH-3.7.2 收口，✅ WB 复核）** —— 落点 = **工程 `.dsh-home`**：插件实体 `profiles/sdk/node_modules/@larryagent/plugin-sandbox-dialect/`（**只 `index.js` ＋ `package.json` 两文件，且不带插件自带的 `node_modules/`**）＋ `profiles/sdk/cordis.patch.yml`（**769 B** = disable 官方 sandbox 行 ＋ insert 方言件）。⇒ ③ 的修复在生产面**已生效**（原记「已验收、未生效」作废）。⚠️ 该落点目录在 `.gitignore` 内、不入库 ⇒ 重装/换机须按 `TODO.md`「DSH-3.7.2」的步骤重做。
 
 > ⚠️ **2026-09-14 订正上句的判据表述**（⚠️ **`larry` 面已于 2026-09-17 退役**，下述路径为当时事实）：原记"三个 profile 的 `cordis.patch.yml` 仍为 `[]`"—— **只在全局 home 成立**。实测须分两处看：
 > - `~/.dsh/profiles/{larry,sdk,web}/cordis.patch.yml` = **模板空态 `[]`** ✅ 原记正确
@@ -224,7 +224,10 @@ const DENIAL_SIGNATURES = {
 
 **已证 / 未证边界（别过度读）**：
 - 🟢 已证：boot 时 `providerCtor=SandboxDialectProvider`；消费方 `SandboxPwshExecutor.confine()` 拿到的签名 = 加宽后 6 条；消费方 argv 含 preamble。
-- ⬛ 未证：**模型真触发一次被拒命令并看到 `[sandbox: file access denied]`** 的真 end-to-end（boot 内的受限 spawn 被工具沙箱拦）→ 留 DSH-3。
+- 🟢 **已证（2026-09-17 DSH-3.7.2 收口，✅ WB 复核）**：**模型真触发一次被拒命令并看到 `[sandbox: file access denied]`** 的真 end-to-end —— 真模型 ／ **工程 `.dsh-home`** ／ client 同源通道 `dsh-prompt.mjs` ／ profile `sdk` ／ `workspace-write` 下往工作区**外**写文件（`D:\Code\larry-sbox-372\outside\denied.txt`）。
+  - **双锚**：挂上修复件 ⇒ 模型侧看到 `[sandbox: file access denied under workspace-write mode]`（工具返回原文 998 B）；摘掉 ⇒ 同一命令只剩 `EPERM` 原文 ＋ `[exit code: 1]`（758 B）⇒ 两态差 **240 B = 恰好那两行标记**。两态**目标文件均未被创建**（正对照：该命令确实写不出去）。
+  - **取证面 = 工具返回帧**，不是模型复述：判据取自 DSH 自己的会话日志 `$DSH_HOME/sessions/<cwd>/session-*/session.v3.jsonl.zstd` 的 `tool/result` 帧（⚠️ 该文件是**多 zstd frame 串联**，`zstdDecompressSync` 只解第一帧 ⇒ 须按 magic 切分逐帧解）。
+  - ⚠️ **未闭合（脆弱性，非缺陷）**：同一装置在同一台机上**另有一次运行走了 pwsh 受限失败路径** —— 工具返回为 `CannotCreateTypeConstrainedLanguage` ＋ `无法运行 node.exe：拒绝访问`，且输出是 **GBK 乱码** ⇒ 既无 marker、也匹配不到 `PLAIN_DENIAL_WORDS` ⇒ 该路径下 `unpatched` 态会被判 FAIL。**方向是 fail-safe（假红，非假绿）**，但「命令一定走到 EPERM」这一前提**不成立**。
 - 适用面：本修复**仅 Windows**（`confine()` 在非 win32 直接返回原值）⇒ CVM(Linux/landlock) 上不需要、也无副作用。
 
 #### 4.3.1 015 复核：上游**未**自修，修复件继续有效（🟢 2026-09-16 WB 本机上机）

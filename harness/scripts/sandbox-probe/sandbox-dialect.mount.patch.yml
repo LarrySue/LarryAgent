@@ -9,8 +9,7 @@
 #
 # ⚠️ 插件须**实体复制**进 profile 的**自身层** node_modules（**勿 link、勿放共享层**）
 #    安装点：$DSH_HOME/profiles/<profile>/node_modules/@larryagent/plugin-sandbox-dialect/
-#      （2026-09-17 DSH-3.7.2 订正：原写 `profiles/node_modules/…` = 共享层，是错的）
-#      （2026-09-17 修订：原写 `profiles/node_modules/…`「共享层」—— 实测该层把
+#      （2026-09-17 DSH-3.7.2 订正：原写 `profiles/node_modules/…`「共享层」—— 实测该层把
 #       `dsh-sandbox-local` 解析到旧代 `0.0.1-rc.1`（同树 `dsh-llm` = `0.1.5-rc.2`）
 #       ⇒ 插件 `import` 即崩（`does not provide an export named 'assertNever'`）。
 #       必须落**该 profile 自身**的 `node_modules`。）
