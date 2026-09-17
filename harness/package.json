@@ -6,7 +6,7 @@
   "description": "LarryAgent DSH integration workspace: Cordis bundle plugins mounted into dsh profiles.",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
-    "build": "pnpm --filter @larryagent/plugin-probe run build",
+    "build": "pnpm --filter \"./packages/*\" --if-present run build",
     "build:probe": "pnpm --filter @larryagent/plugin-probe run build",
     "build:sandbox-probe": "pnpm --filter @larryagent/plugin-sandbox-probe run build",
     "test:isolated": "vitest run tests/guard.test.ts",

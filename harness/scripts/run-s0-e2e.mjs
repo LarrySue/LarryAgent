@@ -14,7 +14,7 @@
  * ⚠️ 已知坑：真实调用冷跑可达 ~106s、pnpm 装插件后 node 不退出 ⇒ 每个变体给足时限，见 `S0_VARIANT_TIMEOUT_MS`。
  */
 import { spawn } from 'node:child_process'
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
@@ -36,6 +36,29 @@ const env = {
   S0_EVIDENCE_DIR: process.env.S0_EVIDENCE_DIR ?? resolve(repoDir, '.s0-evidence'),
 }
 mkdirSync(env.S0_EVIDENCE_DIR, { recursive: true })
+
+// ---------------------------------------------------------------------------
+// 构建前置检查（2026-09-17 补）
+//
+// `lib/` 是构建产物、被 `harness/.gitignore` 忽略（设计如此）⇒ **干净 clone 后直接复跑会因
+// 缺 `lib/index.js` 失败**（CVM 那次能跑，只因现场已 build 过、`lib/` 07:47 生成）。
+// 这里**只检查、不自动 build**：自动构建会在被测环境里造副作用，也会与 `package.json` 的
+// build 入口形成两套逻辑。缺产物就明确报错（退出码 2），不让它伪装成"测试失败"（1）。
+// ⚠️ 入口路径跟着被测包的 `main` 走，不硬编码 lib/index.js。
+// ---------------------------------------------------------------------------
+{
+  const pluginDir = resolve(harnessDir, 'packages', 'plugin-tool-readfile')
+  const pkgJson = JSON.parse(readFileSync(resolve(pluginDir, 'package.json'), 'utf8'))
+  const entry = resolve(pluginDir, pkgJson.main ?? 'lib/index.js')
+  if (!existsSync(entry)) {
+    console.error(
+      `[s0] ❌ 被测插件缺构建产物：${entry}\n` +
+        `[s0]   lib/ 不入库，须先构建（退出码 2 ≠ 测试失败）：\n` +
+        `[s0]     cd harness && pnpm --filter "./packages/*" run build\n`,
+    )
+    process.exit(2)
+  }
+}
 
 if (!env.DEEPSEEK_API_KEY) {
   console.warn('[s0] ⚠️ 未检测到 DEEPSEEK_API_KEY（仅判存在性、不读值）——base / 大多数变体会按"失败"报出，这不是环境 bug。')

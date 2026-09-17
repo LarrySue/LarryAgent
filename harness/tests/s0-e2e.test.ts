@@ -156,7 +156,7 @@ async function runPrompt(key: string): Promise<{ response: string; verdict: Retu
  * 只杀直接子进程会留下它继续把回合写完，日志照样含 nonce（不确定的假绿）；
  * ② 杀完要**等文件落定**再读，否则读到"正在写的中间态"。
  */
-async function killClientRun(): Promise<string> {
+async function killClientRun(): Promise<{ summary: string; killedBy: string; bytesAtKill: number }> {
   const fallbackMs = Number(process.env.S0_KILL_AFTER_MS ?? 8000)
   const child = spawn(
     process.execPath,
@@ -207,10 +207,13 @@ async function killClientRun(): Promise<string> {
     }
   }
   await new Promise((r) => setTimeout(r, 2000)) // 等落定再回读
-  return (
-    `killedBy=${killedBy} bytesAtKill=${bytesAtKill} pid=${child.pid} ` +
-    `exitCode=${String(child.exitCode)} signal=${String(child.signalCode)} soFar=${out.slice(0, 160)}`
-  )
+  return {
+    summary:
+      `killedBy=${killedBy} bytesAtKill=${bytesAtKill} pid=${child.pid} ` +
+      `exitCode=${String(child.exitCode)} signal=${String(child.signalCode)} soFar=${out.slice(0, 160)}`,
+    killedBy,
+    bytesAtKill,
+  }
 }
 
 beforeAll(() => {
@@ -260,7 +263,11 @@ const ENABLED = realApiEnabled()
 describe.skipIf(!ENABLED)(`S0 基础链路（variant=${VARIANT}）`, () => {
   it('四项判据 / 负向对照', async () => {
     if (VARIANT === 'kill-client') {
-      evidence.notes.push(`kill-client: ${(await killClientRun()).slice(0, 300)}`)
+      const kc = await killClientRun()
+      evidence.notes.push(`kill-client: ${kc.summary.slice(0, 300)}`)
+      // ⭐ 破坏动作的生效锚（2026-09-17 复验发现）：只断言 ④ 为假，会被"日志从未创建"
+      //    这一平凡情形同样满足（假通过）⇒ 把"何时杀的 / 杀时已写多少"一并留证（见下方断言）。
+      evidence.criteria = { '④_killedBy': kc.killedBy, '④_bytesAtKill': kc.bytesAtKill }
     } else {
       // base 用**环境里注入的真 key**（由 run-s0-e2e / s0-run-with-file-key 注入）；
       // wrong-key 变体换成明示无效的占位串（判据 ③ 的负向对照）。
@@ -344,12 +351,27 @@ describe.skipIf(!ENABLED)(`S0 基础链路（variant=${VARIANT}）`, () => {
       return
     }
     if (VARIANT === 'no-session-dir') {
-      expect(evidence.sessionLog.containsNonce, '负向 3：落盘目录只读后 ④ 必须红').toBe(false)
+      // ⭐ 补锚（2026-09-17 复验发现）：仅断言 ④ 为假，会被"整条链路压根没起来"平凡满足（假通过）。
+      //   实测（CVM 09-17）：本变体下 ③ **也**红 —— turnEndKind=error / errorCode=UNKNOWN、
+      //   finalResponse 空、toolNameInLog 空 ⇒ 只读 sessions 目录让 **session 创建即失败**，
+      //   模型根本没被调到。故唯一可用的"链路是活的"锚是**插件激活层**（实测 true）。
+      //   ⚠️ 记：本变体的真实破坏面**大于**其名（不止打掉 ④）—— 别据此断言 ③ 必须绿，
+      //     那是当下实现的副作用，不是判据要求（DSH 若改成"落盘失败不阻断回合"，③ 就该变绿）。
+      expect(evidence.criteria['②_activated'], '负向 3：插件激活层必须仍是绿的（否则"红"可能只是链路没起来）').toBe(true)
+      expect(evidence.sessionLog.logPresent, '负向 3：落盘应当确实没发生（文件不存在，而非"存在但无 nonce"）').toBe(false)
+      expect(evidence.criteria['④_sessionContainsNonce'], '负向 3：落盘目录只读后 ④ 必须红').toBe(false)
       return
     }
     if (VARIANT === 'kill-client') {
       // ④ 的红灯形态 = 「**文件已存在且已写了 N 字节**，但回读查不到 nonce」——
       // 这同时否掉"文件存在就算 ④ 过"这一弱判据（派发稿 §1 判据 ④ 明文：不是「文件存在 / 条数够」）。
+      //
+      // ⭐ 补锚（2026-09-17 复验发现）：上面这条形态**此前只写在注释里、没进断言** ——
+      //   仅断言 ④ 为假时，"日志从未创建"（环境没起来）同样满足（假通过）。
+      //   实测（CVM 09-17）：logPresent=true / bytes=995（杀时 636，杀后仍涨到 995 ⇒ 必须"等落定再读"）。
+      expect(evidence.criteria['④_killedBy'], '负向 4：破坏动作须在客户端仍存活时执行（不能是它已跑完退出后再补杀）').not.toBe('child-exited-first')
+      expect(evidence.sessionLog.logPresent, '负向 4：日志文件必须已存在（否则是"从未落盘"，不是"写到一半被杀"）').toBe(true)
+      expect(evidence.sessionLog.bytes, '负向 4：必须已写入 > 0 字节（实证 995 B）').toBeGreaterThan(0)
       expect(evidence.criteria['④_sessionContainsNonce'], '负向 4：客户端在中途被杀后，回读不得含完整 nonce').toBe(false)
       return
     }

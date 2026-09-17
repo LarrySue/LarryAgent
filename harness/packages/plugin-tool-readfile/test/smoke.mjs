@@ -4,7 +4,7 @@
  * 运行：node test/smoke.mjs（先 `pnpm build`）
  */
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply, inject, name, TOOL_NAME } from '../lib/index.js'
@@ -41,7 +41,22 @@ assert.deepEqual(inject, [], 'inject 必须是空数组（零硬依赖，缺失�
 // ② 容忍 config === undefined（§3.6 事实 8：patch 无 config 块时 cordis 传 undefined）
 {
   const { ctx, registered } = fakeCtx()
-  apply(ctx) // ⛔ 不传 config —— 关键用例
+  // ⭐ 测试隔离（2026-09-17）：本用例**故意不传 config**，而缺省打点路径是
+  //   `<DSH_HOME>/plugin-tool-readfile.activate.log` ⇒ 不设 DSH_HOME 就会写**真实** `~/.dsh`
+  //   （`apply` 里还会 `mkdirSync` 它）。故临时把 DSH_HOME 指到临时目录、跑完还原，
+  //   顺带把「缺省落点跟随 DSH_HOME」这条契约钉成断言。
+  const savedDshHome = process.env.DSH_HOME
+  process.env.DSH_HOME = work
+  try {
+    apply(ctx) // ⛔ 不传 config —— 关键用例
+    assert.ok(
+      existsSync(join(work, 'plugin-tool-readfile.activate.log')),
+      '缺省打点必须落在 <DSH_HOME> 下（不得写真实 ~/.dsh）',
+    )
+  } finally {
+    if (savedDshHome === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = savedDshHome
+  }
   const tool = registered.find((d) => d.name === TOOL_NAME)
   assert.ok(tool, 'config 为 undefined 时也必须注册工具')
   assert.equal(typeof tool.output.render, 'function', 'output.render 必须是函数（register 的硬校验）')

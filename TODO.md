@@ -101,10 +101,11 @@
 - [x] 📚 **参考件**（登记表 3.1 行）：`ref/community/kun2-5code__dsh-plugin-template` —— 插件脚手架（`dsh.bundle.patch` + `dsh.client` 清单形状、`service` / `hook` / `commands` 三个半边、**假 ctx 单测范式** `test/smoke.mjs`）；e2e 台可参照 ✅ 借鉴点已回填（事实表 5 / 8 / **9 / 10**，2026-09-17）｜ `iiwish/dsh-testkit`（Docker 隔离真宿主生命周期测试）/ `PerryLink/dsh-test-drive`（一次性 profile 冒烟）
 - [x] 🧹 **清退代码内的 log 指针**（**3.1 顺带项**，WB 2026-09-17 发现；原则见 `exchange/README.md` 协作规则末条）：三处**均已失活**（`log-claude.md` 内容此后整体轮换）——① `harness/tests/global-setup.ts:75-77` 引「防挂死安全网」节 ⇒ **就地自足化**（把「方案 A：真实退出码 ＋ 诊断，不因残留判红——假红比没护栏更糟」的语义 ＋ 裁决日期写进注释本体；内容源 = `TODO:40`，原出处已消失）；② `harness/tests/global-setup.ts:127` 运行期输出串内嵌「见 exchange/log-claude.md 裁决记录」⇒ **删该括注**，其余不动；③ `backend/tests/test_integration_llm.py:48`「排查记录见 exchange/log-claude.md」⇒ **改指** `archive/report-2026-08-30.md`（该事故复盘的永久落点，内容在）。
 
-- ⚠️ **3.1 复验发现 3 条（WB 2026-09-17，均非阻断；② 涉及判据有效性，建议处置）**：
-  1. **复跑说明缺一步 `pnpm build`**：`lib/` 被 `harness/.gitignore` 忽略（设计如此，非笔误），而 `run-s0-e2e.mjs` 与回报给出的"一条命令复跑"**未含 build** ⇒ 干净 clone 后照做会失败（插件 `main` 指向不存在的 `lib/index.js`）。CVM 能跑通是因现场已 build（`lib/index.js` 07:47 生成）。**修法**：脚本开头补一步 build，或在用法处写明前置。
-  2. **负向对照 3 / 4 的断言缺"破坏动作确实生效"的锚**：两条都只断言 `④_sessionContainsNonce === false` —— 若环境整体没起来（会话日志根本没创建），同样会 PASS（**假通过**）。应各补一条正向锚：负向 3 加 `②_activated === true`（现证据本就是 true，只是没锁住）；负向 4 加 `logPresent === true && bytes > 0`（现证据 995 B，证明"写了一半被杀"而非"从未写"）。**负向 1 / 2 无此问题**（各自已带对照）。
-  3. **`smoke.mjs` 用例 ② 会写真实 home**（小瑕疵）：`apply(ctx)` 不传 config ⇒ `markerPath` 缺省落 `process.env.DSH_HOME ?? ~/.dsh/plugin-tool-readfile.activate.log` ⇒ 跑单测污染真实 `~/.dsh`。应显式传 `activateMarker`。
+- ✅ **3.1 复验发现 3 条 —— 均已处置（WB 2026-09-17，老大授权 WB 直接改）**：
+  1. **构建链**（原判"复跑说明缺一步 `pnpm build`" —— **实情更重，已订正**）：`harness/package.json` 的 `build` 此前只 filter `plugin-probe` ⇒ **新插件与 `plugin-sandbox-probe` 都不在构建链内**（不是"说明漏写"，是脚本没跟上）。**已修**：`build` 改为 `pnpm --filter "./packages/*" --if-present run build`（本机实测：选中 7 项目、3 个有 build 的包全 Done、rc=0）；`run-s0-e2e.mjs` 补**构建前置检查** —— 缺被测包 `main` 指向的产物即报错退出 **2**（与"测试失败 1"／"看门狗 124"区分）。⚠️ 刻意**只检查、不自动 build**：自动构建会在被测环境造副作用，且与 `package.json` 的 build 入口形成两套逻辑 —— 不是遗漏。
+  2. **负向对照 3 / 4 补"破坏动作生效"锚 —— 已补 ＋ CVM 实跑验证**：负向 3 加 `②_activated === true` ＋ `logPresent === false`；负向 4 加 `logPresent === true` ＋ `bytes > 0` ＋ `killedBy !== 'child-exited-first'`（为此把 `killClientRun` 改为返回结构化，另把 `④_killedBy` / `④_bytesAtKill` 落进证据）。**实跑**：两变体均 exit=0（`no-session-dir` 7s、`kill-client` 9s），实证 `killedBy=first-session-log-byte`、`bytesAtKill=636` → 终值 995 B（与 Trae 那次独立跑**同值**，变体行为稳定）。
+     - 📌 顺带订正一条**过度声明**：负向 3 的真实破坏面**大于其名** —— 实测下 **③ 也红**（`turnEndKind=error` / `errorCode=UNKNOWN` / `finalResponse` 空）⇒ 只读 sessions 目录令 **session 创建即失败**，模型根本没被调到。已在该变体注释里写明"**别断言 ③ 必须绿**"（那是当下实现的副作用，非判据要求）。
+  3. **`smoke.mjs` 用例 ② 写真实 home —— 已修**：改为临时把 `DSH_HOME` 指到临时目录（`finally` 还原），并把"缺省打点跟随 `DSH_HOME`"钉成断言。**本机实测**：`smoke ok`，且真实 `~/.dsh/plugin-tool-readfile.activate.log` 前后**完全未变**（3784 B / mtime 07:55:09）。
 
 #### DSH-3.2 · 首验：跨进程 resume 的 id collision 定性
 

@@ -74,6 +74,8 @@ importers:
         specifier: '*'
         version: 4.6.5
 
+  packages/plugin-tool-readfile: {}
+
 packages:
 
   '@agentclientprotocol/sdk@1.4.0':
