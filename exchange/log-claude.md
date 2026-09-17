@@ -5,6 +5,81 @@
 
 ---
 
+# DSH-3.7.3-T · 进行中回报（Claude｜2026-09-17）
+
+> ⏳ **本件未完成**：`T1(a–d)` 与 `T2` **待 `DSH-3.2.1` 交回后开工**（前置 0，同场地同依赖树，并发会互相污染）。
+> ✅ 已完成**零冲突项**（纯只读，不跑 DSH 会话、不写仓库）：前置 1 锚值核对、`T1(e)` 装置清单、**`T3` 全项**、**`T4` 全部三问**。证据落 `D:\Code\_claude-evidence\373t\`。
+
+**通道**：本机 Windows ／ **bash(MSYS)** ／ `node v24.14.1 @ /d/App/node/node` ／ `pnpm.cmd 11.7.0` ／ **未走 CVM**（仅 T3(c) 读了一次 CVM lock 的 sha256）。
+
+## 结论先行（已完成项）
+
+| 项 | 一句话 |
+|---|---|
+| 前置 1 · 锚值 | ✅ **§5 六项全对**（尺寸 ＋ sha256 全等）⇒ 场地未被前序改动 |
+| T1(e) · 清单 | ✅ 已清点：`scripts/` 顶层 **8 个 `.mjs`** ＋ 4 子目录（22 文件）｜`tests/` **14 个** — 待 3.2.1 交回后逐个说明跑/不跑 |
+| T3 · 复算 | ✅ **四项全对**：`specifier:'*'` = **0**｜`0.0.1-rc.1` = **0**｜三包版本集合各只 `0.1.5-rc.2`｜两侧 lock **sha256 逐字节一致**｜4 探针包终态**完全符合** |
+| T4 · 判据边界 | ⚠️ **发现 1 处未闭合假阳路径**（见下 §T4-3）＋ 1 处残余缺口（§T4-2）——修复方向对，但**未被覆盖** |
+
+## T3 · 判据复算（命令原文 ＋ 原始输出）
+
+**T3(a)** `grep -c "specifier: '\*'" harness/pnpm-lock.yaml` → **`0`** ｜ `grep -c "0\.0\.1-rc\.1"` → **`0`** ｜ 反向佐证 `grep -c "0\.1\.5-rc\.2"` → **`2177`**
+
+**T3(b)** 遍历 `.pnpm/*/node_modules/{@scope/}*/package.json` **读 `name`/`version`**（脚本 `t3b-scan-pnpm.mjs`，⛔ 未用目录名 glob）：
+```
+实体条目总数: 2574（0 个不可读）
+含 version === "0.0.1-rc.1" 的条目数: 0
+@deepseek-ai/dsh-sandbox-local      : 版本集合 = 0.1.5-rc.2 ｜ 物理 entry 数 = 3
+@deepseek-ai/dsh-storage-domain     : 版本集合 = 0.1.5-rc.2 ｜ 物理 entry 数 = 5
+@deepseek-ai/dsh-sandbox-windows-acl: 版本集合 = 0.1.5-rc.2 ｜ 物理 entry 数 = 2
+```
+**T3(c)** 本机 `sha256 = a03ede8de3f00ee3e35edd6751da6429f6dd7913e0451cd33420a2d4a096ffed`（541493 B）＝ CVM 同值 ⇒ **两侧逐字节一致** ✅（CVM 侧另核：`package.json` 1283 B/`e4d338caa2a0431b`、`dialect` 551 B/`9d6f4794a8aec191`，`packages/` = **7** 包，**无 `.git`** 与记载一致）
+
+**T3(d)** `plugin-probe` / `plugin-sandbox-probe` = `{"@deepseek-ai/cordis":"^4.0.2"}` ＋ `{"optional":true}`；`plugin-sandbox-mount-probe` / `plugin-storage-probe` = **两段均不存在** ✅
+
+## T4 · 判据修复的边界评估（读码，未改代码）
+
+**T4-1 · `p2LogPath` 语义**：**改动前后不一致**。
+- 改前（据 `s0-resume.test.ts:308-312` 注释所记旧片段 **推断** ⚠️ 该片段只含 `p2Log` 定义与 `p2LandedOnSameLog` 赋值，**改前 `p2LogPath` 的写法无独立来源**）：`p2Log = find(l => l.hasP2 && l.hasP1 === false)` ⇒ 恒指「**P1 之外**那条含 P2 的日志」，按构造**永不**指向 P1 所在日志。
+- 改后（`:313-321`）：`landedOnP1Log === true` ⇒ 指 **`p1Log.path`（与 `p1LogPath` 同值）**；`false` ⇒ 指 `otherP2Log?.path ?? null`。
+⇒ 语义由「P2 独占的那条」改为「**P2 实际落在哪条**」（更正确），但**下游须知**：`p2LogPath === p1LogPath` 在 `true` 分支下是**预期**、不是异常。
+
+**T4-2 · `null` 与 `false` 能否区分**：**机器下游不存在** —— `run-s0-resume.mjs`（106 行通读）只收集 exit code、落 `*.resume.json`、打 PASS/FAIL，**完全不读 `resumeTarget`** ⇒ 该字段**只写不读**，唯一读者是人。人的判读表：
+
+| `p2LandedOnSameLog` | `p2LogPath` | 含义 |
+|---|---|---|
+| `null` | `otherP2Log?.path ?? null` | 无任何日志含 P1（`:354` 断言会 FAIL，但证据已在 `:324` 落盘） |
+| `true` | ＝ `p1LogPath` | P2 落在 P1 那条 ✅ |
+| `false` | 路径 | P2 落在**另一条**日志 |
+| `false` | `null` | **P2 未落盘**（第二轮失败/没写日志） |
+
+⇒ **可区分**，但 `false` **混合了两种语义**，须靠 `p2LogPath` 是否为 `null` 才能分开，而**证据里没有独立字段**表达「P2 无落盘」、也无文字说明此组合 ⇒ **残余缺口**（建议：加 `p2LogFound: boolean`，或把该分支的 `p2LogPath` 写成 `'(none)'` 以别于 `null`）。
+
+**T4-3 · `hasP1`/`hasP2` 取法 ＋ 是否会被骗**：`logsEvidence():219` = **`text.includes('OK-P1'/'OK-P2')`**，`text` 是整篇解码后的会话日志（每行一个 JSON 事件）⇒ **纯子串匹配，不分事件类型、不分轮次、不分角色**。
+
+⚠️ **会被骗到——且存在一条未被修复覆盖的假阳路径**：
+1. `sessionLogs` 顺序由 `listSessionLogs()` 定为 **mtime 新→旧**（`s0-session-log.ts:27`）；
+2. `p1Log = sessionLogs.find(l => l.hasP1)` ⇒ 取**最新**那条含 P1 的日志；
+3. 若 P2 实际落在**另一条**日志，而那条日志因 **resume 载入 P1 历史**（或模型复述、或 `request/context` 帧带入）而含 `OK-P1` ⇒ 该日志 `hasP1 = true` ⇒ **`p1Log` 误指向 P2 的日志**；
+4. 该日志必然 `hasP2 = true` ⇒ **`p2LandedOnSameLog` 报 `true` —— 假阳**（真相应是"另开了一条日志"）。
+5. `key` 变体的断言（`:354-355`）只查 `p1Log` defined，**不校验它真是 P1 的落点** ⇒ **拦不住**。
+
+根因是**名实不符**：字段名/注释暗示 `hasP1` = "这条日志是 P1 的落点"，实现却只是"这段文本含该串"。
+⚠️ **以上为读码推断，须实测确认** ⇒ 已列入 T2 的验证动作：逐条读 `sessionLogs` 的 `path`/`bytes`/`lastEventType`/`hasP1`/`hasP2`，**用日志条数与路径交叉验证**布尔值，不只信 `true`/`false`。
+
+## 开工前核出的两处**记载与实际不符**（先报差异）
+
+1. **node 通道**：派发单记「Bash 通道 = `22.22.2`（managed）／ system = `24.14.1`」，实测 **Bash 通道只有一个 node = v24.14.1**（`which node` → `/d/App/node/node`，PATH 无第二份；`AppData/Local/node` 下只有 `corepack`，**无 node.exe**）⇒ **两条通道同版本，"通道不同"的提示在本机当前**不成立**。⚠️ 若某处结论依赖「22.22.2 那条通道」，需重核。
+2. **「本机 2574 个 `package.json`」—— 我先判错、现自纠**：`find` 口径得 585/577（`.pnpm/<dir>/node_modules/<pkg>` 是**符号链接**，`find` 默认不进入），正确口径（读 `package.json`）得 **2574** ⇒ **派发单没写错，是我口径错**。
+
+## 待办（前置满足后立即执行）
+
+- `T1(a)` e2e ＋ `(b)` build ＋ `(c)` 四个 `test:isolated*`（⚠️ 哨兵组本就应红）＋ `(d)` `dsh-prompt.mjs`（⚠️ `pwd -W` 必须）
+- `T2` `S0_RESUME_VARIANT=same-proc` 触发 `true` 分支 ＋ **逐条 `sessionLogs` 交叉验证**（含上面 §T4-3 的假阳验证）
+- 收尾核 `git status --short` ＋ T1(e) 逐件说明
+
+---
+
 ## 📮 在飞任务（状态区）
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
