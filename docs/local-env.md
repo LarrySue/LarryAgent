@@ -442,6 +442,10 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
    - 正确姿势：遍历 `node_modules/.pnpm/*/node_modules/{@scope/}*/package.json`，读其 `name` / `version` 比对。⚠️ scope 目录（`@deepseek-ai`）**自身没有 `package.json`**，别把它当空壳。
    - **更强的判据（树 vs lock 全量对齐）**：把树里读出的 `name` 集合与 lock `packages:` 段的 key 比对 ⇒ 「**树有 lock 无**」应为 **0**（无多余包）；「**lock 有树无**」应**全为异平台 optional**（本机实测 91 项，全是 `sharp` ／ `node-addon-system-*` 的 darwin/linux/wasm 支）。
    - ⚠️ **「物理目录数」≠「版本数」**：同一版本因 **peer 变体**会有多个物理 entry（实测清理后 `dsh-sandbox-local` **3** 个 entry ／ `dsh-storage-domain` **5** 个 ／ `sandbox-windows-acl` **2** 个，而**版本集合各只一支**）⇒ 报「支数」须**注明是版本数还是物理目录数**，否则会把 peer 变体误读成「没清干净」。
+4. **⚠️ `cp -r` profile 到临时 home ⇒ pnpm 直接拒（判「装置跑不起来」用，2026-09-17 实测）** —— profile 的 `node_modules/.modules.yaml` 里 **`virtualStoreDir` 是源 profile 的绝对路径**（实测 ＝ `D:\Code\LarryAgent\.dsh-home\profiles\sdk\node_modules\.pnpm`，且 `"nodeLinker": "hoisted"`、`storeDir` ＝ `D:\.pnpm-store\v11`）⇒ 复制到临时 home 后 pnpm 算出的是**副本路径** ⇒ 二者不一致 ⇒ **`ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`、`exit 1`，且发生在解析依赖之前**（⇒ 与「包在不在树里」**无关**）。
+   - **现象**：依赖 `installPlugin` 的装置（如 `run-s0-e2e.mjs` 的各变体）报 `plugin add: exit=1` ／ `dsh: pnpm failed in profile directory <临时home>\profiles\sdk`，**看着像工程坏了、实为复制姿势**。
+   - **修法方向**（未实施）：复制后清 ／ 改副本的 `virtualStoreDir`，或改用 `pnpm install` 在副本里重建；⚠️ 本机 `.dsh-home` 的 profile 现场建于 `2026-09-17 00:11`（早于 3.7.3 的依赖清理约 19.7 h）⇒ **该失效非本次清理所致**。
+
 ## 9. Vue/Tauri ↔ DSH 连通复跑（DSH-2.3）
 
 > **来源**：原文为 Trae 实测报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`（2026-09-09，基线 `dsh-v0.1.2-rc.1`）。2026-09-11 吸收至本节，独立报告文件随之删除（内容等价）。
@@ -524,6 +528,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 - **`git` 全局硬编码代理**：`http.proxy` = `https.proxy` = `socks5://127.0.0.1:7890`（用户梯子）。⇒ **梯子关时，`git fetch/pull/push` 与依赖 git 的插件安装会一起失败**；需临时 `git -c http.proxy= -c https.proxy=`（本机直连 GitHub 会被 reset；见决策稿 §3.4「DSH-2.6 收口复核」）。
 - **行尾**：仓库内 `core.autocrlf=true`，全局未设 ⇒ 跨 AI 协作行尾噪声的来源（本仓治理检查已含"末字节与 HEAD 逐字节比对"）。
 - **控制台编码**：中文 Windows 默认 GBK/CP936，且 User 层未设 `PYTHONUTF8` —— 与 §4.1「编码层」同源，是 ① 层缺口的环境底色。
+- ⭐ **工具输出的语言与编码（判"证据原文"用，2026-09-17 实测）**：中文 Windows 上 `taskkill` 的成功输出**恒为 GBK 中文**（原始字节 `b3c9b9a6…` ＝ `成功: 已终止 PID 为 <pid> 的进程。`），`tasklist` 无匹配 ＝ `信息: 没有运行的任务匹配指定标准。`；`GetACP` ／ `GetConsoleOutputCP` ＝ **936**、`GetUserDefaultUILanguage` ＝ **0x804**（zh-CN）。⇒ **node 的 `spawnSync(cmd, …, {encoding:'utf8'})` 读这些输出必得替换字符乱码**（实测：`����: �޷���ֹ …`），**绝不会**得到英文。⇒ 凡把这类输出当「证据原文」存盘 ／ 引用：① 须按 **ACP（936）** 解码；② **出现英文 ⇒ 不是本机该进程的原始产物** —— 这是一条判「证据链是否被后处理过」的硬判据。
 
 ### 10.3 实测**证伪**（留痕，防止再被误导）
 
