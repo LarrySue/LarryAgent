@@ -51,7 +51,9 @@
 | embedding 模型加载 | ~150–250 MB | 🔴 **估算，未测到**（见 §6 坑 2） |
 | SQLite（内嵌） | 忽略 | — |
 
-> ⚠️ **口径警告（勿重复计数）**：「DSH web profile 全量常驻 173MB」测的是 **web profile（含官方 browser UI）**，**与生产形态不并存** —— 生产跑的是 headless `larry` profile + 自做服务，对应「联合 RSS 192MB」这一项。**二者择一，不得相加。**
+> ⚠️ **口径警告（勿重复计数）**：「DSH web profile 全量常驻 173MB」测的是 **web profile（含官方 browser UI）**，**与生产形态不并存** —— 生产跑的是 **`sdk` profile** + 自做服务，对应「联合 RSS 192MB」这一项。**二者择一，不得相加。**
+>
+> 〔2026-09-17 订正：原写"headless `larry` profile"，与**同表上一行自相矛盾** —— 该项实测标注即"DSH `sdk` profile 进程树"；且 `larry` 面（本机工程 ＋ 本机全局 ＋ CVM 共三处）已于同日全部退役。**数值口径不受影响**，仅 profile 名订正。〕
 
 **生产内存账（合成）**：OS idle 391 + **联合 192** + ChromaDB 91 + embedding 模型 150–250 ≈ **0.82–0.92 GB**（单人低频、单会话峰值口径）。
 
@@ -531,6 +533,21 @@ records:
 
 - 📐 **015 完整 composition 口径 = `dsh-base` ＋ `dsh-sdk-app` ＋ 3 个可选 peer**：它们在锁文件里是 `peerDependenciesMeta.optional: true`，而 profile 配 `autoInstallPeers: false` ⇒ pnpm 把 32 条列进 `transitivePeerDependencies` **却不安装** ⇒ 运行时回落 fallback 层（**这正是 DSH-3.0.3 崩的机制**；若回退层与 profile **同代**则可省）。
 - ⚠️ **别把 `node-addon-system@0.1.2` 当"旧代际残留"**：它是**独立包**（无 `dsh-` 前缀、与 DSH 代际体系无关），按 `grep 0.1.2` 扫代际时会假命中 ⇒ **判定残留须按 `@deepseek-ai/dsh-*` 前缀筛**。
+
+**CVM 侧 `larry` profile 退役（2026-09-17，WB 上机执行）**：
+
+| 维度 | 实测 |
+|---|---|
+| 代际 | deps 全钉 **`0.1.2-rc.1`**（`dsh-api-gateway` ／ `dsh-host-webserver`）＋ 传递到 `dsh-typert-protocol@0.1.2-rc.1` ⇒ **012 代**（而该机 CLI ／ 共享层 ／ `sdk` 面均已 015）|
+| 引用面 | 全机 3 处 "larry" 命中**皆同名不同物**（`@larryagent/` 命名空间 ／ `larry_probe` 存储域名 ／ `larry-test-realapi-` 前缀）⇒ **无任何脚本把它当 profile 用** |
+| 活跃度 | mtime 停 **2026-09-10 10:43**，此后 11 天未动 |
+| 规模 | 自身 17 包（`@deepseek-ai` 7 个）／ **1.9 MB** —— 与「真删慢」的工程侧 99 包不同，**删除成本低** |
+
+⇒ **判定：退役。** 原记「`larry` 本次不动（有主）」系**照抄旧登记未核实** —— 其名义"主"（本节 §2 口径警告原写"生产跑 headless `larry`"）已被同表实测（该项测的是 `sdk` 进程树）与 09-16 定型（生产落点 = `sdk`）双重推翻；且 composition 是 api-gateway ＋ host-webserver，与"headless"本就不符 ⇒ **实为 09-10 验证 HTTP/gateway 面（`/api/remote.mux` 带 cookie 仍 404 那次）的实验器材残留**，012 代在 015 环境里**留也跑不起来**。
+
+**处置**：重命名备份 `~/.dsh/profiles/larry.RETIRED-20260917-1818`（原路径已空、`sdk` 面未受影响；真删可交老大）。⚠️ **`acp` ／ `web` 两个空壳（deps `{}`）勿动** —— 出厂模板，且 `web` 是多条结论的基准面。
+
+⭐ **同批实测（跨机同形，详见 `docs/local-env.md` §4.3）**：该机共享层 `profiles/node_modules` **同样含 `dsh-sandbox-local@0.0.1-rc.1`**，从 `sdk/` 起点解析则得 `0.1.5-rc.2` ✓ ⇒ 旧代**来自依赖解析本身**（peer `*` → npm latest），**非本机人为复刻所致**。
 
 #### 附二：手工复验 / 脚本驱动时的 `DSH_HOME` 注入（2026-09-14 实测）
 

@@ -204,6 +204,7 @@ const DENIAL_SIGNATURES = {
 
 > ⛔ **2026-09-17 推翻原记「共享层一份够多面」**（🟢 WB 实测 + 四组对照）：原记「插件实体放在 `profiles/node_modules/@larryagent/`，**三个共享，一份足够**」—— **该层是坏的**。同一份插件从该层 `import` 时，`dsh-sandbox-local` 被解析到 **`0.0.1-rc.1`（npm latest 那支）**，而同树 `dsh-llm` 是 `0.1.5-rc.2` ⇒ **`import` 即崩**。**必须落各 profile 自身的 `node_modules`**（那里按 profile 自己的 lock 装，代际正确）。
 > 溯源：`peerDependencies` 写成 `"*"` 是**旧代之所以进树**的原因，**决定命中结果的是落点层级** —— 两因素叠加，不是同一个；引入点 = **`a974258`**（升 015 时 lockfile 重算）。修法见 `TODO.md`「DSH-3.7.2 硬前置 1」。
+> ⭐ **跨机同形（2026-09-17 CVM 实测追加）**：CVM 的 `~/.dsh/profiles/node_modules/` 共享层**同样含 `dsh-sandbox-local@0.0.1-rc.1`**（该层由 09-16 装 `sdk` 时生成，**非人为复刻产物**）。解析实测（`createRequire.resolve`，只读）：从 `profiles/larry/`（当时仍在的 012 面）与 `profiles/node_modules/` 起点 → **`0.0.1-rc.1`**；从 `profiles/sdk/` 起点 → **`0.1.5-rc.2`** ✓。⇒ ① 旧代**不是本机某次操作的产物，而是依赖解析本身**（peer `*` → npm latest）—— **跨机同形即证**；② **3.7.2 落 `sdk` 自身层会被解析到 015**，该落点判断**正反两面均有实测**（正：会绿 ／ 反：落共享层即取旧代）。
 
 **落盘状态**：⬛ **未落盘** → **老大 2026-09-11 拍定：并入 DSH-3 执行**（届时带真 end-to-end）。在此之前，③ 的修复在生产是**"已验收、未生效"**，勿当已上线。
 
