@@ -57,3 +57,78 @@
 - `DSH-4 / 5 / 6`（`:288-319`）—— 未派且各 7–17 行，属正常待办。
 
 **我未改动 `TODO.md`**（职责边界；且工作区当时已有 WB 未提交的在制改动）。以上是否动手、动到哪一级，待老大裁。
+
+---
+
+## 2026-09-17 · 职责外独立复核：项目代码层的 DSH 旧代（< 015）残留（老大交办）
+
+**范围**：**非文档**的代码 / 配置 / 脚本 / 锁文件 / 运行时树（排除 `docs/`、`exchange/`、`archive/`、`node_modules` 内容本体）；另附**仓库外但同盘**的相关物。
+**方法**：全仓版本式扫描（`0.1.[0-4]-rc/alpha`、`0.0.1-rc`、`dsh-v0.1.[0-4]`）→ 逐个 package.json 的 `@deepseek-ai` 声明 → 两个锁文件 → **实装树逐包读 version** → 两处 home 共享层对比。
+
+### 0. 结论
+
+**有，且是「活的」** —— 不是历史留痕。核心是 **DSH `0.0.1` 时代那一支**（比 012 还早），仍在**锁文件里被声明、在磁盘上被实装**。分三层：
+
+| 层 | 状态 |
+|---|---|
+| 锁文件（`harness/pnpm-lock.yaml`） | ❌ **仍声明 2 处活动解析 → `0.0.1-rc.1`**（`0.1.2-rc.1` 已 0 次） |
+| 实装树（`harness/.pnpm` 内部 hoisted 别名层） | ❌ **3 个包 = `0.0.1-rc.1`**（同层 `dsh-llm`/`dsh-session` = `0.1.5-rc.2` ⇒ **同树混代**） |
+| 工程 home 共享层（`.dsh-home/profiles/node_modules`） | ❌ 241 条 junction **镜像了那棵坏树**（3 个旧代包） |
+
+**对照组（证明不是全局现象）**：全局 `~/.dsh/profiles/node_modules` 共享层、`.dsh-home/profiles/sdk` **自身层**、`harness/package.json`、npm 全局 CLI —— **全部 `0.1.5-rc.2`** ✓。
+
+### 1. 🔴 未登记的新发现（本单增量）
+
+**① `plugin-sandbox-mount-probe` 的 peer 仍是 `"*"`** —— 与 `dialect` 被修的**同一缺陷、第二个实例**
+`harness/packages/plugin-sandbox-mount-probe/package.json`：`peerDependencies: {"@deepseek-ai/dsh-sandbox-local": "*"}`
+⇒ 锁文件现行解析：`specifier: '*'` → **`0.0.1-rc.1`**。
+**为何算未登记**：TODO 里 `mount-probe` 只在 `:59`「三个探针包已到位」提过一次；`grep 'mount-probe.*\*'` = **0**。而 `:213` 的修法是"**钉 peer** ＋ 重算 lock"——**只钉了 `dialect` 一处**。⇒ 未钉完。
+
+**② `plugin-storage-probe` 的 `dsh-storage-domain: "*"`** —— **另一个旧代包，TODO 里完全没出现**
+`harness/packages/plugin-storage-probe/package.json`：`dependencies: {"@deepseek-ai/dsh-storage-domain": "*"}`
+⇒ 锁文件现行解析：**`dsh-storage-domain@0.0.1-rc.1`**。
+**为何算未登记**：`storage-domain` 在 `TODO.md` 出现 **0 次**；`:213` 记的"根"只覆盖 `dsh-sandbox-lo` 那条线。⇒ **不同包、另一条线，完全漏登记**。
+
+**③ 一个待 WB 核对的细节**：`.pnpm` 下**截断名目录有两支** —— `@deepseek-ai+dsh-sandbox-lo_afd5a52…` 与 `_fc402b20…`（`dsh-sandbox-wi_`、`dsh-storage-do_` 亦各两支）。`:213` 只记了 `_fc402b20` 一支。**我不下结论**（可能一支实装、一支对照/残留），但两支都在，值得随手核一下。
+
+### 2. 🟡 版本标签过时的代码注释（功能无影响，但会被后续 AI 当判据）
+
+| 位置 | 现文 | 问题 |
+|---|---|---|
+| `harness/tests/real-api.ts:69` | "⚠️ DSH provider（**dsh-v0.1.2-rc.1**）的静态 catalog 仍只声明 v4 系列 id——源码级确认未编目 id" | 版本标签停在 012。**该断言在 015 下是否仍成立，未验**（我不替它下结论） |
+| `harness/packages/plugin-sandbox-probe/src/index.ts:80` | "形状抄自 `ref/dsh-bare @ **dsh-v0.1.2-rc.1**` 的 `packages/sandbox/sandbox/src/index.ts`" | provenance 标签停在 012；若 015 改了该形状，这句会误导 |
+
+### 3. ⚪ 第三类：生成物（非手写文档，但会进 AI 上下文）
+
+**`.qoder/repowiki/zh/content/**`** —— 这是被注入 AI 会话上下文的知识库，内含**过时的"现状"断言**，例如：
+- `开发指南.md:438-441`：表格「**CLI** 现状 `0.1.2-rc.1`」「**hoisted 根** 现状 `0.1.2-rc.1`」「**装置侧** 现状 `0.1.2-rc.1`」⇒ 均已被同文件他处的"已升级"叙述推翻
+- `生产环境部署.md:336-340`：还留着「**方案二：降级到 `0.1.2-rc.1`**」＋两条降级命令
+
+⇒ **修法是重新生成，不是手改**。「AI 会读到 012 现状」这件事本身值得老大知悉。
+
+### 4. 🟢 明确「不算残留、勿动」
+
+| 项 | 理由 |
+|---|---|
+| `harness/scripts/cvm-probes/*.sh` 注释里的 `0.1.2-rc.1` | 参数化说明的**示例**（默认已 `${DSH_VERSION:-0.1.5-rc.2}`），故意留 |
+| `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml:14` 注释 | 解释"为何不可落共享层"的**现象记录** |
+| `ref/community/**` 4 个社区参考件（`0.1.0-rc.5/6/7`、`>=0.1.2-rc.1 <0.2.0`） | 上游参考副本，**不应修改**；⚠️ 但提醒：**从中抄会继承旧钉版** |
+| `ref/dsh-bare` 多 tag 并存 | 按设计（对照用） |
+| `README.md:96` / `TODO.md` 各处 | 文档区，不在本单范围 |
+
+### 5. 仓库外但同盘（上次提过，仍在）
+
+- **`D:\Code\dsh-src` 仍挂 tag `dsh-v0.1.2-rc.1`** —— 运行时早已 015，而"追 DSH 源码"的参照物还是 012 ⇒ 按它判 015 行为会读错代
+- ✅ npm 全局 `@deepseek-ai/dsh` = `0.1.5-rc.2`
+- ✅ **两处 home 的共享层代际不同**（工程 = `0.0.1-rc.1`／全局 = `0.1.5-rc.2`）—— 这是"工程共享层是坏的"最直白的对照
+
+### 6. 建议（供裁；我不动代码）
+
+1. **补钉 `mount-probe` 的 peer**（`*` → `0.1.5-rc.2`），与 `dialect` 同批
+2. **处置 `storage-probe` 的 `dsh-storage-domain: "*"`** —— 先确认该包在 015 是否仍存在/改名，再决定钉版还是换 name
+3. **重算 `harness/pnpm-lock.yaml`**（`:213` 已写"断根靠钉 peer ＋ 重算 lock"，当前只做到前者）—— 重算后需**双面同步 CVM**
+4. 顺手核 §1③ 的**两支截断名目录**
+5. `real-api.ts:69` / `plugin-sandbox-probe:80` 的**注释版本标签**更新（并顺带验一下 015 下断言是否仍成立）
+6. `.qoder/repowiki` 重新生成（或明确"不注入"）
+
+**我未改动任何代码/配置**（职责外复核，只做取证）。以上均可复现：命令与逐包 version 见本单正文。
