@@ -664,11 +664,11 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 |---|---|---|
 | 工程目录 | `harness/`（仓库内，pnpm workspace） | DSH-2.1 定案 |
 | 包名前缀 | `@larryagent/` | 同上 |
-| profile 名 | `larry`（= `dsh-base` + `dsh-headless`） | 同上。⚠️ **manifest 因 bundle 而异**——`patchReload` / 可用命令等结论**不可跨 profile 外推**（第 0 项的 `startup` 即出自 sdk-app） |
+| profile 名 | `larry`（= `dsh-base` + `dsh-headless`）〔2026-09-17：**该面已退役并真删**；**现役主 profile = `sdk`**，见下行〕 | 同上。⚠️ **manifest 因 bundle 而异**——`patchReload` / 可用命令等结论**不可跨 profile 外推**（第 0 项的 `startup` 即出自 sdk-app） |
 | `DSH_HOME` | `.dsh-home/`（仓库内，已 gitignore——含凭据与会话产物） | 同上 |
 | DSH 入口 | **npm 全局 `dsh@0.1.5-rc.2`**（⚠️ **须与 profile 同代** —— 混代未验；✅ **同代化已全项闭合**：CVM 侧 2026-09-16 完成、`cvm-probes/` 脚本钉版 2026-09-17 参数化并回同步，见 §2.3 未闭合项 #6）；不用源码 `bin.ts` + tsx | DSH-2.2 反证（通道 012）：源码入口在 PowerShell 下偶发卡住；同代要求见 §2.3 未闭合项 #6 |
 | DSH 源码副本 | `D:\Code\dsh-src`（仓库外，可重建）——**仅在需追进 DSH 内部行为时**使用 | 同上，非日常必需（A 案的价值正是默认不需要它） |
-| sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC）；⚠️ manifest **`patchReload: startup`**（与 `larry` 的 `live` **不同**） | DSH-2.3 连通验证用；**B 段走 sdk → 其配置热重载结论不等于 larry**；与 `larry` 是两个 profile，结论不可互推（`patchReload` 差异 2026-09-11 订正，见 §3.4〈基线收口复核〉） |
+| sdk profile | `.dsh-home/profiles/sdk`（= `dsh-base` + `dsh-sdk-app`，stdio JSON-RPC）；⚠️ manifest **`patchReload: startup`**（与 `larry` 的 `live` **不同**） | DSH-2.3 连通验证用；**B 段走 sdk → 其配置热重载结论不等于 larry**；与 `larry`（**已于 2026-09-17 退役**）是两个 profile，结论不可互推（`patchReload` 差异 2026-09-11 订正，见 §3.4〈基线收口复核〉） |
 | **端到端动态验证** | **WB 侧可独立完成**：Git Bash 工具 + 环境变量注入测试 key | 🟢 2026-09-09 复测：握手 / 事件流 / **真实 LLM 回包**全部跑通，见下方「WB 复验边界（修订）」 |
 | **WB 的 PowerShell 工具** | **不可用**：未启用 ConPTY，原生 exe（`node.exe`）无输出、等同于不执行 | 🟢 WB 实测：`node -v` 返回空、纯 cmdlet（`Set-Content`）正常 |
 

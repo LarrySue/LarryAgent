@@ -14,7 +14,7 @@
 > **边界**：其中属 **DSH 迁移专题**的部分（通信面定型、B 段路线判定）以 `dsh/dsh-migration.md` 为准，本文档只记**环境侧事实与复跑依据**。
 > 全部为 🟢 实测或源码级确认；除 §11 明确标注为**推论**外，DSH 相关章节基线为 `dsh-v0.1.2-rc.1`。
 >
-> ⚠️ **代际状态更新（2026-09-17）**：上面这句声明的是**下文各节判据的验证基准年代**（保留不动）。但**本机环境本身已全面升到 `0.1.5-rc.2`**，四处同代 —— ① `harness/` 装置侧（`package.json` ＋ lockfile ＋ `node_modules`，isolated 布局）② npm 全局 CLI（`%APPDATA%\npm`）③ 工程 home `.dsh-home/profiles/{larry,sdk}` ④ 主 `~/.dsh` 回退层。
+> ⚠️ **代际状态更新（2026-09-17）**：上面这句声明的是**下文各节判据的验证基准年代**（保留不动）。但**本机环境本身已全面升到 `0.1.5-rc.2`**，四处同代 —— ① `harness/` 装置侧（`package.json` ＋ lockfile ＋ `node_modules`，isolated 布局）② npm 全局 CLI（`%APPDATA%\npm`）③ 工程 home `.dsh-home/profiles/{sdk}`（⚠️ `larry` 已于同日退役、不在册） ④ 主 `~/.dsh` 回退层。
 > ⇒ 读下文时**分清两件事**：**「012」是判据的出处年代，不是本机现状**；凡写「本机仍锁 `0.1.2-rc.1`」或给 `npm i -g @deepseek-ai/dsh@0.1.2-rc.1` 复跑命令的段落（§8.1 表 ＋ 复核注／§8.3／§9.2），**均为 09-09~09-11 的历史记录**，现状以本行为准。**基线迁移的环境事实**见 §4.3.1 末；**015 未复核的章节**不得据"已升级"外推（`confine()` 运行时行为仍属未验）。
 > ⚠️ **本机 symlink 事项（2026-09-17 订正）**：曾记「本机建不出真符号链接、pnpm isolated 装不出链接层」—— **已推翻**（`os.symlink` 抛 `WinError 2` 但链接真实建成，`reparse tag = 0xa000000c`；isolated 装法实测可用）。判据细节见 `TODO.md` DSH-3.1 前置段。
 
@@ -255,10 +255,10 @@ const DENIAL_SIGNATURES = {
 
 **⇒ 处置**：修复件**不退役**；DSH-3.7 走「**重跑全链路复验**」路径（**不得沿用 012 结论** —— 本项只证了"方言表未变"，`confine()` 的**运行时行为**在 015 上仍属未验）。
 
-✅ **该代际落差已解除（2026-09-17 实测）**：工程 `.dsh-home` 已升 015 —— `profiles/{larry,sdk}` 的 `package.json` 与 `node_modules` 均 `0.1.5-rc.2`（`larry`: `dsh-base` ＋ `dsh-headless`；`sdk`: `dsh-base` ＋ `dsh-sdk-app`；composition 未动，与修前基线 diff **各仅 2 行版本号**），两个 lockfile 的 `0.1.2-rc.1` 出现 **0** 次。⇒ **3.7 的 end-to-end 真实宿主（client ＋ 工程 home）现跑在 015 上**，与本项判定基准（主 `~/.dsh/profiles/sdk`，015）**已同代**。
+✅ **该代际落差已解除（2026-09-17 实测）**〔**当时事实** —— ⚠️ `larry` 已于同日退役，本行按原状保留〕：工程 `.dsh-home` 已升 015 —— `profiles/{larry,sdk}` 的 `package.json` 与 `node_modules` 均 `0.1.5-rc.2`（`larry`: `dsh-base` ＋ `dsh-headless`；`sdk`: `dsh-base` ＋ `dsh-sdk-app`；composition 未动，与修前基线 diff **各仅 2 行版本号**），两个 lockfile 的 `0.1.2-rc.1` 出现 **0** 次。⇒ **3.7 的 end-to-end 真实宿主（client ＋ 工程 home）现跑在 015 上**，与本项判定基准（主 `~/.dsh/profiles/sdk`，015）**已同代**。
 - 本项「修复件继续有效」的结论**不变且更干净**：015 未自修（证据链见上），且该结论本就设计为「**工程 home 升 015 后仍成立**」。⇒ 修复件**仍不退役**。
 - ⚠️ **遗留不变**：本项只证了"方言表未变"，`confine()` 的**运行时行为**在 015 上仍属未验 ⇒ DSH-3.7 仍走「重跑全链路复验」，**不得沿用 012 结论**。
-- 📌 **实测口径（2026-09-17）**：两条 `--profile X --help` 需**显式设 `DSH_HOME=D:\Code\LarryAgent\.dsh-home`** 才正常（`exit 0`／约 2 s 自退出；`larry` 打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)`）。**不设**则落到主 `~/.dsh`，而该处的 `larry` profile 只有 `dsh-base` bundle、`dependencies: {}`、**无 app 层** ⇒ 无 app 可 boot、**静默挂死（零输出且不返回）** —— 这是**用法问题、非 015 缺陷**（属 §1「会卡死所有 dsh 命令」同族的"看起来像卡死"陷阱）。
+- 📌 **实测口径（2026-09-17）**：两条 `--profile X --help` 需**显式设 `DSH_HOME=D:\Code\LarryAgent\.dsh-home`** 才正常（`exit 0`／约 2 s 自退出；**原例** `larry` 打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)` —— ⚠️ **该例已随三个 `larry` 面退役而不可复现**）。**不设**则落到主 `~/.dsh`，而该处的 `larry` profile（**已退役并真删**）只有 `dsh-base` bundle、`dependencies: {}`、**无 app 层** ⇒ 无 app 可 boot、**静默挂死（零输出且不返回）** —— 这是**用法问题、非 015 缺陷**（属 §1「会卡死所有 dsh 命令」同族的"看起来像卡死"陷阱）。⚠️ **本口径仍成立**，但其两个可复现例（工程 home 的 `larry`、主 `~/.dsh` 的空壳 `larry`）**均已随 2026-09-17 退役真删而不可复现** ⇒ 要复现此坑需**自建**一个只引 `dsh-base`、`dependencies: {}` 的 profile。
 
 ---
 
@@ -400,7 +400,7 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 3. **pnpm 11 的 `allowBuilds` 安全机制**：`dsh plugin … add` 装到含 koffi/node-pty/protobufjs 等依赖时，会因 "ignored build scripts" 以 **exit 1** 结束、reconcile 不跑。解决：在 profile 的 `pnpm-workspace.yaml` 把 `allowBuilds` 待审批项**全设 `false`**（headless boot 不需要这些 native 构建），重跑即 exit 0。**这是 pnpm 11 相对旧版的行为变化，别当成 dsh 坏了。**
 4. **源码入口 + tsx 在 PowerShell 下启动偶发卡住**（本次 add `dsh-headless` 一次后台卡住、CPU 停滞）：改用 **npm 全局 `dsh`**（`lib/bin.js`，无 tsx）后 1.3s 完成。**验证性操作一律走 npm 全局入口，又快又稳。**
 5. **PowerShell 把原生 stderr 包装成 error 流**：`[B1-PROBE]` 这类 stderr 会被 PS 显示成红字 + RemoteException 外观，**内容本身没坏** —— 看字符串别被格式吓到。
-6. **自定义 profile（`larry`）`patchReload` 默认 `live`**：profile 用户层 `cordis.patch.yml` 变化即热载（launcher watch-only fallback，不需要 hmr 插件）；**模块级代码 HMR 是另一个开关**（见 §8.5），别混。
+6. **自定义 profile（原例 `larry`，该面 2026-09-17 已退役并真删）`patchReload` 默认 `live`**：profile 用户层 `cordis.patch.yml` 变化即热载（launcher watch-only fallback，不需要 hmr 插件）；**模块级代码 HMR 是另一个开关**（见 §8.5），别混。
 
 ### 8.5 模块级 HMR 开关（可开，非必需）
 

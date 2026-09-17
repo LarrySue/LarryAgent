@@ -545,7 +545,7 @@ records:
 
 ⇒ **判定：退役。** 原记「`larry` 本次不动（有主）」系**照抄旧登记未核实** —— 其名义"主"（本节 §2 口径警告原写"生产跑 headless `larry`"）已被同表实测（该项测的是 `sdk` 进程树）与 09-16 定型（生产落点 = `sdk`）双重推翻；且 composition 是 api-gateway ＋ host-webserver，与"headless"本就不符 ⇒ **实为 09-10 验证 HTTP/gateway 面（`/api/remote.mux` 带 cookie 仍 404 那次）的实验器材残留**，012 代在 015 环境里**留也跑不起来**。
 
-**处置**：重命名备份 `~/.dsh/profiles/larry.RETIRED-20260917-1818`（原路径已空、`sdk` 面未受影响；真删可交老大）。⚠️ **`acp` ／ `web` 两个空壳（deps `{}`）勿动** —— 出厂模板，且 `web` 是多条结论的基准面。
+**处置**：退役 —— 先重命名备份 `~/.dsh/profiles/larry.RETIRED-20260917-1818`，**随后同日真删**（原路径与备份名**磁盘上均已不存在**，此名仅供追溯；`sdk` 面未受影响）。⚠️ **`acp` ／ `web` 两个空壳（deps `{}`）勿动** —— 出厂模板，且 `web` 是多条结论的基准面。
 
 ⭐ **同批实测（跨机同形，详见 `docs/local-env.md` §4.3）**：该机共享层 `profiles/node_modules` **同样含 `dsh-sandbox-local@0.0.1-rc.1`**，从 `sdk/` 起点解析则得 `0.1.5-rc.2` ✓ ⇒ 旧代**来自依赖解析本身**（peer `*` → npm latest），**非本机人为复刻所致**。
 
