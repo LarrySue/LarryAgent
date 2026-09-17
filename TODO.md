@@ -109,22 +109,27 @@
 
 #### DSH-3.2 · 首验：跨进程 resume 的 id collision 定性
 
-> 📮 **已派发（Trae 2026-09-17）**｜场地 = **CVM 单环境**（本段只跑 Linux 侧）；**Windows 侧的锁子项已拆出** → **3.2.1（未派）**。
+> ✅ **已收口（Trae 2026-09-17 交付 ／ WB 2026-09-17 复验）**｜场地 = **CVM 单环境**；**Windows 侧的锁子项已拆出** → **3.2.1（未派）**。
+> **结论 = 真缺口（不是姿势问题）**：对**框架自产、已真 `completed` 并落盘**的会话，第二个进程复用同 ID **一样被拒**（`JsonRpcResponseError` / `code=-32603` / `session "<id>" already exists`）⇒ 缺口在 **runtime 的 session 物化路径**（`session/prompt` 对"日志已在盘上"的 id 走 **create**，而 jsonl 后端自己注明**该走 open**），**不在 SDK 的 API 面**（两套 SDK 的"指定 id"入口**都在**）。
+> ⭐ **产品影响**：**跨进程 resume 在 015 上不可用** ⇒ `2.4.1` / `2.8.2` 的 fork / resume 叙事**必须改口径**（走「同进程内复用」—— 已证可用 —— 或「用 `sessionPersistence.load/inspect` 自建重放」）。
 > **交付物** = 可复跑复现脚本（与 3.1 同族：一行复跑 ＋ 明确退出码）＋ 定性结论；退出码沿用 3.1 约定（`0` 通过 ／ `1` 测试失败 ／ `2` 前置缺失 ／ `124` 看门狗超时）。
 > **本项要回答的一件事**：「固定 ID 撞车 ⇒ 换个 ID 就好」（**姿势问题**）与「同 ID 复用被系统性拒绝」（**真缺口**）**是两回事，且可能同时存在** —— 定论前不得只报其中一支。
 
-- [ ] 反向组（固定 ID 复现 `id collision`）+ 正向组（新 UUID）+ **关键组**（真实 completed 会话、跨进程复用同 ID）
-- [ ] **对照组 0**：grep SDK client 源码确认**是否存在显式 resume 入口** —— 若不存在，"SDK 不支持 resume"与"固定 ID 会 collision"是**两个独立的 bug**，可能同时存在。⚠️ **在 015 实物上核**（参考件锚在 harness master，签名可能漂）；⚠️ 说"没有"须附**检索式 ＋ 遍历范围**，否则不可验
-- [ ] ⚠️ **复用 3.1 产出的 nonce 会话，不另造**（否则两处会话构造法会漂）—— 落实为：**复用 3.1 的会话构造法**（`harness/tests/s0-e2e.test.ts` ＋ `s0-session-log.ts` 的多帧 zstd 回读 ＋ 临时 home 建法）；⚠️ **不要求**复用 3.1 那次的**会话实体**（其 temp home 已随 3.1 收口清理，实体不在了）
-- [ ] ⚠️ **判据须先区分"两把锁"**（Trae 2026-09-15 提出，原意见稿已清；未裁则按此执行）——本任务靶子是 **015 的 session 写租约**（`session-persistence-jsonl/lease.ts`：POSIX `flock(2)` / Windows named semaphore，**进程死亡即由内核释放**、**故意不做 TTL 抢占**）；而系统里还有**另一把语义相反的锁** —— `$DSH_HOME/profiles/node_modules.lock`（`dsh-atomic-write`，profile 装/修复时持有），**持有者死亡后永不自动回收**（源码原文：*"the contender never removes an existing lock because file age cannot prove that its owner stopped; **orphan recovery is an operator action**"*）
+- [x] ✅ **四变体装置已交付并跑通**（WB 复跑：CVM 4/4 exit 0；证据 `D:\Code\_trae-cvm-evidence\s0-resume*`）｜反向组（固定 ID 复现 `id collision`）+ 正向组（新 UUID）+ **关键组**（真实 completed 会话、跨进程复用同 ID）
+- [x] ✅ **已答：两套 SDK 的「指定 session id」入口都在、都不叫 resume**（TS `dsh-sdk-client` `lib/types/api.d.ts:55/62/78-83`；Python `api.py:120-131`）⇒ 下述检索式/遍历范围要求已满足（详见 3.2 回报 §2）｜原项：grep SDK client 源码确认**是否存在显式 resume 入口** —— 若不存在，"SDK 不支持 resume"与"固定 ID 会 collision"是**两个独立的 bug**，可能同时存在。⚠️ **在 015 实物上核**（参考件锚在 harness master，签名可能漂）；⚠️ 说"没有"须附**检索式 ＋ 遍历范围**，否则不可验
+- [x] ✅ **已照办**（骨架照 `run-s0-e2e.mjs` 抄；临时 home 建法 ＋ `listSessionLogs`/`readSessionLog` 复用）｜原要求：复用 3.1 产出的 nonce 会话，不另造（否则两处会话构造法会漂）—— 落实为：**复用 3.1 的会话构造法**（`harness/tests/s0-e2e.test.ts` ＋ `s0-session-log.ts` 的多帧 zstd 回读 ＋ 临时 home 建法）；⚠️ **不要求**复用 3.1 那次的**会话实体**（其 temp home 已随 3.1 收口清理，实体不在了）
+- [x] ✅ **已答：A 锁全程无孤儿 ／ B 锁全程未现**（每轮 `close()` 走到真退出 ⇒ 租约由内核释放）⇒ **②/④ 的红灯与锁无关**｜原要求：判据须先区分"两把锁"（Trae 2026-09-15 提出，原意见稿已清；未裁则按此执行）——本任务靶子是 **015 的 session 写租约**（`session-persistence-jsonl/lease.ts`：POSIX `flock(2)` / Windows named semaphore，**进程死亡即由内核释放**、**故意不做 TTL 抢占**）；而系统里还有**另一把语义相反的锁** —— `$DSH_HOME/profiles/node_modules.lock`（`dsh-atomic-write`，profile 装/修复时持有），**持有者死亡后永不自动回收**（源码原文：*"the contender never removes an existing lock because file age cannot prove that its owner stopped; **orphan recovery is an operator action**"*）
   - ① 报告里凡"锁残留"**必须标是哪一把**（两把表现不同：A 锁 = 任何 dsh 命令启动即失败 `atomic-write: timed out waiting for the writer lock`，默认只等 2 s，**极易误判成"启动慢/网络问题"**；B 锁 = 第二个写者收 `SessionAlreadyOwnedError`）
   - ② 实验**前置须先清 A 锁的孤儿**，否则实验根本没跑起来，会得到"租约没生效"的**假阴性**
   - ③ **Windows 侧 named semaphore 的释放实测** → **已拆出为 3.2.1**（同判据体系、但换场地，故独立编号；**本段不跑**）
   - 📖 机制与实测：`docs/dsh/dsh-migration.md` §3.6（锁争用矩阵）、`docs/local-env.md`（本机锁原文与实测）
 - 执行人：**Trae**（他此前判"改 UUID 后成功"，让他自己验自己的判据）
-- 🟡 前置：我方 CVM 通道核查（见 3.0）
+- ✅ 前置：我方 CVM 通道核查（见 3.0）—— **已通**（3.1 起即用）
 - ✅ **参考件已落位（2026-09-17，WB 拉取）**：`ref/community/EvilIrving__dsh-repro`（MIT，浅克隆 HEAD `e51736ba`）—— **四要素（① 路径 ② 怎么参考 ③ 参考程度 ④ 不可参考）见 `docs/dsh/dsh-migration.md` §2.2.2 表，派发稿照抄**
-- [ ] 📚 **官方参考件**（登记表 3.2 行）：`dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`（社区件见上条，**已落位**）
+- [x] 📚 **官方参考件**（登记表 3.2 行）：`dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`（社区件见上条，**已落位**）
+
+- ⚠️ **WB 复验 · 判据缺陷 1（登记待修）**：`s0-resume.test.ts` 的 `resumeTarget.p2LandedOnSameLog` **恒为 `null`｜`false`、永不可能是 `true`**（实现写死 `p2Log === null ? null : false`）⇒ **将来 resume 真修好时该字段会静默给 `null`（假阴性）**。修法 = 补一条 `hasP1 && hasP2` 的日志判定；⚠️ **改判据须实跑**（下次上 CVM 时随 3.2.1 一并验，不在此处改）
+- ⚠️ **Trae 报的 4 条未闭合（并入后续，不单开任务）**：① 抛错点二选一（`dsh-session` 的 `prepare` vs `dsh-session-persistence` 的 `SessionAlreadyExistsError`，**文案完全相同**）→ 并入 3.3/3.6 插桩位顺手取；② `-32603` 映射点未定位 → 记入「包归属待核」；③ **012 那版文案（`(id collision)` 尾巴）不可在 015 复核**（SEA 快照）⇒ 结论只按 015 记；④ **Python 侧未真跑**（只做源码侧）⇒ 两通道是否一致未验
 
 #### DSH-3.2.1 · 锁子项：Windows 侧 named semaphore 的内核释放实测（**未派**）
 
@@ -179,28 +184,35 @@
 > **本段分两块（2026-09-17 拆）**：**3.7.1 前置就位与定性**（📮 **已派发 Trae 2026-09-17**）→ **3.7.2 落盘 ＋ 自检 ＋ 真 e2e**（**未派**，等 3.7.1 回报后起跑）。
 > **为什么拆**：原规格把"前提已就绪"当前提，而 2026-09-17 WB 实测**三项前提实为缺项**（见 3.7.1）；且 `EPERM` 归因本身**结果开放**（可能反推落盘人结论）⇒ **先定性、再落盘**，避免"落点对了却没生效"。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）。
 
-##### DSH-3.7.1 · 前置就位与定性 📮 **已派发（Trae 2026-09-17）**
+##### DSH-3.7.1 · 前置就位与定性 ✅ **已回报（Trae 2026-09-17）· WB 复验：① ③ 成立、② 的判据被推翻**
 
 > 本块**不写 patch、不跑 e2e**（那是 3.7.2）；只把前提清干净 ＋ 把 `EPERM` 归因定性。
 
-- [ ] ① **`EPERM` 归因定性（必须用他自己的通道复跑）** —— 判据**要钉主体**：同一条拒绝，出自 **AI 工具沙箱** 还是 **DSH 自身沙箱**，归属与严重性**完全不同**（09-12 已有一次同类"主体错位"）。须给**触发命令原文 ＋ 完整错误对象（`code` / `errno` / 栈帧里的模块路径）**，并**指出抛出者是谁**。
+- [x] ✅ **① 已答：归因不成立**（他自己的通道 ＋ 正对照 `C:\Windows`；4/4 可写、09-14 那条命令两处都不复现；**没有为不存在的现象编主体** —— 正确姿势）｜原项：`EPERM` 归因定性（必须用他自己的通道复跑） —— 判据**要钉主体**：同一条拒绝，出自 **AI 工具沙箱** 还是 **DSH 自身沙箱**，归属与严重性**完全不同**（09-12 已有一次同类"主体错位"）。须给**触发命令原文 ＋ 完整错误对象（`code` / `errno` / 栈帧里的模块路径）**，并**指出抛出者是谁**。
   - ⚠️ **两处各测一次**：`~/.dsh/profiles/…`（09-14 那条记录的现场）与**工程 `.dsh-home/profiles/larry/…`**（**现在的落点**）⇒ 判"哪个能写、不能的那个是谁拦的"
   - ⚠️ 结论**只写在实测过的那条通道上、不得跨通道外推**（WB 通道能写 ≠ Trae 能写，反之亦然）
   - ⚠️ 写探针只允许"**建一个探针文件后立即删除**"；**不得改动现存任何文件**（全局 home 的 profile 勿动）
-- [ ] ② **方言插件实体安装（工程 home）** —— 现状（WB 2026-09-17 实测）：**挂载点不存在** —— `.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（`~/.dsh` 侧那份是**全局 home**、不是本项落点）
+- [x] ⚠️ **② 实体安装属实、但「判据成立」被 WB 复验推翻**（详见下方 WB 复验）｜原项：方言插件实体安装（工程 home） —— 现状（WB 2026-09-17 实测）：**挂载点不存在** —— `.dsh-home/profiles/node_modules/@larryagent/` **无该目录**（`~/.dsh` 侧那份是**全局 home**、不是本项落点）
   - 目标：`工程 .dsh-home/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`（范式原文 `docs/local-env.md` §4.3「插件怎么进 profile」）
   - **源 = 仓库 `harness/packages/plugin-sandbox-dialect/`**（`index.js` ＋ `package.json`）；⚠️ **必须实体复制、不得 link**（link 下 bare import 从源目录解析 ⇒ **取不到** `@deepseek-ai/dsh-sandbox-local`）
   - ⚠️ **不得从全局 home 那份拷**：`~/.dsh/profiles/node_modules/@larryagent/plugin-sandbox-dialect/` 那份**功能码与源逐行一致、但注释头是旧版**（2962 B vs 源 4087 B）⇒ 以仓库源为准
-  - 判据 = 装完后**从该位置**能解析 `@larryagent/plugin-sandbox-dialect`，**且**其内部 `@deepseek-ai/dsh-sandbox-local` 也解析成功（这正是"实体复制 vs link"的分界点）⇒ **须附实测输出**
-- [ ] ③ **凭据路径打通（在工程 `.dsh-home` 上跑通一次真 prompt）** —— 现状：`.dsh-home` **无 `.credentials.yaml`**；而 `client/src-tauri/src/main.rs:275-276` 注释写"凭据**继承本进程 env**（由启动环境注入）"、`docs/production-env.md` §12.5 表把该文件标"**可选**"、本段的「配套三件①」却写"**须建**" ⇒ ⚠️ **三处口径不一致，以实测为准**（这不是笔误，是三种说法并存，须落下一条实测结论）
+  - ❌ **判据本身不成立（WB 2026-09-17 复验推翻）**：`import()` **落点那份插件 失败** —— `SyntaxError: The requested module '@deepseek-ai/dsh-llm' does not provide an export named 'assertNever'`，**与 Trae 归给"link 对照"的红灯是同一条**。⇒ **真正分界不是"实体 vs link"，而是"依赖绑到哪一代"**。WB 四组实测：**A 全局 home 落点 = OK ／ B 工程落点（实体）= FAIL ／ C 直接 import `sandbox-local@0.1.5-rc.2` = OK ／ D 直接 import `sandbox-local@0.0.1-rc.1` = FAIL**（A 绿 ⇒ 判据在健康对象上会绿，排除探针自身故障）
+  - ⭐ **根因（WB 追溯）**：`harness/packages/plugin-sandbox-dialect/package.json` 的 `peerDependencies: {"@deepseek-ai/dsh-sandbox-local": "*"}` ⇒ pnpm 解析到 npm latest 那支 **`0.0.1-rc.1`**（DSH 0.0.1 时代的包），而同一棵树里 `dsh-llm` 是 **`0.1.5-rc.2`** ⇒ **跨代混装 ⇒ 加载即崩**。**引入点 = `a974258`（本机升 015 时 lockfile 重算），非本轮任何改动**
+  - ⛔ **这是 3.7.2 的硬前置**：修法 = 把该 peer 从 `*` 改为显式 `0.1.5-rc.2`（或 `^0.1.5-rc.2`）＋ 重算 lock ／ 重装落点 ＋ **实跑验证**（改依赖树必须实跑，不得只凭推理）。⚠️ lockfile 属**双面同步范围**（本机 ↔ CVM）⇒ 改动须同步
+  - ✅ **junction 归属订正（WB 实测）**：工程 `.dsh-home/profiles/node_modules/@deepseek-ai/` 的 **241 条 junction 全部指向 `harness/node_modules/.pnpm/…`（本工程）**，**无一条指向全局 npm** ⇒ Trae §3.1① 的「依赖实际解析到全局 npm 的 dsh 自带依赖」是**取错了观测对象**（那是**全局 home** 的机制 —— 全局 home 的 junction 才指 `%APPDATA%\npm\…`）。⚠️ 但他**另一条是对的**：他所读那份包与工程指向那份**同版本同字节**（`dsh-session` / `-persistence` / `-jsonl` / `dsh-llm` 四处 sha256 全同）⇒ **他的 §6 源码行号结论不受影响**
+- [x] ✅ **③ 已答：实际凭据层 = 启动环境变量**（两态互异：无 key ⇒ `MISSING_CREDENTIAL`；env 注入 ⇒ `completed`）；**该层就是 client 会走的那层**（`main.rs:274-291` 只设 `DSH_HOME`、不设 key ⇒ 由 Tauri 启动环境带入）。⚠️ **遗留**：B 态 key 取自 `backend/config.yaml`、**不是 client 的真实取值路径**（"谁往 Tauri 启动环境放 key"未找到代码路径）⇒ Trae 已如实标为待核｜原项：凭据路径打通（在工程 `.dsh-home` 上跑通一次真 prompt） —— 现状：`.dsh-home` **无 `.credentials.yaml`**；而 `client/src-tauri/src/main.rs:275-276` 注释写"凭据**继承本进程 env**（由启动环境注入）"、`docs/production-env.md` §12.5 表把该文件标"**可选**"、本段的「配套三件①」却写"**须建**" ⇒ ⚠️ **三处口径不一致，以实测为准**（这不是笔误，是三种说法并存，须落下一条实测结论）
   - **交付** = 在工程 `.dsh-home` 上跑通一次真 prompt，并**写明实际走的是哪一层**（启动环境 ／ 存储文件 ／ 项目 `.env` ／ 主目录 `.env`）＋ **该层是否就是 client 路径会走的那层**
     - ⚠️ **落点 profile = `larry`，但 `harness/scripts/dsh-prompt.mjs:25` 硬钉 `profile: 'sdk'`** ⇒ **别把「`sdk` 通了」当成「`larry` 通了」**；本块只要求验掉"凭据层通不通"，**但回报须写明跑的是哪个 profile**（3.7.2 需要能指 `larry` 的入口）
   - 🔴 key 值**不得**落任何受版本控制的文件 / 日志 / 工具输出；手工复验命令模板与 `pwd -W` 那个坑见本节「落点已定」条
+- [x] ⭐ **④ 附带硬发现（WB 复核属实）：落点 `larry` 根本不是 SDK 面** —— `larry` = `dsh-base` ＋ `dsh-headless`（CLI 面，要位置参数当 task）；`sdk` = `dsh-base` ＋ `dsh-sdk-app`（stdio JSON-RPC）⇒ **"落盘在 larry"与"client 实际跑的 sdk"不是同一条通道**，**3.7.2 起跑前须在三条里选一条（待老大裁）**：① 给 `larry` 加 `dsh-sdk-app`（改该 profile 依赖）② 把落点改到 `sdk` ③ e2e 改用 CLI 直跑 `dsh --profile larry "…"`（**非 SDK 通道，须单独声明**）
+- [x] ⚠️ **另一处冲突（待 3.7.2 处置）**：`larry` 里**已有一个 `link:` 挂载的 `@larryagent/plugin-probe`**（boot 打 `[B1-PROBE] external bundle loaded by cordis`）⇒ 落点 profile **已有"link 挂载"先例**，与 ② 要求的"必须实体复制"并存，落盘前建议一并定口径
 - ⛔ **本块禁区**：不写 `cordis.patch.yml`；不碰 `.dsh-home/profiles/{larry,sdk}/package.json` 与 lockfile（刚由 Qoder 升 015）；**不把插件装进全局 `~/.dsh`**（那份已存在、勿动）
 - 执行人：**Trae**
 
 ##### DSH-3.7.2 · 落盘 ＋ 自检 ＋ 真 e2e（**未派**）
 
+- [ ] ⛔ **硬前置 1（WB 2026-09-17 复验新增）：先钉方言件的依赖代际** —— 现 `peerDependencies: "*"` 解析到 `dsh-sandbox-local@0.0.1-rc.1` ⇒ **落点那份插件当前 `import` 即崩**（已实测，见 3.7.1 ②）。**修好前挂 patch 必崩，不得跳过**
+- [ ] ⛔ **硬前置 2（待老大裁）：落点 profile 的"面"** —— `larry` 是 headless CLI 面、**非 SDK 面**（见 3.7.1 ④）⇒ **入口三选一**后才能定 e2e 跑法
 - [ ] 把 `harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml` 的两段写进**工程** `.dsh-home/profiles/larry/cordis.patch.yml`（**追加，不是覆盖**）
 - [ ] **一次真 end-to-end**：模型触发被拒命令 → 看到 `[sandbox: file access denied]` —— 这是 `docs/local-env.md` §4.3 标注的**唯一未证项**
 - [ ] **生效自检**：`dsh --profile larry --dump-config`（须**显式设 `DSH_HOME=工程 .dsh-home`**）⇒ 官方 sandbox 行**保留 ＋ `disabled: true`**、末尾多出 `sandbox-dialect` 行。⚠️ **别拿"行消失"当判据**（会误判成未生效）
@@ -331,8 +343,10 @@
     - ⭐ **3.1 提前派发（老大 2026-09-17 拍）**：原批次表把 3.1 排在批次 2（在 3.0 ＋ 3.2 ＋ 3.7 之后）；老大定调「**3.1 编号在前，故应先做**」⇒ **3.1 提前、3.2 / 3.7 顺延**。闸门侧无碍：DSH-3.0.5 已于 09-16 完成，「待 3.0.5 后」已满足、块已空出
     - 📮 **DSH-3.1 · S0 基础链路**（**Trae**，2026-09-17 派发）→ **派发稿 = `exchange/log-trae.md` 末尾〈📮 DSH-3.1 派发稿〉段**（该文件当前唯一在飞任务）；**前置已全清**（`cvm-probes` 参数化 ＋ 本机环境同代化，见 `:275` / `:276`）；**场地 = CVM 单跑**
     - **DSH-3.1 · S0 基础链路**（Trae）→ ✅ **已回报（2026-09-17）· WB 复验通过（主结论）**：四项硬判据 **WB 独立复跑全绿**（CVM，`base` 变体，exit 0 —— 不采信其日志）；四条负向对照核回传证据自洽；**源 `sdk` profile 未被改写**（`plugin-tool-readfile` 出现 0 次 ／ mtime 停在 09-16 17:49 ⇒ §5(a) 真副本路线成立）；默认开关下 `1 skipped` 不红（WB 本机 vitest 实测）；**无真 Key 落盘**（WB 以**哈希比对**独立验证：`config.yaml` 唯一真值，4 处 fixture 与真 key 不同值）；CVM 侧残留 0（`/tmp/larry-s0-*`、孤儿锁）；交付物 = `713c103`（14 文件 ＋1159）；`docs/dsh/dsh-migration.md` 事实表补 9 / 10 两条并回填 3.1 行借鉴点
-    - **📮 DSH-3.2 · 首验：跨进程 resume 的 id collision 定性**（**Trae**，2026-09-17 派发）→ **场地 = CVM 单环境**；**派发稿 = `exchange/log-trae.md`（在飞任务区）**；⚠️ **Windows 侧锁子项已拆出为 3.2.1（未派）**；**参考件 `ref/community/EvilIrving__dsh-repro` 已落位**（四要素 → `docs/dsh/dsh-migration.md` §2.2.2 新行）
-    - **📮 DSH-3.7.1 · 前置就位与定性**（**Trae**，2026-09-17 派发）→ **场地 = 本机 Windows**；**派发稿 = `exchange/log-trae.md`（在飞任务区）**；三项 = ① `EPERM` 归因定性（**须钉主体**：AI 工具沙箱 vs DSH 自身沙箱）② 方言插件**实体安装进工程 `.dsh-home`**（WB 实测：挂载点不存在）③ 工程 `.dsh-home` 凭据路径打通（**三处口径不一致，以实测为准**）。**3.7.2（落盘 ＋ 自检 ＋ 真 e2e）未派**，等本块回报
+    - **✅ DSH-3.2 · 首验：跨进程 resume 的 id collision 定性**（**Trae**，2026-09-17 派发）→ ✅ **已回报（2026-09-17）· WB 复验：结论成立**（= **真缺口**，非姿势问题）；场地 = CVM；装置 = `harness/tests/s0-resume.test.ts` ＋ `scripts/run-s0-resume.mjs`（四变体 ＋ 构建前置检查 ＋ 退出码 0-1-2-124）；证据 = `D:\Code\_trae-cvm-evidence\s0-resume*`（4 份 JSON ＋ 原始 log，**WB 独立扫 Tier0：clean**）；**参考件借鉴点已回填**（`dsh-migration.md` 事实表 **11**）；⚠️ **Windows 侧锁子项仍为 3.2.1（未派）**；⚠️ **判据缺陷 1 已登记**（`p2LandedOnSameLog` 恒 `null`|`false`）
+    - **✅ DSH-3.7.1 · 前置就位与定性**（**Trae**，2026-09-17 派发）→ ✅ **已回报（2026-09-17）· WB 复验：① ③ 成立 ／ ② 的判据被推翻** —— ① `EPERM` 归因**不成立**（4/4 可写、不给现象编主体）；② **实体安装属实**（4087/542 B、SHA256 与仓库源 SAME、真目录）**但「可加载」不成立**（落点 `import` 崩；根因 = peer `*` 把 `dsh-sandbox-local` 解析到旧代 **`0.0.1-rc.1`**，**已定为 3.7.2 硬前置 1**）；③ 凭据层 = **启动环境变量**；⭐ 附带硬发现：**`larry` 是 headless CLI 面、不是 SDK 面** ⇒ **3.7.2 岔口待裁（硬前置 2）**。**3.7.2 未派**，等两条前置清完
+    - ⚠️ **WB 复验 · 两条驳回（2026-09-17）**：① Trae 自曝「`run-s0-e2e.mjs` 没有构建前置检查」**不成立** —— 本机该文件 `:40-61` **有**（WB 09-17 所加，提交 `cdc0fde`）；他核的应是 **CVM 上那份滞后同步的副本**（CVM 无完整仓库）⇒ **原待裁项「要不要回填 3.1 那只」随之作废**（无需回填）。② Trae commit message 称"订正 `dsh-pysdk-probe-claude.md:157`"，**但 `0f81c04` 未改该文件** ⇒ **WB 本轮已补正**（声明与交付不一致，记一条）
+    - ✅ **WB 承认（出稿方义务）**：派发稿 §5 把 TS 客户端实物路径写成 `$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh-sdk-client/`，**CVM 上不存在**（实物在 `harness/node_modules/@deepseek-ai/dsh-sdk-client`）—— Trae 顶住了"照稿执行"的惯性并报出，**本条为回填**
     - ✅ **原记「3.2 / 3.7 未启」已作废（2026-09-17）** —— **3.2 全块 ＋ 3.7.1 已起跑**（两块**互不依赖**，即原批次 1 的分组，非破「同时只跑一块」）；**3.2.1 ／ 3.7.2 待前序回报后起跑**
     - ✅ **3.1 前置 · 仓库资产缺陷（WB 2026-09-16 发现 → 2026-09-17 已处置）**：`harness/scripts/cvm-probes/` 有 **3 个脚本 6 处曾钉 `@0.1.2-rc.1`**（⚠️ **原记「7 处」有误，2026-09-17 全目录逐字节实测为 6 处**：`cvm-setup-profile2.sh` ×3 ／ `cvm-acp-setup.sh` ×2 ／ `cvm-task1-setup.sh` ×1；`cvm-step0.sh` 等其余 8 个文件无钉版）—— 三者都是「**在 CVM 上装 profile ／ 插件**」的复现脚本，**会被 3.1 起的任务参考** ⇒ **照抄会装出 012 profile、重演混代崩溃**（3.0.3 已踩过一次）。详见 `docs/dsh/dsh-migration.md` §2.3 未闭合项 #6。**老大 2026-09-17 裁：走 ② 参数化** ⇒ ✅ **已执行（WB 同日）**：三脚本在 `export DSH_HOME=…` 之后插入 `DSH_VERSION="${DSH_VERSION:-0.1.5-rc.2}"` ＋ 3 行说明注释，6 处字面量改 `@${DSH_VERSION}`；**双验通过** —— `set -n` 语法检查 RC=0（无语法错）、展开验证「默认 ⇒ 6 处全 `0.1.5-rc.2` ／ 显式 `DSH_VERSION=0.1.2-rc.1` ⇒ 6 处全回 `0.1.2-rc.1`」、行尾纯 LF 未混排。✅ **已回同步 CVM**（scp 三文件；两侧 sha256 逐字节一致 `0484d821…` ／ `5fe6b699…` ／ `77986d45…`；同步前 CVM 侧与仓库 HEAD **同源**、无现场改动被覆盖）
     - ✅ **3.1 前置 · 装置侧两面不同代（WB 2026-09-16 发现 → 同日处置）**：`harness/package.json:26-27` 是**受版本控制**文件，本机原钉 `0.1.2-rc.1`，而 **CVM `~/harness` 那份已被 3.0.4 现场改成 `0.1.5-rc.2`**（`.bak-304` 为证）⇒ **同一份文件两面不同代**；又因同步方式 = **整树 tar**（CVM `SYNC-ANCHOR.txt` 原文 `excluded: node_modules, .git, dist`）⇒ **`package.json` ＋ `pnpm-lock.yaml` 都在覆盖范围内**，3.1 期间任何一次同步都会把 CVM 打回 012、重演 3.0.3 混代崩溃。**老大 2026-09-16 拍「本机整体升 015」（原选项 ①）**：

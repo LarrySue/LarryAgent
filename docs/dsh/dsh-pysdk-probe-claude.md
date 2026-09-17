@@ -154,7 +154,7 @@ B3 MCP 桥可行（决定 shell/file_ops 可留 Python ✅）+ B1、B2 均可行
 - 占位 key 阶段 resume"跑通"是假象（error 会话无持久化内容）
 - 真实 completed 会话持久化后，**跨进程复用同 session_id 报错**：`session "..." already has a persisted log on disk that does not match this live session (id collision)`
 - 源码确认"cold session is resumed on first touch"是预期机制（`packages/core/session/src/index.ts`）——说明同 id 续用本应 resume，但 Python SDK 高层（`start_session(session_id)` → `session/prompt`）触发 collision
-- **定性：发现项待核**——TS client 亦无显式 resume API（grep 无命中），需对照 DSH 正确 resume 姿势（或 subagent 内 resume 机制）才能定性是 SDK 缺口还是姿势问题。**影响**：2.4.1/2.8.2 的"fork/resume"承接叙事需按此核实，但不影响一等判定的四条判据
+- **定性：已定性（DSH-3.2，2026-09-17）⇒ 真缺口，非姿势问题**。⚠️ 本行原表述「TS client 亦无显式 resume API」**半对半错**：两套 SDK **都有**"指定 session id"的入口（TS `dsh-sdk-client` `lib/types/api.d.ts:55/62/78-83`；Python `api.py:120-131`），只是**都不叫 `resume`**（grep `resume` 均 0 命中）。对**框架自产、已真 `completed` 并落盘**的会话，第二个进程复用同 ID **一样被拒**（`code=-32603` ／ `session "<id>" already exists`）⇒ 缺口在 **runtime 的 session 物化路径**（`session/prompt` 对"日志已在盘上"的 id 走 create，而 jsonl 后端自己注明该走 open），**不在 SDK 的 API 面**。装置与证据见 `harness/tests/s0-resume.test.ts` ＋ `docs/dsh/dsh-migration.md` 事实表 **11**。**影响**：2.4.1/2.8.2 的"fork/resume"承接叙事**须改口径**（走"同进程内复用"——已证可用——或"用 `sessionPersistence.load/inspect` 自建重放"）；不影响一等判定的四条判据
 
 **测试 3：超时/取消 —— ⚠️ 发现 SDK 长 turn 无超时保护**
 - `request_timeout_seconds=4s` 下 15.9s 的 turn 正常完成——**该超时只作用于单次 JSON-RPC 往返，不覆盖长 turn 生成**
