@@ -125,7 +125,7 @@
 - ✅ **参考件已落位（2026-09-17，WB 拉取）**：`ref/community/EvilIrving__dsh-repro`（MIT，浅克隆 HEAD `e51736ba`）—— **四要素（① 路径 ② 怎么参考 ③ 参考程度 ④ 不可参考）见 `docs/dsh/dsh-migration.md` §2.2.2 表，派发稿照抄**
 - [x] 📚 **官方参考件**（登记表 3.2 行）：`dsh-session-persistence-sqlite` / `-jsonl` / `dsh-session-query-sqlite`（社区件见上条，**已落位**）
 
-- ⚠️ **WB 复验 · 判据缺陷 1（登记待修）**：`s0-resume.test.ts` 的 `resumeTarget.p2LandedOnSameLog` **恒为 `null`｜`false`、永不可能是 `true`**（实现写死 `p2Log === null ? null : false`）⇒ **将来 resume 真修好时该字段会静默给 `null`（假阴性）**。修法 = 补一条 `hasP1 && hasP2` 的日志判定；⚠️ **改判据须实跑**（下次上 CVM 时随 3.2.1 一并验，不在此处改）
+- ⚠️ **WB 复验 · 判据缺陷 1（登记待修）**：`s0-resume.test.ts` 的 `resumeTarget.p2LandedOnSameLog` **恒为 `null`｜`false`、永不可能是 `true`**（实现写死 `p2Log === null ? null : false`）⇒ **将来 resume 真修好时该字段会静默给 `null`（假阴性）**。修法 = 补一条 `hasP1 && hasP2` 的日志判定；⚠️ **改判据须实跑**。📮 **已并入 DSH-3.7.3 派发（2026-09-17 Trae）** —— 实跑场地写 **CVM**（3.2 的装置与结论都是 CVM 单环境 ⇒ 换场地即跨通道外推）；⚠️ 诚实边界：015 现状下该字段**仍不可观察到 `true`**，本项只证「实现不再排除 true ＋ 实跑取值与原始分布自洽」
 - ⚠️ **Trae 报的 4 条未闭合（并入后续，不单开任务）**：① 抛错点二选一（`dsh-session` 的 `prepare` vs `dsh-session-persistence` 的 `SessionAlreadyExistsError`，**文案完全相同**）→ 并入 3.3/3.6 插桩位顺手取；② `-32603` 映射点未定位 → 记入「包归属待核」；③ **012 那版文案（`(id collision)` 尾巴）不可在 015 复核**（SEA 快照）⇒ 结论只按 015 记；④ **Python 侧未真跑**（只做源码侧）⇒ 两通道是否一致未验
 
 #### DSH-3.2.1 · 锁子项：Windows 侧 named semaphore 的内核释放实测（**未派**）
@@ -178,7 +178,7 @@
 
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
 
-> **本段分两块（2026-09-17 拆）**：**3.7.1 前置就位与定性**（📮 **已派发 Trae 2026-09-17**）→ **3.7.2 落盘 ＋ 自检 ＋ 真 e2e**（**未派**，等 3.7.1 回报后起跑）。
+> **本段分三块（2026-09-17 拆）**：**3.7.1 前置就位与定性**（✅ 已回报＋复验）→ **3.7.2 落盘 ＋ 自检 ＋ 真 e2e**（✅ 已回报＋复验，J1–J7 全成立）→ **3.7.3 工程卫生合并块**（🚀 **已派发 Trae 2026-09-17**，由 3.7.2 未闭合项转出 ＋ 3.2 判据缺陷合并）。
 > **为什么拆**：原规格把"前提已就绪"当前提，而 2026-09-17 WB 实测**三项前提实为缺项**（见 3.7.1）；且 `EPERM` 归因本身**结果开放**（可能反推落盘人结论）⇒ **先定性、再落盘**，避免"落点对了却没生效"。范式 / 自检口径 / 已证未证边界见 `docs/local-env.md` §4.3（**原 DSH-2.5 ③ 收口欠账 1**）。
 
 ##### DSH-3.7.1 · 前置就位与定性 ✅ **已回报（Trae 2026-09-17）· WB 复验：① ③ 成立、② 的判据被推翻**
@@ -231,13 +231,33 @@
 > - 🔻 **推翻执行方两处自述**：① CVM `--frozen-lockfile` 被拒的**归因错**（他记为「同步 lock 后既有 `node_modules` 仍旧代」）—— install 日志原文主体 = `packages/plugin-sandbox-mount-probe/package.json`，真因 = **`*` 不匹配 prerelease**（`semver@7.8.5` 实测 `satisfies('0.0.1-rc.1','*') === false`）⇒ **与 dialect 的同步无关**，是**未派包**的既有坑。② 故「同步后必须 `--no-frozen-lockfile`」属**过度声明**：WB 上机复跑 frozen ⇒ **`exit 0` ／ `Already up to date`**；⚠️ 但 WB 走的是「已 up-to-date 短路」路径（430 ms、**无 `Verifying lockfile` 输出**），与他「需要安装」路径**不同路径 ⇒ 观察不可互推**，两条**并列留痕**，本条**未定论、不写 SOP**。
 > - ⚠️ **未闭合（转出项，不阻断本块收口）**：
 >   1. **装置脆弱性（fail-safe 方向）**：同机**另有一次运行**走了 **pwsh 受限失败路径**（工具返回 = `CannotCreateTypeConstrainedLanguage` ＋ `无法运行 node.exe：拒绝访问`，**GBK 乱码** ⇒ 既无 marker、也匹配不到普通失败词）⇒ 该路径下 `unpatched` 态会被判 **FAIL** ⇒「命令一定走到 `EPERM`」这一前提**不成立**。⚠️ **该次运行归属未定**（2026-09-17 11:01:19 ／ 11:01:34 UTC 一对，**非** Trae 交付那次、**也非** WB 复跑那次）⇒ **待老大认领**。
->   2. **同类旧代隐患仍在（→ 建议单派；⭐ Qoder 同日独立复核亦命中同一批**，其口径 = 「2 处活动解析」，与本条「16 处字符串出现」**不同口径、不可混用**）**：lock 仍有 **16 处** `0.0.1-rc.1`（**口径** = 字符串出现次数；⚠️ Qoder 记的是「**2 处活动解析**」，属**另一口径**，两者不可混用）（`plugin-probe` ／ `plugin-sandbox-mount-probe` ／ `plugin-sandbox-probe` ／ `plugin-storage-probe`，peer 同为 `*`；本机 lock 共 **6 处** `specifier: '*'`）⇒ 这些 `*` 不清，则**共享层 241 条 junction 仍指旧代那支**（实测 `.pnpm/node_modules/@deepseek-ai/dsh-sandbox-local` = `0.0.1-rc.1`；⚠️ 该包在 `.pnpm` 下实有**两支**：`…_fc402b20…`（旧代，仍被这些 `*` 包引用）／`…_afd5a527…`（015，dialect 钉 peer 后新解出）⇒ **钉 peer 只挪 dialect 那一支、不迁走旧支**），且「需要安装」路径下 `frozen` 必报 `OUTDATED_LOCKFILE`（**主体是它们，不是 dialect**）。
+>   2. 📮 **已转 DSH-3.7.3 派发（2026-09-17）**｜原记：**同类旧代隐患仍在（→ 建议单派；⭐ Qoder 同日独立复核亦命中同一批**，其口径 = 「2 处活动解析」，与本条「16 处字符串出现」**不同口径、不可混用**）**：lock 仍有 **16 处** `0.0.1-rc.1`（**口径** = 字符串出现次数；⚠️ Qoder 记的是「**2 处活动解析**」，属**另一口径**，两者不可混用）（`plugin-probe` ／ `plugin-sandbox-mount-probe` ／ `plugin-sandbox-probe` ／ `plugin-storage-probe`，peer 同为 `*`；本机 lock 共 **6 处** `specifier: '*'`）⇒ 这些 `*` 不清，则**共享层 241 条 junction 仍指旧代那支**（实测 `.pnpm/node_modules/@deepseek-ai/dsh-sandbox-local` = `0.0.1-rc.1`；⚠️ 该包在 `.pnpm` 下实有**两支**：`…_fc402b20…`（旧代，仍被这些 `*` 包引用）／`…_afd5a527…`（015，dialect 钉 peer 后新解出）⇒ **钉 peer 只挪 dialect 那一支、不迁走旧支**），且「需要安装」路径下 `frozen` 必报 `OUTDATED_LOCKFILE`（**主体是它们，不是 dialect**）。　⚠️ **2026-09-17 订正（WB 自纠）**：4 个包**都**有 `*` 声明属实，但**只有 2 条致旧代**（`mount-probe` 的 `dsh-sandbox-local` ＋ `storage-probe` 的 `dsh-storage-domain`）；另 **3 条 `cordis`**（`plugin-probe`／`plugin-sandbox-probe`／`plugin-storage-probe`）＋ **1 条 `zod`**（`plugin-storage-probe`）**解析本就正确**（`4.0.2` ／ `4.6.5`）；且 `mount-probe`／`storage-probe` 的声明在代码里**零使用**（`plugin-probe`／`plugin-sandbox-probe` 的 `cordis` 是 `import type`、**编译期要用**）⇒ 终态 = **删 4 条零使用声明 ＋ 收紧 2 处 cordis 为 `^4.0.2`**（照字面"改 6 处"会去动本来就对的、制造无谓 lock churn）。
 >   3. **装置判据面建议收紧**：`markerPresent` 现取自 `dsh-prompt.mjs` 的 `finalResponse`（= **模型复述**，二手表述）⇒ 建议改取 `tool/result` 帧（`run-372-dialect-e2e.mjs` 的 `runPrompt()`）。⭐ **多帧 zstd 回读不必自造** —— 仓库已有现成器材 **`harness/tests/s0-session-log.ts`**（3.1 交付物，标题即"多帧 zstd 回读"）；WB 本轮先自写了按 magic 切分的脚本，之后才发现已有 ⇒ **先查器材再动手**。
->   4. **CVM 副本滞后**：`~/harness/packages/` 少 `plugin-015-preset-probe`（本机 7 ／ CVM 6）；`mount.patch.yml` 旧注释待下次同步覆盖。
+>   4. 📮 **已并入 DSH-3.7.3（2026-09-17）**：**CVM 副本滞后**：`~/harness/packages/` 少 `plugin-015-preset-probe`（本机 7 ／ CVM 6）；`mount.patch.yml` 旧注释待下次同步覆盖。
 >   5. **真客户端（Tauri）重启验证未做**（执行方未闭合项 5）：本机无可跑的 Tauri 链路，e2e 走的是 client **同源脚本**（`dsh-prompt.mjs`）⇒「落盘后**真客户端**起来是否生效」仍属未验。
 >   6. **DSH-3.2.1 可起跑**：本机场地已空出（3.7.2 已交回，「与 3.7.2 争用同一棵 `harness/node_modules`」的约束解除）。
 >
-##### DSH-3.7 · 已定前提（两块共有，勿重复推导）
+##### DSH-3.7.3 · 工程卫生合并块（旧代依赖清理 ＋ CVM 副本补齐 ＋ 3.2 判据缺陷修复）🚀 **已派发 Trae（2026-09-17）**
+
+> **派发稿**：`exchange/log-trae.md`「DSH-3.7.3」段（⚠️ 活日志会被随时清理 ⇒ **判据与边界的权威落点在本文件**，派发稿只作执行指引）。
+> **为什么合并成一块**：三件**同一场地（本机 ＋ CVM 双侧）＋ 争用同一棵 `harness/node_modules`** ⇒ 天然串行，分三次派是浪费。**老大 2026-09-17 裁**：「完全没用的就删掉，不能删掉的就改，不严谨的地方收紧，合并派出去」。
+> **本块要回答的一件事**：harness 工作区那批旧代依赖（`0.0.1-rc.1`）**清干净了没有**，且**没顺手打断任何在飞成果**。
+
+- [ ] **① 旧代依赖清理**（3.7.2 未闭合项 2 转出）：⛔ **口径已订正（WB 2026-09-17 自纠）** —— 原记「6 处 `specifier: '*'`」是**字符串计数**，但**只有 2 条真的致旧代**：
+  - **删（4 条零使用声明）**：`plugin-sandbox-mount-probe` 的 `dsh-sandbox-local: *`（1 条）＋ `plugin-storage-probe` 的 `cordis`／`dsh-storage-domain`／`zod: *`（3 条）—— 已**逐文件核过 import 为零**（`mount-probe` 只用 `node:` 内建 ＋ `inject` 拿服务；`storage-probe` 头注释自述 *"Deliberately dependency-free"*）⇒ 这些声明的**唯一作用就是把旧代包拽进树**（`autoInstallPeers: true` 下连 `optional: true` 的 peer 也被自动装成真依赖；lock 里落在 `dependencies:` 段）。
+  - **改（2 处，不能删）**：`plugin-probe` ／ `plugin-sandbox-probe` 的 `cordis: *` → **`^4.0.2`** —— 这两个是 **TS 包**（`build: tsc`），`src/index.ts` 有 `import type { Context } from '@deepseek-ai/cordis'` ⇒ **编译期需要该包**，删声明会让 `pnpm build` 失败。`^4.0.2` = **生态惯例**（`.pnpm` 内 **238 个** 015 代包**一律**如此；⛔ 不照抄 `plugin-sandbox-dialect` 的精确版写法 —— 那是 3.7.2 的刻意收紧、语义不同）。
+  - **终态**：`specifier: '*'` **0 处** ／ `0.0.1-rc.1` **0 处**（本机基线 **6 ／ 16**）＋ 物理树里 `dsh-sandbox-local`／`dsh-storage-domain`／`dsh-sandbox-windows-acl` **各剩 1 支 `0.1.5-rc.2`**（基线各 2 支）。
+  - ⚠️ **判据须双锚**：同时断言 `dsh-sandbox-local@0.1.5-rc.2` **仍在树里** ＋ `cordis` 全树**仍只 4.0.2 一支** —— 否则「旧代清除」与「整棵树被装空」不可区分（假通过）。
+  - ⚠️ **传递面不许闷掉**：`dsh-sandbox-windows-acl@0.0.1-rc.1` 是**被旧代 `sandbox-local` 拖进来的**（而它正是**方言表**的宿主）⇒ 若旧代 `sandbox-local` 已消失而它**仍在**，须**报出并追出还有谁在引它**。
+- [ ] **② CVM 副本补齐**（3.7.2 未闭合项 4 ＋ 3.1 前置遗留）：`~/harness/packages/` 补 `plugin-015-preset-probe`（CVM 6 → 7）＋ `scripts/015-preset-probe/` 2 文件 ＋ `sandbox-dialect.mount.patch.yml` **注释订正版**；`SYNC-ANCHOR.txt` 更新。**目标**：两侧 `pnpm-lock.yaml` **sha256 相同**（原 **40 B** 差异 = CVM 少 `packages/plugin-015-preset-probe: {}` 两行 ⇒ 随补齐消失；若仍不一致须给逐行 diff ＋ 原因，⛔ 不得只报"已同步"）。
+- [ ] **③ 3.2 判据缺陷修复**（本文件 `:128`）：`harness/tests/s0-resume.test.ts:312` 的 `p2LandedOnSameLog` 改为**可取 `true`**（现写死 `p2Log === null ? null : false`，而 `:309` 的 `p2Log` 只找"含 P2 但不含 P1"的**另一条**日志 ⇒ 按构造永不 `true`）⇒ 补 `hasP1 && hasP2` 分支。**实跑道 = CVM**（3.2 的装置与结论都是 **CVM 单环境**，换场地即**跨通道外推**）。
+- ⚠️ **本块最强回归判据**（负向对照）：清理后**本机实跑** `harness/scripts/run-372-dialect-e2e.mjs` 须仍 **`exit 0`** ＋ patch 复位回 **`74400d260d5d4e6c…`**（769 B）＝「清理没打断 3.7.2 的成果」；输出目录须用 `S372_EVIDENCE_DIR` 指临时目录，⛔ 不覆盖 3.7.2 交付证据。
+- ⚠️ **本机 pnpm 通道（实测坑）**：本机**必须用 `pnpm.cmd`** —— 裸 `pnpm` 在本机 Bash 通道下**必崩**（npm 的 sh 垫片缺 `sed`/`dirname`/`uname`，且入口会错解析到 `D:\node_modules\pnpm\bin\pnpm.mjs`）⇒ 报 `Cannot find module 'D:\node_modules\pnpm\bin\pnpm.mjs'` **是通道问题、不是工程问题**。自证式：`pnpm.cmd -v` = **11.7.0**（与 `packageManager` 一致）。⛔ 不得改用 `npm` / `yarn`。
+- ⚠️ **诚实边界**：本块**不得声称**「DSH 旧代问题已彻底解决」—— **生产参照 profile `~/larry-dsh-home/profiles/sdk` 仍整体是 `0.1.2-rc.1`（012 代）**、**共享层 241 条 junction 未动**，两者**均在范围外**（**清引用者 ≠ 迁走被引用者**）；亦**不得声称**「resume 已可用」（015 现状下 `p2LandedOnSameLog` 仍不可观察到 `true`，③ 只证"实现不再排除 true ＋ 实跑取值与原始分布自洽"）。
+- ⛔ **禁区**：不碰 `.dsh-home/profiles/node_modules/`（共享层）／不碰工程落点 dialect 3 文件（`index.js` `022b0ff5efd11648` ／ `package.json` `9d6f4794a8aec191`）／不碰 CVM 的 **012 代** profile 内容／不改 `harness/packages/plugin-sandbox-dialect/package.json`（`9d6f4794a8aec191`）／不加 `pnpm.overrides`／**`rm -rf` 一律禁用**（清树须用 pnpm 机制或先备份再整树重装）。
+- 执行人：**Trae**
+
+##### DSH-3.7 · 已定前提（三块共有，勿重复推导）
 
 - [x] ✅ **首项判定已完成（WB 2026-09-16，本机上机）⇒ 结论 = ③「未修」**：015 **未自修** Windows 沙箱方言缺口 ⇒ **修复件不退役、且无需改码**；**须重跑全链路复验，不得沿用 012 结论**
   - **判据（读 015 `DENIAL_SIGNATURES` 是否已含 `operation not permitted`）**：015 的 `windows-acl` 方言仍是 `['access is denied','access to the path','permission denied']` —— **不含** `operation not permitted`、**也不含** zh-CN 两条
@@ -368,7 +388,8 @@
     - ✅ **原记「3.2 / 3.7 未启」已作废（2026-09-17）** —— **3.2 全块 ＋ 3.7.1 已起跑**（两块**互不依赖**，即原批次 1 的分组，非破「同时只跑一块」）；**3.2.1 ／ 3.7.2 待前序回报后起跑**
       - ✅ **前序已清（2026-09-17）**：3.2 ✅、3.7.1 ✅ **双双回报并复验** ⇒ **3.2.1 ／ 3.7.2 的前置均已满足，待派**
       - ✅ **DSH-3.7.2 已交付并复验（2026-09-17：Trae 交付 ／ WB 逐条回源复核 J1–J7 全成立）**：场地 = **本机 Windows**｜落点 = **`sdk` 面 ＋ `sdk` 自身 `node_modules`**（复核结论与遗留见本文件「DSH-3.7.2」段末引用块）；**原派发稿与回报已于 2026-09-17 按交流区规矩清理**（回溯：`git log -p -- exchange/log-trae.md`）
-      - ⏸️ **DSH-3.2.1 顺延（仍未派，但场地已空出）** —— ✅ **3.7.2 已交回 ⇒ 「争用同一棵 `harness/node_modules`」的约束解除 ⇒ 可起跑**。**判据：「独立判据 ＋ 独立场地」方可并行；两块只满足前半** ⇒ 它与 3.7.2 **场地相同**（均本机）且**争用同一棵 `harness/node_modules`**（3.7.2 要重算 lock ＋ 装插件 ⇒ 期间 CLI 树不稳）⇒ **不可并行**。等 3.7.2 交回后起跑（3.2 的锁归属结论已出：「A 锁全程无孤儿／B 锁全程未现」⇒ 3.2.1 的问法**无需改**，可直接按原判据跑）
+      - 🚀 **DSH-3.7.3 · 工程卫生合并块**（**Trae**，2026-09-17 派发）→ **在飞**；场地 = **本机 ＋ CVM 双侧**；三件合并（旧代依赖清理 ／ CVM 副本补齐 ／ 3.2 判据缺陷修复，来源见 `:234` ／ `:236` ／ `:128`）；派发稿 = `exchange/log-trae.md`「DSH-3.7.3」段，**判据权威落点 = 本文件「DSH-3.7.3」段**
+      - ⏸️ **DSH-3.2.1 顺延（仍未派，但场地已空出）** —— ✅ **3.7.2 已交回 ⇒ 「争用同一棵 `harness/node_modules`」的约束解除 ⇒ 可起跑**。**判据：「独立判据 ＋ 独立场地」方可并行；两块只满足前半** ⇒ 它与 3.7.2 **场地相同**（均本机）且**争用同一棵 `harness/node_modules`**（3.7.2 要重算 lock ＋ 装插件 ⇒ 期间 CLI 树不稳）⇒ **不可并行**。等 3.7.2 交回后起跑（3.2 的锁归属结论已出：「A 锁全程无孤儿／B 锁全程未现」⇒ 3.2.1 的问法**无需改**，可直接按原判据跑）。⚠️ **2026-09-17 更新**：**DSH-3.7.3 已占该场地**（同样本机、同样要重算这棵 `harness/node_modules`）⇒ **3.2.1 顺延至 3.7.3 交回后起跑**
       - ⛔ **`larry` 面已退役（老大 2026-09-17 裁）**：原「3.7 落点 = `larry`」作废 ⇒ **3.7.2 落点 = `sdk` 面**（硬前置 2 已裁）。工程 `.dsh-home/profiles/larry` ＋ 全局空壳 `~/.dsh/profiles/larry` **两处已退役并于同日真删**（原备份名后缀 `.RETIRED-20260917-1808`，仅供追溯、**磁盘上已不存在**），**3.7.1 落在共享层的产物同步退役**（该层已实证会取到旧代）。⚠️ **CVM 那份 `larry` 经复核后已于同日一并退役**（原判「不动」为抄旧登记未核实；实测 = 012 代跨代残留 ＋ 零引用 ＋ 停 11 天 ⇒ 退役并于同日真删，原备份名 `larry.RETIRED-20260917-1818`）。`@larryagent/plugin-probe` **包保留**（最小自研 bundle 样板）
 - [x] ✅ **落盘两项 —— 已完成（2026-09-17 DSH-3.7.2；下表为落盘**前**的实测现状）**（当时：`sdk/cordis.patch.yml` = `217 B` 模板空态 `[]`；`sdk/node_modules/@larryagent/` 不存在）：
   - ① **插件实体** = 仓库源 `harness/packages/plugin-sandbox-dialect/`（`index.js` **4087 B** ＋ `package.json` 542 B）**实体复制**到 `.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-sandbox-dialect/`（**该 profile 自身层**；⚠️ 不是共享层 ／ 不 link ／ 不从全局 `~/.dsh` 拷）。⭐ **只拷 `index.js` ＋ `package.json` 两个文件，`node_modules/` 必须排除** —— 实测：插件源自带的 `node_modules/@deepseek-ai/dsh-sandbox-local` 是指向 `harness/.pnpm` **旧代那支**的 junction ⇒ **连它一起拷，无论落哪层都取旧代**。⚠️ 另实测：**`sdk` 自身层是独立真树**（`@deepseek-ai/` 下 **real=105 ／ link=0**），而有问题的共享层是 **real=0 ／ link=241**（全指 `harness/.pnpm`）⇒ **两层的结构本身就不同**，这才是"落层"是真变量的实底。⭐ 只拷两文件后 pnpm 不参与 ⇒ 依赖由 `sdk/node_modules/@deepseek-ai/`（实测 015）解析
@@ -392,7 +413,7 @@
   - **批次节奏**
     | 批次 | 内容 | 说明 |
     |---|---|---|
-    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ **已回报＋复验** ／ 3.7 **拆为 3.7.1（✅ 已回报＋复验）＋ 3.7.2（✅ 已回报＋复验）**；⚠️ 3.7.2 落点**已由 `larry` 改 `sdk`**（该面已退役） |
+    | **1** | **3.0** + **3.2** + **3.7** | 三者互不依赖；⭐ **2026-09-17 实况**：3.0 ✅ ／ 3.2 ✅ **已回报＋复验** ／ 3.7 **拆为 3.7.1（✅ 已回报＋复验）＋ 3.7.2（✅ 已回报＋复验）**；⚠️ 3.7.2 落点**已由 `larry` 改 `sdk`**（该面已退役）｜＋ **3.7.3「工程卫生合并块」2026-09-17 派发**（由 3.7.2 未闭合项 2 ／ 4 ＋ 3.2 判据缺陷 1 合并） |
     | **2** | **3.1 S0** | 单发；后续一切的地基 —— ⭐ **已提前至批次 1 之前派发（老大 2026-09-17 拍：编号在前即先做）** |
     | **3** | **3.3 → 3.4 → 3.5 → 3.6** | **严格串行**（逐层叠加、单独验收） |
     | **4** | **3.8** + **3.9** | 3.8 可在批次 3 后期并行 |
