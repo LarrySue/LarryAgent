@@ -11,6 +11,7 @@
  * 用法（harness/ 下）：
  *   DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles node scripts/s0-run-with-file-key.mjs [variant...]
  * 覆盖凭据文件位置：`S0_CREDS=/path/to/.credentials.yaml`
+ * 换目标 runner（默认 `run-s0-e2e.mjs`）：`S0_TARGET_RUNNER=run-s0-resume.mjs`（3.2 用）
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
@@ -31,7 +32,8 @@ if (matched === null || matched[1] === undefined || matched[1] === '') {
 const key = matched[1]
 console.log(`[s0-key] 取自 ${creds}：长度 ${key.length}（值不打印）；以 env 注入子进程`)
 
-const child = spawn(process.execPath, [join(harnessDir, 'scripts', 'run-s0-e2e.mjs'), ...process.argv.slice(2)], {
+const targetRunner = process.env.S0_TARGET_RUNNER ?? 'run-s0-e2e.mjs'
+const child = spawn(process.execPath, [join(harnessDir, 'scripts', targetRunner), ...process.argv.slice(2)], {
   cwd: harnessDir,
   stdio: 'inherit',
   env: { ...process.env, DEEPSEEK_API_KEY: key },

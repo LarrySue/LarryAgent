@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.2** · 首验：跨进程 resume 的 id collision 定性 | Trae | **CVM** | 🔴 在飞 | 2026-09-17 |
+| **DSH-3.2** · 首验：跨进程 resume 的 id collision 定性 | Trae | **CVM** | ✅ **已回报（2026-09-17）** · 结论 = 真缺口（非姿势问题） | 2026-09-17 |
 | **DSH-3.7.1** · 前置就位与定性（方言修复件） | Trae | **本机 Windows** | 🔴 在飞 | 2026-09-17 |
 
 - 两块**互不依赖**（= 原批次 1 的分组），**先做哪块都行**；**建议 3.2 先**（CVM **10-09 到期**，且它是 2.4.1 / 2.8.2 承接叙事的前置）。
@@ -108,6 +108,124 @@
 - ⛔ 清锁一律"**重命名备份**"，**禁 `rm -f`**
 - ⛔ 不落 key；不把 key 打进工具输出
 - ⚠️ **别把 `exit 0` 单独当判据** —— 已证假绿源（空壳 home 探针 / `--dump-config` 同族）
+
+---
+
+# ✅ DSH-3.2 回报 · 跨进程 resume 的 id collision 定性（Trae 2026-09-17）
+
+## 1 · 结论先行（一句话）
+
+**真缺口 —— 且不是姿势问题**：对**框架自产、已真 `completed` 并落盘**的会话（④），第二个进程复用同 ID **一样被拒**；缺口在 **runtime 的 session 物化路径**（`session/prompt` 对"日志已在盘上"的 id 走 **create**，而 jsonl 后端自己注明**该走 open**），**不在 SDK 的 API 面** —— 两套 SDK 的"同 ID 入口"**都在**（见 ①）。
+⇒ 三条口径里选：**不是「姿势问题」**（换 UUID 只是绕开）、**不是「Python 独有」**、**是「两者皆有」里的第二支被排除后剩下的那支 —— runtime/SDK 集成缺口**。
+
+## 2 · ① 对照组 0 — 源码侧：有没有显式 resume 入口
+
+**结论：两套 SDK 都有「指定 session id」的入口；两套都**没有**名为 `resume` 的 API（grep 均 0 命中）。**
+⚠️ 故原文那句「**TS client 亦无显式 resume API（grep 无命中）**」（`docs/dsh/dsh-pysdk-probe-claude.md:157`）**半对半错**：说"没有 resume 字样"为真，说"没有入口 / 没有 API"为**假**。
+
+**TS 半边** —— ⚠️ **派发稿给的路径与实际不符**：`$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh-sdk-client/` **在 CVM 上不存在**（该 profile 的 `@deepseek-ai/` 里只有 `dsh-sdk-app` / `-jsonrpc-server` / `-minimal` / `-protocol` 四件 `dsh-sdk-*`）。**TS 客户端是 harness 的工作区依赖** ⇒ 实物 = `harness/node_modules/@deepseek-ai/dsh-sdk-client/`（`0.1.5-rc.2`，与基线同代）。
+
+| 入口 | 位置 | 签名 / 文档原文 |
+|---|---|---|
+| 高层 | `lib/types/api.d.ts:55`（doc `:52`） | `session(sessionId?: string): HarnessSession` — *"explicit id to reuse; omitted mints a fresh one"* |
+| 高层 | `lib/types/api.d.ts:62`＋`:78-83` | `run(input, options?: RunOptions)`；`interface RunOptions { sessionId?: string }` — *"Session id to run on; omitted mints a fresh session per call"* |
+| 低层 | `lib/types/client.d.ts:98`（doc `:94`） | `prompt(sessionId: string, contentBlocks): Promise<string>` — *"target session; **an unknown id creates it**"* |
+
+检索式与结果：`grep -rn resume harness/node_modules/@deepseek-ai/dsh-sdk-client/lib/` ⇒ **0 命中**（⇒ 不是"没写文档/漏看"，而是**这个能力不叫 resume**）
+
+**Python 半边**（本轮**新装实物** `deepseek-harness-sdk==0.1.5rc1` 到 `D:\Temp\pysdk-inspect`，源码侧读）
+
+| 入口 | 位置 | 原文 |
+|---|---|---|
+| 高层 | `deepseek_harness/api.py:120-122` | `def start_session(self, session_id: str | None = None) -> "Session":` → `Session(self, session_id or f"session-{uuid.uuid4().hex}")` |
+| 高层 | `deepseek_harness/api.py:124-131` | `def run(self, input, *, session_id=None, on_notification=None)` → `self.start_session(session_id).run(...)` |
+| 低层 | `deepseek_harness/client.py:174-180` | `payload = {"sessionId": session_id, "contentBlocks": content_blocks}` |
+
+检索式：`grep -riE 'resume|reuse|existing session|collision' deepseek_harness/` ⇒ **0 命中**（连"复用 / 已存在"的语义说明都没有）
+⚠️ 版本注：原观察出自 **0.1.2rc1**；本轮取的是 PyPI 现版 **0.1.5rc1**（与 TS `0.1.5-rc.2` 同代）。**Python 侧本轮只做源码侧，未做真调用复跑**（真跑全部走 TS 通道）。
+
+**运行时侧的 resume 语义（间接证据）**：`dsh-session-persistence-jsonl/README.md:141`（*"A resumed agent pays for retained history…"*）、`:145`（*"A resumed loop can reuse provider cache only when its reconstructed history…match"*）⇒ **框架侧确有 resume 语义**。原文"cold session is resumed on first touch"与本轮 ④ 的报错**不矛盾**：**载入**真发生了，**拒绝**发生在"再建/再触"那一步。
+
+## 3 · ② 反向组 — 固定 ID 跨进程复现
+
+命令（退出码 **0**）：`S0_TARGET_RUNNER=run-s0-resume.mjs node scripts/s0-run-with-file-key.mjs reverse`
+
+| 轮 | 请求 id | 结果 |
+|---|---|---|
+| p1 | `s0-resume-fixed-0001`（**自选固定串**） | ✅ `ok=true kind=completed`，13 事件，2.79 s；落盘 `…/sessions/<cwd-key>/s0-resume-fixed-0001/session.v3.jsonl.zstd`（11658 B） |
+| p2（**新进程**，同 home 同 id） | 同上 | ❌ `JsonRpcResponseError` **code=-32603** ／ `session "s0-resume-fixed-0001" already exists`（1.36 s） |
+
+**层归属**：这是 **runtime 回给客户端的 JSON-RPC error response**（`session/prompt` 的应答），**不是 SDK 客户端本地抛的**；抛出点在 runtime 内部的 session 物化路径（具体见 §6）。
+**文案已换代**：015 的原文**不含** 09-08 那版的 `(id collision)` 尾巴（012: `already has a persisted log on disk that does not match this live session (id collision)` → 015: `session "<id>" already exists`）⇒ **拒的行为不变，文案变了**。⚠️ 012 那句原文**在 015 实物上 grep 不到**（`does not match this live` / `already has a persisted log` 均 0 命中）⇒ 它出自 **012 的 SEA 快照 / runtime-bin**，**不可在 015 源码上复核**（未闭合项 3）。
+
+## 4 · ③ 正向组 — 每次新 UUID
+
+命令同上，`forward`（退出码 **0**）
+p1 `session-84c0018f5eb24875bcfb719192accb28` → `completed`（2.73 s）／p2 `session-6e22d045617c4a0a8a2b3ef6c9f8291b` → `completed`（4.16 s）
+**两条 id 不同**、落成**两条**日志（11815 B / 12004 B，各含各自口令）⇒ 环境 ＋ 凭据 ＋ 落盘**都活着** ⇒ **②/④ 的红灯不是"环境坏了"**（这正是本组的价值）。
+
+## 5 · ④ 关键组 — 真 `completed` 会话跨进程复用同 ID ⭐
+
+命令同上，`key`（退出码 **0**）
+
+| 轮 | 请求 id | 结果 |
+|---|---|---|
+| p1 | **不传 id**（由框架 mint） | ✅ `session-a676f45cbcc14d78988234e7fb12fbda` → `ok=true kind=completed`，13 事件，3.84 s；落盘 12105 B（含第一轮口令） |
+| p2（**新进程**） | `session-a676f45cbcc14d78988234e7fb12fbda` | ❌ `code=-32603` ／ `session "session-a676f45cbcc14d78988234e7fb12fbda" already exists`（1.34 s） |
+
+⇒ ⭐ **对"已存在的真会话"同样拒** ⇒ 按派发稿 §0 的口径 = **真缺口**，**不是"探针用固定 ID 所致"**。
+
+**附加判别器（我加的，见自曝 2）：`same-proc`** —— **同一进程内**同 id 连发两次 ⇒ **两次都 `completed`**，且**写进同一条日志**（12640 B，`hasP1=true && hasP2=true`）⇒ **同进程内是真 resume（续写同一日志）**，缺口**只出现在"换进程"这一态**。
+⇒ 这把"哪一层"收窄了：不是"id 不能被复用"，而是"**新进程里拿一个已有日志的 id 去 prompt**"这条路径不通。
+
+## 6 · 抛错点（015 实物的源码侧，两个候选）
+
+两个候选的**文案完全相同** ⇒ **仅凭报错文本无法区分**（如实标为未闭合项 1）：
+
+1. `@deepseek-ai/dsh-session` `lib/index.js:1380` —— `SessionStore.prepare(id, options)`：`if (this.store.has(sessionId)) throw new Error('session "' + sessionId + '" already exists')`；同处 doc（`:1366-1372`）写明 *"@returns the constructed session, **NOT yet in the store**"* ／ *"@throws if a session with `id` already exists"* ⇒ **这是"建新会话"的入口，不是 resume 入口**。
+2. `@deepseek-ai/dsh-session-persistence` `lib/index.js:33-41` —— `SessionAlreadyExistsError`：*"**`create`** targeted a Session identity that **already exists in this backend**"*（契约见同包 `lib/types/index.d.ts:106`）。
+
+**旁证（指向缺口本质）**：`dsh-session-persistence-jsonl/lib/index.js:3002` 对**同一情形**用的是**另一句文案** —— `refusing to materialize "<id>": a log already exists on disk (**open it instead**)` ⇒ **后端自己明确提示"该走 open、不该 create"**。与我方观测一致：**resume 的原语（open / load / inspect）在，缺的是把 `session/prompt` 的"日志已在盘上"这一态路由过去**。
+
+## 7 · 锁归属（A / B，必标）
+
+- **A 锁**（`<profiles>/node_modules.lock`）：跑前 `releaseOrphanProfileLock` 查**全局 `~/.dsh/profiles`** 与**临时 home** ⇒ 均 `action=none`；事前 `find ~/.dsh -maxdepth 3 -name '*.lock*'` **为空**。⇒ **全程无 A 锁参与、也未被创建**。
+- **B 锁**（jsonl 写租约，POSIX `flock`）：**全程未出现** `SessionAlreadyOwnedError`。原因：每次都 `harness.close()`（EOF→SIGTERM→SIGKILL 阶梯**等到真退出**）后才起下一个进程 ⇒ 租约由内核释放。⇒ **②/④ 的红灯与 B 锁无关**（这条必须写明，否则易被误读成"锁没释放"）。
+
+## 8 · 交付物 / 复跑
+
+| # | 路径 | 说明 |
+|---|---|---|
+| 1 | `harness/tests/s0-resume.test.ts` | 4 变体装置（`forward` / `reverse` / `key` / `same-proc`），姿态自证在头部；`describe.skipIf(!realApiEnabled())` ⇒ 默认 `npm test` 不受影响 |
+| 2 | `harness/scripts/run-s0-resume.mjs` | 一键复跑；退出码 `0` 通过 ／ `1` 测试失败 ／ `2` 前置缺失（**新增「构建前置检查」，只查不 build**）／ `124` 看门狗 |
+| 3 | `harness/scripts/s0-run-with-file-key.mjs` | 加 `S0_TARGET_RUNNER`（**默认值不变，向后兼容**） |
+
+复跑（一条，含全部环境变量）：
+
+```bash
+cd ~/harness && export PATH=$HOME/node/bin:$PATH DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles \
+  S0_EVIDENCE_DIR=$HOME/trae-evidence/s0-resume S0_TARGET_RUNNER=run-s0-resume.mjs \
+  && node scripts/s0-run-with-file-key.mjs
+```
+
+证据（CVM 产出，**已回传本机** → `D:\Code\_trae-cvm-evidence\s0-resume\`）：`{forward,reverse,key,same-proc}.resume.json` ＋ 原始日志 `s0-resume.log`。三元组见各 JSON 的 `triple` 字段（每变体独立临时 home ＋ `sdk` 真副本 ＋ 环境变量凭据层）。
+
+## 9 · 未闭合项 ＋ 下一步判断
+
+| # | 未闭合 | 我的判断 |
+|---|---|---|
+| 1 | **抛错点二选一未区分**（文案同） | 要区分得挂 `session` 服务插桩或读 error `data` 字段。**建议并入 DSH-3.3 / 3.6 的插桩位顺手取**，不单开任务 |
+| 2 | `-32603` 的**映射点未定位**（015 的 `dsh-sdk-*` 三包 grep 无命中） | 记入「包归属待核」，与 3.0 的同类项合并 |
+| 3 | **012 那版文案不可在 015 复核**（SEA 快照） | 结论按 015 记；012 侧只保留"同一现象"的定性 |
+| 4 | **Python 侧未真跑**（只做源码侧） | 两通道行为是否一致未验；**建议不单开任务**，等 A-service 选型随真实链路一并验 |
+| 5 | ⭐ **产品影响**：`resume`（跨进程续会话）在 015 上**不可用** | **`2.4.1 / 2.8.2` 的 fork / resume 叙事必须改口径**：走「**同进程内复用**」（已证可用）或「**用 `sessionPersistence.load/inspect` 自建重放**」（官方 seam，本轮已证日志可读）。**这是给 3.6 与后续的硬输入** |
+
+## 10 · 自曝
+
+1. **派发稿两处与实际不符**：① §5 的 TS 客户端路径（`$DSH_HOME/profiles/node_modules/@deepseek-ai/dsh-sdk-client/`）**在 CVM 上不存在**，我改查实物 `harness/node_modules/…`；② 派发稿说 `run-s0-e2e.mjs` 有"构建前置检查（缺产物退 2）"，**它其实没有** —— 我**只在新 runner 里补了**，**没去动 3.1 已交付的那只**（避免改已复核件）。**要不要回填 3.1 那只，请你裁。**
+2. **我加了第 5 个变体 `same-proc`**（不在派发稿 ①②③④ 内）。理由：没有它，"跨进程被拒"与"id 根本不能复用"分不开。若判超范围，删掉即可（主结论不依赖它，但会少一条解释）。
+3. **② 与 ④ 的差别只在 id 来源**（自选固定 vs 框架自产），两者结果**完全一致**。若你要的 ② 是别的口径（如"同 home 内第三次"/"不同 cwd 复用"），说一声，改跑很便宜（**6–9 s / 变体**）。
+4. **首跑前我预期可能红在别处**（B 锁 / 加密 / 权限），实际是干净的业务级拒绝 —— 如实记，**这不是我设计出来的**。
 
 ---
 
