@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.2** · 首验：跨进程 resume 的 id collision 定性 | Trae | **CVM** | ✅ **已回报（2026-09-17）** · 结论 = 真缺口（非姿势问题） | 2026-09-17 |
-| **DSH-3.7.1** · 前置就位与定性（方言修复件） | Trae | **本机 Windows** | 🔴 在飞 | 2026-09-17 |
+| **DSH-3.7.1** · 前置就位与定性（方言修复件） | Trae | **本机 Windows** | ✅ **已回报（2026-09-17）** · ①归因不成立／②实体装成／③凭据层=env；**暴露 3.7.2 岔口待裁** | 2026-09-17 |
 
 - 两块**互不依赖**（= 原批次 1 的分组），**先做哪块都行**；**建议 3.2 先**（CVM **10-09 到期**，且它是 2.4.1 / 2.8.2 承接叙事的前置）。
 - ⚠️ **DSH-3.7.2（落盘 ＋ 自检 ＋ 真 e2e）本区未派** —— 等 3.7.1 回报后起跑，**别自行往下做**。
@@ -288,3 +288,177 @@ cd ~/harness && export PATH=$HOME/node/bin:$PATH DSH_REAL_API_PROFILE_HOME=$HOME
 1. 三条各"**结论 ＋ 原始证据**"（命令 / 输出 / 退出码）
 2. `EPERM` 那条**必须写主体**（**谁的沙箱**），并分别给两处的结论
 3. **自曝**：拿不准 / 证据不足 / 发现新矛盾 —— 直接写（"成因未知"是可接受的结论，**别为叙事完整编一个**）
+
+---
+
+# ✅ DSH-3.7.1 回报 · 前置就位与定性（Trae 2026-09-17）
+
+## 1 · 结论先行
+
+1. **① `EPERM` 归因：我 09-14 那条归因不成立** —— 两处 × 两条通道的写探针**全部成功**，09-14 引用的那条命令**两处都不复现**。⇒ **本任务通道上"写不进去"这一现象不存在，故没有主体可钉**（我没有为它补一个新主体）。另附**正对照**（拒绝长什么样），证明探针的成功不是"被静默吞掉"。
+2. **② 实体复制已完成、判据成立**（双层解析 + **真 `import` 成功**）；但抓到 **2 处与文档不符**（依赖实际解析到**全局 npm 的 dsh 自带依赖**；link 对照的红灯**不是**文档记的那条文案）。
+3. **③ 凭据层 = 启动环境变量**（两态互异：无 key → `MISSING_CREDENTIAL`；env 注入 → `completed`），且**该层就是 client 会走的那层**。但**client 走 `sdk` profile，而落点是 `larry`** —— 且 `larry` **根本不是 SDK 面**（起不来）⇒ **3.7.2 有个必须先裁的结构性岔口**（见 §4.3）。
+
+## 2 · ① `EPERM` 归因定性（**主体必写**）
+
+### 2.1 两处 × 两条通道的写探针（每处各一次；**建后立即删除**，未动任何现存文件）
+
+| 处 | 通道（潜在主体） | 探针 | 结果 |
+|---|---|---|---|
+| `~/.dsh/profiles/sdk/`（**09-14 的现场**） | **我的写文件工具**（AI 工具通道） | `.write-probe-tool.tmp` | ✅ **成功**（随即删除） |
+| `.dsh-home/profiles/larry/`（**现落点**） | 同上 | `.write-probe-tool.tmp` | ✅ **成功**（随即删除） |
+| `~/.dsh/profiles/sdk/` | **node `fs`**（我的 shell 通道） | `.write-probe-node-<ts>.tmp` | ✅ `wAccess=W_OK ok` → 写入 ok → 回读 ok → `cleanup=deleted` |
+| `.dsh-home/profiles/larry/` | 同上 | 同上 | ✅ 同上 |
+
+⇒ **两处、两条通道，4/4 可写，无一条 `EPERM`。**
+（探针脚本 `D:\Temp\dsh-probe\371-erperm-probe.mjs`；`node v24.14.1`）
+
+**顺手排掉一条解释**：`cordis*.yml` 的**文件属性全为 `Archive`（无只读位）** —— `~/.dsh/profiles/{larry,sdk,web}/cordis*.yml` 6 个 ＋ `.dsh-home/profiles/{larry,sdk}/cordis*.yml` 4 个，均无 `ReadOnly`。
+
+### 2.2 09-14 那条"证据"命令：**两处都不复现**
+
+触发命令原文（我当时引用的那条）：
+
+```
+dsh --profile sdk --dump-config
+```
+
+| 处（**均在 home 的副本上跑，真件未动**） | 退出码 | stderr | stdout |
+|---|---|---|---|
+| 工程 home 副本 `D:\Temp\dsh-probe\371-home` | **0** | **0 字节** | 11533 B |
+| 全局 home 副本 `D:\Temp\dsh-probe\371-global` | **0** | **0 字节** | 11652 B |
+
+⇒ **两处都干净成功**：没有 `EPERM`、没有任何失败。
+
+### 2.3 正对照：**拒绝长什么样**（用来证明 2.1 的成功是真成功）
+
+| 主体（谁在拒） | 触发 | 完整错误对象（**原文**） |
+|---|---|---|
+| **我的写文件工具**（AI 工具通道） | 写 `C:\Windows\.write-probe-tool.tmp` | `无法写入文件"c:\Windows\.write-probe-tool.tmp"（NoPermissions (FileSystemError): Error: EPERM: operation not permitted, open 'c:\Windows\.write-probe-tool.tmp'）` |
+| **node**（shell 通道） | 写 `C:\Windows\.write-probe-node-<ts>.tmp` | `name=Error` / `code=EPERM` / `errno=-4048` / `syscall=open` / `path=C:\Windows\…tmp`；`message=EPERM: operation not permitted, open '…'`；栈头 `at writeFileSync (node:fs:2413:20)` → `371-erperm-probe.mjs:31` |
+
+⇒ **两种主体、两种形状**（工具通道 = 外层裹 `NoPermissions (FileSystemError)`；node 通道 = `EPERM + errno=-4048 + syscall=open`）—— **这就是"钉主体"的可操作判据**。而 2.1 的 4 次探针**两种形状都没出现** ⇒ 是真成功，不是被吞。
+
+### 2.4 主体结论（逐处）
+
+- **全局 `~/.dsh/profiles/sdk/`（09-14 现场）**：**无拒绝 ⇒ 无主体可钉**。09-14"写 `~/.dsh/profiles/*/cordis*.yml` 被拒"**不成立**（与 WB 2026-09-14 的独立实测一致）。
+- **工程 `.dsh-home/profiles/larry/`（现落点）**：**无拒绝 ⇒ 无主体可钉**。
+- **我 09-14 的归因错在哪（两重错）**：① **证据引用错位** —— 拿 `dsh --profile sdk --dump-config` 的失败当"写 cordis.yml 被拒"的证据，而那条命令是 **DSH 启动**、根本不写 `cordis.yml`（WB 09-14 已指出）；② **该失败现在也不复现**。⇒ 双重不成立。
+- ⚠️ **我没有为它补一个新主体**（既不说成"工具沙箱"，也不反过来说成"DSH 沙箱"）：**现象不存在时，任何主体都是编的**。
+- 唯一**有据可查**的 `EPERM` 出处仍是 `docs/local-env.md` §4「② 错误码类别层」：**DSH 自身沙箱**（windows-acl runner 拒写 → node 报 `EPERM: operation not permitted` → DSH 未识别该文案）。但那是"**沙箱拦命令**"的场景，与我 09-14 声称的"**拦我写 profile 目录**"**不是同一件事** ⇒ 归 **3.7.2 的真 e2e** 去验，不计入本条。
+
+### 2.5 顺手排掉一个"最容易再次误记成权限问题"的坑
+
+拷全局 home 那次 `robocopy` 报 **RC=9、25 个目录 FAILED** —— 表面极像"权限被拒"。**真相**：源里有 **509 个 junction（reparse point）**，`robocopy` 默认要展开/重建它们而失败；加 `/XJ` 后 **19183 文件 / 157.16 MB 全部拷成、0 FAILED**。
+⇒ **「目录拷不动」≠「权限被拒」**，它不属于 `EPERM` 家族。
+
+## 3 · ② 方言修复件**实体安装**
+
+- **源** = `harness/packages/plugin-sandbox-dialect/{index.js,package.json}`（**仓库源**，未从全局 home 拷）
+- **落点** = `.dsh-home/profiles/node_modules/@larryagent/plugin-sandbox-dialect/`
+
+| 检查 | 实测 |
+|---|---|
+| 实体 还是 link | **实体目录**（`LinkType` 空）；`@larryagent/` 下只有这一个条目 |
+| 与源一致 | `index.js` **4087 B** / `package.json` **542 B**；SHA256 前 16 位与仓库源 **SAME** |
+| 解析插件自身 | `@larryagent/plugin-sandbox-dialect` → `…\profiles\node_modules\@larryagent\plugin-sandbox-dialect\index.js` ✅ |
+| 解析内部依赖 | `@deepseek-ai/dsh-sandbox-local` → `C:\Users\SuLarry\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\dsh-sandbox-local\lib\index.js` ✅ |
+| **真 `import()`**（最终判据） | `ok`；导出 `["WINDOWS_ACL_EXTRA_DENIALS","default"]`；`extras = ["operation not permitted","拒绝访问","访问被拒绝"]`；`default` 是 class ✅ |
+
+（验证脚本 `D:\Temp\dsh-probe\371-verify-2.mjs`）
+
+### 3.1 ⭐ 两处与文档不符（**要订正**）
+
+1. **依赖实际不是"profile 自己装了一份"**：`profiles/node_modules/@deepseek-ai/*` 的条目是 **Junction**，指向 **全局 npm 安装的 dsh 自带依赖**（`C:\Users\SuLarry\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\node_modules\@deepseek-ai\…`）。⇒ ② 成立，但**成立的机制**是"Dsh 把 profile 树 junction 到自己的依赖"，**不是**"profile 内独立安装"。
+2. **link 对照的红灯不是文档记的那条**：`docs/local-env.md` §4.3 与挂载件注释都写「link 下**取不到** `@deepseek-ai/dsh-sandbox-local`」。实测（junction → 仓库源，Node 解析）：
+
+   | specifier | 从**仓库源目录**解析 | 结果 |
+   |---|---|---|
+   | `@deepseek-ai/dsh-sandbox-local` | **取到了**（`harness/node_modules/.pnpm/@deepseek-ai+dsh-sandbox-lo_…/`） | OK |
+   | `@deepseek-ai/dsh-llm` | **MODULE_NOT_FOUND** | FAIL |
+   | 真 `import()` 插件 | **失败**，文案 = `SyntaxError: The requested module '@deepseek-ai/dsh-llm' does not provide an export named 'assertNever'` | FAIL |
+
+   ⇒ **结论方向不变**（link 确实不可用），但**载体是"依赖树不配套"**（连到了另一份变体的 `dsh-llm`），**不是"找不到 sandbox-local"**。⚠️ 照旧文案去排查会走偏。
+
+## 4 · ③ 凭据路径打通 ＋ **实际走的是哪一层**
+
+**两态对照**（均在**工程 `.dsh-home`** 上真跑；脚本 `D:\Temp\dsh-probe\371-cred-probe.mjs`）：
+
+| 态 | profile | 注入 | 结果 |
+|---|---|---|---|
+| **A** | `sdk` | **不注入任何 key**（我的 env 里没有、工程 home 也无 `.credentials.yaml`） | `turn/end.kind=error` / **`code=MISSING_CREDENTIAL`** / `finalResponse` 空 / 13 事件 / **2.29 s** |
+| **B** | `sdk` | 从 **`backend/config.yaml`** 取 key（长度 35）经**环境变量**注入 | **`completed`** / `finalResponse="CRED-OK"` / 13 事件 / **2.75 s** ✅ |
+
+⇒ **实际凭据层 = 「启动环境变量层」**：没有 env key 就 `MISSING_CREDENTIAL`；给了就走通。（`.credentials.yaml` 全程未参与。）
+
+### 4.1 该层**就是** client 路径会走的那层
+
+`client/src-tauri/src/main.rs:274-291`：
+- 注释自述：*"模型凭据**继承本进程 env**（由启动环境注入 `DEEPSEEK_API_KEY`）"*
+- 代码实测：`Command::new("node").arg(dsh-prompt.mjs).env("DSH_HOME", .dsh-home)` —— **只设 `DSH_HOME`**、**不设 `DEEPSEEK_API_KEY`**（Rust `Command` 默认继承父 env）⇒ **Key 必须由 Tauri 进程自身的启动环境带进来**。
+
+⇒ 与我 B 态**同层（env）**一致。⚠️ 但**"谁把 key 放进 Tauri 的启动环境"这一环不在本块范围**（我没找到 Tauri 侧读 `config.yaml` 的代码路径）—— 记为待核（见自曝 4）。
+
+### 4.2 三处口径的**实测裁决**
+
+| 出处 | 说法 | 本机实测 |
+|---|---|---|
+| `main.rs:274-277` | 凭据继承本进程 env | ✅ **成立**（B 态） |
+| `docs/production-env.md` §12.5 表 | `.credentials.yaml`「**可选**」 | ✅ **成立**（工程 home 无该文件，B 态照样 `completed`） |
+| `TODO.md` DSH-3.7「配套三件①」 | 该文件「**须建**」 | ⚠️ **在本机 TS SDK 通道下非必要**。**除非**目标改成"Tauri 启动时没 env 也能通"，那才需要建文件或让 client 显式注入 —— 那是**产品选择**，不是实测结论 |
+
+### 4.3 ⭐ 硬发现三：**落点 `larry` 根本不是 SDK 面**
+
+先按派发稿的提醒单独试 `larry`（没把 sdk 的绿灯当成 larry 的）：
+
+```
+DSH_HOME=.dsh-home  profile='larry'  真 SDK 通道
+→ TransportClosedError: dsh profile "larry": JSON-RPC input closed
+  exit code: 1
+  stderr tail:
+  [B1-PROBE] external bundle loaded by cordis (tag=v1)
+  error: a task is required, for example: dsh --profile headless "run the tests"     （3.48 s）
+```
+
+剖面（两个 profile 的 `package.json`，**只读**）：
+
+| profile | bundles | 面 |
+|---|---|---|
+| `sdk` | `dsh-base` ＋ **`dsh-sdk-app`** | **SDK 面**（stdio JSON-RPC） |
+| `larry` | `dsh-base` ＋ **`dsh-headless`** ＋ `@larryagent/plugin-probe`（**`link:`**） | **headless CLI 面**（要位置参数当 task） |
+
+⇒ **「落盘在 larry」与「client 实际跑的 sdk」不是同一条通道**。**3.7.2 必须先在下面三条里选一条（请老大/WB 裁）**：
+
+1. 给 `larry` 加 `@deepseek-ai/dsh-sdk-app`（**改该 profile 依赖** —— 本块禁区内，我没动）
+2. 把落点改到 `sdk`
+3. 3.7.2 的 e2e 改用 **CLI 直跑** `dsh --profile larry "…"` —— 但那**不是 SDK 通道**，按"三通道结论不可互推"的纪律须单独声明
+
+⚠️ 另注工程 home 两处现状（**只读观察，未动**）：
+- `larry` profile 里**已有一个 `link:` 挂载的 `@larryagent/plugin-probe`**，boot 时打出 `[B1-PROBE] external bundle loaded by cordis (tag=v1)` ⇒ **落点 profile 现有"link 挂载"先例**，与 ② 要求的"必须实体复制"相冲突（3.7.2 落盘前建议一并处置）。
+- `larry/cordis.patch.yml` 当前 = **477 B**，内容即那条 `- id: hmr / disabled: false`（与文档一致，未动）。
+
+## 5 · 禁区文件哈希取证（**未动**）
+
+10 个文件（`{larry,sdk} × {package.json, pnpm-lock.yaml, cordis.patch.yml, cordis.yml, pnpm-workspace.yaml}`）：
+
+- **boot 前后**：与"从真件拷出、再在副本上**独立 boot 一次**"的那份**逐文件哈希相同（SAME×10）** ⇒ **重复 boot 不改写这 10 个文件**（`profiles/node_modules` 会被 materialize，manifest/lockfile 不动）
+- **②③ 前后**：T0（boot 后）vs T1（②③ 后）**SAME×10** ⇒ ②③ 未动它们
+
+## 6 · 本轮我改动了工程 home 的哪些东西（如实清单）
+
+| 路径 | 动作 | 性质 |
+|---|---|---|
+| `.dsh-home/profiles/node_modules/`（240 个 `@deepseek-ai` junction ＋ 其余） | **新建** | **DSH boot 自动 materialize** 的产物（与 3.0.4「boot 不是只读」一致） |
+| `.dsh-home/profiles/larry/node_modules/`、`larry/.dsh-module-fallback` | **新建** | 同上，boot 产物 |
+| `.dsh-home/profiles/node_modules/@larryagent/plugin-sandbox-dialect/{index.js,package.json}` | **新建** | **② 的交付本体** |
+| `.dsh-home/sessions/**` | 新增 2 条会话（`session-f2d9b78c…` / `session-d758970d…`） | ③ 真调用落盘 |
+| 禁区 10 文件 ＋ `larry/cordis.patch.yml` | **未动**（§5 哈希取证） | — |
+
+## 7 · 自曝
+
+1. **① 我只拿到"不复现"，没拿到"当年为什么"** —— 我**没有**去编一个主体。要追"当年的真因"，需要当时的现场（当时的 dsh 版本 ＋ 当时的 profile 状态），**两者现在都变了**（本机已同代化）⇒ 建议按「**归因不成立、现象不复现**」结案。
+2. **我加了一个不在派发稿里的对照**（`C:\Windows` 正对照）：没有它，"探针成功"与"探针被静默吞掉"不可区分。若判超范围可删，但删了就没有"拒绝形状"的锚点。
+3. **② 的 link 对照是 Node 层实验，不是 dsh 挂载实验** —— 我没真造一个 link-mount 的 dsh 启动（那要动 profile manifest，属禁区）。故"link 不可用"的**载体**结论只到 Node 解析层。
+4. **③ 的 B 态 key 是我从 `backend/config.yaml` 取的**，**不是 client 的真实取值路径**（那条路径我没找到）。所以"层级一致"是**由 `main.rs` 的代码＋注释推的**，不是我端到端跑出来的 ⇒ **"谁往 Tauri 的启动环境里放 key"请确认**。
+5. **`larry` 起不来这条我没预料到**（派发稿只说"别把 sdk 通了当 larry 通了"）。它把 3.7.2 变成一个**必须先裁的岔口**，不是我能自己选的（§4.3 三选一）。
+6. 本块**全程本机**，未连 CVM；未做任何 git 远程操作。
