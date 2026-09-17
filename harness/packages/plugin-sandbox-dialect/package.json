@@ -9,7 +9,7 @@
     "./package.json": "./package.json"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-sandbox-local": "*"
+    "@deepseek-ai/dsh-sandbox-local": "0.1.5-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-sandbox-local": { "optional": true }

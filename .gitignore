@@ -28,6 +28,9 @@ ref/
 # DSH 运行时装配点（可随时重建，含凭据/会话产物，不入 git）
 .dsh-home/
 
+# DSH-3.7.2 e2e 证据目录（dump-config 前后 / prompt 原文 / summary；可随时重建）
+.s372-evidence/
+
 # IDE
 .vscode/
 .idea/

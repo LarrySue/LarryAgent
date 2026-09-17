@@ -7,9 +7,9 @@
 # ⚠️ form A（`- id: sandbox` + `name:` 覆盖同名行）实测**不生效** —— loader 的 id 定位
 #    只做 config 覆盖，不改该行的插件来源。故必须用 disable + insert。
 #
-# ⚠️ 插件须**实体复制**进 profile 的 node_modules（不要 link）：
-#    link 方式下插件的 bare import 会从源目录解析，取不到 @deepseek-ai/dsh-sandbox-local。
-#    ⭐ 安装点：$DSH_HOME/profiles/<profile>/node_modules/@larryagent/plugin-sandbox-dialect/
+# ⚠️ 插件须**实体复制**进 profile 的**自身层** node_modules（**勿 link、勿放共享层**）
+#    安装点：$DSH_HOME/profiles/<profile>/node_modules/@larryagent/plugin-sandbox-dialect/
+#      （2026-09-17 DSH-3.7.2 订正：原写 `profiles/node_modules/…` = 共享层，是错的）
 #      （2026-09-17 修订：原写 `profiles/node_modules/…`「共享层」—— 实测该层把
 #       `dsh-sandbox-local` 解析到旧代 `0.0.1-rc.1`（同树 `dsh-llm` = `0.1.5-rc.2`）
 #       ⇒ 插件 `import` 即崩（`does not provide an export named 'assertNever'`）。
