@@ -127,14 +127,22 @@ pnpm now wants to use the store at "D:\.pnpm-store\v11" …
 - **等价手段（实测）**：`icacls <dir> /deny <me>:(AD,WD)` ⇒ 子项 `mkdir`／`writeFile` 均返回 **`EPERM: operation not permitted`**（与 POSIX 的 `EACCES` 同类）；`icacls … /remove:d` 后**恢复可写**（撤销幂等，已进 `afterAll` 清理）。
 - **复跑**：改用等价手段后，该变体在 run4 ／ run5 **两次**均按期望落位（`logPresent=false` ＋ `②_activated=true`），且红灯形态与 CVM 记载的 `③_turnEndKind=error/errorCode=UNKNOWN` **一致** ⇒ 是**等价**而非放宽。
 
-### 6 · J6 转出项 ②：`pwsh` 受限路径 ⇒ fail-safe 假红
+### 6 · J6 转出项 ②：`pwsh` 受限路径 ⇒ fail-safe 假红 —— **已在真 dsh 链路重放，结论被我自己的实测推翻一半**
 
-- **判定：路径存在，且方向上只可能是"假红"（fail-safe），不是假绿。** 该形态下 `tool/result` **既无 `EPERM`、也无 `[sandbox: file access denied under <mode> mode]`、也无升权提示** ⇒ 3.7.2 装置对 `unpatched` 的"期望看到 EPERM"必然判 FAIL。
-- **dsh 侧触发条件（DSH 自述原文，非我推断）**：`dsh-tool-pwsh/lib/index.js:144` —— "**Under the Windows sandbox, read-only pwsh runs in PowerShell ConstrainedLanguage mode, while workspace-write stays in FullLanguage unless host policy says otherwise.**"（中文版 `README.zh.md:58` 同义）。⇒ 两条触发路径：① **read-only 沙箱**；② workspace-write ＋ **host policy 强制**（Qoder 那两次 R3 的会话头是 `sandbox/mode=workspace-write` 却仍受限 ⇒ 落在②）。
-- **本机可复现的触发式（命令 ＋ 观测）**：把该 PowerShell 会话**运行期**置入 `ConstrainedLanguage`，再跑与 DSH pwsh 工具同形的开头（`[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)`）：
-  - 观测（原文 `374\j6\J6-C-runtime-constrained.raw.txt`）：`LanguageMode= ConstrainedLanguage` → `set OutputEncoding = THREW` → **`FullyQualifiedId = CannotCreateTypeConstrainedLanguage`** —— 与 R3 的 `tool/result` **同一 error id**。（同轮对照 A：`FullLanguage` 下同一命令 `= OK`。）
-  - 探针脚本：`374\j6\constrained-probe-C.ps1`。
-- ⚠️ **未做（诚实标注）**：我没有在本机 dsh 上**真跑一次 read-only 会话**去取装置的红灯原文 —— `dsh-prompt.mjs` 没有模式开关（只认 `DSH_HOME`），`DSH_PERMISSION_MODE` 只在 CVM 探针里用过，而本块不碰 CVM、也不改该脚本。⇒ 「该路径下 `unpatched` 会被判 FAIL」是**依据 R3 实物 ＋ 3.7.2 装置判据代码**的推论，**不是**本机重放所得。
+**补跑（2026-09-20，真 dsh 链路；两臂唯一变量 = `DSH_PERMISSION_MODE`）**
+- 装置：`374\j6\run-j6-dsh.mjs` ｜模式开关的源头 = profile 自身配置 `dsh-base/cordis.patch.yml:211`（`mode: !!js process.env.DSH_PERMISSION_MODE ?? 'workspace-write'`）｜临时 home = 复制 `.dsh-home/profiles/sdk`（**不碰工程 home、不切 patch**）｜工作区 `<SBOX>/ws`、越界目标 `<SBOX>/outside/denied.txt`、口令与 R3 同形｜Key 只经环境变量注入（`backend/config.yaml` 首条），**值不落盘、不打印**。
+- 原文：`374\j6\dsh\J6-toolresult.raw.txt`（两臂 `tool/result` 帧全文）＋ 会话日志副本 `374\j6\dsh\sessionlog-*/`
+
+| 臂 | 会话（运行自报 id） | `tool/result` 要点 | 越界文件 |
+|---|---|---|---|
+| A `workspace-write` | `session-15f7be025dab4d53a6c4832061056cb5` | `Error: EPERM: operation not permitted…` ＋ `[sandbox: file access denied under workspace-write mode]` ＋ 升权提示 ＋ `[exit code: 1]` | 未创建 |
+| B `read-only` | `session-af1976d123e9434f81be723ca15cc5df` | **`CannotCreateTypeConstrainedLanguage` ×2**（开头 `[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)` 失败）**—— 但其后 `Error: EPERM …` 照旧出现** ＋ `[sandbox: file access denied under **read-only** mode]` ＋ 升权提示 ＋ `[exit code: 1]` | 未创建 |
+
+**三条判定（第 2 条订正我上一版的写法）**：
+1. **触发条件（本机实测成立）**：`DSH_PERMISSION_MODE=read-only` ⇒ pwsh 进 **ConstrainedLanguage**，报 **`CannotCreateTypeConstrainedLanguage`**（**与 R3 的 tool/result 同一 error id**）。机制源头有 DSH 自述原文（`dsh-tool-pwsh/lib/index.js:144`）："**Under the Windows sandbox, read-only pwsh runs in PowerShell ConstrainedLanguage mode, while workspace-write stays in FullLanguage unless host policy says otherwise.**"
+2. ⚠️ **但"read-only ⇒ 装置假红"不成立**：B 臂里 **`EPERM` 与 marker 一个都没少**（ConstrainedLanguage 只打掉了 prelude 那一行，**命令照样被执行**）⇒ 3.7.2 装置的两态判据**仍会通过**，**不构成假红**。
+3. ⇒ **假红的充分条件比"read-only"多一层**：R3 的 `tool/result` 里**连 `EPERM` 都没有**、只有「**无法运行 node.exe：拒绝访问**」⇒ 它那次是**受限令牌进一步阻止了子进程创建**（ConstrainedLanguage 只是第一层）；本机 read-only **只满足前一半**。
+4. ⛔ **R3 为何落到那一层：成因未定** —— 同机、同一 profile 的 workspace-write 臂在我这里完全正常，而 R3 的会话头是 workspace-write 却受限 ⇒ 只可能是 DSH 自述里那条 "**unless host policy says otherwise**" 分支，但**具体是什么策略/什么差别，未查到，不补成因**。能确定的只有：**该路径确实存在，且方向上只可能"假红"（不会有假绿）**。
 
 ### 7 · J7 原文原样落盘 ＋ 文件清单
 
@@ -156,7 +164,7 @@ pnpm now wants to use the store at "D:\.pnpm-store\v11" …
 ### 9 · 未闭合（本项不做／做不了，逐条列明）
 
 1. **本机 pnpm 默认 store = `D:\.pnpm-store\v11` 的来源未查清**（5 处候选 rc 全缺，环境变量无相关项）—— 只报了"是什么"，没报"为什么"。
-2. **J6 的 dsh 侧重放未做**：没有在本机 dsh 上真跑 read-only 会话取装置红灯原文（见 §6 末）。
+2. **J6 已补做（见 §6），但"R3 落到的那一层"的成因仍未定** —— 本机 `read-only` 只复现出「ConstrainedLanguage」这**半层**；让 `node.exe` **也起不来**的那个额外限制**未查到**（不补成因）。
 3. **runner 的默认源与测试自身默认源不一致**（`run-s0-e2e.mjs` → `~/.dsh/profiles`；`real-api.ts:251` → `<repo>/.dsh-home/profiles`，J4 锚也在后者）⇒ 我**按现状跑**（用 runner 默认源，才有 §1.3 的第二个字段发现），**未改** runner `scope`。待裁：是否把 runner 默认改到 `.dsh-home`。
 4. `no-session-dir` 的 **POSIX 分支我未在此机实跑**（无 Linux 通道；CVM 属 3.7.5）⇒ POSIX 行为保持原样但**本轮未复验**。
 5. `docs/`（`local-env.md` 等）与本段相关的承接**未回填**（本稿只动 `s0-e2e.test.ts` ＋ `.gitignore`）。
@@ -169,11 +177,14 @@ pnpm now wants to use the store at "D:\.pnpm-store\v11" …
 4. **BOM 又踩一次**：J1 的 `e1c` 探针用 `Set-Content` 写 JSON ⇒ pnpm 报 `Unexpected token '\uFEFF'`（这是 3.7.2 学过的坑）⇒ 改用 `[System.IO.File]::WriteAllText(..., UTF8Encoding($false))`。
 5. **多改了一行 `.gitignore`**：加 `.s0-evidence/`（与既有 `.s372-evidence/` 同向）。理由：runner 每次复跑都会把仓判脏；**若复核认为超范围，删该行即可**（不影响任何判据）。
 6. **判据未放宽**：三处改动里只有 #3 触及"破坏动作"，其**期望值一个没动**（仍是 `logPresent=false` ＋ `④=false` ＋ `②_activated=true`），且等价性有实测支撑（§5）。
+7. ⭐ **我上一版 §6 写错了一半，已按实测订正**：原写「read-only ⇒ 工具返回**既无 `EPERM` 也无 marker** ⇒ 装置必然假红」—— 本机真链路重放证明 **`EPERM` 与 marker 一个都没少**（ConstrainedLanguage 只打掉 prelude 那一行，命令照样执行）⇒ **「read-only ⇒ 假红」不成立**。那是我拿 R3 的**单次实物外推**出的"必然"，没先在本机重放就写进了报告。**教训：跨环境外推一句"必然"之前，先在本机重放一次。**
+8. **补跑用 Key 的处理**：老大给了一只临时 Key，我**没有**把它写进任何命令行／文件（命令行文本也算"工具输出"，凭据零落盘的适用面）⇒ 补跑仍走 `backend/config.yaml` 那条既有通道（值不入任何文本）。若后续要用指定 Key，安全姿势是**先用环境变量注入到会话**，再让我读环境变量。
 
 ### 11 · 收尾
 
-- **`git status --short`**：`M .gitignore` ／ `M harness/tests/s0-e2e.test.ts`（＋ 已按 §7 忽略 `.s0-evidence/`，不再出现）
-- **本项改动的受版本控制文件 = 2 个**，`git diff --stat` 见提交前速览；未改 `harness/node_modules`、未改 runner、未改 `real-api.ts`、未碰 CVM。
+- **`git status --short`**：`M .gitignore` ／ `M harness/tests/s0-e2e.test.ts` ／ `M exchange/log-trae.md`（`.s0-evidence/` 已按 §7 忽略，不再出现）
+- **本项改动的受版本控制文件 = 3 个**；未改 `harness/node_modules`、未改 `run-s0-e2e.mjs`、未改 `real-api.ts`、未碰 CVM、未切 `cordis.patch.yml`（J6 补跑走临时 home）。
+- **仓外证据**：`D:\Code\_trae-evidence\374\`（`j1\` 五臂探针 ｜ `j2\` 四次 runner 原文 ｜ `j4\` 源 profile 基线 ｜ `j5\` ACL 语义 ｜ `j6\` 触发式与 dsh 两臂重放）＋ `D:\Code\LarryAgent\.s0-evidence\`（装置自产 14 件）。
 
 
 ---
