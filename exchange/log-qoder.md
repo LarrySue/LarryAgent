@@ -132,3 +132,68 @@
 ### 5. 待补（第二节）
 
 web 取证两路仍在跑：**① DSH 自身社区指标**（star/fork/contributor、release 与 PR/Issue 处理、Discord 规模、npm/PyPI 下载量、下游产品级用例）**② 行业趋势**（harness 品类、插件内核 vs 框架 API、MCP/ACP 采用度、押注预览期底座的先例、TS/Python 分布、反向意见）。回来后补，并据此校准先前评估的第三问。
+
+---
+
+## 2026-09-17 · 社区调研（第二节：行业趋势与外部校准 · web 取证已回）
+
+> 检索时间 2026-09；来源 20 条附末。标注：【源】=有来源支撑 ／【判】=综合判断。**本节按"确认了什么 / 需要重新掂量什么 / 我要修正自己什么"来组织。**
+
+### A. 三条与我判断同向的确认
+
+**A1. "harness 已是独立工程品类" —— 方向有品类支撑**【源】
+Winder.AI（2026-08-20）把 agent 栈分四层（harness = 单 agent 执行循环 / 工具 / 沙箱 / 记忆 / hooks；framework = 多 agent 编排；platform ≈ runtime），金句 **"Frameworks compose agents; harnesses run them"**，并横向比较 9 个 harness（**含 DeepSeek Harness**）。arXiv 2607.28802（2026-07-30）把 harness 与 model 列为**独立故障归因层**。⇒ 项目"押注 harness 层而非自造 agent loop"**站在已被命名的品类上**。
+
+**A2. 插件内核对"生态退化"的批评 —— 被我本地数据实证**【源】+【本地】
+HN 讨论警告插件生态会退化成 "**nightmare of incompatible, deprecated plugins**"；braindrip 指"配置 / 记忆 / 拓扑仍锁死在 harness 内"。
+⇒ 这两条我**在本地独立复算里都看到了实证**：3,196 条 / 2,067 owner、单 owner ≥5 条者 15+ 家、同一账号 30 个微插件、数字随机账号批量产出同构 toolkit（见第一节）。**两条独立证据交叉印证** ⇒ 项目 §3.0「只借鉴不直装」不是保守，是有据。
+
+**A3. 个人 agent 的主流形态选择，项目三条全中**【源】
+Vellum（2026-09-07）分三类（本地推理壳 / 私有 RAG 工作区 / 持久身份助手），**几乎全是本地 + 云混合**；界面分原生桌面 vs 服务端。OpenClaw（本地优先）2026 走红。记忆层对比：Mem0 = 云依赖 + 按量计费（"**If Mem0's API is down, my agent has amnesia**"）、Letta = "**structurally excessive**"、自建 = 数据主权但少高级查询。
+⇒ 项目**"本地优先 + 云混合 / 自带前端 / 记忆自建"三条均与主流同向**，且"记忆自建"有外部给的支撑（两家现成方案各有明确缺陷）。
+
+### B. 三条需要重新掂量的（本节的实质）
+
+**B1. 押注预览期底座：外部有一份点名 dsh 的负面评估**【源】
+- developersdigest（2026-08-13，读 dsh 后）："**Nothing here is stable enough to build a product on this quarter**"（并点出：RC 版本号、开发中改 license、单次 squash 提交抹掉历史、**eval 缺失**）
+- justin3go（2026-08-15，深度评测）建议"**等半年**"
+- 警示案例：**OpenAI Assistants API（beta）已于 2026-08-26 关停并强制迁移**
+⇒ 项目的失效条件与兜底清单是完整的，**但"现在就全量迁移"与外部"等半年"的建议正相反**。这不是说项目错，而是：**这个反向证据此前不在项目的风险登记里**（项目登记的是"性能回退 / pre-stable API / 集中度"等事实项，没有登记"外部直接评价其不足以支撑产品"这一层）。
+
+**B2. A-framework「含语言」无公开先例，且与行业通用对策**方向相反**【源】
+- 行业通用对策 = **Anti-Corruption Layer**（Azure 架构中心）：把上游变更**挡在核心外**
+- 反方建议明确："**Start from your team's strongest language**"（Blaxel）、"**尽早隔离 AI middleware 以便迁移**"（KunalGanglani）；分层混用（Python 守模型/推理、TS 拿应用层）是主流共识
+- ⚠️ agent 明确标注：**"为贴近上游内核而整体更换语言"的公开先例与成败评价 = 未找到**
+⇒ 项目选的是**贴紧内核换演进红利**，行业通用对策选的是**隔离内核换稳定**。两条逻辑各自成立，但**方向相反** —— 这是本次校准里最值得老大显式知道的一条。我在第一轮评估里说"跨语言重写是否必要值得重新确认"，现在有了外部依据：**它没有先例，且与主流对策反向**。
+
+**B3. "模型会吃掉脚手架"这条反方论据，直接冲击"贴紧内核"**【源】
+DeepMind 的 Logan Kilpatrick（2026-06 播客）：外部 harness 约 **"12 个月寿命"**、"**the model eats that scaffolding**"，建议别做通用 wrapper、只做深垂直。HN 高赞："Large opinionated software is unlikely to survive and more likely to give you a **migration fatigue**"。braindrip：选 harness 应按"**基础栈承诺**"对待（更换代价高）。
+⇒ 若 harness 层本身可能被模型能力吸收，则**把 3.7–4.4k 行核心重写进 harness 形态**的风险，显著高于"保持语言中立 + 隔离层"。
+
+### C. 一条我要**修正自己先前说法**的（以及一条抬高）
+
+**C1. ACP —— 我先前说的不准，修正**
+我第一轮按上游口径写"ACP 是 automation-only、做人面向 UI 不佳"。外部证据显示：**ACP 已是"编辑器 × agent"的事实标准**（Zed 的 ACP，已被 Zed / JetBrains / VS Code / Neovim / Obsidian × Claude Code / Cursor / Copilot / Codex CLI / Gemini CLI 采纳；OpenHands 2026-06-18 靠它实现"任意 agent 换后端"）。
+⇒ **修正为**：协议本身是**行业标准、不会消失**；但 **DSH 的 ACP 实现刻意不含 DSH 特有呈现**（上游原文 "Avoid it when a human needs DSH-specific presentation cards, plans, titles, todos…"）⇒ 作为 LarryAgent 的**人面向 UI 通道仍不理想**，作为**脱钩 / 自动化通道则有外部生态背书**。**这实际上抬高了**项目"保留 sdk / acp 接入面作脱钩通道"的价值（我先前低估了）。
+
+**C2. 抬高一条**：**"自建私有通信协议普遍不可取"未找到权威表述**（agent 如实标注），主流只是"优先 build against MCP" ⇒ 项目的"通信面自做服务中转"**不算逆势**。
+
+### D. 反对方共识 vs 项目选择：**高度吻合**（本次最强的正面结论）
+
+外部反对方（Kilpatrick / Winder.AI / HN）的共识**不是"别用 harness"，而是**："**别把命押在通用底座上，保留退路与自持核心资产（记忆 / 数据 / 协议）**"。
+⇒ 项目**恰好已经是这么做的**：记忆 / 画像 / 路由 / 时间感知自持（19 项自做）+ MIT 可 fork 兜底 + 保留脱钩通道 + 只借鉴不直装。
+**这是本次外部校准里最强的正面结论 —— 项目的架构选择与外部反向意见给出的"正确做法"高度吻合。**
+
+### E. 来源（本轮实际检索；获取日 2026-09-20）
+
+1. A Comparison of AI Agent Harnesses in 2026 — Winder.AI（08-20）｜2. The 2026 Harness Landscape — braindrip｜3. Model or Harness? arXiv 2607.28802（07-30）｜4. Cordis Explained — agentatlas（08-17）｜5. DeepSeek Harness 深度解析 — mazhen.tech（08-16）｜6. dsh developer preview — Hacker News（08-13）｜7. Claude Agent SDK vs LangGraph — developersdigest（06-11）｜8. AI Agent Framework Guide — Mastra（06-22）｜9. Donating MCP to the Agentic AI Foundation — Anthropic（2025-12-09）｜10. MCP 2026-07-28 RC — modelcontextprotocol.io（07-28）｜11. Zed ACP；OpenHands 接入 ACP（06-18）；The Quiet Standardisation of Agent Protocols（05-03）｜12. We Read DeepSeek Harness — developersdigest（08-13）｜13. DeepSeek Harness 深度评测 — justin3go（08-15）｜14. OpenAI Assistants 迁移指南；Anti-Corruption Layer — Azure 架构中心｜15. Python vs TypeScript for AI — KunalGanglani（07-11）；TypeScript AI agents shift — Ability.ai（07-18）｜16. TypeScript vs Python for AI Agents — Blaxel（04-09）｜17. 8 Best Open-Source Personal AI Assistants 2026 — Vellum（09-07）｜18. OpenClaw 本地安全复盘 — dev.to（02-08）｜19. Hipocampus vs Mem0 vs Letta — BSWEN（03-21）｜20. Why the Model Eats the Harness — Kilpatrick 播客摘要（06）
+
+### F. 三问的最终回答（把第一节与本节合起来）
+
+| 问 | 答 |
+|---|---|
+| **整体路子对不对** | **对**：harness 是已被命名的品类；不自造底座、只借鉴不直装、保留自建前端、记忆自建 —— 四条都有外部支撑；且与反对方的"正确做法"高度吻合。**但"现在就全量迁移"与外部"等半年"正相反，且外部有一份点名 dsh 的"不足以支撑产品"评价。** |
+| **用法是否符合 DSH 设计哲学** | **大体合**（插件挂载 = 上游期望形态；Seam 原则；保留自建前端获上游成文支持）。**2 处需收敛**：① 产品启动形态应收敛到 profile + 上游桌面端蓝本；② 数据层不可回退（升 SOP 的回退只对代码成立）。 |
+| **是否符合技术趋势** | **方向同向、路径有例外**：品类 / 协议 / 形态三条同向；**"整体换语言 + 贴紧内核"这一条无先例、且与行业通用对策（ACL 隔离）反向**，同时承受"模型吃掉脚手架"这条反方论据。 |
+
+**第三节（DSH 自身社区指标：star / contributor / npm 下载 / 下游用例）web 取证仍在跑，回来补。**
