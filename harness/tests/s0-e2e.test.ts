@@ -295,6 +295,11 @@ beforeAll(() => {
     mkdirSync(dir, { recursive: true })
     if (process.platform === 'win32') {
       const me = `${process.env.USERDOMAIN ?? ''}\\${process.env.USERNAME ?? ''}`
+      // ⚠️ 编码已知坑（DSH-3.7.4 #9，2026-09-20 裁定「只加注释」）：icacls 是原生 exe，在中文 Windows 上
+      //    输出走 ACP(936/GBK) 字节 ⇒ 这里按 `utf8` 解码，`tail` **必然是乱码**。
+      //    ⛔ 它**不承载判据** —— 判据是下面的 `r.status !== 0`（数字，不受编码影响），该文本只作证据文件里的
+      //    人工线索。若确需读 ACL 真实结果：直接手工跑 `icacls <dir>`（console 代码页下正常显示），
+      //    或改用 `new TextDecoder('gbk')` 解码 buffer。⛔ 不要据此行判定「ACL 是否设上」。
       const r = spawnSync('icacls', [dir, '/deny', `${me}:(AD,WD)`], { encoding: 'utf8' })
       const tail = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').pop() ?? ''
       evidence.notes.push(`no-session-dir: icacls /deny ${me}:(AD,WD) exit=${r.status} :: ${tail.trim()}`)

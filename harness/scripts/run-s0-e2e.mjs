@@ -2,11 +2,11 @@
 /**
  * S0 基础链路 e2e **一键复跑**（DSH-3.1）。
  *
- * 用法（在 `harness/` 下，一条命令含全部环境变量）：
- *   DEEPSEEK_API_KEY=<你的 key> \
- *   DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles \
- *   node scripts/run-s0-e2e.mjs                 # 跑 base ＋ 四条负向对照
- *   node scripts/run-s0-e2e.mjs base            # 只跑某一变体
+ * 用法（在 `harness/` 下）：
+ *   DEEPSEEK_API_KEY=<你的 key> node scripts/run-s0-e2e.mjs        # 跑 base ＋四条负向对照
+ *   DEEPSEEK_API_KEY=<你的 key> node scripts/run-s0-e2e.mjs base   # 只跑某一变体
+ *   ⚠️ 非本机环境（如 CVM）须**显式传源**：DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles
+ *      （默认源 = `<repo>/.dsh-home/profiles`，与测试自身默认同源；源不存在即 exit 2、**不回落**）
  *
  * 变体：`base`（四项判据必须全绿）｜`no-bundle`｜`wrong-key`｜`no-session-dir`｜`kill-client`（后四条各自期望**特定判据变红**）
  *
@@ -15,7 +15,6 @@
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
 const harnessDir = resolve(import.meta.dirname, '..')
@@ -29,10 +28,24 @@ if (unknown.length > 0) {
   process.exit(2)
 }
 
+/**
+ * profile 源目录（2026-09-20 统一，DSH-3.7.4 复验收尾）。
+ *
+ * ⚠️ 本脚本原默认 `~/.dsh/profiles`，而测试自身默认 `<repo>/.dsh-home/profiles`
+ * （`tests/real-api.ts:251`）—— 两处**默认不一致** ⇒ 不带 env 跑会**静默换源**。
+ * 且两处源常处于**不同卷** ⇒ pnpm store 亦随之不同（store 按卷回落，见
+ * `docs/local-env.md` §12）⇒ 记录出来的 `storeDir` / `virtualStoreDir` 会换值。
+ * ⇒ 现统一到**项目口径**（`TODO.md` 贯穿规则：本机手工跑亦显式指 `.dsh-home`、
+ *   勿靠默认回落 `~/.dsh`），并在日志里**标明来源**（env / 默认）。
+ */
+const DEFAULT_PROFILE_HOME = resolve(repoDir, '.dsh-home', 'profiles')
+const profileHome = process.env.DSH_REAL_API_PROFILE_HOME ?? DEFAULT_PROFILE_HOME
+const profileHomeFrom = process.env.DSH_REAL_API_PROFILE_HOME ? 'env' : '默认'
+
 const env = {
   ...process.env,
   DSH_REAL_API: '1',
-  DSH_REAL_API_PROFILE_HOME: process.env.DSH_REAL_API_PROFILE_HOME ?? resolve(homedir(), '.dsh', 'profiles'),
+  DSH_REAL_API_PROFILE_HOME: profileHome,
   S0_EVIDENCE_DIR: process.env.S0_EVIDENCE_DIR ?? resolve(repoDir, '.s0-evidence'),
 }
 mkdirSync(env.S0_EVIDENCE_DIR, { recursive: true })
@@ -60,10 +73,29 @@ mkdirSync(env.S0_EVIDENCE_DIR, { recursive: true })
   }
 }
 
+// ---------------------------------------------------------------------------
+// profile 源存在性检查（2026-09-20 补）
+//
+// 源不存在时 pnpm 会**造出一个空壳 profile**，装置看起来"跑过了"（DSH-3.0.5 已实证：
+// 空壳 home 与"装过但缺 peer"的 home 在 SDK 握手处**不可分**）⇒ 静默换源 ＋ 空壳 profile
+// 会合谋产出**假绿**。这里直接 exit 2，不让它伪装成测试失败（1）。
+// ---------------------------------------------------------------------------
+{
+  const sdkPkg = resolve(profileHome, 'sdk', 'package.json')
+  if (!existsSync(sdkPkg)) {
+    console.error(
+      `[s0] ❌ profile 源不存在：${sdkPkg}\n` +
+        `[s0]   默认源 = <repo>/.dsh-home/profiles（本机口径）；其它环境请**显式传**：\n` +
+        `[s0]     DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles node scripts/run-s0-e2e.mjs\n`,
+    )
+    process.exit(2)
+  }
+}
+
 if (!env.DEEPSEEK_API_KEY) {
   console.warn('[s0] ⚠️ 未检测到 DEEPSEEK_API_KEY（仅判存在性、不读值）——base / 大多数变体会按"失败"报出，这不是环境 bug。')
 }
-console.log(`[s0] profiles=${env.DSH_REAL_API_PROFILE_HOME}`)
+console.log(`[s0] profiles=${profileHome}（来源：${profileHomeFrom}）`)
 console.log(`[s0] evidence=${env.S0_EVIDENCE_DIR}`)
 console.log(`[s0] variants=${variants.join(', ')}\n`)
 
