@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.7.4-T** | Claude | 本机（Windows） | ✅ **已交回并复验（WB 2026-09-20：`T-1` 独立复跑逐条一致 ＋ `T-2` 三方字段比对一致；2 处差异均**非断言项**）** | 2026-09-20 |
-| **DSH-3.7.4-T·P** | Claude | **CVM（Linux）** | 🚀 **已派发 · 待起跑** —— `T-1-a` 的 **POSIX 侧**补测（**发版前必做**）｜派发稿见本文件末尾 | 2026-09-20 |
+| **DSH-3.7.4-T·P** | Claude | **CVM（Linux）** | 🚀 **已派发 · 待起跑** —— `T-1-a` 的 **POSIX 侧补测**（**发版前必做**）｜派发稿见本文件末尾 ｜⚠️ 稿已于 **2026-09-20 17:2x** 按 **CVM 实测**更正 5 处（树版本锚 ／ 参考件落位 ／ 运行时调用式 ／ 装置为旧版无平台分支 ／ 默认源那条不成立） | 2026-09-20 |
 
 - 已完成并复验（各段已按交流区规矩清理；3.0.x 系列与 DSH-2 系列均已在 `TODO.md` 承接）：**3.7.3-T ✅（WB 复核：T1–T4 四项判定均成立，另补 1 条更强的 ＋ 记我方派稿缺陷 1 处）** ／ **3.7.4-T ✅（WB 复核：`T-1` 独立复跑逐条一致 ＋ `T-2` 三方字段比对一致；2 处差异均**非断言项**）**。
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.7.4-T」段**；本区只放**怎么做**。⚠️ 需回溯时用 `git log -p -- exchange/log-claude.md`。
@@ -64,7 +64,9 @@
 
 ### 3 · 交付物
 
-- **独立测试件源码**（建议**扩**你上一轮的 `harness/scripts/s0-e2e-destructive-actions.mjs`，加 POSIX 分支；⛔ **不得改被测装置**）。
+- **独立测试件源码**（建议**扩**你上一轮的 T-1 件，加 POSIX 分支；⛔ **不得改被测装置**）。
+  - ✅ **该件已由 WB 落位到你的场地**：`/home/ubuntu/harness/scripts/s0-e2e-destructive-actions.mjs`（2026-09-20 17:16 scp；sha256 `9b5e1668…e7ec3e4`／16101 B，**本机与 CVM 双侧核对一致**；落位留痕见 `~/harness/SYNC-ANCHOR.txt` 末节）。
+  - ⇒ 它是**你场地上的拷贝** —— 改它**不影响本机仓库**，可放心扩；⛔ 但仍不得把它当被测装置。
 - **原文证据落盘**（含编码），报**路径 ＋ 文件清单**；⚠️ **证据目录自定，不得覆盖他人**（Trae 的 `.s0-evidence` ／ 你的 `_claude-evidence\374t` 均不得动）。
 - **回报**：写本文件**顶部状态区之后**，单独一节。
 
@@ -72,16 +74,27 @@
 
 | # | 件 | ① 路径 | ② 怎么参考 | ③ 参考程度 | ④ **不可参考** |
 |---|---|---|---|---|---|
-| a | 被测装置（**只读**） | `harness/tests/s0-e2e.test.ts` | 读 `no-session-dir` 变体的**平台分支**（Windows 走 `icacls` ／ POSIX 走 `chmodSync(dir, 0o500)`）＋ 该变体的期望落位（`logPresent=false` 等） | **只读** | ⛔ **不得改它**（那是 Trae 的活） |
-| b | 你上一轮的 T-1 件 | `harness/scripts/s0-e2e-destructive-actions.mjs` | **臂 1 ＋ 正对照**的写法与退出码语义（`0`=观测已取得，**不代表装置对**） | 可复用 ／ 可扩 | ⛔ 其 **Windows 侧结论不可外推**到 Linux（`0o444` 那套是 Windows 语义） |
-| c | 机制说明 | `docs/local-env.md` **§12.3** | 三手段对照表（chmod 不成立 ／ `icacls /deny` 成立 ／ `accessSync(W_OK)` 不可作判据） | 照用 | ⚠️ §12.3 的实测**全在 Windows** —— 它只提供"该测什么"，**不提供 Linux 侧的答案** |
+| a | 被测装置（**只读**） | `/home/ubuntu/harness/tests/s0-e2e.test.ts` | 读 `no-session-dir` 变体。⚠️ **你场地上这份是旧版、没有平台分支** —— `chmodSync(dir, 0o500)` **直接写在第 252 行**（平台分支是本机 2026-09-20 的修复，**未同步到 CVM**）。**本块要验的正是那一行**。另读该变体的期望落位（`logPresent=false` 等） | **只读** | ⛔ **不得改它**（那是 Trae 的活） |
+| b | 你上一轮的 T-1 件（**已落位到场地**） | `/home/ubuntu/harness/scripts/s0-e2e-destructive-actions.mjs`（WB 2026-09-20 落位；sha256 `9b5e1668…e7ec3e4`） | **臂 1 ＋ 正对照**的写法与退出码语义（`0`=观测已取得，**不代表装置对**） | 可复用 ／ 可扩 | ⛔ 其 **Windows 侧结论不可外推**到 Linux（`0o444` 那套是 Windows 语义） |
+| c | 机制说明（⚠️ **原文件在你场地上不存在**，要点就地摘录） | 本机仓库 `docs/local-env.md` §12.3（**CVM 上无此文件**） | 三手段要点：① `chmod` 在 Windows 上**不成立**（Windows 侧结论，⛔ **不可外推**）② `icacls /deny` **成立**（Windows 专用手段）③ ⛔ **`fs.accessSync(dir, W_OK)` 不可作判据**（`0o444` 下照样通过 —— 本机实测）。**本块只需第 ③ 条**，并记住 ①② 不可外推 | 照用 | ⚠️ §12.3 的实测**全在 Windows** —— 它只提供"该测什么"，**不提供 Linux 侧的答案** |
 
 ### 5 · 场地器材（⚠️ 本块有一处**与上一轮不同**的地方，别踩）
 
-- **场地**：**CVM（Linux）**。提醒：**CVM 10-09 到期**（见 `TODO.md` DSH-3.9）⇒ 本项属**发版前必做**，宜早。
-- 🔴 **`run-s0-e2e.mjs` 的默认源已改**（2026-09-20，`TODO.md` 处置表 #4）：现默认 = `<repo>/.dsh-home/profiles`，且**源不存在即 `exit 2`**（⛔ 不再回落 `~/.dsh`）。
-  ⇒ **在 CVM 上跑 runner 必须显式传**：`DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles`，否则会拿到 `exit 2`（这是**有意设计**：宁明确失败，不静默换源）。runner 日志现在会打印「`profiles=… （来源：env／默认）`」，可据此核对。
-- ⛔ 不得动 `~/harness` 的受控文件（`package.json` ／ lockfile 等）；⛔ 不得动源 profile；⛔ 不得动 `~/larry-dsh-home`（已降级为**负向对照器材**）。
+- **场地**：**CVM（Linux）**，`ubuntu@49.232.129.252`（WB 2026-09-20 实测可直连）。提醒：**CVM 10-09 到期**（见 `TODO.md` DSH-3.9）⇒ 本项属**发版前必做**，宜早。
+- 🔴 **你场地上那棵 harness 树的版本 = `~/harness/SYNC-ANCHOR.txt` 记的 `917f45d`（synced-at 2026-09-17 20:05）**。⚠️ **它不是 git 仓库**（同步时排除了 `.git`／`node_modules`／`dist`）⇒ **别用 `git log` 判版本**，读那个锚文件。它**落后本机 3 天**；本块**已定不同步**（WB ＋ 老大 2026-09-20）：要验的那一行两版都在。
+  ⇒ ⚠️ **结论必须注明"取自 `917f45d` 版树"** —— ⛔ 不得当作"当前版本"的结论外推。
+- 🔴 **「默认源已改、不传即 `exit 2`」那条提醒，在你场地上不成立**（WB 已实测更正）：你那边是**旧版**（`scripts/run-s0-e2e.mjs:35` = `resolve(homedir(), '.dsh', 'profiles')`，**无 `exit 2` 逻辑**）；「源不存在即 exit 2 ＋ 不回落」是本机 **2026-09-20** 才改的（`TODO.md` 处置表 #4），**未同步到 CVM**。
+  ⇒ 本块**仍按显式传** `DSH_REAL_API_PROFILE_HOME=$HOME/.dsh/profiles`（WB 实测：该目录存在 ✅，且**恰好等于旧版默认值** ⇒ 无副作用）；但 ⛔ **别把"不传会 exit 2"当判据** —— 旧版不会，去验它只会得到一条**假矛盾**。
+- 🔴 **运行时不在 PATH 里**（WB 实测：裸 `node`／`pnpm` 均 `command not found`；`~/bin` 与 `~/.local/bin` **都不存在**，`.profile` 里那两行 PATH 追加是空转）。**实测调用式**：
+  ```sh
+  export PATH="$HOME/node/bin:$PATH"   # ⛔ 少了这行，pnpm 会以 /usr/bin/env: 'node': No such file or directory 挂掉
+  node -v   # ⇒ v22.22.2（实测；与本机 managed 同版）
+  pnpm -v   # ⇒ 11.7.0（锚文件记录）
+  ```
+- ✅ **运行身份已由 WB 实测**：`uid=1000(ubuntu)`、**非 root** ⇒ 本块的核心风险（root 下 `chmod 500` 无效）**已排除**。仍请**在你通道内自报一次** `id`／`umask` 作为你自己的证据。
+- ✅ **凭据载体存在**：`~/.dsh/.credentials.yaml`（`-rw-------`，仅属主可读）。⛔ **本块只判存在性、不读值、不打印、不落盘**；第 3 条若需真模型回合，按你既有取法自取。
+- **证据目录（现场已有，⛔ 别撞）**：`~/trae-evidence/`（Trae）、`~/claude-305/`、`~/s0-evidence.tgz`、`~/.dsh/`、`~/larry-dsh-home/`。⇒ **你自己的证据目录自定且不得覆盖上述任何一个**（建议 `~/claude-tp-evidence/`）。
+- ⛔ 不得动 `~/harness` 的**受控文件**（`package.json` ／ lockfile 等）；⛔ 不得动源 profile；⛔ 不得动 `~/larry-dsh-home`（已降级为**负向对照器材**）。✅ 但**可以**在 `scripts/` 下**新增**测试件（参考件 b 就在那儿）。
 - ⛔ 涉及依赖时锁死 `pnpm`（⛔ 禁 `npm` ／ `yarn`）。
 
 ### 6 · 回报格式
