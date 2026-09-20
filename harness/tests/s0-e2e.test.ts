@@ -103,6 +103,43 @@ function installPlugin(): string {
   return out
 }
 
+/**
+ * 修复 `cp -r` 副本继承的**源 profile pnpm 元数据**（DSH-3.7.4）。
+ *
+ * 成因（本机 pnpm 11.7.0 实物源码 `dist/pnpm.mjs:155097-155119` 的 `writeModulesManifest`）：
+ * ```js
+ * if (!isWindows()) {                                     // ← 155114
+ *   saveModules.virtualStoreDir = path.relative(modulesDir, saveModules.virtualStoreDir)  // ← 155115
+ * }
+ * ```
+ * ⇒ `.modules.yaml` 里的 `virtualStoreDir` **在 Windows 上必然写绝对、在 POSIX 上写相对**
+ *（相对基是 `modulesDir`，即 `<proj>/node_modules`）。副本逐字节复制过来后，pnpm 拿它
+ * 与自己算出的位置比对（`checkCompatibility`，同文件 `:187868` / `:187875`），不一致即抛
+ * `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`（或 `storeDir` 不一致时的 `ERR_PNPM_UNEXPECTED_STORE`）
+ * 并在**解析依赖之前**退出（实测 1 s）—— 这就是本机五变体全红、CVM 全绿的原因
+ *（CVM 是 Linux ⇒ 源里本来就是相对值 ⇒ 副本也该是相对值）。
+ *
+ * 修法：**删掉副本的 `node_modules/.modules.yaml`**，让 pnpm 按当下环境重算。
+ * 为什么不是"把值改写成 .pnpm"（该写法实测也能绿）：一个文件里**不止一个**绝对路径字段 ——
+ * 实测 `storeDir` 同样会咬（用 `~/.dsh/profiles` 作源时红的是 `ERR_PNPM_UNEXPECTED_STORE`）。
+ * 删掉是唯一对"所有继承字段"都成立的做法，代价只是 pnpm 重建清单（实测 +9 s）。
+ * 对照实验（唯一变量 = 副本 `.modules.yaml`）：原样=红 ／ 副本自身绝对=绿 ／ `.pnpm`=绿 ／ **删=绿**。
+ */
+function repairCopiedPnpmMetadata(): void {
+  const modulesYaml = join(home, 'profiles', 'sdk', 'node_modules', '.modules.yaml')
+  if (!existsSync(modulesYaml)) {
+    evidence.notes.push('repair: 副本无 node_modules/.modules.yaml（跳过）')
+    return
+  }
+  const raw = readFileSync(modulesYaml, 'utf8')
+  const recorded = [...raw.matchAll(/"(virtualStoreDir|storeDir)":\s*"([^"]*)"/g)].map((m) => `${m[1]}=${m[2]}`)
+  rmSync(modulesYaml, { force: true })
+  evidence.notes.push(
+    `repair: 删除副本 node_modules/.modules.yaml（源记录的绝对路径：${recorded.join(' ｜ ')}）` +
+      '（DSH-3.7.4；改的是副本，源 profile 未动）',
+  )
+}
+
 /** 负向对照 1 的破坏动作：把自做 bundle 从 profile manifest 里摘掉（等价于"注释掉 bundle"）。 */
 function dropBundleFromManifest(): void {
   const pj = join(home, 'profiles', 'sdk', 'package.json')
@@ -236,6 +273,7 @@ beforeAll(() => {
   home = mkdtempSync(join(tmpdir(), 'larry-s0-'))
   mkdirSync(join(home, 'profiles'), { recursive: true })
   cpSync(srcSdk, join(home, 'profiles', 'sdk'), { recursive: true })
+  repairCopiedPnpmMetadata() // DSH-3.7.4：副本不得沿用**源** profile 的 pnpm 元数据（绝对路径）
   evidence.triple.DSH_HOME = home
 
   nonce = `PING-${randomBytes(6).toString('hex')}`
@@ -247,10 +285,27 @@ beforeAll(() => {
   if (VARIANT === 'no-bundle') dropBundleFromManifest()
 
   if (VARIANT === 'no-session-dir') {
+    // ⚠️ DSH-3.7.4 实测（本机 Windows）：`chmodSync(dir, 0o500)` **完全无效** —— Node 在 Windows 上
+    //    对目录只翻"只读"属性，Windows 对目录忽略该属性 ⇒ 落盘照常成功（2026-09-20 实测：
+    //    ③ 全绿 / logPresent=true / ④ 仍含 nonce ⇒ 本变体的断言必红，是**平台缺陷**不是判据缺陷）。
+    //    Windows 上的等效手段 = **ACL 拒绝**（`icacls <dir> /deny <me>:(AD,WD)`）：实测子项
+    //    创建/写入均返回 `EPERM: operation not permitted`，与 POSIX 的 `EACCES` 同类，
+    //    且**可撤销**（`/remove:d`）。POSIX 分支保持原样（`chmod 500`），不改动已绿的 CVM 侧行为。
     const dir = join(home, 'sessions')
     mkdirSync(dir, { recursive: true })
-    chmodSync(dir, 0o500) // 只读 ⇒ 落盘必失败
-    evidence.notes.push('no-session-dir: <home>/sessions chmod 500（只读）')
+    if (process.platform === 'win32') {
+      const me = `${process.env.USERDOMAIN ?? ''}\\${process.env.USERNAME ?? ''}`
+      const r = spawnSync('icacls', [dir, '/deny', `${me}:(AD,WD)`], { encoding: 'utf8' })
+      const tail = `${r.stdout ?? ''}${r.stderr ?? ''}`.trim().split('\n').pop() ?? ''
+      evidence.notes.push(`no-session-dir: icacls /deny ${me}:(AD,WD) exit=${r.status} :: ${tail.trim()}`)
+      if (r.status !== 0) {
+        // 拒绝静默降级：ACL 没设上 ⇒ 破坏动作未发生，让断言按实测变红（不可伪装成"通过"）
+        evidence.notes.push('no-session-dir: ⛔ ACL 未设上 ⇒ 本变体的破坏动作**未生效**')
+      }
+    } else {
+      chmodSync(dir, 0o500) // 只读 ⇒ 落盘必失败
+      evidence.notes.push('no-session-dir: <home>/sessions chmod 500（只读）')
+    }
   }
 }, 900_000)
 
@@ -383,9 +438,19 @@ afterAll(() => {
   // 证据已复制到 EVIDENCE_DIR；home 里含 node_modules 副本，跑完即删（先恢复 sessions 权限）
   try {
     const sessions = join(home, 'sessions')
-    if (existsSync(sessions)) chmodSync(sessions, 0o700)
+    if (existsSync(sessions)) {
+      // Windows：先撤销 no-session-dir 变体设下的 ACL 拒绝，否则子项删不掉（撤销是幂等的）
+      if (process.platform === 'win32') {
+        const me = `${process.env.USERDOMAIN ?? ''}\\${process.env.USERNAME ?? ''}`
+        spawnSync('icacls', [sessions, '/remove:d', me], { encoding: 'utf8' })
+      }
+      chmodSync(sessions, 0o700)
+    }
     if (home !== '') rmSync(home, { recursive: true, force: true })
   } catch {
     /* 清理失败不影响判据（证据已落 EVIDENCE_DIR） */
   }
-})
+  // ⚠️ DSH-3.7.4 实测：这里**必须给超时**。home 是 sdk profile 的完整副本（含 node_modules，
+  //    实测 300 包 / 243 待链），`rmSync` 在 Windows 上会超过 vitest 默认 hookTimeout（10 s）
+  //    ⇒ 报 `Hook timed out in 10000ms`，**测试本身已过**却把套件判红（wrong-key/kill-client 实测命中）。
+}, 900_000)
