@@ -442,9 +442,9 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
    - 正确姿势：遍历 `node_modules/.pnpm/*/node_modules/{@scope/}*/package.json`，读其 `name` / `version` 比对。⚠️ scope 目录（`@deepseek-ai`）**自身没有 `package.json`**，别把它当空壳。
    - **更强的判据（树 vs lock 全量对齐）**：把树里读出的 `name` 集合与 lock `packages:` 段的 key 比对 ⇒ 「**树有 lock 无**」应为 **0**（无多余包）；「**lock 有树无**」应**全为异平台 optional**（本机实测 91 项，全是 `sharp` ／ `node-addon-system-*` 的 darwin/linux/wasm 支）。
    - ⚠️ **「物理目录数」≠「版本数」**：同一版本因 **peer 变体**会有多个物理 entry（实测清理后 `dsh-sandbox-local` **3** 个 entry ／ `dsh-storage-domain` **5** 个 ／ `sandbox-windows-acl` **2** 个，而**版本集合各只一支**）⇒ 报「支数」须**注明是版本数还是物理目录数**，否则会把 peer 变体误读成「没清干净」。
-4. **⚠️ `cp -r` profile 到临时 home ⇒ pnpm 直接拒（判「装置跑不起来」用，2026-09-17 实测）** —— profile 的 `node_modules/.modules.yaml` 里 **`virtualStoreDir` 是源 profile 的绝对路径**（实测 ＝ `D:\Code\LarryAgent\.dsh-home\profiles\sdk\node_modules\.pnpm`，且 `"nodeLinker": "hoisted"`、`storeDir` ＝ `D:\.pnpm-store\v11`）⇒ 复制到临时 home 后 pnpm 算出的是**副本路径** ⇒ 二者不一致 ⇒ **`ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`、`exit 1`，且发生在解析依赖之前**（⇒ 与「包在不在树里」**无关**）。
+4. **⚠️ `cp -r` profile 到临时 home ⇒ pnpm 直接拒（判「装置跑不起来」用，2026-09-17 实测；✅ 2026-09-20 已修，见末条）** —— profile 的 `node_modules/.modules.yaml` 里 **`virtualStoreDir` 是源 profile 的绝对路径**（实测 ＝ `D:\Code\LarryAgent\.dsh-home\profiles\sdk\node_modules\.pnpm`，且 `"nodeLinker": "hoisted"`、`storeDir` ＝ `D:\.pnpm-store\v11`）⇒ 复制到临时 home 后 pnpm 算出的是**副本路径** ⇒ 二者不一致 ⇒ **`ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`、`exit 1`，且发生在解析依赖之前**（⇒ 与「包在不在树里」**无关**）。
    - **现象**：依赖 `installPlugin` 的装置（如 `run-s0-e2e.mjs` 的各变体）报 `plugin add: exit=1` ／ `dsh: pnpm failed in profile directory <临时home>\profiles\sdk`，**看着像工程坏了、实为复制姿势**。
-   - **修法方向**（未实施）：复制后清 ／ 改副本的 `virtualStoreDir`，或改用 `pnpm install` 在副本里重建；⚠️ 本机 `.dsh-home` 的 profile 现场建于 `2026-09-17 00:11`（早于 3.7.3 的依赖清理约 19.7 h）⇒ **该失效非本次清理所致**。
+   - ✅ **已实施（2026-09-20，`4a2bb5b`）**：`cpSync` 出副本后**删掉副本的 `node_modules/.modules.yaml`**，交给 pnpm 重建（`s0-e2e.test.ts`：定义 `:128-141`／调用 `:276`）⇒ 本机五变体 5/5 全绿（Trae 两轮 ＋ Claude 两轮，判据字段逐条一致）。**成因 = pnpm 的平台分支**（Windows 写绝对 ／ POSIX 写相对）**＋ pnpm store 按卷回落 —— 机制见 §12.1 ／ §12.2**。⚠️ 本机 `.dsh-home` 的 profile 现场建于 `2026-09-17 00:11`（早于 3.7.3 的依赖清理约 19.7 h）⇒ **该失效非本次清理所致**。
 
 ## 9. Vue/Tauri ↔ DSH 连通复跑（DSH-2.3）
 
@@ -528,7 +528,8 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 - **`git` 全局硬编码代理**：`http.proxy` = `https.proxy` = `socks5://127.0.0.1:7890`（用户梯子）。⇒ **梯子关时，`git fetch/pull/push` 与依赖 git 的插件安装会一起失败**；需临时 `git -c http.proxy= -c https.proxy=`（本机直连 GitHub 会被 reset；见决策稿 §3.4「DSH-2.6 收口复核」）。
 - **行尾**：仓库内 `core.autocrlf=true`，全局未设 ⇒ 跨 AI 协作行尾噪声的来源（本仓治理检查已含"末字节与 HEAD 逐字节比对"）。
 - **控制台编码**：中文 Windows 默认 GBK/CP936，且 User 层未设 `PYTHONUTF8` —— 与 §4.1「编码层」同源，是 ① 层缺口的环境底色。
-- ⭐ **工具输出的语言与编码（判"证据原文"用，2026-09-17 实测）**：中文 Windows 上 `taskkill` 的成功输出**恒为 GBK 中文**（原始字节 `b3c9b9a6…` ＝ `成功: 已终止 PID 为 <pid> 的进程。`），`tasklist` 无匹配 ＝ `信息: 没有运行的任务匹配指定标准。`；`GetACP` ／ `GetConsoleOutputCP` ＝ **936**、`GetUserDefaultUILanguage` ＝ **0x804**（zh-CN）。⇒ **node 的 `spawnSync(cmd, …, {encoding:'utf8'})` 读这些输出必得替换字符乱码**（实测：`����: �޷���ֹ …`），**绝不会**得到英文。⇒ 凡把这类输出当「证据原文」存盘 ／ 引用：① 须按 **ACP（936）** 解码；② **出现英文 ⇒ 不是本机该进程的原始产物** —— 这是一条判「证据链是否被后处理过」的硬判据。
+- ⭐ **工具输出的语言与编码（判"证据原文"用，2026-09-17 实测）**：中文 Windows 上 `taskkill` 的成功输出**恒为 GBK 中文**（原始字节 `b3c9b9a6…` ＝ `成功: 已终止 PID 为 <pid> 的进程。`），`tasklist` 无匹配 ＝ `信息: 没有运行的任务匹配指定标准。`；`GetACP` ／ `GetConsoleOutputCP` ＝ **936**、`GetUserDefaultUILanguage` ＝ **0x804**（zh-CN）。⇒ **node 的 `spawnSync(cmd, …, {encoding:'utf8'})` 读这些输出必得替换字符乱码**（实测：`����: �޷���ֹ …`），**绝不会**得到英文（**前提：该进程确实按 ACP 输出、且未经本地化**）。⇒ 凡把这类输出当「证据原文」存盘 ／ 引用：① 须按 **ACP（936）** 解码。
+  - ⛔ **原 ②「出现英文 ⇒ 不是本机该进程的原始产物」已作废（2026-09-20 实测推翻）**：同一台机器、同一条路径**能**产出英文 —— `icacls` 92 次采样中 **2 次英文**；PS 5.1 在**带 DSH 编码前导码**的形态下 **11/12 出英文**（而系统/用户 UI 语言实测确是 zh-CN）。⇒ **语言 ／ 编码不得作"证据是否被后处理"的判据**（该条曾误伤 Trae 的 3.7.4 证据）。完整实测与替代纪律见 **§12.6**。
 
 ### 10.3 实测**证伪**（留痕，防止再被误导）
 
@@ -557,3 +558,93 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 | §10.1：**各 AI 工具运行时被注入不同环境**；§10.2：`python` 多入口 / `git` 全局硬编码代理 / `core.autocrlf` 等属**本机持久层**配置 | ⇒ 这些**本机持有、不随产品分发** ⇒ 产品侧**不得依赖本机持久层**：不假设裸 `python` 可用、不假设存在 `git` 代理、行尾不依赖 `autocrlf` |
 
 **⬛ 待补（决定本节的效力上限）**：本节**无他机验证**。要把它从 🟡 推论抬成 🟢 事实，至少需要**一台与本机配置不同的 Windows**（不同 UI 语言 / 非管理员账户 / 非开发机）跑一遍 §4 的探针。做不做、何时做 → 待老大定，**不自行立项**。
+
+---
+
+## 12. DSH-3.7.4 复验沉淀 · Windows 装置类事实与判据纪律（🟢 2026-09-20 WB 复验：源码 ＋ 字节级实测）
+
+> **来源**：`exchange/log-workbuddy.md`《DSH-3.7.4 ／ DSH-3.7.4-T · WB 复验判定》。本节只收**跨块可复用**的事实；3.7.4 的判据与验收基准仍在 `TODO.md`。
+> **证据等级**：§12.1 ／ §12.2 ／ §12.5 为 🟢 **源码逐行 ＋ 独立实测**；§12.3 ／ §12.4 为 🟢 **独立复跑最小装置**；§12.6 为 🟢 **多轮采样**（但**触发机制未定**，见该节）。
+
+### 12.1 pnpm `virtualStoreDir` 的平台分支 ⇒ `cp -r` profile 必失效（3.7.4 的成因）
+
+实物源码 `…\npm\node_modules\pnpm\dist\pnpm.mjs`（本机 pnpm 11.7.0）：
+
+| 行 | 内容 |
+|---|---|
+| `:155097` | `async function writeModulesManifest(modulesDir, modules)` |
+| `:155114-155116` | **平台分支**：`if (!isWindows()) { saveModules.virtualStoreDir = path.relative(modulesDir, saveModules.virtualStoreDir) }` ⇒ **Windows 写绝对 ／ POSIX 写相对** |
+| `:155060-155064` | 读侧：缺省 = `join(modulesDir, '.pnpm')`；**相对值**按 `join(modulesDir, …)` 还原 ⇒ **跟着副本走、自洽** |
+| `:187869` ／ `:187876` | `UnexpectedStoreError` ／ `UnexpectedVirtualStoreDirError`（均在 `checkCompatibility` 内，**先于依赖解析**） |
+
+⇒ 本机（Windows）profile 的 `.modules.yaml` 记的是**源 profile 的绝对路径**；`cp -r` 到临时 home 后 pnpm 按**副本路径**复算 ⇒ 不一致 ⇒ `ERR_PNPM_UNEXPECTED_(VIRTUAL_)STORE`、`exit 1`、**在解析依赖之前退出**。
+⇒ **读侧独立验证**：本机三处 `.modules.yaml` 的 `virtualStoreDir` **全为绝对**（`harness` = isolated ／ `.dsh-home/profiles/sdk` = hoisted ／ `~/.dsh/profiles/sdk` = hoisted）。
+⇒ **已实施的修法**见 §8.7 第 4 条末条（`4a2bb5b`：删副本的 `.modules.yaml`）。⚠️ 副作用 = 删含 `node_modules` 的副本变慢 ⇒ 同提交把 `describe` ／ `afterAll` 超时放宽到 `900_000`（`s0-e2e.test.ts:310` ／ `:434` ／ `:456`；原 vitest 默认 `hookTimeout` = 10 s）。
+
+### 12.2 ⭐ pnpm store 的位置**按卷回落**，不是全局配置
+
+`getStorePath`（同文件 `:161743-161785`）逻辑：先试「家目录 store 能否与 `pkgRoot` **hardlink**」——
+- **能**（同卷）⇒ 用家目录 store（`%LOCALAPPDATA%\pnpm\store\vN`）；
+- **不能**（**跨卷**，hardlink 不成立）⇒ 落到 **`pkgRoot` 所在卷的根**：`<mountpoint>\.pnpm-store\<ver>`；异常再回落家目录。
+
+⇒ **实测逐字印证**（同一 pnpm 11.7.0，仅换 cwd）：
+
+| cwd | `pnpm store path` |
+|---|---|
+| `D:\Code\LarryAgent` | **`D:\.pnpm-store\v11`** |
+| `C:\Users\SuLarry` | **`C:\Users\SuLarry\AppData\Local\pnpm\store\v11`** |
+
+⇒ **不是谁配的**：`~/.npmrc` 只有 registry 一行；`pnpm config get store-dir` = `undefined`；env 无 `PNPM_HOME` ／ `npm_config_store_dir`；DSH 各包内搜 `store-dir` ／ `.pnpm-store` ／ `PNPM_HOME` = **0 命中**。
+⇒ **对判据的用处**：同一 profile 被拷到**另一个卷**，`storeDir` 与 `virtualStoreDir` 会**双双换值** ⇒ 报"两侧 `.modules.yaml` 不同"时，**先看卷、再看内容**（这正是 3.7.4 那场"换了源就暴出第二个字段"的机制）。
+
+### 12.3 Windows 上「把目录设成只读」的正确与错误手段（T-1 机制层独立复跑）
+
+| 手段 | 实测结果 |
+|---|---|
+| `fs.chmodSync(dir, 0o500)` | ❌ **不成立** —— 落成 `0o444`（只翻「只读」属性，Windows 对目录忽略该位）；`writeFileSync` ／ `mkdirSync` **照常成功** |
+| `fs.accessSync(dir, W_OK)` | ⛔ **不可当判据** —— 在 `0o444` 下**照样通过**（只查属性位、不试写） |
+| `icacls <dir> /deny <me>:(AD,WD)` | ✅ **成立** —— `writeFileSync`／`mkdirSync` 双双 `EPERM: operation not permitted`（`errno:-4048`）；`icacls <dir> /remove:d <me>` 撤销且**幂等** |
+
+⇒ 装置 `s0-e2e.test.ts` 的 `no-session-dir` 变体已按平台分支：**Windows 走 `icacls`，POSIX 保留 `chmodSync(dir, 0o500)`**。
+⚠️ **POSIX 侧从未验证**（本机无 Linux 通道）⇒ 若 Linux 上 `chmod 500` 也不拦（例如容器里以 root 跑），装置会**静默失效**（判据变成没有验证力的红／绿）—— **发版前必做**，清单见 `TODO.md`。
+⚠️ 附带：装置里 `spawnSync('icacls', …, {encoding:'utf8'})` 在本机**必得乱码**（icacls 恒按 ACP 936 输出）——该行**不承载判据**，但原作者须知道它落盘不会是中文。
+
+### 12.4 Windows 上「杀进程组」不可行 ⇒ 必须回落
+
+`process.kill(-pid, 'SIGKILL')`（负 PID = 进程组）在 Windows **必抛 `ESRCH`（errno -4040）且直连子进程仍活** ⇒ 装置必须走 `child.kill('SIGKILL')` 回落（`s0-e2e.test.ts:241`）。
+⚠️ 本探针拓扑下**回落仍能带走孙进程**（stdio = ignore ／ pipe 两形态皆然）—— 这是"**在该拓扑下**"的观察，**不可外推**成"任何形态都能带走"。
+
+### 12.5 DSH pwsh 工具：可执行文件解析 ＋ 编码前导码（解释"输出为何常是英文"）
+
+- **可执行文件解析在 `dsh-pwsh-local`**（`dsh-tool-pwsh` 只委派给 `ctx.shell`）；`resolvePwshPath` 候选顺序：
+  1. `%ProgramFiles%\PowerShell\7\pwsh.exe`（⑦）→ 2. `%PATH%` 各项 `\pwsh.exe` → 3. `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`（5.1 兜底）
+  - ⚠️ **本机 `pwsh` ⑦ 不存在**（`shutil.which('pwsh')` = `None`、`C:\Program Files\PowerShell` 无）⇒ 本机解析**只能落到 PS 5.1**。
+  - ⚠️ 注意 `pwsh` ≠ `powershell`：任何"本机 pwsh 行为"的结论**先定该程序是哪一个**（两者本地化资源与默认编码都不同）。
+- **`ENCODING_PREAMBLE`** 定义在 `dsh-pwsh-local/lib/index.js:158`、拼接在 `:278` —— 即 `[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); …`。
+- ⭐ **该前导码形态实测倾向英文 ＋ UTF-8**：「前导码 ＋ 报错」**11/12 出英文**，而**单语句短命令** 12/12 中文。⇒ **DSH pwsh 的输出本来就偏英文**，那里**不存在**"本地化中文原文"。
+
+### 12.6 ⭐ 判据纪律：**语言与编码不得作"证据是否被后处理"的判据**（本条订正 §10.2 末条）
+
+§10.2 末条原立「**出现英文 ⇒ 不是本机该进程的原始产物**」为**硬判据** —— **该全称命题不成立**（2026-09-20 实测推翻）：
+
+| 观察 | 结果 |
+|---|---|
+| `icacls` 92 次采样（裸名／全路径／大小写三种拼写各 20 次起） | **90 中文 ／ 2 英文**；英文那次与某证据行**逐字符同形** |
+| PS 5.1（**同 exe、同 flags、同命令**） | 出现过 `en-US ＋ 英文`（6/6、11/12）与 `zh-CN ＋ 中文`（12/12、5/5）**两种稳定态**；`[CultureInfo]::CurrentUICulture.Name` 实测值与消息语言**一一对应** |
+| 系统 ／ 用户默认 UI 语言 | `0x0804`(zh-CN) ／ `MachinePreferredUILanguages = ['zh-CN']` ／ `InstallLanguage = 0804` —— **不解释**英文 |
+
+**已实测排除的六类候选**：系统／用户 UI 语言、`SetProcessPreferredUILanguages`、`LANG`／`LC_ALL`／`DOTNET_CLI_UI_LANGUAGE`、PATH 形态与裸名/全路径拼写、`pwsh` ⑦ 是否存在、icacls 路径形态。
+⇒ **触发机制至今未定**（且在不承载判据时不必追；留一条未测线索：restricted token 沙箱链 —— **是猜测，不是结论**）。
+
+**替代纪律**（可直接抄进派发稿）：
+- ⛔ **不得**由「输出是英文」推出「证据被人工改写」；⛔ 也**不得**反推"必是本机原产"（双向都不下结论）。
+- ✅ 判「原文」只认**字节级**核对（编码按 **ACP 936** 解 GBK，或直接比原始字节）；**每段引用须注明取自哪条通道**（原生 shell ／ DSH pwsh ／ 沙箱运行器）。**通道不同则结论不可互推**。
+- ✅ 派发稿口径改为「**⛔ 禁止人工改写 ／ 意译；工具链自身的语言与编码差异须原样保留，并注明该段取自哪条通道**」——原「禁把本地化文字英文化」在 DSH pwsh 路径上**必然误伤**（每次都会被判"疑似英文化"）。
+
+### 12.7 未闭合（已转入 `TODO.md`，勿在本节追）
+
+- J6 中「**连 `node.exe` 也起不来**」那一层的成因（只复现出 ConstrainedLanguage 半层）。
+- J6 **未由 Claude 独立重放**（本轮只做了原始帧解码复核）。
+⇒ 上述两条的承接位置 = `TODO.md`「**延后（低优先 · 待触发）**」段。
+（另两条已由老大裁掉：英文触发机制**关闭收口**并降为规则（即本条 §12.6）；`④_bytesAtKill` **降级为参考项**——它本就不是断言项。）
+- `no-session-dir` 的 **POSIX 分支**未在 Linux 上验过 ⇒ **不属延后**，属**发版前必做**（见 §12.3），承接位置 = `TODO.md` 3.7.4 段的收尾项。
