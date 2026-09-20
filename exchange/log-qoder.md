@@ -3,3 +3,67 @@
 > 本区为**活日志**：已闭环、已升格的段**直接删除**——不留指针、不留底、不进引用关系。
 > 此文件派发的任务的执行结果均写于此文件（除非有明确要求新建文件或写于其他文件）
 ---
+
+---
+
+## 2026-09-17 · 职责外宏观评估：项目路子与 DSH 用法（老大交办 · 外部审阅者视角）
+
+**方法**：① 项目一手文档（定位稿 / 决策稿 / TODO 实况量）② **上游源码与文档原文**（只读 `ref/dsh-bare` @ `dsh-v0.1.5-rc.2`，未 checkout）③ 外部行业趋势（**取证仍在跑，第三问待补**）。
+**先声明两条局限**：⑴ repowiki/知识卡片**不能当宏观依据** —— 它是从代码生成的、内容是"Python/Vue 应用"旧形态（架构卡里 DSH 只出现 1 次），且含过时的 012「现状」断言与"降级到 0.1.2-rc.1"方案；本评估未采用它。⑵ 我不深入实现细节，产品价值的判断依赖老大对自身使用的体感。
+
+### 一句话结论
+
+**方向的选择是对的；用法大体合上游哲学（2 处需收敛）；真正的风险不在方向，而在「节奏与隐性成本」—— 项目注意力已 7:1 压在基础设施与过程上，而产品侧近一周零演进。**
+
+### 一、整体路子：判断成立，但三件事被低估
+
+**成立的部分（有据）**
+
+| 判断 | 依据 |
+|---|---|
+| 不自造底座是对的 | 上游把 compaction / sandbox / 审批 / persistence / MCP 都做成可挂载 seam，且明言 "There is **no privileged core** to patch: you extend dsh by mounting a plugin beside the others" |
+| 「只借鉴不直装」（§3.0）是对的 | 上游自述其官方包 "an idea, an official showcase, and a source of inspiration, but **not a mandate**"，且 "we **cannot accept external pull requests** at the moment" ⇒ 生态依赖确实不可控 |
+| 保留 Vue/Tauri **不是**逆势 | 上游成文支持自建前端：cookbook"I​​t may serve a UI or an automation client"；未见"必须用官方客户端"任何表述 |
+| 把信念层与证据层切开、给可证伪失效条件 | 上游原文级风险已逐条登记（含"AGI 是重心 ⇒ harness 是副产品"这条对己不利的矛盾） |
+| 迁移是并行轨道不是断桥 | 老栈未被破坏（近一周 backend +1/−1 行、client 0 行） |
+
+**被低估的部分（本评估的量化）**
+
+1. **注意力分配失衡（外部审阅者第一眼会看到的）**：近一周 `docs/` 71 + `exchange/` 105 + `.workbuddy/` 141 = **317 条提交** vs 代码 **18 条**（`harness` 17 / `backend` 1 / `client` 0）。文档体的重心：DSH 专题 **349,646 字符**、环境三份 141,122、产品定位 58,259 ⇒ **基础设施/过程文档 : 产品文档 ≈ 6.8 : 1**。单篇最大 `dsh-migration.md` 169,584 字符（产品稿 2.9 倍）。
+2. **"替上游打工"是长期税，不是一次性成本**：`DSH-3.7` 那 16 条提交（占 DSH-3 提交的 ~19%）是在补 **DSH 自己的 Windows 沙箱方言缺口**，而 015 未自修 ⇒ 修复件**必须随客户端发布** ⇒ 该项目承接了一项上游的持续维护责任。
+3. **双轨已名存实亡**：DSH-6 前"双轨可回退"是核心兜底，但 `backend` 近一周 +1/−1 行、`client` 0 行 ⇒ **回退目标已停止演进**，兜底只剩形式。
+4. **规模感**：`harness/` 已 **6,149 行**（> `client` 的 3,805 行）而**产品能力 0**；剩余 DSH-3.3–3.6 = 4 个 TS 插件 + 各自完整判据装置；**真正的大头在 DSH-4**（19 项语义层迁移）。现在的 3.x 只是 prototype。
+
+### 二、对 DSH 的用法是否符合其设计哲学：大致合，**2 处需收敛**
+
+**合的部分**：把产品语义写成 Cordis 插件 = 上游期望的接入方式；上游原则"Extension plugins depend on Service Definitions, **never concrete providers**"正是 3.4（自做 compaction provider）的做法；三级递进（本地插件 → `--patch` overlay → npm bundle + profile）与项目落地方向一致。
+
+**⚠️ 需收敛 ①：产品启动形态贴到了上游明禁**
+上游 `docs/architecture.md`〈Application launch〉原文：
+> "Every supported Node application starts at the `dsh` CLI with a named profile… custom plugin composition remains **a profile plus ordered patch files, not another executable or inline application tree**."
+> "…`verify-application-entrypoints` keeps every package bin, executable source, and root demo in an explicit class and **rejects a Node application path that bypasses `dsh`**."
+
+而项目 client 侧走的是**自造驱动脚本** `harness/scripts/dsh-prompt.mjs`（其自述 "the Tauri client runs exactly this script under the hood"）。
+⭐ **上游已给出桌面端的标准蓝本**（同节〈Desktop application〉）：自己的 Electron 应用**占一个保留 profile**（`$DSH_HOME/profiles/desktop`）＋ **绑定一个精确 dsh 版本** ＋ **自带第一方离线 seed** ＋ **启动时用自带 pnpm 把该版本装进可写 profile**。⇒ **LarryAgent 的 Tauri 客户端有现成范式可对齐，不必自创**；上游 bundle/profile 分工是硬性的："A bundle is what you author and distribute; a profile is what a user boots with. **Nothing is both.**"
+（我可能误读之处：该规则语境是上游仓库自身的准入门禁；但它是**公开架构规则**且配套强制校验，作为"期望形态"的指示是明确的。）
+
+**⚠️ 需收敛 ②：数据层不可回退 —— 升级 SOP 的回退动作不成立**
+上游 `AGENTS.md:7` 原文：session 格式迁移 "may add a version-named successor but never move, overwrite, or delete committed generations; **predecessors imply neither fallback nor downgrade support**"。
+`docs/session-format-status.md` 更重：**"An alpha, beta, or release-candidate product publication establishes released Session-format obligations. GitHub's prerelease flag does not make persisted user data disposable."**
+⇒ 项目升级 SOP 里的"超时未收敛即**回退上一 tag**"**只对代码成立，对数据不成立**（升级后写入的会话/存储，旧 tag 读不了）。
+**现场标本**：本机 `.dsh-home/sessions/` 仍留着 **8 个 012 期会话**（文件名 `session.jsonl.zstd`，**无版本段**），而 015 写出的是 `session.**v3**.jsonl.zstd` ⇒ **格式代已变，那 8 个旧会话在 015 下能否读取，项目未验**（全仓文档未见任何一处分析"已持久化会话数据"的跨代可读性）。
+**另一条上游定性（项目已登记"自做"，但未登记力度）**：多租户 —— 上游原文 "Deployments that need a hard multi-tenant boundary need a **container-class backend**"、"a future **multi-principal Host** must revisit…"，现存的是 "**single-user local Host trust model**"。⇒ 2.10.1 的云端多端不是"补一层租户过滤"，而是**上游明确划在框架之外、需换后端类别**的事。
+
+### 三、是否符合行业趋势（**待补**）
+
+外部取证仍在跑（agent harness 品类现状 / 插件内核 vs 框架 API / MCP 与 ACP 采用度 / 押注预览期底座的先例 / TS 与 Python 在 agent 基础设施的势力分布 / 反向意见）。**回来后我补这一节，并据此校准以上判断。** 本轮不预判，避免闭门造车。
+
+### 四、我建议你拍的三件事（取舍点，不是结论）
+
+| # | 取舍 | 我的倾向 |
+|---|---|---|
+| 1 | **要不要给迁移加一个"产品可见产出"闸门**：例如 3.6（记忆最小闭环）完成后，强制做一个端到端可用的垂直切片，而非继续按 3.3→3.6 顺序铺 | **倾向加**。迁移的价值只有产品语义层跑起来才可验证；"值不值得继续"的最好证据是有一个能用的东西 |
+| 2 | **要不要把"上游缺口承接"显性化成一张独立清单并估持续成本**（Windows 方言件 / 跨代解析 / 启动形态对齐…） | **倾向要**。现在散在各处，看不出总量；这是继"注意力"之后第二大的隐性成本 |
+| 3 | **要不要把"数据不可回退"升为升级 SOP 的硬前置**（升级前快照 + 明确回退边界；顺手把 8 个旧会话做一次可读性实测，全是测试数据、代价低，正好当演练） | **倾向要**。它决定"跟随 rc"的代价上限 |
+
+**我未改动任何文件**（评估性输出）。以上均为可复现取证：量化命令、上游原文路径与行号见正文，第三问待外部取证补入。
