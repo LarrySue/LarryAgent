@@ -208,6 +208,11 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 6. **Chroma collection 名 ≥ 3 字符**（SDK 校验，非环境问题）。
 7. **公网机器上调试避免回显 token** 🟢：实测中 DSH boot token 出现在日志回显里。本次实例只听 127.0.0.1、为临时免费机、重启即变，不构成实际风险，**但纪律上应暴露并规避**。
 8. **组装自定义 DSH profile 的三道坎（2026-09-10 实测）** 🟢：① **`dsh plugin add` 依赖 `pnpm`**（镜像机默认没有，须先 `npm i -g pnpm`）；② **必须显式锁版本**与主包同版（`0.1.2-rc.1`）——**默认 `latest` 指向旧版 `0.0.1-rc.1`，其依赖树引用 registry 上不存在的 `@deepseek-ai/dsh-type-meta`，安装必然 404 失败**；③ **`plugin add` 只写 `dependencies`、不写 `dsh.profile.bundles`，装了不生效**，且多数相关包（含 `dsh-api-gateway` / `dsh-host-webserver`）**未声明 `dsh.bundle`，手工补进 bundles 会直接报错**。详见 `dsh/dsh-migration.md`「B 段 Gateway 路线实测判定」。
+9. **`/dev/shm` 上的产物是否跨 ssh 会话存活 —— ⚠️ 两通道分歧未收敛（勿轻信"会被自动清掉"）** 🟢 机器事实 ＋ ⬛ 归因未复现：一份外部报告（Claude 通道，2026-09-21）称 `/dev/shm` 下所建目录"在会话外消失"，归因 **systemd-logind `RemoveIPC`**。**WB 复验既未复现该现象，机器配置亦与该归因不符**：
+   - 🟢 **机器事实（与通道无关）**：`systemctl show systemd-logind -p RemoveIPC` ⇒ **`RemoveIPC=no`**；`/etc/systemd/logind.conf:48` 为**注释态** `#RemoveIPC=yes`，且 `/etc`、`/run` 下**无 `logind.conf.d` drop-in 覆盖**（仅 `/usr/lib/.../unattended-upgrades-logind-maxdelay.conf`，与 IPC 无关）。`loginctl show-user ubuntu` ⇒ `Linger=no`、`State=active`；systemd 255。
+   - 🟢 **WB 通道实测**：`mkdir /dev/shm/wb-removeipc-probe` ＋ 写文件 → **在随后的新 ssh 会话里仍存在**（`ls -l` 逐项可见）。⇒ **未复现"跨会话被清"**。
+   - ⇒ **两通道分歧，并列留痕、不合并**（同 §6.2 的处理；⚠️ 通道不同则结论不可互推）。⛔ **不得据此写"`/dev/shm` 会被自动清"** —— 该归因**未受支持**。若确有产物消失的事件，**成因未知**（"成因未知"是可接受的结论）。
+   - 行动纪律（两通道一致、无争议）：**测试产物别放 `/dev/shm`**，用 `$HOME` 下目录；跨会话的产物一律落在仓库树或 `$HOME`。
 
 ---
 

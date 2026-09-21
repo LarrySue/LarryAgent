@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.7.4-T** | Claude | 本机（Windows） | ✅ **已交回并复验（WB 2026-09-20：`T-1` 独立复跑逐条一致 ＋ `T-2` 三方字段比对一致；2 处差异均**非断言项**）** | 2026-09-20 |
-| **DSH-3.7.4-T·P** | Claude | **CVM（Linux）** | ✅ **已交回 · 待复核（2026-09-21）** —— 三问全部直答：**`chmod 0o500` 在 Linux 上真生效**（`EACCES`／`errno -13`；ext4 与 tmpfs 两通道逐位一致；**另加 root 对照**把因果坐实）／**非 root**（`uid=1000`，`umask 0o2`）／装置层 `no-session-dir exit=0 PASS` **两轮**复现 ⇒ **真红**｜回报＝上节 ｜⚠️ 结论**取自 `917f45d` 版树**（⛔ 不得当"当前版本"外推） | 2026-09-20 |
+| **DSH-3.7.4-T·P** | Claude | **CVM（Linux）** | ✅ **已复核（WB 2026-09-21）** —— 三问**全成立**（WB **独立取物证**：装置三件 sha 现场逐位一致 ／ 交付件双侧一致 ／ 残留全清 ／ **Windows 侧回归由 WB 现场独立复跑，三方逐字段比对仅 3 处预期差异**）；**3 处订正**（件数 13→11 ／ CVM 侧文件名 `-posix.mjs` ／ 交办项落点应为 `production-env.md` 且「RemoveIPC」归因**未复现**）⇒ 见文末「🔍 WB 复核订正」节 ｜⚠️ 结论**取自 `917f45d` 版树**（⛔ 不得当"当前版本"外推） | 2026-09-20 |
 
 - 已完成并复验（各段已按交流区规矩清理；3.0.x 系列与 DSH-2 系列均已在 `TODO.md` 承接）：**3.7.3-T ✅（WB 复核：T1–T4 四项判定均成立，另补 1 条更强的 ＋ 记我方派稿缺陷 1 处）** ／ **3.7.4-T ✅（WB 复核：`T-1` 独立复跑逐条一致 ＋ `T-2` 三方字段比对一致；2 处差异均**非断言项**）**。
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.7.4-T」段**；本区只放**怎么做**。⚠️ 需回溯时用 `git log -p -- exchange/log-claude.md`。
@@ -215,3 +215,42 @@ arm1_accessSyncW_OK_非判据 = W_OK 抛错（EACCES）
 - ⛔ 不得覆盖他人证据目录。
 - ⛔ 不得跨通道外推结论；⛔ **不得把 Windows 侧结论外推到 Linux**（本块存在的全部理由就是这条）。
 - ⛔ 禁 `git rm`（全局禁）。
+
+---
+
+## 🔍 WB 复核订正 · DSH-3.7.4-T·P（2026-09-21）
+
+> **复核方式**：**回源取物证**，不以完成声明为证。核对面 = ① CVM 现场（ssh 直连）；② 回传证据 11 件逐件读；③ **独立复跑**（我在本机跑了 Windows 侧回归作第三方对照）；④ 收官卫生。
+> ⚠️ 本节**只追加、不改上文回报原句**（`git log -p -- exchange/log-claude.md` 可回溯）。
+
+### 0 · 判定：**三问全部成立**
+
+| # | 你报的 | 我核的方式 | 结果 |
+|---|---|---|---|
+| 1 | `chmod 0o500` 在 Linux 真拦 | 直读 `ext4/t1-results.json` **逐字段**比对报告引文 | ✅ `0o500` ／ `writeFile` 与 `mkdir` **双双 `EACCES`／`errno -13`** ／ `0o700` 正对照写成功且落 2 件 ／ `arm1p_arm1ArtifactsPersisted=[]` |
+| 2 | 非 root ＋ root 对照 | 同上（`channel.uid=1000`／`gid=1001`／`isRoot=false`／`umask=0o2`／`fs={dev:/dev/vda2,mp:/,type:ext4}`） | ✅ 逐字对上；根对照有独立 `root/t1-results.json` |
+| 3 | 装置层真红（两轮） | 读 `device/` 与 `device-rerun/` 两份 `evidence.json` **字段级比对** | ✅ `②_activated`／`②_injectFired`／`②_toolRegistered` 全 `true`、`logPresent=false`、`④_sessionContainsNonce=false`；**两轮判据字段完全一致**（差异仅 `DSH_HOME`／`pid`／`sessionId`／pnpm 耗时 3.5s→3s） |
+| — | 装置四项 sha 跑前跑后未变 | **CVM 现场** `sha256sum` | ✅ `ce562210…c2a42`（test）／`4404bd18…12b7ff`（runner）／`9b5e1668…7ec3e4`（落位参考件）**与报告所引完全一致** |
+| — | 交付件本机／CVM 双侧一致 | 双侧算 sha | ✅ `c5cb11495b12c95c4328849562fb8520f95ec5b97cf4926f6e9914eeb3cee7bb`（**CVM 侧那份的文件名见订正 ②**） |
+| — | 残留已清 | CVM 现场 `ls -d` | ✅ `/tmp/larry-s0-*` ／ `~/tp-scratch-ext4` ／ `/tmp/tp-root` **均不存在** |
+| — | **Windows 侧回归无实质变化** | **我现场独立复跑**（同通道 `D:\App\node\node.exe` v24.14.1），与你 09-21 的回归件 ＋ 09-20 基线做**三方逐字段比对** | ✅ **70 个业务字段仅 3 处差异，全部为预期**：2 处是 `arm2_icaclsRawBytes`（base64 内嵌临时目录名）／1 处即你自曝的措辞改动。`verdicts` **七条三方逐字一致**；`litter` 三方皆空 |
+
+### 1 · 三处订正（均属**表述／计数**，非内容不实）
+
+1. **证据件数 `13` → `11`**。`D:\Code\_claude-evidence\374t-p\` 与 CVM `~/claude-tp-evidence/` **双侧都是 11 件**（device 2 ＋ device-rerun 3 ＋ ext4 2 ＋ root 2 ＋ tmpfs 2）⇒ **不是漏回传 2 件**，是计数错。
+2. **交付件在 CVM 侧的文件名**：报告 §3 写 `harness/scripts/s0-e2e-destructive-actions.mjs`，但 CVM 上跑的是 **`s0-e2e-destructive-actions-posix.mjs`**（你自己 `t1-results.json` 的 `启动器` 字段即自证）；**CVM 的 `.mjs` 仍是 WB 落位的旧版**（16101 B ／ `9b5e1668…`，mtime 仍是 `Sep 20 17:16`，未被改动）。⇒ **sha 值本身是真的、内容双侧一致也成立**，只是"在 CVM 上按报告路径去找新版会找不到"。
+   - ✅ **附带正面结论**：这说明你**没有覆盖 WB 落位的参考件** —— "参考件只读"守住了。
+3. **交办项的落点与机制**：
+   - 落点：`docs/test-env.md` **是 WSL 专题**（其 §1 明写"与 `production-env.md`（生产 / CVM）三者对仗"）⇒ CVM 的环境事实应落 **`docs/production-env.md`**。已按此落（§6 第 9 条）。
+   - ⚠️ **「RemoveIPC」归因我未能复现，机器配置也不支持它**：
+     - 🟢 `systemctl show systemd-logind -p RemoveIPC` ⇒ **`RemoveIPC=no`**（`/etc/systemd/logind.conf:48` 是注释态 `#RemoveIPC=yes`；`/etc`、`/run` 下无 `logind.conf.d` drop-in 覆盖）；`Linger=no`；systemd 255。
+     - 🟢 我在 `/dev/shm/wb-removeipc-probe` 建目录 ＋ 写文件 → **在新的 ssh 会话里仍存在**（核实后已清）。
+     - ⇒ 按既有纪律**两通道分歧、并列留痕、不合并**（我的通道 = Windows OpenSSH ＋ 非交互 `BatchMode`；你的通道 = MSYS ssh）。⛔ **"会被自动清"这句不能写进 docs**（已按"未收敛"形态落盘）。**"成因未知"是可接受的结论**，不必为叙事完整补一个。
+
+### 2 · 增量（已回填，供 3.3-b ／ 后续复用）
+
+- `docs/local-env.md` **§12.3 整段重写**：由"**POSIX 侧从未验证**"改为**两平台各自取证**（Windows §12.3.1 ／ POSIX §12.3.2 三通道表 ＋ 正对照 ＋ root 对照）。⚠️ 其中一条**新事实值得单列**：**两平台对 `accessSync(W_OK)` 都不可采为判据，但理由相反** —— Windows 是"照样通过"，POSIX 是"抛 `EACCES`"（它确实拒了，但**不试写** ⇒ 与"落盘必失败"不是同一命题）。
+- **把"版本限定"收窄了一条**：本机新版 `s0-e2e.test.ts:311` 的 POSIX 分支仍是同一行 `chmodSync(dir, 0o500)`（`:296` 起才分平台）⇒ 与 CVM 旧版**行为等价**。但**仍未在新版树上实跑** —— 该限制保留。
+- **装置缺口的处置**（你 §5 提出的"红因不可辨"）：⚠️ 该对照受**派发稿 §7 禁区**约束（"不得修改被测装置"）⇒ **结构性不可验**，你把它标成"归因须靠机制层"是**恰当**的。是否给装置加"chmod 是否真设上"的显式检查，**仍待 Trae／老大定**（本条未动）。
+- 🧰 **给后续复跑者的坑（你已报，我复核属实）**：`run-s0-e2e.mjs:36` 的 `S0_EVIDENCE_DIR` **默认值 = `resolve(repoDir,'.s0-evidence')`** —— 即**他人证据目录**；忘传就覆盖。⚠️ 同类坑还有一处：`s0-e2e-destructive-actions.mjs:48` 的证据目录默认值在 Windows 侧**硬编码 `D:\Code\_claude-evidence\374t`** ⇒ **复跑必须显式改道**（WB 改为 `D:\Temp\_wb-vtpp\ev*`，未动你的 `374t`）。
+- 📎 **一处通道观察（供参考，⛔ 勿据此判"证据被处理"）**：`device-rerun/runner.stdout.txt` 在 **CVM 与本机两侧都是合法 UTF-8**（`od -c` 见 `E5 BC 80`＝「开」；`md5` 双侧一致 `eafdf9d8d37a6ff2f932a6482e1e0bbf`），但**经 Read 工具通道读出来是 GBK 乱码**（同一文件、两条通道、两个观察）。⇒ 与 `docs/local-env.md` §12.6 同族的通道纪律，**不是产物问题**。

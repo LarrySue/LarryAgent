@@ -564,7 +564,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 ## 12. DSH-3.7.4 复验沉淀 · Windows 装置类事实与判据纪律（🟢 2026-09-20 WB 复验：源码 ＋ 字节级实测）
 
 > **来源**：WB《DSH-3.7.4 ／ DSH-3.7.4-T · 复验判定》（2026-09-20），原载交流区 `exchange/log-workbuddy.md` —— **该段已随交流区清理**（回溯 `git show 5a1763d:exchange/log-workbuddy.md`）。本节只收**跨块可复用**的事实；3.7.4 的判据与验收基准仍在 `TODO.md`。
-> **证据等级**：§12.1 ／ §12.2 ／ §12.5 为 🟢 **源码逐行 ＋ 独立实测**；§12.3 ／ §12.4 为 🟢 **独立复跑最小装置**；§12.6 为 🟢 **多轮采样**（但**触发机制未定**，见该节）；§12.7 为 🟢 **env 实测 ＋ 源码定位**（2026-09-20 追加）。
+> **证据等级**：§12.1 ／ §12.2 ／ §12.5 为 🟢 **源码逐行 ＋ 独立实测**；§12.3 ／ §12.4 为 🟢 **独立复跑最小装置**（**§12.3 另于 2026-09-21 补齐 POSIX 侧**，两平台各自取证）；§12.6 为 🟢 **多轮采样**（但**触发机制未定**，见该节）；§12.7 为 🟢 **env 实测 ＋ 源码定位**（2026-09-20 追加）。
 > **本节范围**：**12.1–12.6** = DSH-3.7.4 复验沉淀的**装置类事实**；**12.7** = **本机临时区（`TEMP`／`Sys`）语义**（**非 3.7.4 产物**，同日追加）；**12.8** = 未闭合指针（已转入 `TODO.md`）。
 
 ### 12.1 pnpm `virtualStoreDir` 的平台分支 ⇒ `cp -r` profile 必失效（3.7.4 的成因）
@@ -598,7 +598,9 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 ⇒ **不是谁配的**：`~/.npmrc` 只有 registry 一行；`pnpm config get store-dir` = `undefined`；env 无 `PNPM_HOME` ／ `npm_config_store_dir`；DSH 各包内搜 `store-dir` ／ `.pnpm-store` ／ `PNPM_HOME` = **0 命中**。
 ⇒ **对判据的用处**：同一 profile 被拷到**另一个卷**，`storeDir` 与 `virtualStoreDir` 会**双双换值** ⇒ 报"两侧 `.modules.yaml` 不同"时，**先看卷、再看内容**（这正是 3.7.4 那场"换了源就暴出第二个字段"的机制）。
 
-### 12.3 Windows 上「把目录设成只读」的正确与错误手段（T-1 机制层独立复跑）
+### 12.3 「把目录设成只读」的正确与错误手段（**两平台各自取证** —— Windows = T-1 2026-09-20 ／ POSIX = T·P 2026-09-21）
+
+**§12.3.1 · Windows 侧**（本机 · node v24.14.1）：
 
 | 手段 | 实测结果 |
 |---|---|
@@ -606,8 +608,21 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 | `fs.accessSync(dir, W_OK)` | ⛔ **不可当判据** —— 在 `0o444` 下**照样通过**（只查属性位、不试写） |
 | `icacls <dir> /deny <me>:(AD,WD)` | ✅ **成立** —— `writeFileSync`／`mkdirSync` 双双 `EPERM: operation not permitted`（`errno:-4048`）；`icacls <dir> /remove:d <me>` 撤销且**幂等** |
 
-⇒ 装置 `s0-e2e.test.ts` 的 `no-session-dir` 变体已按平台分支：**Windows 走 `icacls`，POSIX 保留 `chmodSync(dir, 0o500)`**。
-⚠️ **POSIX 侧从未验证**（本机无 Linux 通道）⇒ 若 Linux 上 `chmod 500` 也不拦（例如容器里以 root 跑），装置会**静默失效**（判据变成没有验证力的红／绿）—— **发版前必做**，清单见 `TODO.md`。
+**§12.3.2 · POSIX 侧**（CVM · **非 root** · node v22.22.2 · 取自 `917f45d` 版树）：
+
+| 通道 | 身份 ／ 文件系统 | `mode@0o500` | `writeFile` ／ `mkdir` | `accessSync(W_OK)` |
+|---|---|---|---|---|
+| A `~/tp-scratch-ext4` | `uid=1000` ／ ext4（`/dev/vda2`） | `0o500` | **`EACCES` ／ `EACCES`（`errno -13`）** | 抛 `EACCES` |
+| B `/dev/shm/tp-scratch` | 同上 ／ tmpfs | `0o500` | **逐字段同 A** | 抛 `EACCES` |
+| C `/tmp/tp-root`（**root 对照**） | `uid=0` ／ ext4 | `0o500` | **`ok` ／ `ok`** | **通过** |
+| （正对照：同目录 `0o700`） | 非 root ／ ext4 | `0o700` | `ok` ／ `ok`（落 2 件产物） | — |
+
+⇒ ✅ **POSIX 侧成立**：非 root 下 `chmod 0o500` 是真写保护（`EACCES`）。⚠️ **文件系统维度不改变结论**（A 与 B 逐字段一致）。
+⇒ ✅ **root 对照把因果坐实**：C 与 A／B 的**唯一**差异是"写成功"，而 `mode@0o500` 三者皆为 `0o500` ⇒ 权限位**确实设上了**，差异 **100% 来自 root 绕过 DAC**。
+⚠️ **两平台对 `accessSync(W_OK)` 都不可采为判据，但理由相反** —— Windows：**照样通过**（只查属性位、不试写）；POSIX：**抛 `EACCES`**（它确实按权限位拒了，但它**不试写** ⇒ 与"落盘必失败"不是同一命题）。
+⚠️ **版本限定**：POSIX 结论取自 CVM 的 `917f45d` 版树（无 git 的同步副本、落后本机 3 天；已定**不同步**，见 `TODO.md` 3.7.4 段处置表 #5）⇒ ⛔ 不得当"当前版本"外推。**WB 补证收窄一条**：本机新版 `s0-e2e.test.ts:311` 的 POSIX 分支仍是同一行 `chmodSync(dir, 0o500)`（`:296` 起才分平台）⇒ 与 CVM 旧版**行为等价**；但**仍未在新版树上实跑**。
+
+⇒ 装置 `s0-e2e.test.ts` 的 `no-session-dir` 变体已按平台分支：**Windows 走 `icacls`，POSIX 保留 `chmodSync(dir, 0o500)`**；两臂**各自成立**（Windows 侧 T-1 ／ POSIX 侧 T·P）—— ⛔ 但**结论仍不可跨平台外推**。
 ⚠️ 附带：装置里 `spawnSync('icacls', …, {encoding:'utf8'})` 在本机**必得乱码**（icacls 恒按 ACP 936 输出）——该行**不承载判据**，但原作者须知道它落盘不会是中文。
 
 ### 12.4 Windows 上「杀进程组」不可行 ⇒ 必须回落

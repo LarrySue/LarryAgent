@@ -806,7 +806,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | profile 里注释掉自做 bundle | S0 ②（plugin mount） |
 | 换成错 Key | S0 ③ + 3.0 红灯组 |
 | 摘掉 / 只读 session 落盘目录 | S0 ④ |
-| answerer 抛错或超时 | S1 拒绝路径（须 fail-closed） |
+| answerer 抛错 ／ 请求侧超时撤回 | S1 拒绝路径（须 fail-closed） |
 | SQLite 路径指回 DSH 默认后端 | S4 ②（反向哨兵） |
 | kill SDK 客户端进程 | S0 ④（已写入部分的一致性） |
 | 停 ChromaDB 进程 | S4 双写**降级行为**是否定义 |
