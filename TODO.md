@@ -147,7 +147,7 @@
 
 #### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1）
 
-- [ ] 📮 **`3.3-a` 已派发（WB 2026-09-20，本机／Trae）· 待起跑** ｜ **scope-filtered answerer 插件**（TS）—— ⭐ **答者来源须做成可替换接口**（本地策略 ↔ 远端真人），否则 3.3-b 要重写 ｜ **派发稿 = `exchange/log-trae.md`「DSH-3.3-a」段**（⚠️ 活日志会被随时清理 ⇒ **判据与边界的权威落点仍是本文件 ＋ `docs/dsh/dsh-migration.md` §3.6**）
+- [x] ✅ **`3.3-a` 已交回 · 复核已完成（WB 2026-09-21）** —— 机制接入三项**均成立**：装载与注册 ✅ ／ **scope filter ✅（两组真对照）** ／ **fail-closed ✅（6/6 `unavailable`、被保护动作 0 次）**；⚠️ 复核另**订正 1 处证据引文改写**（见本段末「复核订正」）｜ **scope-filtered answerer 插件**（TS）—— ⭐ 答者来源做成可替换接口 ✅（注入点 `approvalAnswerer`；真 DSH 就绪时序留给 3.3-b）｜ 交付 = `harness/packages/plugin-approval-answerer`（产品）＋ `plugin-approval-probe`（装置）＋ `scripts/run-33a-answerer-e2e.mjs`｜ 派发稿 = `exchange/log-trae.md`「DSH-3.3-a」段（⚠️ 活日志会被随时清理 ⇒ **判据与边界的权威落点仍是本文件 ＋ `docs/dsh/dsh-migration.md` §3.6**）
 - [ ] 🟢 **路已拍（老大 2026-09-14）：分阶段往 ② 走** —— 拆三段，证据与判据见 `docs/dsh/dsh-migration.md` §3.6〈S1 审批三段收敛路径〉：
   - **3.3-a**（本阶段，可随批次 2 跑）**本地策略答者**（`ctx.approval` waterfall 的最终应答者）—— 验**机制接入**：scope filter / 日志可观测 / fail-closed
     - ⚠️ **诚实边界**：「超时」「渠道断裂」两条是**同进程替身路径**（本地答者即同进程调用，无"渠道"可断）⇒ **3.3-a 单独不得声称"审批语义验成立"**
@@ -155,7 +155,8 @@
     - ⚠️ **主要成本**：不能用 `HarnessClient`（其 `start()` 只挂 `onNotification`）+ 其 `exports` 不含 `resolveDshLaunch` ⇒ **起子进程的启动参数要自己构造**
     - ⭐ **产物不是一次性的**：薄客户端 = **3.8 driver 的骨架**
   - **3.3-c = 3.8** 对端换成 driver + 前端 ⇒ 人审批闭环
-- [ ] 用例覆盖 5 条：批准 / 拒绝 / **answerer 超时** / **answerer 抛错** / **渠道断裂** —— 后三条均须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿：你以为是人点了拒绝，其实是请求从未到达）
+- [ ] 用例覆盖 5 条：批准 / 拒绝 / **超时** / **抛错** / **渠道断裂** —— 后三条均须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿：你以为是人点了拒绝，其实是请求从未到达）
+  - ✅ **3.3-a 实测回填（WB 2026-09-21）**：本条原措辞「**answerer 超时**」已订正为「**超时**」—— `dsh-user-approval` 的 `decide()`（`lib/index.js:175-192`）**没有"答者超时"计时器**，唯一"放下"机制是**请求侧 `AbortSignal` 撤回**（`signal` 与应答赛跑，abort 先到 ⇒ 封 **`cancelled`**，**不是 `unavailable`**）。⇒ **3.3-b 的「超时收尾」大概率也走 signal 这条**，别再找一个不存在的「答者超时 API」。
   - ⏱️ **超时值须先定死**（否则"超时路径"无法构造）：建议 **30 s**，写入判据；可依实测调整
 - [ ] 观测点 = **工具 handler 入口打点**（有行 = 真的执行了），UI 与 DSH 日志只作旁证
 - [ ] 📚 **参考件**（登记表 3.3 行）：`ref/community/PerryLink__dsh-reach` —— **deferred answerer**（`approval/request` + `user-questions/request` 两个 waterfall，答案稍后从 IM 回来才兑现）+ `cardTimeoutSec`（超时）+ `bridge.dispose()`（结清待决）+ `inject: []` 降级矩阵；官方机制侧 `dsh-user-approval` / `dsh-permission-presets`

@@ -270,3 +270,17 @@ cd harness ; node scripts/run-33a-answerer-e2e.mjs main
 
 - **DSH-3.7.4 派发稿 ＋ 回报**（2026-09-20 派发／交付／复验后清理）—— 判据与边界的权威落点 = `TODO.md`「DSH-3.7.4」段；机制事实 = `docs/local-env.md` §12。回溯：`git show 5a1763d:exchange/log-trae.md`。
 - **仓外证据（本轮）**：`D:\Code\_trae-evidence\374\`（五臂探针 ／ runner 原文 ／ ACL 语义 ／ dsh 两臂重放）＋（装置自产）`D:\Code\LarryAgent\.s0-evidence\`。
+
+---
+
+## 🔍 DSH-3.3-a · WB 复核订正（2026-09-21）
+
+> 复核方式 = **回源取物证**（读 `_trae-evidence\33a\*` ＋ 交付源码 ＋ 官方包实现），不采信完成声明。
+
+1. **判定：成立。** J1／J2／J3／J4／J5／J6／J8 七项可采信；**J7 部分不成立**（见下条）。装置 `summary.json` 三臂 `verdict` 均为「判据成立」，我逐条复核并**独立复跑** `smoke.mjs`（`exit=0`）。
+2. ⚠️ **J7 订正（唯一硬伤）**：本文件 §3 引 `answerer.marker.json` 的 `activate` 行并标注「**原文，逐字**」，其中 `"caps":{"approvalSeam":true}` —— **原件实为 `false`**。字段级比对（其余 3 行逐字段一致，仅此 1 字段被改）＋ `probe.marker.json` 同字段亦为 `false`（两插件 boot 极早期独立探测）⇒ **原件值 `false` 是对的**。⚠️ 该字段恰是**支持 J1 注册纪律的关键证据**（证明 `inject: []` 下 activate 时刻 `ctx.get` 拿不到 `approval`）⇒ 改写方向**削弱**了报告自身的论证力。**取原文请以证据目录为准。**
+3. ✅ **超时条订正（`cancelled`）予以确认**：机制依据 `lib/index.js:175-192` 的 signal 赛跑**我已独立核实**（逐行读原件）；且派发稿判据表原句已含「以实测为准，报原文」⇒ 订正**有授权**，非擅改判据。30 s 定值实测（审计时间戳差 30008 ms）。
+4. ✅ **判据未放宽**（读 `run-33a-answerer-e2e.mjs:298-366`）：`noanswerer` 臂改判「答者打点应全 0」、`probeAgents` 改取自探针入口打点、J2-② 加 `nonTargets.length > 0` 防空转、J6 两臂双锚齐全。
+5. ✅ **卫生陈述实测成立**：仓库 `git status` clean、**无 `larry-33a-*` 临时 home 残留**、`~/.dsh` 与工程 `.dsh-home` **均无残留 log**（我复跑 smoke 后实测）。`smoke.mjs` 的「零配置路径」处理为满分级（临时 `DSH_HOME` ＋ `finally` 还原 ＋ 钉成断言）。
+6. ℹ️ **两条供 3.3-b 用的增量**：① 「**超时**」的原措辞已订正（答者侧无超时机制，机制是请求侧 signal 撤回）；② **J3 在装置里只采集、无机械断言**（`judge()` 未覆盖期望值）⇒ 3.3-b 建议把用例期望写进装置判据，别只靠人工比对。
+7. 📌 **承接已落位**：判据与状态 → `TODO.md`「DSH-3.3」段；机制事实 → `docs/dsh/dsh-migration.md` §3.6〈S1 审批三段收敛路径〉。
