@@ -797,6 +797,16 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
      - ⚠️ **两条硬约束（实测）**：① **不得用 `- id: X` ＋ `name:` 覆盖同名行** —— **3.7.2 已实测不生效**（`profiles/sdk/cordis.patch.yml` 顶部注释：loader 的 id 定位**只做 config 覆盖，不改插件来源**）；② **`onRequest` 是替换语义**（`transport.d.ts:65` 原文 "replacing any prior handler"）⇒ 与官方 server **抢装会静默顶掉先装者**。
      - ⚠️ **场地缺口（实测）**：`@deepseek-ai/dsh-sdk-protocol` **不在 `harness/package.json`**，`import` 报 **`ERR_MODULE_NOT_FOUND`**（pnpm 严格模式，该包只在 `.pnpm` 深层）；且 `dsh-sdk-client` **不重导出** `JsonRpcLineTransport` ⇒ 须**先补依赖**才能用传输层。
      - ⚠️ **代价（诚实列出）**：路 A **偏离官方 profile 组合**（禁用官方 server 行）⇒ 上游升级需跟。
+     - ⭐ **老大 2026-09-21 拍定：采用路 A**（原话大意「就算后面有啥问题、或者后面官方的代码有什么值得重新适配的变化，那就再改」）⇒ **"上游升级需跟"的代价已被接受**，不在本块设卡。
+     - ✅ **WB 端到端实测（2026-09-21，`--dump-config` 五组对照；改动未落场地）**：**路 A 的机制已成立**，验靶手段本身也可复用 ——
+       - **验靶手段** = `dsh --profile sdk --dump-config`（组合配置树后退出、**不激活插件**）：输出按 `# == <来源>` 分组；**被 patch 命中的条目，来源注释追记 `, patched by <层文件>`**；**未命中的 patch 打一行警告** `dsh: [<层文件>] patch: entry "<id>" not found`，**仍 exit 0**（⇒ 不能只凭退出码判成败）。
+       - **无副作用试验通道** = `dsh --patch <临时层.yml> --dump-config`（`--patch` 可重复、叠加在 profile 层之后）⇒ **不改场地文件即可验证 patch 写法**；本轮五组实验全走此通道。
+       - **① 禁行成立**：`- id: sdk-jsonrpc-server` ＋ `disabled: true` **确实禁掉了这条由上游 `insert` 进来的行**（其来源注释变为 `@deepseek-ai/dsh-sdk-app, patched by <临时层>`）⇒ **补齐 3.7.2 未覆盖的情形**（3.7.2 禁的是 bundle 层直接声明的行，不是 insert 进来的行）。
+       - **② 字段级浅合并**：只写 `disabled` 时，目标条目的 `name` ／ `inject` ／ `config` **全部原样保留** ⇒ **不必重述 config**。（README〈已知限制〉那句"用户 patch 会替换匹配到的整个配置"仅指**你写了 `config` 键**时整体替换、不深合并 —— 两者不矛盾，但极易被误读成"disable 时必须抄一遍原 config"。）
+       - **③ 同层共存**：同一 patch 文件内 `- id: …`（`disabled: true`）与 `- insert: [...]` **共存成立**，insert 行的 `inject: [sdkAppStartup, loader]` 原样保留。
+       - **④ 插入位置不可控**：`insert` 的新条目**一律落在整个条目列表末尾**（在所有层之后）⇒ 不能靠它控制插入点。
+       - **⑤ 可叠加**：insert 出来的条目 **id 会被注册**，可被更后的 `--patch` 层用 id 定位并 patch（结果注释形如 `# == <层1>, patched by <层2>`，无 not found 警告）⇒ **多段叠加可行**。
+       - ⚠️ **场地事实**：`--dump-config` **每次都会写** `$DSH_HOME/profiles/<name>/cordis.yml`（恒为模板 `[]` ＋ 首行注释 "Edit cordis.patch.yml, not this file"，223 B、幂等）⇒ 跑 dump 会 touch 它，**别用 mtime 判污染**；`~/.dsh`（真实 home）实测**零改动**。
 
 **成本与复用（诚实列出）**：
 - 3.3-b 的**主要成本** = 自己起子进程、自构启动参数（不能复用 `HarnessClient`）

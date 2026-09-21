@@ -12,6 +12,7 @@
 | **DSH-3.3-b** | Trae | 本机（Windows） | 🚀 **已派发 · 待起跑** | 2026-09-21 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
+- ⭐ **WB 补充实测（2026-09-21）**：**路 A 机制已端到端成立**（可直接引用）＋ **验靶通道**见 §5 —— 若你已改完 patch 层，先用 `--dump-config` 自查命中，再真跑。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
   1. **前提会随时间失效 ⇒ 动手前重新实测，不照抄旧前提**。
   2. **改依赖树 ／ 删树必须实跑，不得只凭推理**。
@@ -57,7 +58,7 @@ WB 已实测的三条事实（**可直接引用，不必重查**；要复核就�
 
 **两条候选路径**（实测后**择一**，报告里给选择依据）：
 
-- **路 A（WB 判定首选，代价最小）**：在 profile 补丁层把官方那行 **`disabled: true`**，再 **`insert`** 一个自己的 relay 行：
+- **路 A（WB 判定首选；老大 2026-09-21 已拍定采用；机制已端到端实测成立、可直接引用，见 §5 验靶通道）**：在 profile 补丁层把官方那行 **`disabled: true`**，再 **`insert`** 一个自己的 relay 行：
 
   ```yaml
   - id: sdk-jsonrpc-server
@@ -155,6 +156,11 @@ WB 已实测的三条事实（**可直接引用，不必重查**；要复核就�
 - **配置等价性**：官方 profile 行 `sdk-jsonrpc-server` 的 config 是
   `maxTokensAsSuccess: !!js "process.env.DSH_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(...)"` ⇒ **默认 `true`**；你若替换该行，**须保持这个行为**，否则会引入与 3.3-a 不可比的变量。
 - **runner 退出码**：沿用 `0 通过 ／ 1 判据失败 ／ 2 前置缺失 ／ 124 看门狗`。
+- ⭐ **验靶通道（WB 2026-09-21 实测）**：`dsh --profile sdk --dump-config` —— 组合配置树后退出、**不激活插件**。
+  - 输出按 `# == <来源>` 分组；**被你的 patch 命中的条目，来源注释追记 `, patched by <你的层文件>`**；**未命中的 patch 打一行 `dsh: [<层>] patch: entry "<id>" not found`**，且**仍 exit 0**（⇒ 别只凭退出码判成败）。
+  - **无副作用试验**：`dsh --patch <临时层.yml> --dump-config`（`--patch` 可重复、叠加在 profile 层之后）⇒ **不改场地文件就能先验证 patch 写法**。
+  - **已实测的 5 条语义（可直接引用）**：① `- id: sdk-jsonrpc-server` ＋ `disabled: true` **确实能禁掉这条由上游 insert 进来的行**；② **字段级浅合并** —— 只写 `disabled` 时 `name` ／ `inject` ／ `config` **全部保留**（**不必重述 config**）；③ 同层 `disabled` ＋ `insert` **共存成立**，insert 行的 `inject` 保留；④ **insert 的新行一律落在条目列表末尾**（控制不了位置）；⑤ insert 出来的 id **会被注册**，可被更后层用 id 定位。
+  - ⚠️ `--dump-config` **每次都会写** `$DSH_HOME/profiles/sdk/cordis.yml`（恒为模板 `[]`，幂等）⇒ **别用它的 mtime 判污染**。
 
 ### §6 回报格式
 
