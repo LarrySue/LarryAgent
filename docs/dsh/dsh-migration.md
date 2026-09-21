@@ -790,6 +790,13 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 2. **客户端封装层挡住了**（`dsh-sdk-client`，我们目前在用的那层）：`HarnessClient.start()` 内部 `new JsonRpcLineTransport(...)` 后**只挂 `onNotification`、无 `onRequest`**（`lib/index.js:405-411`）；包 `exports` 只有 `"."`，`launch.ts` 的 `resolveDshLaunch` / `installedDshBin` **不在导出面** ⇒ 3.3-b 须**绕开这层封装**（自己起子进程 + 自构启动参数）——代价明确、可控。
 3. **服务端业务层未接线**（`dsh-sdk-jsonrpc-server`）：`HarnessSdkJsonRpcServer` 构造签名 `(ctx, transport: JsonRpcTransportPeer, options?)` —— **transport 是注入的**，而该接口就有 `request()` ⇒ **发请求的能力在手，只是没有调用点**（`handleRequest` 只认 initialize / prompt / shutdown）。
    - ⚠️ **待查（3.3-b 第一件）**：从"我们自己的 B 段插件"到 transport peer 的通路**目前未见服务暴露**（插件入口 `apply(ctx, config)` 只消费 config，`inject` 未声明服务）⇒ 须确认能否经 `ctx` 取到；取不到则要么另开一条边，要么给上游提需求。
+   - ✅ **WB 实测回填（2026-09-21，读包源码 ＋ import 实跑，非二手）**：该「待查」**已收敛** ——
+     - **结论：transport 经 `ctx` 拿不到**。`dsh-sdk-jsonrpc-server` 的 `apply()`（`lib/index.js:257-293`）在**闭包内** `new JsonRpcLineTransport(input, output)`（`:268`），**全文无任何 `ctx.provide`**；其 `Config` 只认 `maxTokensAsSuccess`（`Schema.object(...)`）⇒ **也不能靠 config 开后门**。
+     - **但官方给了现成范式**：`dsh-sdk-app` 在命令行解析成功后 `ctx.provide('sdkAppStartup', { accepted: true })`（`dsh-sdk-app/lib/index.js:16,40`），而 server 的插件行声明 **`inject: [sdkAppStartup, loader]`**（`dsh-sdk-app/cordis.patch.yml` 的 `insert` 段）⇒ **「等启动服务」的落点 = 插件行的 `inject`**，可直接复用（也为 3.3-a 遗留的「`ctx.provide` 就绪时序」给了答案）。
+     - ⭐ **首选收敛路径（路 A，代价最小）**：profile 补丁层把官方 server 那行 `disabled: true`，再 `insert` 自己的 relay 行（`inject: [sdkAppStartup, loader]`）；relay 内**照抄**官方那 30 行 apply（`HarnessSdkJsonRpcServer` 是**公开导出类**，`:296`），**只多一行 `ctx.provide(<服务名>, transport)`**。备选 **路 B** = 另开一条边（额外 fd ／ unix socket ／ `ctx.get('subprocess')`）。
+     - ⚠️ **两条硬约束（实测）**：① **不得用 `- id: X` ＋ `name:` 覆盖同名行** —— **3.7.2 已实测不生效**（`profiles/sdk/cordis.patch.yml` 顶部注释：loader 的 id 定位**只做 config 覆盖，不改插件来源**）；② **`onRequest` 是替换语义**（`transport.d.ts:65` 原文 "replacing any prior handler"）⇒ 与官方 server **抢装会静默顶掉先装者**。
+     - ⚠️ **场地缺口（实测）**：`@deepseek-ai/dsh-sdk-protocol` **不在 `harness/package.json`**，`import` 报 **`ERR_MODULE_NOT_FOUND`**（pnpm 严格模式，该包只在 `.pnpm` 深层）；且 `dsh-sdk-client` **不重导出** `JsonRpcLineTransport` ⇒ 须**先补依赖**才能用传输层。
+     - ⚠️ **代价（诚实列出）**：路 A **偏离官方 profile 组合**（禁用官方 server 行）⇒ 上游升级需跟。
 
 **成本与复用（诚实列出）**：
 - 3.3-b 的**主要成本** = 自己起子进程、自构启动参数（不能复用 `HarnessClient`）
