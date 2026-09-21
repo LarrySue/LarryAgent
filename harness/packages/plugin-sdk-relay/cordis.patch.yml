@@ -1,0 +1,27 @@
+# plugin-sdk-relay 的 bundle 层（DSH-3.3-b · **路 A**）。
+#
+# 做两件事：
+#   ① 把官方 `sdk-jsonrpc-server` 行 **disabled: true**（该行由 `@deepseek-ai/dsh-sdk-app` 的
+#      bundle 层插入；本层的顺序在它之后 ⇒ 覆盖得动）；
+#   ② `insert` 本包自己的行 —— 装配逐字照抄官方那 30 行 apply：
+#      自造 `new JsonRpcLineTransport(process.stdin, process.stdout)` →
+#      `new HarnessSdkJsonRpcServer(ctx, transport, …)` → 装 `onRequest` 三方法 → `ctx.effect` 启动。
+#      唯一机制增量 = `ctx.provide('sdkTransport', transport)`：官方把 transport 造在**闭包内**、
+#      全文无 `ctx.provide` ⇒ 经 ctx 拿不到（这就是 3.3-b 派发稿 §1「待查」的答案）。
+#
+# ⚠️ **这是偏离官方 profile 组合的动作**（禁用了官方 server 行）：
+#    换行的原因是官方那一行不可能把 transport 交出来，而本块的答者必须**出站**发请求。
+#    代价 = 官方 sdk-jsonrpc-server 的后续修复/新方法不会自动进入本 profile；
+#    维护影响 = 每次升 dsh 都要重新比对 `dsh-sdk-jsonrpc-server/lib/index.js` 的 apply 与本包是否漂移。
+#
+# ⚠️ `inject` 与 `config` 均**逐字照抄**官方那一行（`dsh-sdk-app/cordis.patch.yml`），
+#    以保证「配置等价性」：`maxTokensAsSuccess` 仍走同一条 `!!js` 表达式（缺省 true）。
+- id: sdk-jsonrpc-server
+  disabled: true
+
+- insert:
+    - id: sdk-jsonrpc-relay
+      name: '@larryagent/plugin-sdk-relay'
+      inject: [sdkAppStartup, loader]
+      config:
+        maxTokensAsSuccess: !!js "process.env.DSH_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.DSH_MAX_TOKENS_AS_SUCCESS)"

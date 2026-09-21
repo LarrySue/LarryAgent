@@ -1,0 +1,29 @@
+{
+  "name": "@larryagent/plugin-sdk-relay",
+  "version": "0.0.1",
+  "description": "DSH-3.3-b 路 A 中继（装置用，产品部署不要装）：禁用官方 sdk-jsonrpc-server 行，改用本包 —— 照抄官方那 30 行装配（自造 stdio transport + 复用 HarnessSdkJsonRpcServer），唯一机制增量 = `ctx.provide('sdkTransport', transport)`，把 transport 暴露给答者插件，供其向对端进程发出站请求。",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

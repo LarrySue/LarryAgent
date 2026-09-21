@@ -1,0 +1,29 @@
+{
+  "name": "@larryagent/plugin-approval-remote-answerer",
+  "version": "0.0.1",
+  "description": "DSH-3.3-b 远端答者（S1 审批接入第二段）：把 3.3-a 留的 `approvalAnswerer` 替换口接上 —— 答者本体内不做本地策略，而是经 `sdkTransport` 把 `approval/request` **发出站**给对端进程（薄客户端/stub），拿到答案再作答。零硬依赖。",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

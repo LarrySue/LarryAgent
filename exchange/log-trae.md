@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.3-b** | Trae | 本机（Windows） | 🚀 **已派发 · 待起跑** | 2026-09-21 |
+| **DSH-3.3-b** | Trae | 本机（Windows） | ✅ **已回报 · 待复核**（7 臂 66/66） | 2026-09-21 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⭐ **WB 补充实测（2026-09-21）**：**路 A 机制已端到端成立**（可直接引用）＋ **验靶通道**见 §5 —— 若你已改完 patch 层，先用 `--dump-config` 自查命中，再真跑。
@@ -180,5 +180,172 @@ WB 已实测的三条事实（**可直接引用，不必重查**；要复核就�
 - ⛔ **手工改写、意译、润色任何工具输出的「原文」** —— 语言 ／ 编码差异**原样保留并注明通道**；**语言 ／ 编码不得作「证据是否被后处理」的判据**。
 - ⛔ 下失败判定前**先验证执行通道本身**（工具层故障会伪装成被测对象故障）。
 - ⛔ 收尾必核 `git status`（取证动作自身也会改现场）。
+
+---
+
+## ✅ DSH-3.3-b 回报 · 真出站往返（S1 审批接入 · 第二段）
+
+> 执行人 **Trae** ｜ 场地 **本机（Windows）** ｜ 结论 **判据成立：7 臂 66/66** ｜ 完成 2026-09-21
+> 证据根 `D:\Code\_trae-evidence\33b\`（⛔ 未覆盖 `33a`）｜ 复跑：`node harness/scripts/run-33b-remote-approval.mjs <arm>`（退出码 `0/1/2/124`）
+> 臂：`main` · `lateabort` · `answertimeout` · `noanswerer` · `nohandler` · `closestdin` · `killpeer`（12+9+9+7+8+11+10 = 66 条全成立）
+
+### §1 J1 · 通路可行性：选了**路 A** ／ 为什么 ／ 实测
+
+**选了路 A**：profile 补丁层把官方 `sdk-jsonrpc-server` 行 `disabled: true`，`insert` 本包 `sdk-jsonrpc-relay`。
+
+为什么（四条，按权重）：
+1. 官方 transport 造在 `apply()` 的**闭包内**、全文无任何 `ctx.provide` ⇒ 经 ctx 拿不到（`dsh-sdk-jsonrpc-server/lib/index.js:268`）—— 这是 §3.6 那条「待查」的答案；
+2. 官方 `Config` 只认 `maxTokensAsSuccess` ⇒ **不能靠 config 给 transport 开后门**；
+3. `HarnessSdkJsonRpcServer` 是**公开导出的类**（`:296`）⇒ relay 可以「照抄官方那 30 行 apply ＋ 只多一行 `ctx.provide('sdkTransport', transport)`」——**偏离面最小且可逐行审计**；
+4. 路 B（另开一条边）要另起子进程/socket，超出「最小可验证」，且引入新的失败面与新的收尾问题。
+
+**实测证据（原文）**。`--dump-config`（`exit=0`，12746 B，物证 `main/cordis.merged-config.txt`）：
+
+```yaml
+# == @deepseek-ai/dsh-sdk-app, patched by @larryagent/plugin-sdk-relay
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
+  inject:
+    - sdkAppStartup
+    - loader
+  config:
+    maxTokensAsSuccess: !!js >-
+      process.env.DSH_MAX_TOKENS_AS_SUCCESS === undefined ? true :
+      JSON.parse(process.env.DSH_MAX_TOKENS_AS_SUCCESS)
+  disabled: true
+# == @larryagent/plugin-sdk-relay
+- id: sdk-jsonrpc-relay
+  name: '@larryagent/plugin-sdk-relay'
+  inject:
+    - sdkAppStartup
+    - loader
+```
+（中继行原文另见同文件；`main/relay.log` 的 activate 里 `"transportStarted":true`）
+
+**patch 层改动本身（§6-1 要的那份 diff）**。中继包自带的 bundle 层 `harness/packages/plugin-sdk-relay/cordis.patch.yml`（新文件，见 `git status` 的 `??`）：
+
+```yaml
+- id: sdk-jsonrpc-server
+  disabled: true
+
+- insert:
+    - id: sdk-jsonrpc-relay
+      name: '@larryagent/plugin-sdk-relay'
+      inject: [sdkAppStartup, loader]
+      config:
+        maxTokensAsSuccess: !!js "process.env.DSH_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.DSH_MAX_TOKENS_AS_SUCCESS)"
+```
+device 侧只再追加一层 `- id: <行> ＋ config:` 覆盖（打点路径等），原文存 `33b/<arm>/cordis.patch.yml.after.txt`。
+
+两条与 WB §5 实测的对齐（可直接引用）：
+- ✅ 用上了 WB 的**验靶通道**：**7 臂 `cordis.merged-config.txt` 里 `not found` 行数全为 0**（⇒ 没有一个 patch 条目落空），且官方行确实被 `disabled: true` 命中（来源注释追记 `, patched by @larryagent/plugin-sdk-relay`）。同时**没只凭退出码**判成败。
+- ⚠️ WB 实测④「**insert 的新行一律落在条目列表末尾**（控制不了位置）」正是本块必须重排 `dsh.profile.bundles` 的原因（3.3-a 的答者要在 apply 时读到注入的 `approvalAnswerer`）—— 位置控不了，就**控层序**。
+
+通路**真走通**（`closestdin/peer.log` 原文）：`initialize` ⇒ `{"serverInfo":{"name":"deepseek-harness-sdk-runtime","version":"0.0.1"}}`；`session/prompt` ⇒ `messageId`。⇒「dsh 进程内的插件，能把一条 JSON-RPC 请求发到对端进程」**成立**。
+
+**代价与维护影响（须明写）**：
+- 偏离官方 profile 组合（禁用了官方 server 行）；官方 `sdk-jsonrpc-server` 之后的修复/新方法**不会自动进入本 profile**；每次升 dsh 都要重新比对官方那 30 行 apply 与本包是否漂移。
+- ⭐ 顺带查出一件**比路 A 本身更要紧**的事：`dsh plugin --profile sdk add <目录>` 装进去的是**符号链接**（实测 `profiles/sdk/node_modules/@larryagent/plugin-sdk-relay`：`LinkType=SymbolicLink` → `harness/packages/plugin-sdk-relay`）⇒ **插件的 `import` 在 harness 工作区解析，不在 profile 树里**。3.1/3.3-a 的包「零外部 import」正好绕过了这件事，所以此前没暴露；本块第一次需要 import `@deepseek-ai/*`，于是踩到（见 §8 自曝①）。
+- **配置等价性**：`maxTokensAsSuccess` 的 `!!js` 表达式、行 `inject: [sdkAppStartup, loader]`、模块 `inject` 导出 `['agents']` —— 三项**逐字照抄**官方。
+
+### §2 J2 · 跨进程等待（端到端往返真发生；两侧各自留痕）
+
+臂 `main`（cases：`approve` / `reject` / `timeout`，probe `timeoutMs=8000`）。
+
+| 判据 | 期望 | 实测 | 物证 ／ 原文 |
+|---|---|---|---|
+| ① 请求真离开 dsh 进程 | dsh 侧有出站打点 | approve 1 次、reject 1 次 | `33b/main/remote-answerer.marker.json`：`{"event":"remote-send","requestId":"remote-1",…,"reason":"case=approve"}` |
+| ② 对端进程真收到 | 对端**自己的**日志里有 | 收到 approve 1、reject 1 | `33b/main/peer.log`：`{"event":"peer-request","case":"approve","requestId":"remote-1",…,"toolName":"approval_probe","agentId":"session-33b-q0nx0h9i"}`（与 dsh 侧打点**相互独立**） |
+| ③ 答案回传后**批准生效** | 被保护动作发生 | `probe-executed=true`；审计 `["allowed-once"]` | `33b/main/probe.marker.json` ＋ `33b/main/audit.json` |
+| ④ 答案回传后**拒绝生效** | 被保护动作被拦 | `probe-skipped outcome="rejected"`；审计 `["rejected"]` | 同上 |
+| ⑤ 负向：对端**收到但不回** | 不得静默放行 | 对端收到 1、`probe-executed=false`、审计 `["cancelled"]` | `33b/main/peer.log` ＋ `audit.json` |
+
+### §3 J3 · 超时收尾（两路分清）
+
+| 路 | 机制 | 臂 ／ 配置 | 实测落哪个词汇 | 原文 |
+|---|---|---|---|---|
+| **(a) 请求侧 signal** | `req.signal` 中止 ⇒ `decide()` 里赛跑，abort 先到 | `main`：`answerTimeoutMs=0`（答者侧**不设表**）、probe `timeoutMs=8000` | **`cancelled`** | `audit.json`：`{"type":"approval/decided","outcome":"cancelled","reason":null}`（`asked` 行 `reason="case=timeout"`）＋ `remote-answerer.log`：`{"event":"remote-aborted","via":"request-signal","pendingAfter":0,"outcomeByService":"cancelled"}` |
+| **(b) 答者侧自建超时** | 官方答者侧**不存在**超时计时器 ⇒ 必须自己实现 | `answertimeout`：`answerTimeoutMs=3000`、probe `timeoutMs=30000`、对端**一直不回** | **`unavailable`**（⛔ 不是 `cancelled`） | `remote-answerer.log`：`{"event":"remote-timeout","via":"answerer-side-timer","answerTimeoutMs":3000,"outcomeByService":"unavailable"}`；`audit.json`：`outcome=["unavailable"]`；且该臂 `remote-aborted` **0 行**（⇒ 请求侧 30 s 表没到点） |
+
+### §4 J4 · 对端消失（**两种形态都跑了**）
+
+**(主形态) 终止传输** —— 臂 `closestdin`：对端收到请求后**不答**，随即 `end()` dsh 的 stdin（本进程不死）。
+
+| 判据 | 实测 ／ 原文 | 物证 |
+|---|---|---|
+| ① 对端收到后不答、随即终止传输 | `peer-request` 1 行、`peer-closed-stdin` 1 行、`peer-answer` **0** 行 | `33b/closestdin/peer.log` |
+| ② 输入流结束**那一刻仍有未结清的出站请求** | `{"event":"input-end","pendingAtEnd":1}` | `33b/closestdin/relay.log`（中继**同步**观测点，注册早于 transport 自己的 `onInputEnd`） |
+| ③ 那条请求**被 reject**（不是超时兜底、不是对端回错） | `{"code":null,"error":"JSON-RPC input closed","pendingAfter":0,"outcomeByService":"unavailable"}` | `33b/closestdin/remote-answerer.log` |
+| ④ `transport.close()` 在收工时走到 | `{"event":"transport-close","pendingBeforeClose":0,"pendingAfterClose":0}`（条目已在 ② 那一刻被清掉） | `33b/closestdin/relay.log` |
+| ⑤ 请求确实发出去过（两侧） | dsh 侧 1 行、对端原始帧登记 1 条 | `remote-answerer.log` ＋ `peer-wire.jsonl` |
+| ⑥ fail-closed | 探针自报 `probe-skip outcome="unavailable"`、`probe-executed=false` | `33b/closestdin/probe.log` |
+
+**(第二形态) 进程级 kill** —— 臂 `killpeer`：runner 在对端刚收到请求时 `kill` 掉对端进程。5 条判据成立（① 进程确被杀 ② 没作答 ③ 请求确已发出 ④ `probe-executed=0` ⑤ 会话日志停在 `tool/call`、`tool/result` **0** 行）。⚠️ 但这一形态**拿不到插件层的 reject 打点**（见 §9 诚实边界②）。
+
+### §5 J5 · 取消传播（臂 `lateabort`，**只发一条**探针调用 ⇒ pending 数无歧义）
+
+时序（`33b/lateabort/remote-answerer.log` ＋ `peer.log` 原文）：
+
+```
+07:44:23.492 remote-send   requestId=remote-1  pendingBefore=0   reason="case=lateabort"
+07:44:31.504 remote-aborted requestId=remote-1 via=request-signal pendingAfter=0 outcomeByService="cancelled"
+07:44:32.495 peer-late-answer-sent jsonrpcId=req_9be976a3dcd14d56b72a000b03a61996 result="allowed-once"   ← 对端补发的"迟到回答"
+07:44:32.511 / 34.510 / 36.511 / 39.518  remote-pending-sample pendingSize=0 ×4（+1s/+3s/+5s/+8s）
+```
+
+| 判据 | 期望 | 实测 |
+|---|---|---|
+| ① 出站请求被 abort | pending 条目被移除 | `send.pendingBefore=0 → aborted.pendingAfter=0`（同 requestId） |
+| ② 无泄漏 | 撤回后连续采样恒 0 | 4 次采样全 0 |
+| ③ 迟到回答被丢弃 | 该帧到达**之后**的采样仍为 0 | 迟到帧 @32.495 ⇒ 其后的 3 次采样（+3s/+5s/+8s）全 0 ⇒ 该帧没有被留成任何待处理状态 |
+| ④ 不得改变结果 | 仍是 `cancelled`、动作未发生 | 审计 `["cancelled"]`、`probe-executed=false` |
+
+依据（原文）：`transport.d.ts:80-82`「aborting removes the pending entry (**no state is retained for a response that may never come**)」。
+
+### §6 J6 · 负向对照（两条都做了）
+
+| 对照 | 臂 | 实测 ／ 原文 |
+|---|---|---|
+| ① 不装远端答者 | `noanswerer`（只装 中继 ＋ 探针） | 审计 `["unavailable"]`、`probe-executed=0`、`remote-send` **0 行**；3.3-a 答者与远端答者打点均 **0 行** |
+| ② 对端回 `-32601` | `nohandler`（对端**故意不装** `onRequest`） | 对端写回的**原始帧**：`{"jsonrpc":"2.0","id":"req_166e580fb12640a8b24e88c928da2f20","error":{"code":-32601,"message":"method not found: approval/request"}}`；dsh 侧 `remote-error code=-32601` ⇒ 审计 `["unavailable"]`、`probe-executed=0` |
+
+### §7 交付物
+
+| 件 | 路径 | 说明 |
+|---|---|---|
+| (a) B 段中继 | `harness/packages/plugin-sdk-relay/`（`src/index.ts` ＋ `cordis.patch.yml`） | 照抄官方 apply ＋ `ctx.provide('sdkTransport',…)` ＋ J1/J4 的同步观测点 |
+| (b) 远端答者 | `harness/packages/plugin-approval-remote-answerer/` | `ctx.provide('approvalAnswerer', remoteImpl)`；⛔ **未改** 3.3-a 的包 |
+| (c) 薄客户端 ＋ stub 对端 | `harness/scripts/33b-thin-client.mjs` | 自己 spawn ＋ `new JsonRpcLineTransport(child.stdout, child.stdin)` ＋ 自己装 `onRequest`；⛔ 未用 `HarnessClient`/`DeepSeekHarness` |
+| (d) 一键复跑 | `harness/scripts/run-33b-remote-approval.mjs`（7 臂） | 证据另指 `33b`，⛔ 未动 `33a` |
+| (e) 逐条证据 | `D:\Code\_trae-evidence\33b\<arm>\`（每臂 31–37 件 ＋ `sessionlogs/`） | `summary.json` 内含 66 条判据与 `cases` 明细 |
+
+### §8 自曝（跑歪 ／ 覆盖 ／ 口径错 ／ 改了什么树）
+
+1. **首跑 boot 直接失败**（不是判据失败）：`ERR_MODULE_NOT_FOUND: Cannot find package '@deepseek-ai/dsh-sdk-jsonrpc-server'`。成因 = 上面那条「装进去的是符号链接」⇒ 插件从 `harness/packages/plugin-sdk-relay/lib/` 解析。**修法**：按 §2 先例 `pnpm add @deepseek-ai/dsh-sdk-jsonrpc-server@0.1.5-rc.2`（见 §8 第 5 条）。**首跑实物留档** `33b/_attempt1-jsonrpc-resolution/`（18 件），未删。
+2. **`approvalAnswerer` 第一次没接上**（`injectedAnswerer: false`）。查因（本块实测，不是推测）：cordis `ctx.provide` 记的 `impl.fiber` 是**调用方自己的 fiber**，而 3.3-a 的 `probe()` 走的 `ctx.get(name)` 带 `strict=true` ⇒ `impl.fiber.state !== 2` 时**直接返回 undefined**；**插件自己的 fiber 在 `apply` 期间还不是 ACTIVE**（自检 `selfVisibleAtApply=false`、150 ms 后同一自检 `true`；而更晚 apply 的中继读它却 `true`）。**修法** = 把 `provide` 挂在**根 ctx**（根 fiber 恒为 ACTIVE）。⚠️ 这条若不是先做自检，会被误判成「顺序没排对」。
+3. **装置判据自己写错 3 处（首跑暴露，全部已修）**：
+   ① `approval/decided` 行**不带 `reason`**（只有 `asked` 行带）⇒ 按 reason 直接过滤 decided 恒为空 ⇒ 改成 `asked → id → decided.outcome` 回填；
+   ② J5 的 pending 绝对数**不可解释**：探针 `isConcurrencySafe: () => true` ⇒ 模型可能**并发**发多个工具调用（首跑实测采到 `pendingBefore=2`）⇒ **把 `lateabort` 拆成单独一臂、只发一条**；
+   ③ `lateMs` 原本远晚于撤回（12 s vs 8 s）⇒ 迟到帧落在 dsh 收工之后、采样窗口覆盖不到（首跑 +5 s 之后的采样全丢）⇒ 改成 9 s ＋ 本臂 graceful 收工窗口拉到 8 s。
+4. **装置自身两处 bug**：① 对端「不装 handler」时那条 `-32601` 是 **transport 自己写的**，手写 `wire()` 抓不到 ⇒ 改成包一层 `child.stdin.write`；② dsh 已退出后对端再发 `transport.request('shutdown')` 会**永久挂起**（首跑把 closestdin 臂拖到看门狗）⇒ 改成 `childExited` 时跳过 ＋ 带上 3 s 放弃信号。
+5. **改了依赖树（须记账）**：`harness/package.json` **+2 行**（`@deepseek-ai/dsh-sdk-protocol@0.1.5-rc.2` ＋ `@deepseek-ai/dsh-sdk-jsonrpc-server@0.1.5-rc.2`）；`harness/pnpm-lock.yaml` `541572 B / F285705752C2…` → `542239 B / 96ED8EB0AC28…`（**+667 B**）；不变量复核：`specifier: '*'` **0** 次、`0.0.1-rc.1` **0** 次。⇒ 这是对「产品不该有的耦合」的账面记账，不是随手加依赖（见 §1 代价条）。
+6. **改了 profile 树（装置动作，两处，都留了痕）**：① 重排临时 home 副本的 `dsh.profile.bundles`（唯一目的 = 让远端答者的行**先于** 3.3-a 答者的行 apply），前后数组存 `bundles.json`；② 追加「装置覆盖层」到该副本的 `cordis.patch.yml`（原文存 `cordis.patch.yml.after.txt`）。**源 profile 未动**；临时 home 均为 `mkdtemp` 产物并保留供复核。
+7. **口径错一处（自我订正）**：J4 起初按派发稿字面用「kill 对端进程」取证，结果 `remote-error` / `pendingAtEnd` / `transport-close` **一个都没有** ⇒ 查明是「对端一死，dsh 的**进程寿命**被 `exitOnStdinEnd` 一并带走」⇒ 补出「终止**传输**」这一形态作为 J4 主形态（派发稿原文本来就写着「进程**/传输**」）。两臂都报，不藏。
+
+### §9 诚实边界（**没**验的东西）
+
+1. **`pnpm add` 补的是「开发检出树里的解析」**：relay 能 import 到 `@deepseek-ai/*` 靠的是 harness 工作区 ＋ 符号链接，**不是**「插件被实体复制进 profile 后的解析」。若将来改成实体复制（3.7.2 的做法），要重新验一遍。未在本块覆盖。
+2. **`killpeer`（进程级）这一形态拿不到插件层 reject 打点**：会话日志的异步持久化与插件 microtask 都跑不过 `process.exit`（实测该臂会话日志末行只到 `tool/call`、`approval/asked`/`decided` 均未落盘）。所以本臂只断言「确已发出 ＋ 确未作答 ＋ 动作 0 次 ＋ 会话停在该次 tool/call」，**不声称**拿到了「pending 被 reject」的插件层证据 —— 那条由 `closestdin` 形态给出。
+3. **J5-③「迟到回答被丢弃」的观测是「无残留状态 ＋ 结果未变」**，不是帧级「观察到 dsh 把它扔了」：`transport.pending` 是唯一状态，采样恒 0 ＋ 审计仍 `cancelled` ＋ 动作未发生。帧级丢弃动作在 transport 内部，无对外钩子。
+4. **stub 对端不是真人**：`approval/request` 这个 RPC 方法名是**本块临时约定**（`cordis.patch.yml` 里可配），3.8 定稿后可能改名；对端策略表（approve/reject/timeout/lateabort/killpeer/closestdin）是**装置口令**，不是产品语义。
+5. **只跑了本机 Windows**：`node v24.14.1`（`D:\App\node\node.exe`）。POSIX 分支未验。
+6. **`answertimeout` 的 3 s 与 `main` 的 8 s 是装置取值**（要在一轮模型回合内把两条表分先后），**不是**产品建议值；`TODO.md` 30 s 级的建议值仍由产品侧定。
+7. **`remote-self-check-later` 等自检字段**是诊断用，**不进判据**。
+
+### §10 通道
+
+- 全部结论取自 **PowerShell / system 通道，`node v24.14.1`**（`D:\App\node\node.exe`）—— ⛔ 不外推到 Bash 通道（那边 node 是 22.x）。
+- Key：只从 `backend/config.yaml` 既有通道注入**子进程 env**，只判存在性；⛔ 未打印、未落盘、未进本回报、未进任何命令行文本。
+- `git status`（收尾复核）：`M harness/package.json` ／ `M harness/pnpm-lock.yaml` ／ `?? harness/packages/plugin-sdk-relay/` ／ `?? harness/packages/plugin-approval-remote-answerer/` ／ `?? harness/scripts/33b-thin-client.mjs` ／ `?? harness/scripts/run-33b-remote-approval.mjs`；证据目录在仓外（`D:\Code\_trae-evidence\33b`），不入库。
 
 ---

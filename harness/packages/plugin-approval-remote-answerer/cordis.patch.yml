@@ -1,0 +1,21 @@
+# plugin-approval-remote-answerer 的 bundle 层（DSH-3.3-b · 装置用）。
+#
+# 本包**不自己**注册 `approval/request` 监听器 —— 那是 `plugin-approval-answerer`（3.3-a）的活。
+# 它只做一件事：`ctx.provide('approvalAnswerer', remoteImpl)`，把 3.3-a 留的**替换口**接上
+# （`packages/plugin-approval-answerer/src/index.ts:190-192`：
+#   `const injected = probe<Answerer>(ctx, 'approvalAnswerer')`
+#   `const source = injected ?? createLocalPolicyAnswerer(...)`）。
+#
+# ⚠️ 顺序敏感：3.3-a 的 `probe()` 在 **apply 时**取值 ⇒ 本插件的行必须**排在
+#    `plugin-approval-answerer` 的行之前**。装置 runner 会显式重排 `dsh.profile.bundles`
+#    （见 `harness/scripts/run-33b-remote-approval.mjs`），并用 3.3-a 打点里的
+#    `injectedAnswerer` 字段当**守卫判据**（为 false 即本臂无效）。
+#
+# `method` 是**本块临时约定**的 RPC 方法名（3.8 定稿后可能改名）。
+# `answerTimeoutMs` = 答者侧**自建**超时（官方答者侧不存在超时计时器）；0 = 关闭。
+- insert:
+    - id: plugin-approval-remote-answerer
+      name: '@larryagent/plugin-approval-remote-answerer'
+      config:
+        method: approval/request
+        answerTimeoutMs: 0

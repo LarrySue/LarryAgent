@@ -14,6 +14,12 @@ importers:
       '@deepseek-ai/dsh-sdk-client':
         specifier: 0.1.5-rc.2
         version: 0.1.5-rc.2(3bcb320e5f5aa30bb1adf55f9c14f2f6)
+      '@deepseek-ai/dsh-sdk-jsonrpc-server':
+        specifier: 0.1.5-rc.2
+        version: 0.1.5-rc.2(88fad41d5fa4924941ddd2d02cb82654)
+      '@deepseek-ai/dsh-sdk-protocol':
+        specifier: 0.1.5-rc.2
+        version: 0.1.5-rc.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-llm@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2))(@deepseek-ai/dsh-session@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-scope@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2)(@deepseek-ai/dsh-invariants@0.1.5-rc.2(@deepseek-ai/cordis@4.0.2))))(@deepseek-ai/dsh-subagent@0.1.5-rc.2(6f5ed7dfc39bd5bb48d8380176415204))
       zod:
         specifier: ^4.5.4
         version: 4.6.5
@@ -33,6 +39,8 @@ importers:
   packages/plugin-approval-answerer: {}
 
   packages/plugin-approval-probe: {}
+
+  packages/plugin-approval-remote-answerer: {}
 
   packages/plugin-probe:
     dependencies:
@@ -61,6 +69,8 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+
+  packages/plugin-sdk-relay: {}
 
   packages/plugin-storage-probe: {}
 
