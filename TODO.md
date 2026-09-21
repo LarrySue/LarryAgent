@@ -344,6 +344,7 @@
 - 🔎 **复验判定全文**原载交流区 `exchange/log-workbuddy.md`《DSH-3.7.4 ／ DSH-3.7.4-T · WB 复验判定》（**该段已随交流区清理，不可再查**；回溯 `git show 5a1763d:exchange/log-workbuddy.md`）。**本段以下的判据与边界仍是权威落点**。
 - 📮 **派发稿**原载交流区 `exchange/log-trae.md`（**已随交流区清理**；回溯 `git show 5a1763d:exchange/log-trae.md`）。派发前 WB 已复核场地**零漂移**：两处 `.modules.yaml` 仍为**绝对** `virtualStoreDir` ／ `harness/.s0-evidence/` 仍**不存在** ／ 行号锚（`:20`/`:92`/`:238`/`:246`/`:327-377`）全对。
 - 🗂 **证据登记（仓外）**：Trae `D:\Code\_trae-evidence\374\` ／ Claude `D:\Code\_claude-evidence\374t\` ／ 装置自产 `D:\Code\LarryAgent\.s0-evidence\`（14 件）。
+- 🗂 **证据登记（仓外 · T·P）**：Claude `D:\Code\_claude-evidence\374t-p\`（**11 件**，含 CVM 侧原件回传）／ **WB 第三方复跑** `D:\Code\_wb-evidence\374t-p\`（README ＋ 两通道 `t1-results.json` ＋ icacls 原文）。
 - ✅ **同业独立测试件 `DSH-3.7.4-T` 已交付并复验（Claude，2026-09-20）⇒ 见本段之后**（两段式 `T-1` ／ `T-2` **均已跑完**）。
 - **要回答的一件事**：本机 `harness/tests/s0-e2e.test.ts` **为什么跑不起来**，以及**为什么同一装置在 CVM 是绿的**。
 - **现象（可复现 ／ WB 2026-09-17）**：`installPlugin()`（`:92`；`:246` **无条件调用**）在 `cpSync`（`:238`）出的临时 home 副本 profile 上跑 `dsh plugin --profile sdk add …` ⇒ pnpm 报 `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`，**在解析依赖之前退出** ⇒ `base` ／ `wrong-key` ／ `no-session-dir` 三变体落红（装置自身负向锚正常，失败**只在插件激活层**）。
