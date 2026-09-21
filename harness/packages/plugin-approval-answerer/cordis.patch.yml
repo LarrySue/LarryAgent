@@ -1,0 +1,14 @@
+# plugin-approval-answerer 的 bundle 层：`dsh plugin --profile sdk add <本包目录>` 后由 dsh 加载。
+# ⚠️ patch 是**整行覆盖**语义（后层按 id 覆盖前层，覆盖整行 config 而非深合并）⇒
+#    部署方可在 profile 自身的 `cordis.patch.yml` 里用 `- id: plugin-approval-answerer` + `config:` 覆盖本行。
+# ⚠️ 本插件**零硬依赖**（`inject: []`）：`approval` 服务缺失时它仍会激活，只记 `degraded` 打点、不注册答者。
+# `scope: first` = 答者**限定到首个被创建的 agent**（在该 agent 自己的 ctx 上注册 ⇒ 只收它的请求）；
+# 置 `all` 则退化为全局答者（负向对照用）。`policy` 缺省 `approve`；
+# 置 `from-request` 可由请求 `reason` 里的 `case=` 选择行为（装置用）。
+# `activateMarker` 缺省落在 `<DSH_HOME>/plugin-approval-answerer.log`；置 false 可关掉打点。
+- insert:
+    - id: plugin-approval-answerer
+      name: '@larryagent/plugin-approval-answerer'
+      config:
+        scope: first
+        policy: approve

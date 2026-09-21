@@ -9,10 +9,11 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.3-a** | Trae | 本机（Windows） | 🚀 **已派发 · 待起跑** —— S1 审批接入第一段（本地策略答者）｜**派发稿见下方** | 2026-09-20 |
+| **DSH-3.3-a** | Trae | 本机（Windows） | ✅ **已交回（2026-09-20）· 待复核** | 2026-09-20 |
 | **DSH-3.7.4** | Trae | 本机（Windows） | ✅ **已交回（2026-09-20）· 复核已完成**（WB 2026-09-20：**修复成立 ＋ 成因链成立 ＋ 判据未放宽**，三项均**可采信**） | 2026-09-20 |
 
 - 已完成并复验（各段已按交流区规矩清理）：3.0 ✅ ／ 3.1 ✅ ／ 3.2 ✅ ／ 3.7.1 ✅ ／ 3.7.2 ✅ ／ 3.7.3 ✅ ／ **3.2.1 ✅（WB 复核：结论认可，另订正 3 处）** ／ **3.7.4 ✅（WB 复核：修复成立 ＋ 成因链成立 ＋ 判据未放宽，三项全可采信）**。
+- **3.3-a 一句话结论**：**`ctx.approval` 这条 seam 接得上** —— 答者能挂上（四类打点实测）／**scope filter 有效**（同机两个 agent：答者只收被限定那个的请求，另一个的请求落 `unavailable`）／**fail-closed 成立**（不装答者 ⇒ 6/6 `unavailable`、被保护动作 0 次）；⚠️ 本块**单独不得声称"审批语义验成立"**（超时／断链是同进程替身，真验在 3.3-b）。
 - **3.7.4 一句话结论**：**跑起来了 ＋ 修好了** —— 本机五变体 **5/5 全绿**（两次独立复跑，runner `exit=0`）；成因 = **pnpm 自身的平台分支**（`.modules.yaml` 的 `virtualStoreDir` 在 Windows 必写绝对 / POSIX 写相对）**＋ 副本 `cp -r` 继承了源树的绝对元数据**（不止 `virtualStoreDir`，`storeDir` 同病）。
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
@@ -25,6 +26,136 @@
   7. **自加判据的取证方法须先自证** —— 探针 API 的语义坑（如 `CreateSemaphoreW` = "创建或打开"会**自造对象**）会产生**恒定假读数**，看起来完全自洽。
   8. **工具输出的"原文"不得手工改写 ／ 意译** —— ⛔ **本条后半句已作废（2026-09-20 WB 复验实测推翻）**：原文写「本地化文字被英文化 ⇒ 证据链失去可采信性（原文本该是 GBK `成功: …`，**出现英文即非本机原始产物**）」—— **「出现英文即非本机产物」不成立**：本机实测 `icacls` 92 次采样中 **2 次英文**；PS 5.1 在**带 DSH 编码前导码**的形态下 **11/12 出英文**（而系统／用户 UI 语言实测是 zh-CN）。⇒ **保留前半**（⛔ 不得人工改写 ／ 意译），**撤掉后半的推论**。**替代纪律**：判「原文」只认**字节级**核对（按 ACP 936 解 GBK，或直接比原始字节），并**注明该段取自哪条通道**；**语言 ／ 编码不得作"证据是否被后处理"的判据**。详见 `docs/local-env.md` §12.6。
   9. **文件不是证据，运行自报的标识才是**（.pnpm 截断名 ／ 会话 id ／ pid 一律以自报为准）。
+
+---
+
+## ✅ DSH-3.3-a 回报 · scope-filtered answerer 插件（S1 审批接入 · 第一段）
+
+> 场地：**本机 Windows**（⛔ 未碰 CVM）｜通道：`D:\App\node\node.exe` = **v24.14.1**（system/PowerShell 通道）｜`pnpm.cmd` = 11.7.0｜Key：**只经环境变量注入**（`backend/config.yaml` 首条；值不打印／不落盘）
+> 证据：`D:\Code\_trae-evidence\33a\{main,scopeoff,noanswerer}\`（**含原始会话日志副本** `sessionlogs/`）
+
+### 0 · 结论先行（派发稿要求的**三段分开**）
+
+1. **装载与注册：成。** 两个包 `dsh plugin add` 均 `exit=0 ＋ pnpm Done`；boot 期四类打点**实测齐全**（`activate` ／ `inject-requested` ／ `inject-fired` ／ `answerer-registered`）；注册走 `ctx.inject(['approval'],…)`，**没有**用 `ctx.get` 当注册前置。
+2. **scope filter：成（两组真对照）。** 同一 runtime 里 **两个 agent**（`run()` 不带 sessionId ⇒ 每次新会话，`dsh-sdk-client/lib/index.js:686-699`）：答者限定到首个 agent ⇒ **`answerer-request` 只出现该 agent**；第二个 agent **确实发过请求**（探针入口打点有行）但**答者未收到**，其请求在审计里落 **`unavailable`** ⇒ 非空转。
+3. **fail-closed：成。** 不装答者 ⇒ 6/6 请求 `outcome=unavailable`、`probe-executed` **0 行**（被保护动作一次都没跑）；答者抛错／返回不合词汇 ⇒ 同样 `unavailable`。
+
+⚠️ **本块单独不得声称"审批语义验成立"**（派发稿 J8 要求显式写）：本块只证**机制接入**（挂得上／路由得到／能决定结果／失败不放行）；「超时」「渠道断裂」在 3.3-a 是**同进程替身路径**（本地答者与宿主同进程，无"渠道"可断），那两条的真验在 `3.3-b`。
+
+### 1 · 交付物与一条命令复跑
+
+| 件 | 路径 |
+|---|---|
+| 产品插件（**本地策略答者**） | [plugin-approval-answerer](file:///d:/Code/LarryAgent/harness/packages/plugin-approval-answerer/src/index.ts)（`src/index.ts` ＋ `cordis.patch.yml` ＋ `test/smoke.mjs`） |
+| 装置用探针（**消费者替身**：`approval_probe` 工具） | [plugin-approval-probe](file:///d:/Code/LarryAgent/harness/packages/plugin-approval-probe/src/index.ts) |
+| e2e 装置（三臂） | [run-33a-answerer-e2e.mjs](file:///d:/Code/LarryAgent/harness/scripts/run-33a-answerer-e2e.mjs) |
+
+```powershell
+# 三臂各跑一次（arm=main / scopeoff / noanswerer）；退出码 0=PASS 1=FAIL 2=前置缺失 124=看门狗
+cd harness ; node scripts/run-33a-answerer-e2e.mjs main
+```
+**末次实跑（第二次独立复跑）**：`main` 判据成立（9 条）／`noanswerer` 判据成立（5 条）／`scopeoff` 判据成立（8 条）。
+**假 ctx 单测**：`node packages/plugin-approval-answerer/test/smoke.mjs` ⇒ `smoke ok`（8 组断言：声明面／容忍 `config===undefined`／注册接线／五条用例的判定源／`scope=all` 全局注册／**J5 注入替换**／降级不抛）。
+
+### 2 · 机制取证（先读实物，再动手）
+
+| 事实 | 出处（本机实物） |
+|---|---|
+| 答者 = `approval/request` **waterfall 监听器**；返回结果即认领，否则 `next()` 委托 | `dsh-user-approval/README.zh.md:32`＋`lib/types/types.d.ts:76`（`'approval/request'(this: Scoped<Agent>, req, next)`） |
+| 分发= **按 agent 作用域**：`ctx.waterfall(scopeTarget(req.agent, req.agent), 'approval/request', req, () => Promise.resolve('unavailable'))` | `dsh-user-approval/lib/index.js:179` |
+| **放行规则**：无标签监听器放行；有标签监听器仅当标签 = 分发键**或其祖先**；`{global:true}` 绕过筛选 | `dsh-scope/README.zh.md`〈事件筛选〉（裸仓 `packages/core/scope/`） |
+| ⇒ **scope filter 的实现方式 = 把监听器注册在 `agent.ctx` 上**（该 ctx 带此 agent 的作用域标签） | `dsh-scope/README.zh.md`〈创建作用域〉"通过 `agent.ctx` 注册的工具只对该 agent 可见" |
+| 结果词汇 = `allowed-once` ／ `rejected` ／ `cancelled`（中止撤回）／ `unavailable`（答者缺失或抛错）；`never` 策略在 waterfall **之前**执行 | `lib/index.js:30-35` / `:178` |
+| 审计 = `approval/asked` ＋ `approval/decided`（**只写日志、不进模型上下文**） | `lib/index.js:135-145` ＋ `types.d.ts:37-51` |
+
+### 3 · J1 装载与注册（四类打点，**实测原文**）
+
+`.../33a/main/answerer.marker.json`（原文，逐字）：
+```json
+{"t":"2026-09-21T01:02:28.224Z","event":"activate","plugin":"plugin-approval-answerer","pid":13192,"dshHome":"D:\\Temp\\Sys\\larry-33a-DyWaHj","configWasUndefined":false,"scope":"first","scopeAgentId":null,"source":"local-policy:from-request","injectedAnswerer":false,"caps":{"approvalSeam":true}}
+{"t":"2026-09-21T01:02:28.225Z","event":"inject-requested","plugin":"plugin-approval-answerer","deps":["approval"]}
+{"t":"2026-09-21T01:02:28.242Z","event":"inject-fired","plugin":"plugin-approval-answerer","hasApproval":true}
+{"t":"2026-09-21T01:02:28.376Z","event":"answerer-registered","plugin":"plugin-approval-answerer","scope":"agent","via":"agent.ctx","agentId":"session-02a32a2626af43409ea9f4dae19e37bb","scopeFilter":"只收该 agent 的请求（dsh-scope 按注册标签放行）"}
+```
+＋ `plugin add` 原文：answerer `exit=0 pnpmDone=true` ／ probe `exit=0 pnpmDone=true`（`33a/main/install-*.txt`）。
+⛔ **未用 `--dump-config` 作证据**（它只组配置树、不激活插件）；⛔ **未用 `ctx.get` 当注册前置**。
+
+### 4 · J2 scope filter（两组真对照）
+
+| 组 | 观测（原文） | 判读 |
+|---|---|---|
+| ① **目标 agent 的请求 ⇒ 答者收到** | 注册=`agent/agent.ctx/session-02a32a26…`；`answerer-request` 里出现的 agentId 集合 = `["session-02a32a26…"]`；该请求审计 = `allowed-once` | ✅ 有行 ＋ 结果出自本答者 |
+| ② **非目标 agent 的请求 ⇒ 答者未收到** | 发过请求的 agent = `["session-02a32a26…","session-6f7d8288…"]`（**非空**）；答者收到的 agentId 集合**只有**前者；后者在审计里 = **`unavailable`** | ✅ 打点无行 ＋ 落最终应答者 |
+
+⇒ 两组**缺一不可**的两侧都拿到：**请求确实发生了**（否则 ② 是空转）＋ **答者确实没收到**。
+
+### 5 · J3 五条用例（每条：工具侧 ＋ seam 侧）
+
+装置在**同一次运行**里跑满五条（探针把 `case=<名>` 放进请求的 `reason`，本地答者按 `from-request` 解析）。`33a/main/J3-cases.json` ＋ `audit.json`：
+
+| 用例 | ① 工具侧（handler 入口打点） | ② seam 侧 `approval/decided`（封闭结果） | 与判据表期望 |
+|---|---|---|---|
+| **批准** | **`probe-executed`（有行）＋ `executed=true`** | `allowed-once` | ✅ 一致 |
+| **拒绝** | `probe-skipped`（无执行行） | `rejected` | ✅ 一致 |
+| **answerer 超时** | `probe-skipped`（无执行行；另有 `probe-abort`） | **`cancelled`** | ⚠️ **实测 ≠ 表里写的 `unavailable`**（见下） |
+| **answerer 抛错** | `probe-skipped` | `unavailable` | ✅ 一致（fail-closed） |
+| **渠道断裂（同进程替身）** | `probe-skipped` | `unavailable` | ✅ 一致（fail-closed） |
+
+⚠️ **订正（实测优先，派发稿也写明"以实测为准，报原文"）**：**超时条的封闭结果是 `cancelled`，不是 `unavailable`**。依据机制：`decide()` 让答者与请求 `signal` **赛跑**，`signal` 中止即结算 `'cancelled'`（`lib/index.js:181-191`）——本块"超时"由**请求方**（探针的 `AbortController`，30 s，即 `TODO.md` 3.3 段定死值）撤回 ⇒ 落在 `cancelled` 支。**Fail-closed 效果相同**（被保护动作 0 次），但**词汇不同** ⇒ 后续引用请以 `cancelled` 为准。
+（`approve` 行 `auditAsked=2` 是 **join 口径**所致 —— A 与 B 都用 `case=approve`；B 那条正是 J2-② 的证据，**不是**重复执行。）
+**⚠️ 后三条都留了可观测日志**：`answerer-pending`（超时）／`answerer-threw`（抛错）／`answerer-decision: maybe`（越词汇）⇒ **没有静默 fail-closed**（静默会制造假绿：看不出请求到没到）。
+
+### 6 · J4 日志可观测（取哪份日志的哪一行）
+
+- 文件 = **`<临时 home>/sessions/--D-Code-LarryAgent-harness--/session-<id>/session.v3.jsonl.zstd`**（多帧 zstd；本装置按 magic 切分逐帧解）；**原文副本已存进证据目录** `33a/main/sessionlogs/`（`.zstd` ＋ `.decoded.jsonl`）。
+- 行 = `{"type":"approval/asked",…,"data":{"id":"…","toolName":"approval_probe","callId":"call_00_…","reason":"case=<名>"}}` 与 `{"type":"approval/decided","data":{"id":"<同 id>","outcome":"…"}}` —— **成对**，`asked=6 ／ decided=6`（含两个 agent）。
+- 两条都**只在日志里**（`README.zh.md:56/86`：审计不进模型上下文）⇒ 这正是"观测点必须取 handler 入口打点 ＋ 审计日志"的理由。
+
+### 7 · J5 答者来源 =「可替换接口」
+
+- **接口形状**（`packages/plugin-approval-answerer/src/index.ts`）：`export interface Answerer { readonly source: string; decide(req): ApprovalOutcome | 'delegate' | Promise<…> }` —— 返回结果即作答，返回 `'delegate'` 即 `next()` 委托（与官方 waterfall 语义一一对应）。
+- **注入点**（同文件 `apply()`）：`const injected = probe<Answerer>(ctx, 'approvalAnswerer'); const source = injected ?? createLocalPolicyAnswerer(normalized, marker)`。
+- ⇒ **换成远端真人答者只需改一处**：**由另一个插件 `ctx.provide('approvalAnswerer', <实现>)`**（或本包 `config` 指向别的实现）—— **本包一行不改**；本地策略**没有**写死在答者内部（`createLocalPolicyAnswerer` 只是一个默认实现）。
+- **已验到哪一层**：假 ctx 单测 ⑥（注入后 `source` 变为注入实现、判定走注入实现）＋ `activate` 打点里 `injectedAnswerer:true` 可核。⚠️ **未验**：真 DSH 上 `ctx.provide` 的**就绪时序**（3.3-b 接远端时须补一次真 boot 注入验证）。
+
+### 8 · J6 负向对照（两组，都在装置里跑成臂）
+
+| 臂 | 破坏动作（原文机制） | 变红项 | 仍活项（双锚） |
+|---|---|---|---|
+| `noanswerer` | **不装答者插件**（只装探针） | 答者打点全 0；**6/6 请求 `unavailable`** | 探针侧全活：`tool-registered` 有行、`probe-request` 6 行、`asked=6/decided=6`、**`probe-executed=0`**（fail-closed 真的拦住了） |
+| `scopeoff` | 答者配置 `scope: all`（**关掉 scope filter** ⇒ 注册在根 ctx） | **J2-② 形态反转**：答者**也**收到了非目标 agent 的请求（收到集合 = 发过请求的集合，两个 agent 全在） | J1 四类打点仍全在、`answerer-registered.scope=global/via=root-ctx`、审计 `asked=6/decided=6` |
+
+### 9 · J7 原文不得后处理 ＋ 通道注明
+
+**本块证据取自三条通道，逐条注明**：
+1. **打点日志**（`answerer.log` ／ `probe.log` ／ `install-*.txt`）：由 **DSH 运行时的插件进程**写（node v24.14.1；`D:\App\node\node.exe`）。
+2. **会话日志**（审计/tool 帧）：由 **DSH 运行时**写；装置另存 `.zstd` 原件 ＋ 解码 `.jsonl`（解码=按 zstd magic 切帧，**未改任何字节内容**）。
+3. **runner 原文**（`*.run.txt`）：**PowerShell（system）通道**。
+
+全部**原样落盘、未改写／未意译**。⚠️ 按本稿 §1 纪律第 8 条（2026-09-20 订正版）：**判「原文」只认字节级核对；语言／编码不作"是否被后处理"的判据** —— 本报告**不据语言下任何结论**。
+证据清单（件数）：`main` 17 ＋ `sessionlogs` 12 ／ `noanswerer` 14 ／ `scopeoff` 17 ／ 顶层 3。
+
+### 10 · 未闭合（逐条列明）
+
+1. **"超时"条的词汇是 `cancelled`（≠ 判据表的 `unavailable`）** ⇒ 已按实测订正；但**"超时"的真语义**（跨进程／跨渠道、迟到的回答被丢弃）**不在本块**，属 3.3-b。
+2. **"渠道断裂"是本块的同进程替身**（答者返回不合词汇的值）——**真断裂未测**，属 3.3-b。
+3. **J5 的注入点在真 DSH 上未验**（只验了假 ctx 层与接口形状）。
+4. **答者只在 `agent/created` 之后注册** ⇒ "宿主先预热 agent、再热插答者"这一形态**未覆盖**（本块场景下 agent 恒晚于 boot）。
+5. **`scope=first` 用"创建顺序"选目标**；生产若要"限定到指定 agent"须用 `scopeAgentId`（**未在真链路上验**）。
+6. **J6① 的"不注册"用"不装插件"实现**（最干净），**未覆盖**"装了但注册失败"的形态。
+7. 本块**未做**：真模型下的**审批语义**断言（见 §0 边界）；也**未**把结论回填 `docs/`（承接留给 WB 的收口）。
+
+### 11 · 自曝
+
+1. ⭐ **装置自身判据缺陷 3 处（首跑暴露，全部已修 + 三臂重跑两遍）**：
+   ① `noanswerer` 臂沿用了"答者打点必须有行"的期望 ⇒ 把"故意不装答者"判成失败；② `agentB` 取自 `agent-created-seen`——该打点**只在 `scope=first`（监听 `agent/created`）时才有** ⇒ `scopeoff` 臂里恒为空，把**期望的红**（过滤失效）判成了装置故障；③ **同臂重复跑会叠加旧证据**（`.log` 是 append）⇒ `scopeoff` 第二次跑读到第一轮的 home 行、`main` 的"非目标 agent"混进历史会话 ⇒ 加"**先清本臂目录**"（与 3.7.4 那件陈旧件同类）。
+   **教训**：负向臂的判据必须写成"**期望的变红形态**"，且引用的观测必须**与"该臂改变了什么"无关**。
+2. **`plugin add` 前必须先删副本的 `.modules.yaml`**（3.7.4 的结论直接用上）：否则本机 1 s 即 `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`。装置里已写成显式一步，并注明出处。
+3. **动了 `harness/pnpm-lock.yaml`**（新包进 workspace 图：+79 B／4 行，`plugin-approval-answerer: {}` ＋ `plugin-approval-probe: {}`）—— 这是**新增 workspace 包的必要副作用**，不是顺手改动；同时复核了 3.7.3 的不变量**未被破坏**（`specifier: '*'` = 0、`0.0.1-rc.1` = 0）。
+4. **探针与产品分了两包**：`approval_probe` 工具是**装置用的消费者替身**（产品部署不该装），故单开 `plugin-approval-probe`；产品包不含任何装置代码。
+5. **清理**：本轮共产生 12 个临时 home（各 157 MB）⇒ **已全部删除**（证据已自足落盘：打点 JSON ＋ 审计 JSON ＋ 原始会话日志副本，不依赖 home 存活）。
+
+
 
 ---
 

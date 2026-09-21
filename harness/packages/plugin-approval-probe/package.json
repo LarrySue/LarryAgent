@@ -1,0 +1,29 @@
+{
+  "name": "@larryagent/plugin-approval-probe",
+  "version": "0.0.1",
+  "description": "DSH-3.3-a 装置用探针：注册一只 `approval_probe` 工具，作为 `ctx.approval` 的**消费者替身** —— 发起审批请求、按结果决定是否执行被保护动作（handler 入口打点），用于验证 S1 审批接人的三件事（scope filter / 日志可观测 / fail-closed）。零硬依赖。",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

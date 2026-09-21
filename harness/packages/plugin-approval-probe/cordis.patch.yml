@@ -1,0 +1,12 @@
+# plugin-approval-probe 的 bundle 层（**装置用探针**，产品部署不要装）。
+# 注册一只 `approval_probe` 工具：它是 `ctx.approval` 的**消费者替身** ——
+#   进 handler ⇒ 记 `probe-request`（工具侧入口打点）⇒ 调 `ctx.approval.request({agent, toolName, reason, signal})`
+#   ⇒ **仅当**结果为 `allowed-once` 才走被保护动作并记 `probe-executed`；否则记 `probe-skipped`。
+# 请求的 `reason` = `case=<名>`，供"本地策略答者"（`plugin-approval-answerer` 的 `policy: from-request`）
+# 在同一次运行里跑满五条用例（approve / reject / timeout / throw / malformed）。
+# `timeoutMs` 缺省 30000：到点由本工具 `AbortController.abort()` 撤回（服务侧 ⇒ `cancelled`）。
+- insert:
+    - id: plugin-approval-probe
+      name: '@larryagent/plugin-approval-probe'
+      config:
+        timeoutMs: 30000
