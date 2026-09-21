@@ -779,6 +779,20 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   - ② **结果词汇封闭且无 `allow-always`**：`allowed-once` ／ `rejected` ／ `cancelled` ／ `unavailable`（`lib/index.js:30-35`）。⚠️ **「超时」落 `cancelled`** —— `decide()` 把应答与 `req.signal` **赛跑**（`lib/index.js:181-191`），abort 先到即 `cancelled`；**答者侧不存在超时计时器**。
   - ③ **fail-closed 成立**：不装答者 ⇒ 6/6 请求 `unavailable`、被保护动作 **0 次**（双锚：探针侧 `probe-request` 仍 6 行、`tool-registered` 仍活）。
   - ⚠️ **本轮未验（留给 3.3-b）**：真 DSH 上 `ctx.provide` 的**就绪时序** ／ 跨进程真往返与取消传播。
+- ✅ **3.3-b 实测回填（WB 2026-09-21 复验，以物证为证；现场独立复跑复现）**：路 A **真跑通**，「② 的真风险」四条**全部有实测支撑** ——
+  - **做法**：按路 A 落地 = 自研 relay（`plugin-sdk-relay`）**禁掉官方 server 行**并 `ctx.provide('sdkTransport', transport)`；远端答者（`plugin-approval-remote-answerer`）接 3.3-a 的替换口 `approvalAnswerer`；薄客户端 ＋ stub 对端作装置。**7 臂 66/66**；WB 现场独立复跑 `main` 臂 **12/12** 复现（audit 序列完全一致、三份日志归一化后逐条一致）。
+  - ① **跨进程往返真发生**：dsh 侧 `remote-send` ↔ 对端 `peer-request`（**独立 pid**）；答案回传后决策生效（approve ⇒ 动作发生 ／ reject ⇒ 被拦）。
+  - ② **超时两路分清**（本块最易错处）：**请求侧** `req.signal` 中止 ⇒ `cancelled`（实测中止点 = 探针 `timeoutMs`，差 8.009 s）；**答者侧自建计时器**（官方无此物，须自做）⇒ **`unavailable`**（实测 3 002 ms 正合 3 000，且该臂请求侧 30 s 表**未到点**）。
+  - ③ **对端消失**：**终止传输**形态 ⇒ 输入端结束**那一刻仍有 1 条未结清**（中继同步观测点，注册早于 transport 自身的 `onInputEnd`），该条被 **reject**（`JSON-RPC input closed`）⇒ `unavailable` 且 fail-closed（动作 0 次）。⚠️ **进程级 kill** 形态拿不到插件层 reject 打点（dsh 进程寿命被 `exitOnStdinEnd` 一并带走）⇒ **两形态分别报、不合并**。
+  - ④ **取消传播**：撤回后 pending **连续采样恒 0**（无泄漏）；对端**迟到回答**在该帧之后的采样里仍未留任何状态、结果不变 ⇒ 合 `transport.d.ts` 的「no state is retained for a response that may never come」。
+  - ⑤ **负向对照两条**：不装任何答者 ⇒ `unavailable` ＋ 动作 0 次；对端未装 handler ⇒ **原始帧 `-32601`** ＋ dsh 侧归一化为 `unavailable`。
+- ⭐ **3.3-b 查出的三条机制事实（可直接引用）**：
+  - **(a) `dsh plugin --profile X add <目录>` 装的是符号链接** ⇒ 插件的 `import` 在 **harness 工作区**解析，**不在 profile 树里**。⇒ 插件若要 import `@deepseek-ai/*`，**必须把该包登记进 `harness/package.json`**（本块已记账：`package.json` `+2 行`、`pnpm-lock.yaml` `+667 B`）。3.3-a 的包"零外部 import"正好绕过，故此前未暴露。⚠️ 若将来改为**实体复制**装载，此前提须重验。
+  - **(b) 跨插件提供 seam 必须 `provide` 在 root ctx**：cordis 的 `ctx.provide(name, v)` 记下的是**调用方自己的 fiber**，而取值走 `ctx.get(name)` 的 **`strict`** 语义（owner fiber 非 ACTIVE ⇒ 直接返回 `undefined`）；插件在 `apply` 期间的 fiber **还不是 ACTIVE**。⇒ 先于提供方 `apply` 的插件（如 3.3-a）要读到该 seam，提供方必须挂 **root ctx**（`ctx.root ?? ctx`）。实测对照：`_attempt1` 的 `injectedAnswerer=false`（`source=local-policy:from-request`）→ 改挂 root 后 `main` 的 `injectedAnswerer=true`（`source=remote:approval/request`）。
+  - **(c) `insert` 的新条目一律落条目列表末尾**（与上文「④ 插入位置不可控」一致）⇒ 需要控制层序时**只能重排 `dsh.profile.bundles`**；且中继行必须排在 `@deepseek-ai/dsh-sdk-app` **之后**（否则 disable 不动官方那一行）。
+- ⚠️ **本块成本（供后续同类任务估量）**：每次运行在系统 TEMP 下复制一份 sdk profile **真副本**（**≈330 MB ／ 4.35 万文件**）；本块累计留下 **≈10.2 GB** 临时 home ⇒ 同类装置**收尾应显式清理临时 home**（或改共享基准 ＋ 增量覆盖）。
+- ⚠️ **未验（留 3.3-c = 3.8）**：真人 ／ 前端闭环；`approval/request` 是**本块临时约定**的 method 名（3.8 定稿后可能改名）；**POSIX 分支**与「实体复制装载」下的解析均未验。
+- 📂 **证据**：交付方 `D:\Code\_trae-evidence\33b\`（284 件 ／ 7 臂）；WB 独立复跑产物在 `D:\Temp\_wb-33b\ev\main`（临时，结论可重跑重建）。
 
 **证据（2026-09-14 读包源码，非二手结论）**—— ② 的真实形状是三层，**不需要 fork 任何包**：
 

@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.3-b** | Trae | 本机（Windows） | ✅ **已回报 · 待复核**（7 臂 66/66） | 2026-09-21 |
+| **DSH-3.3-b** | Trae | 本机（Windows） | ✅ **已回报 · 复核已完成**（WB 2026-09-21；**判定成立**，7 臂 66/66） | 2026-09-21 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⭐ **WB 补充实测（2026-09-21）**：**路 A 机制已端到端成立**（可直接引用）＋ **验靶通道**见 §5 —— 若你已改完 patch 层，先用 `--dump-config` 自查命中，再真跑。
@@ -347,5 +347,57 @@ device 侧只再追加一层 `- id: <行> ＋ config:` 覆盖（打点路径等�
 - 全部结论取自 **PowerShell / system 通道，`node v24.14.1`**（`D:\App\node\node.exe`）—— ⛔ 不外推到 Bash 通道（那边 node 是 22.x）。
 - Key：只从 `backend/config.yaml` 既有通道注入**子进程 env**，只判存在性；⛔ 未打印、未落盘、未进本回报、未进任何命令行文本。
 - `git status`（收尾复核）：`M harness/package.json` ／ `M harness/pnpm-lock.yaml` ／ `?? harness/packages/plugin-sdk-relay/` ／ `?? harness/packages/plugin-approval-remote-answerer/` ／ `?? harness/scripts/33b-thin-client.mjs` ／ `?? harness/scripts/run-33b-remote-approval.mjs`；证据目录在仓外（`D:\Code\_trae-evidence\33b`），不入库。
+
+---
+
+---
+
+## 🔍 WB 复核订正 · DSH-3.3-b（2026-09-21）
+
+> 复核人 **WB** ｜ 姿态 = **回源取物证 ＋ 现场独立复跑**（不采信完成声明）
+> **判定：成立**（7 臂 66/66）｜ 附 **2 处引文与物证不符**（均不影响结论）
+
+### 一、我实际核了什么
+
+| 面 | 手段 | 结果 |
+|---|---|---|
+| **路 A 是否真生效** | **自己数** 7 臂 `cordis.merged-config.txt` | ✅ `not found` **全 0**；官方行来源注释 = `# == @deepseek-ai/dsh-sdk-app, patched by @larryagent/plugin-sdk-relay`（`:347-348`） |
+| **判据覆盖** | **自己数** 7 臂 `summary.json` 的 `findings` | ✅ 12+9+9+7+8+11+10 = **66 条、ok 66**；judge 名单与各臂臂型一一相符 |
+| **装置是否真断言**（非"只采集"） | 读 `run-33b-remote-approval.mjs` 的 judge 调用 | ✅ 全部为 `=== true / === false` / `.length === 0` 形式（3.3-a 那条"装置全绿≠判据被覆盖"的教训已被吸收） |
+| **J2 两侧独立** | dsh 侧 `remote-answerer.log` ↔ 对端 `peer.log`（**不同 pid**） | ✅ 同 `requestId` / `callId` 对应 |
+| **J3 两路** | `main`（请求侧）与 `answertimeout`（答者侧）**各自物证** | ✅ 3 002 ms 正合 3 000；该臂 `remote-aborted` **0 行**（30 s 表没到点）；落 `cancelled` ↔ `unavailable` |
+| **J5 时序** | `lateabort/remote-answerer.log` | ✅ 迟到帧 **早于首次采样 16 ms**；其后 4 次采样恒 0 |
+| **J6 双锚** | `noanswerer` / `nohandler` | ✅ 前者 audit `unavailable` ＋ **两个答者日志文件均不存在**；后者原始帧 `-32601` ＋ dsh 侧归 `unavailable` |
+| **Tier0** | 自扫 33b 全 **284 件** ＋ WB 自跑证据 | ✅ `sk-` / `Bearer` / `secret` / `password` **全 0**（唯一 `api_key` 命中 = `apiKeyEnv` **键名**，8 份同位置） |
+| **卫生** | 真实 home ／ 源 profile ／ `git status` | ✅ `~/.dsh` 与 `.dsh-home` **无插件日志**；源 profile 未被动（`cordis.patch.yml` mtime 仍 09-17）；`git status` clean |
+| **现场独立复跑** | 本机跑 `main` 臂（**另指证据目录**） | ✅ `exit=0`、12/12 PASS；与交付件逐字段比对：`audit` 6 条序列**完全一致**、`relay`/`probe`/`peer` 三份日志**归一化后逐条一致**、findings 名单一致 |
+
+### 二、2 处订正（均为「标注为实测／原文，但物证不支持」；不影响任何结论）
+
+1. **§6-② 的 `-32601`「原始帧」引文，`id` 与物证不符。**
+   回报引 `"id":"req_166e580fb12640a8b24e88c928da2f20"`；`nohandler` 臂全部物证（`peer-wire.jsonl`／`peer.wire.json`／`peer.log`／`peer.marker.json`／`summary.json`／`_runs.log` **六处**）里的实际 id 是 **`req_88a77059fc5d4db48354e0832a2787b5`**；全仓 **468 文件**搜前者 ⇒ **只在回报自身出现 1 次**。帧的其余部分（结构 / `code:-32601` / message）**逐字一致**。⇒ 判据与结论不受影响；但**按回报给的 id 找不到那帧**（与上轮「CVM 侧文件名写错」同族）。
+2. **§8-2 的 `selfVisibleAtApply=false` 在物证里不存在。**
+   回报称「实测（`_attempt1-jsonrpc-resolution`）：本插件自检 `selfVisibleAtApply=false`、150 ms 后 `true`」。实况：
+   - `_attempt1` 目录**全部 18 件里该字段出现 0 次**（当时尚未进源码）；
+   - 全仓所有落盘里该字段**样本恒为 `true`**（含 7 臂终跑与 WB 复跑），**无一例 `false`**；
+   - 该目录里唯一的 `false` 是 **3.3-a 答者侧的 `injectedAnswerer:false`**（`_attempt1/answerer.log`，与目的行同秒）。
+   ⇒ 最简解释 = **观测名张冠李戴**（把 `injectedAnswerer:false` 记成 `selfVisibleAtApply=false`）＋ 出处不精确。**成因未证实，不替它定论。**
+   ⚠️ **机制结论本身由实物支撑成立**：`_attempt1` 的 `injectedAnswerer=false`（`source=local-policy:from-request`）→ `main` 的 `injectedAnswerer=true`（`source=remote:approval/request`），**对照清晰**；修法（`provide` 挂 root ctx）经 7 臂 ＋ WB 独立复跑验证有效。
+   ⚠️ 该处出现在**解释机制**的位置 ⇒ 属"给结论配证据"的环节，尤其要按「写依据前先问证据是什么」办事。
+
+### 三、增量（回报未写／表述不全）
+
+1. ⭐ **`dsh plugin --profile X add <目录>` 装的是符号链接** ⇒ 插件的 `import` 在 **harness 工作区**解析、**不在 profile 树里** —— 这是 §8-1 首跑 `ERR_MODULE_NOT_FOUND` 的真因。**推论**：插件若要 import `@deepseek-ai/*`，必须把该包登记进 **`harness/package.json`**（本块已按此记账 `+2 行`）。3.3-a 的包"零外部 import"正好绕过，故此前未暴露。
+2. ⭐ **跨插件提供 seam 必须 `provide` 在 root ctx**（机制，非风格）：cordis 的 `provide` 记**调用方自己的 fiber**，取值走 `ctx.get` 的 `strict` 语义（owner fiber 非 ACTIVE ⇒ 返回 `undefined`），而插件在 `apply` 期间的 fiber **还不是 ACTIVE**。
+   ⚠️ 附带一条**自检字段的失效**：代码里那个 `selfVisibleAtApply` 在**当前实现下恒为 `true`**（因为已改挂 root），**已无判别力** —— 判别力只余 `injectedAnswerer` 的 `false→true` 对照。后来者别拿它当"挂根与否"的判据。
+3. **`insert` 的条目一律落列表末尾** ⇒ 需要控制层序时**只能重排 `dsh.profile.bundles`**；且中继行必须排在 `@deepseek-ai/dsh-sdk-app` **之后**（否则 disable 不动官方那一行）。
+4. **`bundles.json` 的 note 与 `before/after` 差异不完全对应**：note 说「重排是为让远端答者先于 3.3-a 答者」，而 `before` 里二者次序**已满足**该条件；重排的实际差异是 **probe ↔ answerer 互换**。⇒ 装置 detail，不影响判据；记此以免后来者按 note 复现时困惑。
+5. **装置代价（供后续引用）**：每次运行在系统 TEMP 下复制一份 sdk profile 真副本（**≈330 MB ／ 4.35 万文件**）；本块累计留下 **≈10.2 GB** 临时 home。⇒ 同类装置收尾应**显式清理临时 home**。
+6. **「尺寸差不可作判据」的又一实例**：交付件 `--dump-config` = 12 746 B、WB 复跑 = 12 714 B，差 32 B = `activateMarker` 路径长度差（8 字符 × 4 处）⇒ 与合并内容无关。
+
+### 四、结论
+
+**7 臂 66/66 判据成立**，且该判定**由现场独立复跑复现**（`main` 臂 12/12，三方逐字段一致）。
+§3.6「② 的真风险」四条**全部有实测支撑**；未验边界按回报 §9 诚实边界保留（stub 对端非真人 ／ method 是临时约定 ／ 只跑本机 Windows）。
 
 ---
