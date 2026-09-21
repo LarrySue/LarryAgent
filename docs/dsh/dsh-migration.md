@@ -807,6 +807,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
        - **④ 插入位置不可控**：`insert` 的新条目**一律落在整个条目列表末尾**（在所有层之后）⇒ 不能靠它控制插入点。
        - **⑤ 可叠加**：insert 出来的条目 **id 会被注册**，可被更后的 `--patch` 层用 id 定位并 patch（结果注释形如 `# == <层1>, patched by <层2>`，无 not found 警告）⇒ **多段叠加可行**。
        - ⚠️ **场地事实**：`--dump-config` **每次都会写** `$DSH_HOME/profiles/<name>/cordis.yml`（恒为模板 `[]` ＋ 首行注释 "Edit cordis.patch.yml, not this file"，223 B、幂等）⇒ 跑 dump 会 touch 它，**别用 mtime 判污染**；`~/.dsh`（真实 home）实测**零改动**。
+       - 📂 **物证落档**：五组 dump 快照 ＋ 实验用 overlay 层 → `D:\Code\_wb-evidence\33b\`（含 README，附复现命令；结论本可重跑重建，留档只为便于他人核对）。
 
 **成本与复用（诚实列出）**：
 - 3.3-b 的**主要成本** = 自己起子进程、自构启动参数（不能复用 `HarnessClient`）
