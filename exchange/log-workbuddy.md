@@ -107,3 +107,74 @@
 - 本报告写在**本区**（`log-qoder.md` 正由 Qoder 编辑 ⇒ **未触碰**）
 - ⛔ 未改 `log-qoder.md`、未改任何 Qoder 文件；`TODO.md` 本轮**亦未改**
 - 3.7.5 执行侧的复验结论（CVM 现场独立取证、判定成立）**本轮未回退、维持有效**（详见 `TODO.md`「DSH-3.7.5」段末）
+
+---
+
+## ✅ WB 复验 · DSH-3.8.1（driver 成型）— 2026-09-22
+
+> 复验对象 = `exchange/log-trae.md` 的 3.8.1 回报（终跑 `run9`：PASS 22 ／ FAIL 0 ／ OBS 10 ／ 未验 0；含一次返工）。
+> 姿态 = **独立取物证 ＋ 独立复跑**，⛔ 不读其结论当判据。**判定：成立（可采信）**。
+
+### 0 · 结论先行
+
+**判定成立。** 核心增量「**能自己退出**」我已**独立复现**：以 **Bash 通道 ＋ system node `v24.14.1`**（**同版本、异通道**）实跑一次 ⇒ `PASS 18 ／ FAIL 0 ／ OBS 7 ／ 未验 1`（未验 = J4-real，本机无 key）、**EXIT=0 且进程自行结束**（未被工具层强杀）。
+
+- 他与我的**通道不同、node 同代**，结论一致 ⇒ 该结论**对通道不敏感**。
+- 判据集合构成**逐条对齐**：他 22 PASS = 我 18 + 真 dsh 段 4 条（J4-real-a／J4-real-b／J5-b／J5-c）；他 10 OBS = 我 7 + J4-real-c／-d／-e。⇒ 差异**只来自「有无 key 决定 J4-real 段是否执行」**，不是判据口径分歧。
+
+### 1 · 我独立复现的（逐面，附我的读数）
+
+| 面 | 我的独立读数 | 对照 |
+|---|---|---|
+| 实跑结论 | `PASS 18／FAIL 0／OBS 7／未验 1`，`EXIT=0`，**自行结束** | 一致（差在真 dsh 段） |
+| **J3-a 自退** | `host exit code=0 signal=null watchdogFired=false killedByHarness=false`，宿主墙钟 4269 ms | 一致 |
+| **J3-b 机制级证据** | 我这次 `beforeExit` 原文：`{"event":"beforeExit","code":0,"activeResources":["PipeWrap","PipeWrap"]}` | 一致 |
+| **J3-g 收工→进程退出** | **91 ms**（同次：收工→**子进程**退出 70 ms） | 他 51 ms（量级一致） |
+| **J3-f 反例对照** | 33b 骨架：子进程退出 → 骨架进程退出 **≈4132 ms**；源码尾段含 `child.kill()` ＋ `process.exit(0)` | 他 4050 ms（一致） |
+| J1-a/b/c/d/e | argv 原文含 `--profile sdk --patch <层>`；`patched by …overlay-hit.yml`；`not found` 1 行且 `exit=0` | 一致 |
+| J1-f | `overlay-noop` 层名在 dump 里出现 **0** 次 | 一致 |
+| J2-a | 请求/响应帧原文齐全，往返 3676 ms；`serverInfo.name=deepseek-harness-sdk-runtime` | 一致 |
+| J4-a/b/c | 桩路：`noAutoAnswer=true`；`reverse-answer-sent 行数=0`；对端 `stub-reverse-no-answer waitedMs=2500`；正向锚 `allowed-once` | 一致 |
+| J5-a | driver `pid=35008` / 对端 `pid=32552`，同 `requestId=stub-rev-1` | 一致（他 8548／32552） |
+| J6-a | `typert-gateway` 行**未标 disabled** | 一致 |
+| J6-b | 全机监听 41→41、`新增监听=[]`、`curl /api/remote.mux=[]` | 一致 |
+| J6-d | 启动日志落点＝子进程 stderr；本轮 0 行（无 key ⇒ 无真 dsh 变体） | 他 8 行（有 key）⇒ 一致 |
+| **交付物自证** | `lib/index.js`：`process.exit(` 命中 **1**（第 6 行注释）、`.kill(` 命中 **1**（`:443` force 分支） | 与他 Select-String 原文一致 |
+| **依赖记账** | `pnpm-lock` 仅 **+2 行**（`packages/dsh-driver: {}`），无新依赖 | 一致 |
+| **构建时序** | `src` 10:55:30 → `lib` 10:55:43（晚 13 s，**已重建**）；`run6/7/9` 均在其后 ⇒ 跑的确实是含「两段等待」的新码 | 一致 |
+| **留档件未动** | `33b-thin-client.mjs` ／ `run-33b-remote-approval.mjs` 最后改动仍为 `ff44323`（3.3-b 时期） | 一致（禁 1 守住） |
+| **证据包** | `run9/` 顶层 **52** 文件 ＋ `peer33b/` | 一致 |
+| **真 dsh 段交叉**（未复跑，见 §4） | driver 侧 `requestId=remote-1` / `callId=…Gw2585` / `agentId=session-381-ce5b40230228` ↔ `real-remote-answerer.log` 的 `remote-send` **逐字相同**；`J6-bootlog` 的 dsh `pid=41096` ↔ `relay`／`answerer` 日志**同 pid** | 交叉成立 |
+
+### 2 · 我加做的独立判据（原稿没有）
+
+1. ⭐ **Node 语义实证（把 J3-b 的基石从"引用文档"变成"实测"）**：两次 `node -e` 对照 ——
+   - 不调 `process.exit`、事件循环自然排空 ⇒ **输出 `BEFOREEXIT code= 0`**；
+   - 显式 `process.exit(0)` ⇒ **不输出 `BEFOREEXIT`**。
+   ⇒ `beforeExit` 与「显式退出」互斥，**J3-b 成立**。⭐ 并**顺带把 Trae 的诚实边界 6 升级**：他说"骨架没有 `beforeExit` 属**推断**（无法在被测进程外注册该监听）"—— 骨架源码含 `process.exit(0)` ＋ 上面这条语义 ⇒ **推断已成实证**。
+2. ⭐ **无 dsh 孤儿进程**（原判据未含）：我跑完后全机 `node.exe` 共 4 个，命令行全指向 **WorkBuddy 自身的 MCP server**（sheetagent／weixinpay），**无** `larry-381`／`dsh` 残留。
+3. **清理开关真生效**：`S381_KEEP_HOME=0` ⇒ 本次 home `larry-381-yZjTWa` 已被脚本删除（我复现：该路径已不存在），且**未**触碰此前遗留的两个。
+
+### 3 · 发现的问题（须回填；⛔ 均**不影响**判定成立）
+
+1. ⚠️ **J3-c 在本装置下**无判别力**（构造性恒真）**：宿主把 `forceAfterMs: 0`（⛔ 永不 force），而源码是 `if (!exited && forceAfterMs > 0) { …forced = true }` ⇒ **该分支不可达** ⇒ `forced`／`killCalled` **必然为 false**，与"driver 是否真自退"**无关**。
+   ⇒ 回报 §0 结论② 把 `forced/killCalled 双 false` 列为"能自己退出"的证据之一，**该条证据弱**（不是错，是恒真）。**J3 仍成立**：判别力来自 J3-a（看门狗未触发）／**J3-b（`beforeExit`，机制级）**／J3-d（子进程自退）三条 —— 这三条能真的抓出"不自退"。
+2. ⚠️ **两处硬编码文本与环境脱钩**（我实跑才暴露；同一根因：**报告字段写死，不由环境生成**）：
+   - `preflight.channel = 'PowerShell/system（本机直跑 node）'` 是**字面量**。我走 **Bash 通道**跑，输出**仍是该串** ⇒ 该字段**不能承担「注明取自哪条通道」的职能**（而那是项目铁律：通道不同则结论不可互推）。
+   - `J2-b` 的 detail 写死「本轮跑在**有 key 的环境**下」；我**无 key** 跑 ⇒ 输出 `envKeyPresent=false（只判存在性；本轮跑在有 key 的环境下…）` ⇒ **同句自相矛盾**。
+   ⇒ 两者都**不影响判据成立**（PASS 依据分别是 `t1.code===0 && !watchdog` 与 `往返成功 ∧ turn/start=0`），但**报告文本会在别的环境下撒谎** ⇒ 建议后续把这两处改成按 `keyPresent`／按实测通道**条件生成**。
+3. ℹ️ **J5-c 引"原文"时做了字段删减**（省掉 `t`／`pid`／`dshHome`／`maxTokensAsSuccess` 等）却标"原文"。**值未改、事实为真**，但 §6-5 的纪律是"原文原样、禁改写" ⇒ 属**表述不严谨**（建议标注"摘录"）。
+4. ✅ **成本账差异：我补一条排除性证据**。他实测 `157.2 MB ／ 19 660 文件`，说"差异原因未查"——我独立复算：源 `.dsh-home/profiles/sdk` = **164,829,292 B（157.2 MB）／ 21 272 条目** ⇒ **复制无放大**，他的读数可采信。
+   而派发稿登记的 `≈330 MB ／ 4.35 万文件` **与当前源不符**。⭐ **我排除了一个假说**：`run-33b-remote-approval.mjs:33/156` 的 `SRC_SDK` ＋ `cpSync` 与**本块源码逐字相同** ⇒ **不是"统计对象不同"**（不是"整棵 home vs 单 profile"：`.dsh-home` 全树实测 165,478,623 B，与单 profile 几乎相同）。**成因仍未查**（不编）。⇒ **旧登记过期**；而派发稿 §附-8 当时已标「**沿用登记 ⛔ 未验，勿当已核**」⇒ 该标注**起了作用**。
+
+### 4 · 我**没**做的（诚实边界）
+
+**J4-real ／ J5-b（真 dsh 段）我未复跑** —— 复跑需注入凭据（其做法是从 `backend/config.yaml` 读 key 进子进程 env），我按 **Tier0 凭据最小接触**选择不复跑。
+⇒ 该段判定为「**物证多源交叉、可采信；未独立复跑**」：证据来自 **driver 侧 ＋ 4 个 dsh 内插件日志 ＋ bootlog pid** 三源交叉（见 §1 末行），伪造需同时篡改 4 个文件的时间戳／pid／字段 ⇒ 采信度高，但**终非我亲自复跑**。
+其余：J2-b 的「零 LLM」口径、J6-b 的 ~2.7 s 取样窗、POSIX 分支未验等 **其 §5 十条诚实边界，我认可**（其中第 6 条已被我升级为实证，见 §2-1）。
+
+### 5 · 簿记
+
+- 本报告写在**本区**（`log-workbuddy.md`）；⛔ 未改 `log-trae.md` 的回报正文（仅其状态区同步"复核成立"）／未改 `log-qoder.md`。
+- `TODO.md`「DSH-3.8.1」段：状态「待复核」→ **复核成立（WB 2026-09-22）**，并回填 §3 的两处装置缺陷与 §3-1 的证据强度订正。
+- 现场：`git status` 空；我复跑的临时 home 已按开关删除；Trae 保留的两个 home（`larry-381-ZQfrhi`／`larry-381-real-YE5qib`，共 314 MB）仍在 `D:\Temp\Sys` —— **留否待老大一句话**。
