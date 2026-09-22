@@ -206,10 +206,19 @@ for (const delayMs of [700, 2_000]) {
 const t1raw = await t1Exit
 clearTimeout(j1Watchdog)
 const t1 = { ...t1raw, stdout: j1Stdout, stderr: j1Stderr, watchdogFired: j1WatchdogFired, killedByHarness: j1WatchdogFired, pid: j1ChildPid }
+const j1SpawnAt = new Date(j1T0).toISOString()
+const j1ExitAt = new Date(j1T0 + t1raw.ms).toISOString()
 save('j1-host.stdout.txt', j1Stdout)
 save('j1-host.stderr.txt', j1Stderr)
 const j1 = parseHostReport(t1.stdout)
-saveJson('J1-host-report.json', { ...j1, __exit: { code: t1.code, signal: t1.signal, ms: t1.ms, watchdogFired: t1.watchdogFired } })
+/** driver 侧打点（含 `stop-requested`）—— J3-① 的"收工信号"时钟取自这里。 */
+const j1DriverRows = readJsonl(j1Marker)
+const j1StopRow = j1DriverRows.find((r) => r.event === 'stop-requested') ?? null
+saveJson('J1-host-report.json', {
+  ...j1,
+  __exit: { code: t1.code, signal: t1.signal, ms: t1.ms, spawnAt: j1SpawnAt, exitAt: j1ExitAt, watchdogFired: t1.watchdogFired },
+  __driverStopRequestedAt: j1StopRow?.at ?? null,
+})
 judge('J1-a 启动形态 = dsh --profile <name>',
   j1 !== null && j1.started.argv.includes('--profile') && j1.started.argv.includes('sdk'),
   `实际 spawn 的 argv 原文 = ${JSON.stringify(j1?.started.argv ?? null)}`)
@@ -269,6 +278,13 @@ judge('J3-b ⭐ 自退的机制级证据：`beforeExit` 触发（`process.exit()
 judge('J3-c 未依赖 kill：stop.forced / stop.killCalled 双 false',
   realStop?.forced === false && realStop?.killCalled === false,
   `forced=${String(realStop?.forced)} killCalled=${String(realStop?.killCalled)}；shutdown=${JSON.stringify(realStop?.shutdown ?? null)}`)
+// ⭐ J3-① 的**后半**（首版漏了）：判据原文要的是「driver 进程**退出码** ＋ **从「收工信号」到「进程退出」的墙钟**」，
+//    而不是"宿主总墙钟"、也不是"收工信号→**子进程**退出"。这里用**同一时钟**的两个绝对时刻相减：
+//    `stop-requested`（driver 打点，被测进程内）↔ 验收脚本观测到的宿主退出时刻。
+const stopToHostExitMs = j1StopRow === null ? null : Date.parse(j1ExitAt) - Date.parse(j1StopRow.at)
+judge('J3-g ⭐ 从「收工信号」到 **driver 进程退出** 的墙钟（J3-① 的后半）',
+  typeof stopToHostExitMs === 'number' && stopToHostExitMs >= 0 && stopToHostExitMs < 15_000,
+  `收工信号 @${String(j1StopRow?.at)} → driver 进程退出 @${j1ExitAt} ＝ **${String(stopToHostExitMs)} ms**（同一次运行里：收工信号→**子进程**退出 ＝ ${String(realStop?.childExit?.msSinceStopRequest)} ms；宿主总墙钟 ${t1.ms} ms）`)
 judge('J3-d dsh 子进程自己退了（exit code 0）',
   realStop?.childExit?.exited === true && realStop?.childExit?.code === 0,
   `childExit=${JSON.stringify(realStop?.childExit ?? null)}；**从收工信号到子进程退出的墙钟=${String(realStop?.childExit?.msSinceStopRequest)}ms**`)
@@ -440,6 +456,12 @@ if (!doRealApproval) {
   judge('J5-b ⭐ 双侧交叉：driver 侧 ↔ DSH 侧插件日志对**同一条**请求各自留痕',
     rReq !== undefined && rDshSend !== undefined && rDshSend.requestId === rReq.requestId && String(rDshSend.reason ?? '') === String(rReq.reason ?? ''),
     `DSH 侧（plugin-approval-remote-answerer）原文 = ${JSON.stringify(rDshSend ?? null)}；driver 侧 requestId=${String(rReq?.requestId)} reason=${String(rReq?.reason)}（两侧须同值）`)
+  // ⭐ J5 的**第三条腿**（首版只用了一条）：判据点名 **两个** DSH 侧日志 —— relay 那条证明"这条链路由中继在服务"。
+  const rRelayActivate = silentReal.relayRows.find((r) => r.event === 'activate') ?? null
+  const rRelayServed = silentReal.relayRows.filter((r) => r.event === 'server-request-in').map((r) => r.method)
+  judge('J5-c ⭐ 第三条腿：DSH 侧中继插件（plugin-sdk-relay）日志同链',
+    rRelayActivate?.transportStarted === true && rRelayServed.includes('initialize') && rRelayServed.includes('session/prompt'),
+    `relay 侧 activate 原文 = ${JSON.stringify(rRelayActivate ?? null)}；它服务过的方法 = ${JSON.stringify(rRelayServed)}（⇒ 本链路由中继在服务，不在官方 server 行）`)
   const aRemoteAnswer = answeredReal.remoteRows.find((r) => r.event === 'remote-answer')
   const aDriverAns = answeredReal.driverRows.find((r) => r.event === 'reverse-answer-sent')
   // ⚠️ 装置订正（run5 实测暴露）：`real-probe.log` **跨变体累加** ⇒ `find(...)` 会取到 **silent 变体**那条
@@ -479,6 +501,21 @@ obs('J6-b 运行时层：**本机监听端口增量**（含孙进程）＋ 直�
 obs('J6-c 两通道并列（⛔ 不合并）',
   `装配层＝typert-gateway 未标 disabled（J6-dump-gateway.txt）；运行时层＝见 J6-b。` +
   `派发稿 §附-5「装配层已翻转、运行时层仍未验」在本块被**同机同版本**复现（本块给出的是**本机运行时层读数**，与派发稿的解析口径一致）`)
+// ⭐ J6 的**前半**（首版漏了）：判据原文要「dsh 启动日志里 gateway 相关行」。
+//    落点先说清：sdk profile 的 stdout 专属 JSON-RPC ⇒ "启动日志"= **子进程 stderr**（由 driver 收进 diagnosticsTail）；
+//    临时 home 下**无任何 `*.log`**（已遍历，见 J0-home.json 与回报 §6）。
+// ⚠️ `silentReal` ／ `answeredReal` 只活在 else 块内 ⇒ 这里必须走模块级的 `realApproval`（run8 首跑栽在这）
+const bootLog = [
+  ...(j1?.diagnosticsTail ?? []).map((l) => `[J1-无插件 profile] ${l}`),
+  ...(realApproval?.silent?.report?.diagnosticsTail ?? []).map((l) => `[J4-real-silent] ${l}`),
+  ...(realApproval?.answered?.report?.diagnosticsTail ?? []).map((l) => `[J4-real-answered] ${l}`),
+]
+const bootLogGatewayHits = bootLog.filter((l) => /gateway|typert/i.test(l))
+save('J6-bootlog.txt', `${bootLog.join('\n')}\n`)
+obs('J6-d 「dsh 启动日志里 gateway 相关行」的实测（J6 的前半）',
+  `启动日志落点＝子进程 stderr；本轮采集到 **${bootLog.length} 行**全文见 J6-bootlog.txt：${JSON.stringify(bootLog)}；` +
+  `命中 /gateway|typert/ 的行数 ＝ **${bootLogGatewayHits.length}** ⇒ **启动日志里没有 gateway 相关行**` +
+  `（与 J6-a 的"装配层有行、未禁用"**并列**，正是判据要的"不合并"两通道）`)
 
 // ── 汇总 ───────────────────────────────────────────────────────────────────
 /**
