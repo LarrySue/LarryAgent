@@ -94,6 +94,8 @@ export interface DriverOptions {
   shutdownTimeoutMs?: number
   /** 超过此值仍不退才 `kill()`（**会被记为 `forced:true`**，判据要求 `forced:false`）。0 = 永不 force。 */
   forceAfterMs?: number
+  /** 关流之后再等子进程退出的上限（见 `stop()` 的第二段等待）。缺省 3 000。 */
+  postCloseExitWaitMs?: number
   /** 反向请求"上层迟迟未答"的**留痕**阈值（只留痕，⛔ 不代答、不结算）。0 = 关。 */
   reverseIdleWarnMs?: number
   /** 打点文件；`false` = 关；缺省 = `<DSH_HOME>/dsh-driver.log`。 */
@@ -121,6 +123,8 @@ export interface StopReport {
   childWasAliveAtStop: boolean
   shutdown: { ok: boolean; result?: unknown; error?: string }
   childExit: { exited: boolean; code: number | null; signal: string | null; msSinceStopRequest: number | null }
+  /** 第一段等待（发完 shutdown 后）是否直接等到；若 false 而 childExit.exited=true，说明靠**关流级联**才退的。 */
+  exitedBeforeStreamClose: boolean
   /** ⛔ 判据要求 false：true 表示收尾**依赖了** kill。 */
   forced: boolean
   killCalled: boolean
@@ -553,6 +557,15 @@ export class DshDriver {
       forced = true
       await this.waitChildExit(2_000)
     }
+    // ⭐ 第二段等待（3.8.1 实测补）：**关流会触发对端 EOF 级联** ⇒ 若第一段没等到（例如收工时还挂着
+    //    一条未结算的反向请求，dsh 的 root dispose 会被在飞的回合拖住），关掉本侧管道后它往往立刻退。
+    //    ⛔ 这一步必须**先关流、后摘 `exit` 监听** —— 否则监听被摘掉就再也等不到（会退化成"永远 exited:false"）。
+    let exitedAfterClose = exited
+    if (!exited) {
+      this.closeStreams()
+      exitedAfterClose = await this.waitChildExit(this.options.postCloseExitWaitMs ?? 3_000)
+      this.trace({ event: 'post-close-exit-wait', parentExitWaitTimedOut: !exited, exitedAfterClose })
+    }
     const msSinceStopRequest = this.childExitInfo === null
       ? null
       : Date.parse(this.childExitInfo.at) - Date.parse(stopRequestedAt)
@@ -576,6 +589,7 @@ export class DshDriver {
       forced,
       killCalled,
       pendingReversesAtStop,
+      exitedBeforeStreamClose: exited,
       activeResourcesBefore: this.activeResourcesBefore,
       activeResourcesAfter: process.getActiveResourcesInfo(),
       processExitCalled: false,
@@ -583,6 +597,19 @@ export class DshDriver {
     this.stopReport = report
     this.trace({ event: 'driver-stop', ...report, stderrTail: this.stderrTail.slice(-2_000) })
     return report
+  }
+
+  /** 关掉三条管道（会触发对端 EOF 级联）——⛔ 不动监听与定时器，供"关流后还能等到 exit"用。 */
+  private closeStreams(): void {
+    const streams = [this.child?.stdin, this.child?.stdout, this.child?.stderr]
+    for (const stream of streams) {
+      if (stream === undefined || stream === null) continue
+      try {
+        stream.destroy()
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   /** 摘干净一切会吊住事件循环的东西（**自退**的关键就在这一步）。 */
@@ -601,14 +628,6 @@ export class DshDriver {
     }
     this.transport?.close()
     this.transport = undefined
-    const streams = [this.child?.stdin, this.child?.stdout, this.child?.stderr]
-    for (const stream of streams) {
-      if (stream === undefined || stream === null) continue
-      try {
-        stream.destroy()
-      } catch {
-        /* ignore */
-      }
-    }
+    this.closeStreams()
   }
 }

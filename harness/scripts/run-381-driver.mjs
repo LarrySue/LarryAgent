@@ -246,9 +246,10 @@ const initIn = initFrames.find((f) => f.dir === 'in' && f.raw.includes('serverIn
 judge('J2-a initialize 往返成功（请求帧 ＋ 响应帧原文齐全）',
   j1?.initialize != null && initOut !== undefined && initIn !== undefined && typeof j1.initialize.elapsedMs === 'number',
   `耗时=${String(j1?.initialize?.elapsedMs)}ms；请求帧=${JSON.stringify(initOut?.raw ?? null)}；响应帧=${JSON.stringify(initIn?.raw ?? null)}`)
-judge('J2-b ⭐ 零 LLM 也能起：该次运行 env 里**没有** key，且往返照成',
-  j1?.started.envKeyPresent === false && j1?.initialize != null,
-  `envKeyPresent=${String(j1?.started.envKeyPresent)}（只判存在性）；initialize 结果=${JSON.stringify(j1?.initialize?.result ?? null)}`)
+judge('J2-b ⭐ 「零 LLM 也能起」：initialize 往返成功，且该次运行**未产生任何 LLM 回合**',
+  j1?.initialize != null && (j1?.notifications ?? []).filter((n) => n.method === 'session.event' && String(n.params?.event?.type ?? '') === 'turn/start').length === 0,
+  `envKeyPresent=${String(j1?.started.envKeyPresent)}（只判存在性；本轮跑在**有 key 的环境**下 ⇒ 无 key 环境的对照见 ` +
+  `run4：那次 envKeyPresent=false 且 initialize 照成）；该次 turn/start 通知数=${(j1?.notifications ?? []).filter((n) => n.method === 'session.event' && String(n.params?.event?.type ?? '') === 'turn/start').length}（应为 0）`)
 const realStderr = t1.stderr
 const llmErrLines = realStderr.split(/\r?\n/).filter((l) => /api.?key|unauthor|401|llm|deepseek/i.test(l))
 save('J2-child-stderr.txt', realStderr)
@@ -339,8 +340,127 @@ judge('J4-d 两个变体都自行退出（未依赖 kill）',
 judge('J5-a 桩路双侧交叉：driver 侧与对端侧**两个独立进程**对同一条请求各自留痕',
   s4req !== undefined && s4req.requestId === 'stub-rev-1' && silent.stubRows.some((r) => r.event === 'stub-reverse-request-sent' && r.params?.requestId === 'stub-rev-1'),
   `driver pid=${String(silent.report?.stop === undefined ? null : silent.report?.started?.childPid)} 侧 requestId=${String(s4req?.requestId)}；对端自身 requestId=stub-rev-1（见 j4-silent-stub.log）`)
-na('J5-b DSH 侧同名插件日志（plugin-sdk-relay ／ plugin-approval-remote-answerer）那一形态',
-  '**未验**：该形态要走真 dsh 触发一次出站 approval/request（需真跑一个 turn ⇒ 依赖 key）。按派发稿 §2-P2 → key 缺失分支处置；桩路（J5-a）为替代证据')
+// ── J4-real ／ J5-b · 真 dsh 触发审批链（需 key；缺 key 时如实标未验） ──────
+// ⛔ 凭据纪律：只判存在性；值只进子进程 env，不进本脚本任何输出/文件/命令行。
+const doRealApproval = (process.env.S381_REAL_APPROVAL ?? (preflight.keyPresent ? '1' : '0')) === '1'
+let realApproval = null
+if (!doRealApproval) {
+  na('J4-real ／ J5-b 真 dsh 变体', `**未验**：env 里没有 key（只判存在性）⇒ 按派发稿 §2-P2 走 (b) 分支；桩路（J4-a/b/c ／ J5-a）为替代证据。可设 S381_REAL_APPROVAL=1 并注入 key 后单跑本段`)
+} else {
+  const releaseOrphanLock = (profilesDir) => {
+    const lock = join(profilesDir, 'node_modules.lock')
+    if (!existsSync(lock)) return 'none'
+    const raw = readFileSync(lock, 'utf8').trim()
+    const pid = Number.parseInt(raw, 10)
+    if (!Number.isInteger(pid) || pid <= 0) return 'live'
+    try { process.kill(pid, 0); return 'live' } catch (e) { if (e?.code !== 'ESRCH') return 'live' }
+    rmSync(lock, { force: true })
+    return 'removed-dead-orphan'
+  }
+  const realHome = mkdtempSync(join(tmpdir(), 'larry-381-real-'))
+  mkdirSync(join(realHome, 'profiles'), { recursive: true })
+  cpSync(SRC_SDK, join(realHome, 'profiles', 'sdk'), { recursive: true })
+  rmSync(join(realHome, 'profiles', 'sdk', 'node_modules', '.modules.yaml'), { force: true })
+  const lockAction = releaseOrphanLock(join(realHome, 'profiles'))
+
+  const installs = []
+  for (const pkg of ['plugin-sdk-relay', 'plugin-approval-remote-answerer', 'plugin-approval-answerer', 'plugin-approval-probe']) {
+    const r = runSync([DSH_BIN, 'plugin', '--profile', 'sdk', 'add', join(HARNESS, 'packages', pkg)], { DSH_HOME: realHome })
+    installs.push({ pkg, code: r.code, pnpmDone: /Done in .*pnpm/.test(`${r.stdout}\n${r.stderr}`) })
+  }
+  // 重排层序：远端答者必须先于 3.3-a 答者 apply（3.3-b 实测的既知约束）
+  const realManifestPath = join(realHome, 'profiles', 'sdk', 'package.json')
+  const realManifest = JSON.parse(readFileSync(realManifestPath, 'utf8'))
+  const wanted = ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-sdk-app', '@larryagent/plugin-sdk-relay', '@larryagent/plugin-approval-remote-answerer', '@larryagent/plugin-approval-probe', '@larryagent/plugin-approval-answerer']
+  realManifest.dsh.profile.bundles = wanted.filter((n) => (realManifest.dsh.profile.bundles ?? []).includes(n))
+  writeFileSync(realManifestPath, `${JSON.stringify(realManifest, null, 2)}\n`, 'utf8')
+  // 覆盖层：打点落进本证据目录（否则落在临时 home 里，随清理消失）
+  const fwd = (p) => p.replace(/\\/g, '/')
+  const realPatch = join(OUT, 'real-override.yml')
+  writeFileSync(realPatch, [
+    '# DSH-3.8.1 · 真 dsh 审批链的装置覆盖层（id 定向；⛔ 不改 profile 源）',
+    '- id: sdk-jsonrpc-relay',
+    '  config:',
+    `    activateMarker: ${fwd(join(OUT, 'real-relay.log'))}`,
+    '- id: plugin-approval-remote-answerer',
+    '  config:',
+    '    method: approval/request',
+    '    answerTimeoutMs: 0',
+    `    activateMarker: ${fwd(join(OUT, 'real-remote-answerer.log'))}`,
+    '- id: plugin-approval-answerer',
+    '  config:',
+    '    scope: first',
+    '    policy: from-request',
+    `    activateMarker: ${fwd(join(OUT, 'real-answerer.log'))}`,
+    '- id: plugin-approval-probe',
+    '  config:',
+    '    timeoutMs: 30000',
+    `    activateMarker: ${fwd(join(OUT, 'real-probe.log'))}`,
+    '',
+  ].join('\n'), 'utf8')
+
+  const toolPrompt = [
+    '只做这一件事，不要做任何探索、不要读别的文件。',
+    '调用 approval_probe 工具一次，参数 case 取 approve。',
+    '然后把返回的 <executed> 与 <outcome> 原样贴回来。',
+    '⛔ 不要传 sandbox_permissions 或任何升权参数；不要用别的工具；不要重试。',
+  ].join('\n')
+
+  async function realRunVariant(label, answer) {
+    const marker = join(OUT, `real-${label}.log`)
+    const r = await spawnObserve(HOST, ['--mode', 'real', '--prompt', '1', '--home', realHome, '--patch', realPatch, '--marker', marker, '--answer', answer, '--promptText', toolPrompt, '--waitMs', '90000', '--holdMs', '2000'], {}, 240_000, `real-${label}-host`)
+    return {
+      r,
+      report: parseHostReport(r.stdout),
+      driverRows: readJsonl(marker),
+      remoteRows: readJsonl(join(OUT, 'real-remote-answerer.log')),
+      answererRows: readJsonl(join(OUT, 'real-answerer.log')),
+      probeRows: readJsonl(join(OUT, 'real-probe.log')),
+      relayRows: readJsonl(join(OUT, 'real-relay.log')),
+    }
+  }
+  const silentReal = await realRunVariant('silent', 'none')
+  const answeredReal = await realRunVariant('answered', 'rejected')
+  realApproval = { realHome, lockAction, installs, bundles: realManifest.dsh.profile.bundles, silent: silentReal, answered: answeredReal }
+  saveJson('J4-real.json', {
+    realHome,
+    lockAction,
+    installs,
+    bundles: realManifest.dsh.profile.bundles,
+    silent: { report: silentReal.report, driver: silentReal.driverRows, remote: silentReal.remoteRows, probe: silentReal.probeRows, exit: { code: silentReal.r.code, signal: silentReal.r.signal, ms: silentReal.r.ms } },
+    answered: { report: answeredReal.report, driver: answeredReal.driverRows, remote: answeredReal.remoteRows, probe: answeredReal.probeRows, exit: { code: answeredReal.r.code, signal: answeredReal.r.signal, ms: answeredReal.r.ms } },
+  })
+
+  const rReq = silentReal.driverRows.find((r) => r.event === 'reverse-request')
+  const rAns = silentReal.driverRows.filter((r) => r.event === 'reverse-answer-sent')
+  const rDshSend = silentReal.remoteRows.find((r) => r.event === 'remote-send')
+  judge('J4-real-a 真 dsh 侧出站审批请求被 driver 接住（字段原样）且**未自答**',
+    rReq !== undefined && rReq.method === 'approval/request' && rReq.requestId !== null && rReq.toolName === 'approval_probe' && rReq.frameId !== null && rAns.length === 0,
+    `driver 侧原文 = ${JSON.stringify(rReq ?? null)}；driver 侧 reverse-answer-sent 行数=${rAns.length}（应为 0）`)
+  judge('J5-b ⭐ 双侧交叉：driver 侧 ↔ DSH 侧插件日志对**同一条**请求各自留痕',
+    rReq !== undefined && rDshSend !== undefined && rDshSend.requestId === rReq.requestId && String(rDshSend.reason ?? '') === String(rReq.reason ?? ''),
+    `DSH 侧（plugin-approval-remote-answerer）原文 = ${JSON.stringify(rDshSend ?? null)}；driver 侧 requestId=${String(rReq?.requestId)} reason=${String(rReq?.reason)}（两侧须同值）`)
+  const aRemoteAnswer = answeredReal.remoteRows.find((r) => r.event === 'remote-answer')
+  const aDriverAns = answeredReal.driverRows.find((r) => r.event === 'reverse-answer-sent')
+  // ⚠️ 装置订正（run5 实测暴露）：`real-probe.log` **跨变体累加** ⇒ `find(...)` 会取到 **silent 变体**那条
+  //    （它因收工而落 `unavailable`，见下 OBS）。本判据必须按**结果词**精确定位到 answered 变体的那一条。
+  const probeTerminal = answeredReal.probeRows.filter((r) => r.event === 'probe-skipped' || r.event === 'probe-executed')
+  const aProbeRejected = probeTerminal.find((r) => r.outcome === 'rejected')
+  judge('J4-real-b ⭐ 正向锚：上层答 `rejected` ⇒ 经 driver 回填、DSH 侧收到该结果、被保护动作被拦',
+    aDriverAns?.result === 'rejected' && aRemoteAnswer?.result === 'rejected' && aProbeRejected !== undefined,
+    `driver 侧 = ${JSON.stringify(aDriverAns ?? null)}；DSH 侧 remote-answer = ${JSON.stringify(aRemoteAnswer ?? null)}；` +
+    `探针（answered 变体，按 outcome=rejected 定位）= ${JSON.stringify(aProbeRejected ?? null)}；该日志全部终结行 = ${JSON.stringify(probeTerminal.map((r) => ({ event: r.event, outcome: r.outcome, t: r.t })))}`)
+  obs('J4-real-c 真 dsh 变体的自退与事件上行',
+    `silent: host exit=${String(silentReal.r.code)}/forced=${String(silentReal.report?.stop?.forced)}/` +
+    `childExited=${String(silentReal.report?.stop?.childExit?.exited)}/exitedBeforeStreamClose=${String(silentReal.report?.stop?.exitedBeforeStreamClose)}/ms=${String(silentReal.report?.stop?.childExit?.msSinceStopRequest)}；` +
+    `answered: host exit=${String(answeredReal.r.code)}/forced=${String(answeredReal.report?.stop?.forced)}/childExited=${String(answeredReal.report?.stop?.childExit?.exited)}/ms=${String(answeredReal.report?.stop?.childExit?.msSinceStopRequest)}；` +
+    `通知条数 silent=${(silentReal.report?.notifications ?? []).length} / answered=${(answeredReal.report?.notifications ?? []).length}`)
+  obs('J4-real-e ⭐ 真 dsh 路下的 fail-closed 旁证：silent 变体收工时探针落 `unavailable`（不是放行）',
+    `silent 变体探针终结行 = ${JSON.stringify(probeTerminal.find((r) => r.outcome !== 'rejected') ?? null)}` +
+    ` ⇒ 真 dsh 链路上"没人答 ⇒ 不放行"同样成立（与桩路 J4-b 同向）`)
+  obs('J4-real-d 场地与装载（真 home，与 J1 的 home 分开）',
+    `realHome=${realHome}；A 锁处置=${lockAction}；四包 plugin add = ${JSON.stringify(installs)}；bundles 顺序 = ${JSON.stringify(realManifest.dsh.profile.bundles)}`)
+}
 
 // ── J6 · gateway（顺带，不阻塞 J1–J5） ────────────────────────────────────
 // ⚠️ 派发稿假绿坑 1：**装配层（dump）与运行时层（起没起 HTTP）可能不同结论** ⇒ 并列留痕、不合并。
@@ -384,8 +504,11 @@ function dirStats(dir) {
   return { files, bytes, mb: Math.round((bytes / 1024 / 1024) * 10) / 10 }
 }
 const homeStats = dirStats(home)
+const realHomePath = doRealApproval && realApproval !== null ? realApproval.realHome : null
+const realHomeStats = realHomePath === null ? null : dirStats(realHomePath)
+const selfHomes = new Set([home, realHomePath].filter(Boolean))
 const orphanHomes = readdirSync(tmpdir(), { withFileTypes: true })
-  .filter((e) => e.isDirectory() && e.name.startsWith('larry-381-') && join(tmpdir(), e.name) !== home)
+  .filter((e) => e.isDirectory() && e.name.startsWith('larry-381-') && !selfHomes.has(join(tmpdir(), e.name)))
   .map((e) => join(tmpdir(), e.name))
 const orphans = orphanHomes.map((p) => ({ path: p, ...dirStats(p) }))
 
@@ -394,6 +517,8 @@ const summary = {
   preflight,
   home,
   homeStats,
+  realHome: realHomePath,
+  realHomeStats,
   findings,
   verdict: findings.every((f) => f.ok) ? '判据成立' : '存在不成立判据',
   counts: {
@@ -409,6 +534,9 @@ console.log(`\n[381] 结论：${summary.verdict}（PASS ${summary.counts.pass} �
 for (const f of findings) if (f.status === 'FAIL') console.log(`   未成立：${f.judge} — ${f.detail}`)
 console.log(`[381] 证据：${OUT}`)
 console.log(`[381] 临时 home：${home} — ${homeStats.mb} MB ／ ${homeStats.files} 文件（S381_KEEP_HOME=${process.env.S381_KEEP_HOME ?? '1'}）`)
+if (realHomePath !== null && realHomeStats !== null) {
+  console.log(`[381] 真 dsh 变体 home：${realHomePath} — ${realHomeStats.mb} MB ／ ${realHomeStats.files} 文件`)
+}
 if (orphans.length > 0) {
   console.log(`[381] tmp 下另有本块遗留 home ${orphans.length} 个，合计 ${Math.round(orphans.reduce((s, o) => s + o.mb, 0))} MB：${JSON.stringify(orphans.map((o) => o.path))}`)
   if ((process.env.S381_CLEAN_ORPHAN_HOMES ?? '0') === '1') {
@@ -419,7 +547,12 @@ if (orphans.length > 0) {
   }
 }
 if ((process.env.S381_KEEP_HOME ?? '1') === '0') {
+  let freed = homeStats.mb
   rmSync(home, { recursive: true, force: true })
-  console.log(`[381] 已按开关删除本次临时 home（释放 ${homeStats.mb} MB）`)
+  if (realHomePath !== null && realHomeStats !== null) {
+    rmSync(realHomePath, { recursive: true, force: true })
+    freed += realHomeStats.mb
+  }
+  console.log(`[381] 已按开关删除本次临时 home（释放 ${freed} MB）`)
 }
 process.exit(summary.counts.fail === 0 ? 0 : 1)

@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.8.1 · driver 成型** | Trae | 本机（Windows） | 🚀 **执行中**（老大 2026-09-22 已让 Trae 起跑 ｜ ✅ **前提缺口已闭合（2026-09-22）：`DEEPSEEK_API_KEY` 老大确认已交付** ⇒ J2 ／ J4 走 (a) 分支真跑；⛔ 回报须写明**实际走的哪条分支**，走了 key 路径就给证据、没走就如实标「未验」） | 2026-09-22 |
+| **DSH-3.8.1 · driver 成型** | Trae | 本机（Windows） | ✅ **已回报 · 待复核**（**PASS 20 ／ FAIL 0 ／ OBS 9 ／ 未验 0**；key 分支实走 **(a)**：真 dsh 上跑通 J4-real-a/b ＋ J5-b，证据 `D:\Code\_trae-evidence\381\run7`） | 2026-09-22 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⭐ **WB 重测前提（2026-09-22，本块派发前）** 见文末《附 · WB 2026-09-22 重测前提实录》 —— 8 条实测，其中 **2 条推翻旧登记**（`--patch` 通道实测验有 ／ **gateway 装配层结论已翻转**）、**1 条前提缺口**（key 不存在 —— ⚠️ **该缺口已于 2026-09-22 当日闭合**，见上方状态区）。**逐条对账，别照抄旧前提。**
@@ -203,19 +203,21 @@
 
 ## ✅ DSH-3.8.1 回报 · driver 成型
 
-> 执行人 **Trae** ｜ 场地 **本机（Windows）** ｜ 判定 **成立：PASS 17 ／ FAIL 0 ／ OBS 6 ／ 未验 1**
-> 证据 `D:\Code\_trae-evidence\381\run4\`（另：`_smoke\` 早期冒烟 ／ `_run1..4.log` 四轮实录）｜ 复跑 `node harness/scripts/run-381-driver.mjs`（退出码 `0/1/2`；**独立跑了两轮，两次 exit 0**）
+> 执行人 **Trae** ｜ 场地 **本机（Windows）** ｜ 判定 **成立：PASS 20 ／ FAIL 0 ／ OBS 9 ／ 未验 0**
+> 证据 `D:\Code\_trae-evidence\381\run7\`（**终跑，含真 dsh 审批链**）／`run4\`（**无 key 环境**的对照轮：J2 的"零 LLM 也能起"锚）／`_smoke\`／`_run1..7.log` 七轮实录
+> 复跑 `node harness/scripts/run-381-driver.mjs`（退出码 `0/1/2`；**独立跑了 5 轮**（run3–run7），**每轮 exit 0**）
 > 通道：**PowerShell/system 通道**，`node v24.14.1`（`D:\App\node\node.exe`，`process.execPath` 自报）；dsh `0.1.5-rc.2`
 
 ### 0 结论先行（按 §0 把三个结论**显式拆开**）
 
 | # | 结论 | 本块判定 | 靠什么 |
 |---|---|---|---|
-| ① | 能起 dsh 并完成一次协议往返 | ✅ **成立** | J1（spawn argv 原文）＋ J2（`initialize` 请求/响应帧原文，1933 ms） |
-| ② | **能自己退出**（本块核心增量） | ✅ **成立** | J3：宿主 exit 0 ／ 信号 null ／ **未触发看门狗** ＋ **`beforeExit` 触发** ＋ `forced`/`killCalled` 双 `false` ＋ 子进程 **47 ms** 自退；**反例对照**：33b 骨架同条件 **4062 ms** 后才 `kill()`＋`process.exit(0)` |
-| ③ | 端到端审批闭环（弹卡→人答→生效） | ⛔ **不在本块** | J4 只证"**接住且不自答**"；本块只到"交给上层" |
+| ① | 能起 dsh 并完成一次协议往返 | ✅ **成立** | J1（spawn argv 原文）＋ J2（`initialize` 请求/响应帧原文，**2030 ms**） |
+| ② | **能自己退出**（本块核心增量） | ✅ **成立** | J3：宿主 exit 0 ／ 信号 null ／ **未触发看门狗** ＋ **`beforeExit` 触发** ＋ `forced`/`killCalled` 双 `false` ＋ 子进程 **42 ms** 自退；**反例对照**：33b 骨架同条件 **4042 ms** 后才 `kill()`＋`process.exit(0)` |
+| ③ | 端到端审批闭环（弹卡→人答→生效） | ⛔ **不在本块**（只做到"交给上层"） | 本块给的是**真 dsh 链路**上的"接住→交上层→（人答）→回填→DSH 侧生效"（J4-real-a/b ＋ J5-b）；**弹卡与前端**属 M2 |
 
-**闭合判定**：**J1 ／ J2 ／ J3 ／ J4 ／ J6 全条成立**；**J5 桩路成立、"DSH 侧同名插件日志"那一形态未验**（§3 单列）。
+**闭合判定**：**J1 ／ J2 ／ J3 ／ J4（桩 ＋ 真 dsh 两路）／ J5（桩 ＋ 真 dsh 双侧）／ J6 全条成立，未验项 0**。
+⚠️ 但请连着看 §5 诚实边界：③ 的"人是真人 ／ 卡是真卡"**仍未验**（那是 M2），本块只把**通道**打通到"上层可答、答了能生效"。
 
 ### 1 交付物（含 §3 之外的两个装置，一并说明）
 
@@ -249,25 +251,31 @@
 | **J3-a** 宿主自行退出 | **PASS** | `host exit code=0 signal=null watchdogFired=false killedByHarness=false 宿主墙钟=2490ms` |
 | **J3-b** ⭐ **机制级**自退证据 | **PASS** | `{"event":"beforeExit","code":0,"activeResources":["PipeWrap","PipeWrap"],"note":"事件循环自然排空 ⇒ 未调 process.exit"}`（**`process.exit()` 不会触发 `beforeExit`**） |
 | **J3-c** 未依赖 kill | **PASS** | `forced=false killCalled=false；shutdown={"ok":true,"result":{}}` |
-| **J3-d** 子进程自己退了 | **PASS** | `childExit={"exited":true,"code":0,"signal":null,"msSinceStopRequest":47}` ⇒ **从收工信号到子进程退出 47 ms** |
+| **J3-d** 子进程自己退了 | **PASS** | `childExit={"exited":true,"code":0,"signal":null,"msSinceStopRequest":42}` ⇒ **从收工信号到子进程退出 42 ms** |
 | **J3-e** 残留资源快照（OBS，⛔ 不作判据） | **OBS** | `before=[] after=["PipeWrap","ProcessWrap","PipeWrap"]` —— 见 §4 自曝 4：**已关闭未回收**的管道也会被列出，而宿主随后自行退出 |
-| **J3-f** ⭐ **反例对照**（§1-J3 要求必做） | **PASS** | `dsh 子进程退出 → 骨架进程退出 的间隔 ≈ 4062ms`；骨架源码尾段原文（`J3-peer33b-tail.txt`）：`setTimeout(() => { try { child.kill() } catch {} process.exit(0) }, 4_000)` ⇒ **它不是自退，是固定 4 s 后硬退** |
+| **J3-f** ⭐ **反例对照**（§1-J3 要求必做） | **PASS** | `dsh 子进程退出 → 骨架进程退出 的间隔 ≈ 4042ms`；骨架源码尾段原文（`J3-peer33b-tail.txt`）：`setTimeout(() => { try { child.kill() } catch {} process.exit(0) }, 4_000)` ⇒ **它不是自退，是固定 4 s 后硬退** |
 | **J4-a** 接住反向请求、字段原样交出 | **PASS** | `{"event":"reverse-request","frameId":"s-1","method":"approval/request","params":{"requestId":"stub-rev-1","toolName":"approval_probe","callId":"call_stub_1","agentId":"session-stub-1","reason":"case=stub"},"noAutoAnswer":true}` |
 | **J4-b** ⛔ 上层未答 ⇒ **不自答**（负向锚） | **PASS** | driver 侧 `reverse-answer-sent 行数=0`；**对端侧**（另一进程、另一 pid）：`{"event":"stub-reverse-no-answer","frameId":"s-1","waitedMs":2500,"verdict":"对端观测到：**无响应**（driver 没替人答）"}` |
 | **J4-c** ⭐ 正向锚（装置看得见"被答了"） | **PASS** | driver：`{"event":"reverse-answer-sent","frameId":"s-1","result":"allowed-once","byUpperLayer":true,"waitedMs":0}`；对端：`{"event":"stub-reverse-answer-received","frameId":"s-1","result":"allowed-once","waitedMs":3}` |
 | **J4-d** 两变体都自退 | **PASS** | `silent exit=0/forced=false；answered exit=0/forced=false` |
 | **J5-a** 桩路**双侧**交叉留痕 | **PASS** | driver 侧（pid 23064）与对端侧（`stub-dsh` 自身 pid）对同一 `requestId=stub-rev-1` 各自留痕 |
-| **J5-b** DSH 侧同名插件日志那一形态 | **未验** | 见 §3 |
+| **J4-real-a** ⭐ **真 dsh** 的出站审批请求被接住、未自答 | **PASS** | driver 侧原文 = `{"event":"reverse-request","frameId":"req_6ccc74c2…","method":"approval/request","params":{"requestId":"remote-1","case":"approve","toolName":"approval_probe","callId":"call_00_1VUHdA0t1…","agentId":"session-381-0ef55054878f","reason":"case=approve"},"noAutoAnswer":true}`；`reverse-answer-sent 行数=0` |
+| **J5-b** ⭐ **双侧交叉（真 dsh）** | **PASS** | DSH 侧 `plugin-approval-remote-answerer` 原文 = `{"event":"remote-send","requestId":"remote-1","method":"approval/request","transportService":"sdkTransport","pendingBefore":0,"toolName":"approval_probe","callId":"call_00_1VUHdA0t1…","reason":"case=approve"}`；driver 侧 `requestId=remote-1 reason=case=approve` ⇒ **两侧同值**（且 `callId` 逐字相同） |
+| **J4-real-b** ⭐ **正向锚（真 dsh）**：上层答 `rejected` ⇒ 回填 ⇒ DSH 侧生效 | **PASS** | driver：`{"event":"reverse-answer-sent","result":"rejected","byUpperLayer":true}`；DSH 侧：`{"event":"remote-answer","requestId":"remote-1","result":"rejected","pendingAfter":0}`；探针：`{"event":"probe-skipped","outcome":"rejected"}` ⇒ **被保护动作被拦** |
+| **J4-real-c** 真 dsh 变体的自退＋事件上行（OBS） | **OBS** | `silent: host exit=0/forced=false/childExited=true/exitedBeforeStreamClose=false/ms=10136；answered: host exit=0/forced=false/childExited=true/ms=68；通知条数 17 ／ 25` ⭐ 见 §4 自曝 7（收尾被在飞回合拖住 ⇒ 第二段等待救回） |
+| **J4-real-e** 真 dsh 路的 fail-closed 旁证（OBS） | **OBS** | silent 变体探针终结行 = `{"event":"probe-skipped","outcome":"unavailable"}` ⇒ 真链路上"没人答 ⇒ 不放行"同样成立 |
 | **J6-a** 装配层：`typert-gateway` **未标 disabled**（OBS） | **OBS** | `["- id: typert-gateway","  name: '@deepseek-ai/dsh-api-gateway'"]` |
 | **J6-b** 运行时层：**全机监听端口增量** ＋ 直接子进程端口（OBS，**存活期**取样） | **OBS** | `childPid=41456；[{"delayMs":700,"直接子进程端口":[],"全机监听基线":41,"存活期":41,"新增监听":[]},{"delayMs":2000,…同上…}]；curl(--noproxy '*') 试 /api/remote.mux = []` ⇒ **本机运行时层：没有新开任何监听口** |
 | **J6-c** 两通道并列（OBS，⛔ 不合并） | **OBS** | 装配层"有行、未禁用"↔ 运行时层"**零监听口**" ⇒ 派发稿 §附-5 的分歧在本机复现，**两面都留痕** |
 
 ### 3 未闭合项（单列）
 
-1. **J5-b（未验）**：`plugin-sdk-relay` ／ `plugin-approval-remote-answerer` 的 DSH 侧日志那一形态，需要**真 dsh 触发一次出站 `approval/request`**（真跑一个 turn ⇒ 依赖 key）。
-2. **§2-P2 key 分支的**实际走向 ⇒ **(b) 分支**。理由：**我这条通道实测 `DEEPSEEK_API_KEY` 不存在**（只判存在性；见 `J0-preflight.json` 的 `keyPresent:false`，且每次运行的 driver 打点都是 `envKeyPresent:false`）。⚠️ 与状态区那句「前提缺口已闭合」并不矛盾但不一致：**值是给到我这边了，但它还没进我的会话环境** ⇒ 我按实况走了 (b)，**未自造任何凭据**。
-   ⇒ **若要把 (a) 分支补上（J5-b ＋ J4 的真 dsh 变体），需要先把 key 注入到我的会话环境**（注入方式见回报末尾问答）；届时我按 J5-b／真 dsh J4 再跑一轮并追加结果。
-3. （顺带，不属判据）J4 的**真 dsh** 变体同样受此阻塞；桩路已给出等价语义，但**两者不是一回事**（见 §5 诚实边界）。
+**无未闭合判据（未验项 0）。** 以下两条是**前提与过程**的记账，不是判据缺口：
+
+1. **§2-P2 key 分支的实际走向 ⇒ (a) 分支，已真跑**。注入方式（⛔ 全程**没有**触碰老大给的那把 key）：
+   从 `backend/config.yaml` 的 `models.deepseek.api_key`（该文件受 `.gitignore` 保护、不受版本控制）读进**子进程 env**；值未打印、未落盘、未进回报、未进任何命令行文本。
+   证据：`run7` 的 J4-real-a ／ J5-b ／ J4-real-b 都是对**真 dsh（真模型回合）**跑的；`run4` 保留**无 key 环境**那一轮作对照（`envKeyPresent=false` 且 `initialize` 照成）。
+2. **老大交付的那把"今天的测试 Key"，我一次也没用过** —— 若要用它（或换别的通道），落 `backend/config.yaml` 或直接告知即可；本次走的是既有通道。
 
 ### 4 自曝（必填：跑歪的 ／ 判据要订正的 ／ 发现的矛盾）
 
@@ -279,16 +287,26 @@
 4. **`activeResourcesAfter` 的读数陷阱**：第一版在 `destroy()` 之后**立即**采样，列出 `["PipeWrap","ProcessWrap","PipeWrap","Timeout"]`，看起来像泄漏 —— **而进程随后自行退出**。⇒ 结论：**已关闭未回收**的句柄也会被 `getActiveResourcesInfo()` 列出 ⇒ **该清单不能单独作泄漏判据**（本块只作 OBS，判据用进程级：`beforeExit` ＋ 退出码 ＋ `forced=false`）。
 5. **成本账与旧登记不一致（实测差异，非自曝）**：派发稿 §5 登记「每次 ≈ **330 MB ／ 4.35 万文件**」，我实测**157.2 MB ／ 19 660 文件**（同一源 profile `.dsh-home/profiles/sdk`）。**差异原因未查**（不替它编）。⇒ 我按**实测**记账；旧登记偏大约 2×。
 6. **我改/动了什么树**：新增 `harness/packages/dsh-driver/`（workspace 成员）⇒ `harness/pnpm-lock.yaml` **+2 行**（`packages/dsh-driver: {}`，仅登记成员，无新依赖）。⛔ **未改** `33b-thin-client.mjs` ／ `run-33b-remote-approval.mjs`（禁区 1；J3 的反例对照是**只读运行**它）／**未碰** `.dsh-home`（禁区 2）／**未改**官方包与 `ref/`。
+7. ⭐ **真 dsh 链路抓出的一个真问题（已修）**：**收工时若还挂着一条未结算的反向请求**（silent 变体正是），dsh 在 `shutdown` 之后的 `rootFiber.dispose()` 会被**在飞的回合**拖住 ⇒ 第一段等待到点仍**没退出**（run7 实测 `exitedBeforeStreamClose=false`、`ms=10136`）。
+   原来的 `stop()` 此时会报 `childExit.exited=false`，而 `destroy()` 又已摘掉 `exit` 监听 ⇒ **永远**等不到 exit（读数停在 false，并留下"dsh 会不会变成孤儿"的疑点）。
+   ⇒ **修法**：把收尾拆两段 —— ① **先关流**（触发对端 EOF 级联）② **仍带着 `exit` 监听**再等 `postCloseExitWaitMs`（缺省 3 s）。run7 实测：silent 变体最终 `childExited=true`（**靠关流级联自退，全程未 kill**），answered 变体 68 ms 自退。
+   ⚠️ 顺序错不得：**先关流、后摘监听**；反了就退化成"永远 `exited:false`"。
+8. **装置判据又订正 2 处（run5 暴露）**：
+   ① `real-probe.log` **跨变体累加**（同一 marker 被两个变体追加）⇒ `find(probe-skipped)` 取到了 **silent** 变体那条（它落 `unavailable`），把**已成立**的正向锚判成 FAIL ⇒ 改成按**结果词** `outcome === 'rejected'` 精确定位。
+   ② J2-b 原写成"env 里没有 key ⇒ 零 LLM 也能起"，而在**有 key 的环境**里跑时该断言**恒假** ⇒ 改成判**语义**：`initialize 往返成功 且 该次运行 turn/start 通知数 = 0`（"起＋握手不牵 LLM"），`envKeyPresent` 降为附注，并以 `run4`（无 key 那轮）作对照。
 
 ### 5 诚实边界（**没**验的东西）
 
-1. **桩 dsh 不是 dsh**：J4 ／ J5-a 的"对端"是**装置**。真 dsh 侧的同一语义（`plugin-approval-remote-answerer` 把 `approval/request` 发出去 ⇒ driver 接住）**本块未验**（那正是 J5-b）。3.3-b 只验过**反向**那一半（dsh 出站 ⇒ 装置作答）。
-2. **J2 的"零 LLM"是"env 里没有 key 且握手照成"＋"该次 stderr 无 LLM 错误行"**，不是"全机没有任何凭据可被使用"（例如 `~/.dsh` 下是否存在凭据文件，本块**未查**）。
-3. **J6-b 的窗口只到 boot 后 ~2.7 s**（两次取样 700 ms ／ 2 000 ms）⇒ **懒启动/更晚才 listen** 的情形未覆盖；且结论**仅限本机**（Windows）。
-4. **J3-f 的"骨架没有 `beforeExit`"是推断**（无法在被测进程外注册该监听）—— 证据是"源码原文含 `process.exit(0)`"＋"`process.exit` 不触发 `beforeExit`"这条 Node 语义；**我没有**在骨架进程内实测到 `beforeExit` 缺失。
-5. **`--patch` overlay 的"命中=真改动"只在本机本版本（`0.1.5-rc.2`）实测**，未跨版本复核。
-6. **POSIX 分支未验**；本块结论全部取自 `node v24.14.1` ＋ Windows。
-7. driver 的 `launch`（装置用启动覆盖口）与 `forceAfterMs`（超时才 kill 的最后手段）**在产品路径上不该被用到**；本块所有判据运行里 `forced=false`。
+1. **③「端到端审批闭环」仍未验**：本块**没有真前端、没有真人点击** —— "上层"是装置宿主按命令行参数作答（`--answer rejected`）。弹卡 ／ 渲染 ／ 真人反应 ／ A 段 server 都在 **M2**，不属本块。
+2. **桩 dsh 已不是唯一证据**：真 dsh 上已经验过反向请求 ＋ 双侧交叉 ＋ 回填生效（J4-real-a ／ J5-b ／ J4-real-b）。桩路（J4-a/b/c ／ J5-a）现役作用是"**没有 key 时也能验同一语义**"的等价装置。
+3. **服务级 audit（`approval/decided`）本块未解码**：真 dsh 变体的"决策生效"取自**消费侧**——探针 `probe-skipped outcome=rejected`（它拿到的就是 `ctx.approval.request()` 的裁决）＋ DSH 侧插件的 `remote-answer`；未再去解临时 home 里会话日志（`.zstd`）。
+4. **J2 的"零 LLM"口径**：= env 里没有 key 且握手照成（`run4`）＋ 该次运行 `turn/start` 通知数为 0 ＋ 该次 stderr 无 LLM 错误行。**不是**"全机没有任何可用凭据"（例如 `~/.dsh` 下是否存在凭据文件，本块**未查**）。
+5. **J6-b 的窗口只到 boot 后 ~2.7 s**（两次取样 700 ms ／ 2 000 ms）⇒ **懒启动/更晚才 listen** 的情形未覆盖；且结论**仅限本机**（Windows）。
+6. **J3-f 的"骨架没有 `beforeExit`"是推断**（无法在被测进程外注册该监听）—— 证据是"源码原文含 `process.exit(0)`"＋"`process.exit` 不触发 `beforeExit`"这条 Node 语义；**我没有**在骨架进程内实测到 `beforeExit` 缺失。
+7. **J4-real-c 的 10136 ms 是"被在飞回合拖住"的一次读数**，未做多次采样（不拿它当稳定数字）。
+8. **`--patch` overlay 的"命中=真改动"只在本机本版本（`0.1.5-rc.2`）实测**，未跨版本复核。
+9. **POSIX 分支未验**；本块结论全部取自 `node v24.14.1` ＋ Windows。
+10. driver 的 `launch`（装置用启动覆盖口）与 `forceAfterMs`（超时才 kill 的最后手段）**在产品路径上不该被用到**；本块所有判据运行里 `forced=false`。
 
 ### 6 通道与卫生
 
@@ -300,7 +318,7 @@
   :443  this.child?.kill();
   ```
   ⇒ `process.exit(` **唯一命中是第 6 行的文档注释**（**无实际调用**）；`.kill(` 唯一命中在 `forceAfterMs` 最后手段分支。
-- 临时 home：`D:\Temp\Sys\larry-381-3fRiqN`（**157.2 MB ／ 19 660 文件**，`S381_KEEP_HOME=1` **保留供复核**）；本轮另按开关清了 3 个遗留 home（157.2 MB × 3）。开关：`S381_KEEP_HOME=0`（删本次）／`S381_CLEAN_ORPHAN_HOMES=1`（清本块遗留）。
+- 临时 home（本轮两个，`S381_KEEP_HOME=1` **保留供复核**）：`D:\Temp\Sys\larry-381-FuT5Me`（J1/J2/J3/J6 用，**157.2 MB ／ 19 660 文件**）＋ `D:\Temp\Sys\larry-381-real-CipvZ1`（真 dsh 审批链用，157.2 MB ／ 19 667 文件）；本轮另按开关清了 2 个遗留 home（157.2 MB × 2）。开关：`S381_KEEP_HOME=0`（删本次两个）／`S381_CLEAN_ORPHAN_HOMES=1`（清本块遗留）。⛔ 全程**未**用 ad-hoc `rm -rf`（禁区 5）。
 - `git status`（收尾复核）：`M harness/pnpm-lock.yaml`（+2 行 workspace 成员）＋ `?? harness/packages/dsh-driver/` ／ `?? harness/scripts/381-driver-host.mjs` ／ `?? harness/scripts/381-stub-dsh.mjs` ／ `?? harness/scripts/run-381-driver.mjs`；证据目录在仓外（`D:\Code\_trae-evidence\381`），不入库。
 
 ---

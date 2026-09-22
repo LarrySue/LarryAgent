@@ -36,6 +36,7 @@ const home = argOf('--home')
 const patches = argsOf('--patch')
 const marker = argOf('--marker')
 const answerWord = argOf('--answer', 'none')
+const promptText = argOf('--promptText', '只做这一件事：不要调用任何工具，直接回一句 ok。')
 const waitMs = Number(argOf('--waitMs', mode === 'stub' ? 12_000 : 60_000))
 const holdMs = Number(argOf('--holdMs', 1_500))
 const stubPath = resolve(import.meta.dirname, '381-stub-dsh.mjs')
@@ -107,7 +108,7 @@ try {
 
   if (doPrompt) {
     try {
-      report.prompt = { ok: true, ...(await driver.prompt(sessionId, '只做这一件事：不要调用任何工具，直接回一句 ok。')) }
+      report.prompt = { ok: true, ...(await driver.prompt(sessionId, promptText)) }
     } catch (e) {
       report.prompt = { ok: false, error: `${e?.name}: ${e?.message}` }
     }
