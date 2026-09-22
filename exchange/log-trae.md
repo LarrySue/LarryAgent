@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.8.2 · 3.8.1 装置缺陷修复** | Trae | 本机（Windows） | ✅ **已回报 · 待复核**（**A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立**；⭐ **A1 达成**：`forced`／`killCalled` 被翻到 `true`（**两条通道各独立复现**）⇒ `J3-c` 的构造性恒真**已被证伪**；证据 `D:\Code\_trae-evidence\381\run10`（PowerShell ＋ 有 key）／`run11`（Git Bash ＋ 无 key 态）／`run12`（caller 分支）｜跟踪 = 下方 `## DSH-3.8.2` 段；**回报见文末「✅ DSH-3.8.2 回报」**） | 2026-09-22 |
+| **DSH-3.8.2 · 3.8.1 装置缺陷修复** | Trae | 本机（Windows） | ✅ **已回报 · WB 复核成立（2026-09-22）**（**A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立**；⭐ **A1 达成**：`forced`／`killCalled` 被翻到 `true`（**两条通道各独立复现**）⇒ `J3-c` 的构造性恒真**已被证伪**；证据 `D:\Code\_trae-evidence\381\run10`（PowerShell ＋ 有 key）／`run11`（Git Bash ＋ 无 key 态）／`run12`（caller 分支）｜跟踪 = 下方 `## DSH-3.8.2` 段；**回报见文末「✅ DSH-3.8.2 回报」**）｜⭐ **WB 复核（2026-09-22）＝ 逐条回源 ＋ 换通道（node `v22.22.2`）独立复跑，判定成立**（见 `exchange/log-workbuddy.md` 同名段） | 2026-09-22 |
 | **DSH-3.8.1 · driver 成型** | Trae | 本机（Windows） | ✅ **已回报 · WB 复核成立（2026-09-22）**（**PASS 22 ／ FAIL 0 ／ OBS 10 ／ 未验 0**；key 分支实走 **(a)**：真 dsh 上跑通 J4-real-a/b ＋ J5-b ＋ J5-c，证据 `D:\Code\_trae-evidence\381\run9`；⚠️ **首版（run7，PASS 20）漏了三条判据的字面要求，经老大追问后返工**，见下方回报 §4 自曝 9。**WB 复验** = 独立复跑（Bash 通道／同 node 版本）`PASS 18／FAIL 0／未验 1` ⇒ 核心增量「能自己退出」独立复现；⚠️ 两处装置缺陷（`J3-c` 恒真无判别力 ／ 两处硬编码文本异环境自相矛盾）见 `exchange/log-workbuddy.md`） | 2026-09-22 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
