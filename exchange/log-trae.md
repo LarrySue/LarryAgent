@@ -9,6 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
+| **DSH-3.8.2 · 3.8.1 装置缺陷修复** | Trae | 本机（Windows） | 🚀 **已派发 · 待起跑**（修 3.8.1 装置的两处缺陷：`J3-c` 恒真无判别力 ／ 两处硬编码文本与环境脱钩）｜跟踪 = 下方 `## DSH-3.8.2` 段（判据权威落点 = `TODO.md`「DSH-3.8」区） | 2026-09-22 |
 | **DSH-3.8.1 · driver 成型** | Trae | 本机（Windows） | ✅ **已回报 · WB 复核成立（2026-09-22）**（**PASS 22 ／ FAIL 0 ／ OBS 10 ／ 未验 0**；key 分支实走 **(a)**：真 dsh 上跑通 J4-real-a/b ＋ J5-b ＋ J5-c，证据 `D:\Code\_trae-evidence\381\run9`；⚠️ **首版（run7，PASS 20）漏了三条判据的字面要求，经老大追问后返工**，见下方回报 §4 自曝 9。**WB 复验** = 独立复跑（Bash 通道／同 node 版本）`PASS 18／FAIL 0／未验 1` ⇒ 核心增量「能自己退出」独立复现；⚠️ 两处装置缺陷（`J3-c` 恒真无判别力 ／ 两处硬编码文本异环境自相矛盾）见 `exchange/log-workbuddy.md`） | 2026-09-22 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
@@ -26,6 +27,126 @@
 
 ---
 
+
+---
+
+## DSH-3.8.2 · 3.8.1 装置缺陷修复（两处）
+
+> **缘起**：3.8.1 判定成立，但 WB 复验（`exchange/log-workbuddy.md` · 2026-09-22）**实跑**暴露**两处装置缺陷** —— 二者**都不影响 3.8.1 的判定**，但会让装置在**别的环境 ／ 别的通道**下**输出与环境矛盾的话**、或**拿恒真条件当证据**。老大 2026-09-22 指示「让 Trae 顺手修一下」⇒ 起本块。
+> **与 3.8.1 的关系**：本块**只改装置**，⛔ **不重判 3.8.1 的结论**。`run7` ／ `run9` 是**冻结物证**，本块跑出的新 run 只是「装置已修」的**可用性证据**，不替代它们。
+
+### 0 · 目标（一句话）
+
+把 3.8.1 验收装置里**两处会"说谎"的缺陷**修到 **① 不撒谎 ＋ ② 能自我证伪**。
+
+⛔ **三个结论必须显式拆开，不得混报**：
+
+| # | 结论 | 本块是否覆盖 |
+|---|---|---|
+| ① | 装置**不再输出与环境矛盾的文本**（`channel` ／ key 叙述） | ← 本块（缺陷 B） |
+| ② | ⭐ **`forced` ／ `killCalled` 两个标志真的可被翻到 `true`**（⇒ 正式跑里的 `false` 才有信息量） | ← 本块（缺陷 A） |
+| ③ | 3.8.1 的判定「driver 能自己退出」**仍成立** | ⛔ **不是本块要重判的** —— 维持有效（本块不动 J1–J6 的语义） |
+
+---
+
+### 1 · 判据（逐条编号；缺任一条即未闭合）
+
+**缺陷 A · `J3-c` 构造性恒真 ⇒ 修成双向可翻转**
+
+| # | 判据 | 取什么证据（命令 ＋ 期望观测） |
+|---|---|---|
+| **A1** ⭐ **核心** | **反向对照：`forced` ／ `killCalled` 能被翻到 `true`** | 造一个**子进程拒绝退出**的场景：桩进程带 `S381_STUB_IGNORE_SHUTDOWN=1`（**你新增的开关**，见 §3）＋ 宿主传 `--forceAfterMs 1500`（**你新增的参数**）⇒ 读该 run 报告 `stop.forced === true && stop.killCalled === true`。<br>证据 = ① 该 run 的 `HOST-REPORT` 里 `stop` 字段**原文**；② driver 打点里 `force-kill` trace 行**原文**；③ 同 run 的 `stop.shutdown.ok`（预期 `false` —— 桩不理 shutdown）。<br>⛔ **无此条 = 「恒真」未被证伪**，本块**不算完成**。 |
+| **A2** | **正式跑（`forceAfterMs: 0`）里 `J3-c` 的表述不得再充当"能自退"的证据** | 把 `J3-c` 的 `judge(...)` 改为 **`obs(...)`**（或保留 PASS，但 detail 里**显式声明恒真**），并写明「本装置下该分支不可达 ⇒ 无判别力；判别力来自 J3-a ／ J3-b ／ J3-d」。<br>证据 = 改动后 `run-381-driver.mjs` 该段的**源码原文** ＋ 新 run 输出里该行**打印原文**。 |
+| **A3** | **源头注释写明"为什么恒真"** | 在 `381-driver-host.mjs` 的 `forceAfterMs` 处 ＋ `run-381-driver.mjs` 的 `J3-c` 处各加注释：`forceAfterMs: 0` ⇒ `src/index.ts:548` 的 `if (!exited && forceAfterMs > 0)` **分支不可达** ⇒ 标志恒 `false`。<br>证据 = 改动后注释**原文**。 |
+
+**缺陷 B · 两处硬编码文本与环境脱钩 ⇒ 修成按实测环境条件生成**
+
+| # | 判据 | 取什么证据（命令 ＋ 期望观测） |
+|---|---|---|
+| **B1** | `preflight.channel` **不得再输出未由依据支撑的确定值** | 口径（**按此优先序**）：① 调用方给了 env `S381_CHANNEL` ⇒ 原样采纳，并加 `channelSource: 'caller'`；② 否则按**环境痕迹**推断（`process.env.MSYSTEM` ／ `TERM` 含 `xterm` ⇒ 疑似 Git Bash／MSYS；`PSModulePath` ⇒ 疑似 PowerShell）并**显式标为推断**（`channelSource: 'inferred(依据…)'`）；③ 都无 ⇒ `channel: 'unknown'`。<br>证据 = **同一次改动、两条通道各跑一次**（Bash ／ PowerShell），贴各自 `J0-preflight.json` 的 `channel` ＋ `channelSource` **原文** ⇒ ⛔ **两次不得输出同一个确定值**；若两次都落 `unknown` **也合格** —— 关键是**不许再说 `PowerShell/system（本机直跑 node）`**。 |
+| **B2** | `J2-b` 的 detail **按 `envKeyPresent` 条件生成** | 改为按 `keyPresent` 分支：有 key ⇒ 「本轮**有** key（无 key 对照见 run4）」；无 key ⇒ 「本轮**无** key（有 key 对照见 run9）」。<br>证据 = **两态各跑一次**：① 无 key（在子进程 env 里**剔除** `DEEPSEEK_API_KEY`）② 有 key（若你通道内有）。贴两次该行的**打印原文** ⇒ 每句必须与同行的 `envKeyPresent=<bool>` **自洽**（⛔ 不得再出现 `envKeyPresent=false（…本轮跑在有 key 的环境下…）` 这种自相矛盾）。 |
+
+**⛔ 不是判据的**：代码风格 ／ 顺手重构无关段落 ／ 让 PASS 数"更好看"。本块只认上表五条。
+
+---
+
+### 2 · 判据前置（**不满足则实验没跑起来、会得到假阴性**）
+
+- **P1** 场地：本机（Windows）；harness 树 = `D:\Code\LarryAgent\harness`；源 profile = `D:\Code\LarryAgent\.dsh-home\profiles\sdk`（WB 09-22 实测**存在**）。
+- **P2** 改动前**登记三件指纹**（⛔ 防"改了别的"）：`harness/scripts/run-381-driver.mjs` ／ `381-driver-host.mjs` ／ `381-stub-dsh.mjs` 的 `sha256` ＋ 行数。（WB 09-22 读得：**595 ／ 161 ／ 153 行**；**以你通道实测为准，对不上先报差异再动手**。）
+- **P3** ⚠️ **三件行尾不同**：`run-381-driver.mjs` ＝ **LF** ／ `381-driver-host.mjs` ＝ **LF** ／ `381-stub-dsh.mjs` ＝ **CRLF** ⇒ 各按现状写，⛔ 别被编辑器整份改尾（会造全文件 diff 噪声）。判行尾必须**二进制读**（文本模式会静默把 CRLF 转 LF）。
+- **P4** node：**先报版本再动手**，并**注明取自哪条通道**。⚠️ 已知本机**同机不同通道给不同版本**（WB 的 Bash 通道 09-22 读到 managed `v22.22.2`；3.8.1 复验时同通道读到 system `v24.14.1`）—— **两个都真**；对不上**先报差异，别当故障**。
+- **P5** `DEEPSEEK_API_KEY`：**本块不需要真 key**（A 走桩；B2 只要"有／无"两态）。⛔ 只判**存在性**，**永不打印值**、不落盘。
+- **P6** ⛔ **不得覆盖 ／ 改写历史证据目录**：`D:\Code\_trae-evidence\381\run1..run9` ＋ `peer33b` 为**冻结物证** ⇒ 新跑一律落**新 run 目录**（建议 **`run10` 起**，逐次递增）。
+- **P7** ⛔ **产品码不改**：`harness/packages/dsh-driver/src/**` 与 `lib/**` 本块**只读**。A1 的"子进程不退出"必须靠**装置侧**（桩 ＋ 宿主参数）造，⛔ **不得**为了造反向对照去动 driver 的 `stop()` 语义。**若你判断必须改产品码 ⇒ 停手回报，别自己决定。**
+
+---
+
+### 3 · 交付物
+
+**改后文件（预计 3 件，全在 `harness/scripts/`）**：
+
+1. `381-stub-dsh.mjs` — 新增开关 `S381_STUB_IGNORE_SHUTDOWN`（缺省 `0` ＝ 现行为**逐字不变**）：置 `1` 时只打点、**不回 `shutdown` 帧、不 `exit`**
+2. `381-driver-host.mjs` — 新增参数 `--forceAfterMs <N>`（缺省 `0` ＝ 现行为不变），传给 `DshDriver` 的 `forceAfterMs`
+3. `run-381-driver.mjs` — ① `J3-c` 改 `obs` ＋ detail 加恒真说明；② `preflight.channel` 条件生成；③ `J2-b` detail 条件生成；④ 新增 A1 的**反向对照**子跑（独立 run 段，⛔ 不影响主跑的 `forceAfterMs: 0`）
+
+- **证据**：新 run 目录 ＋ B1 的**双通道** `J0-preflight.json` ＋ B2 的**两态**打印原文
+- **退出码**沿用：`0` 通过 ／ `1` 判据失败 ／ `2` 前置缺失 ／ `124` 看门狗
+- **回报**：写本文件（`exchange/log-trae.md`）新段 ＋ 同步本文件顶部状态区
+
+---
+
+### 4 · 参考件四要素
+
+① **路径**（可复制）：
+   - `harness/scripts/run-381-driver.mjs` → `J0-preflight` `:49-63` ／ `J2-b` `:258-261` ／ `J3-c` `:278-280`
+   - `harness/scripts/381-driver-host.mjs` → 构造 `DshDriver` `:76-98`，其中 **`:84` 是 `forceAfterMs: 0`**
+   - `harness/scripts/381-stub-dsh.mjs` → `shutdown` 分支 `:124-145`（**`:140-143` 是硬编码 `process.exit(0)`**）
+   - `harness/packages/dsh-driver/src/index.ts` → `:532` `forceAfterMs` 缺省值；**`:548` `if (!exited && forceAfterMs > 0)`**（＝恒真的根源）
+
+② **怎么参考**：**读源码**，以上述行为改动锚点。`src/index.ts` ／ `lib/index.js` **只读**（见 P7）。
+
+③ **参考程度**：可改形状 —— 本块**就是**改这三个装置脚本。
+
+④ **哪部分不可参考**：⛔ `harness/scripts/33b-thin-client.mjs` 与 `harness/scripts/run-33b-remote-approval.mjs` ＝ **3.3-b 留档件，一字不得改**（3.8.1 的禁 1，本块沿用）。⚠️ **上面所有行号取自 WB 09-22 的工作区快照**，动手前**必须在自己通道复核一遍**（行号漂移**不报错**，只会让你改错地方）。
+
+---
+
+### 5 · 场地器材
+
+- **通道**：本机 Bash（推荐 —— 与 3.8.1 复验同通道，便于对照）＋ **B1 还需用第二条通道（PowerShell）再跑一次**做双通道对照。
+- **实测过的调用式**：node 用**绝对路径**（`C:\Users\SuLarry\.workbuddy\binaries\node\versions\22.22.2-3\node.exe` 或 `D:\App\node\node.exe`），⛔ 别裸调 `node`（本机 PATH 垫片会间歇失效：`ls` ／ `mkdir` ／ `head` 突然 `command not found`）。
+- **已知假绿坑**：
+  1. `--dump-config` 类**配置预览通道 `exit 0` ≠ 没问题**（未命中仍 `exit 0`）。
+  2. ⭐ **`exit 0` ≠ 进程已退出**（3.8.1 的核心教训；J3 判的是**进程生命周期**，不是脚本打印的 pass）。
+  3. **命令"无输出"先验证通道本身**（跑一条必成功的对照），别急着判被测对象超时 ／ 崩溃 —— 工具层故障会伪装成被测对象故障。
+  4. ⚠️ **A1 的反向对照会让桩"故意不退"** ⇒ 必须**带看门狗 ＋ 小 `forceAfterMs`**，别把自己也挂住；跑完⛔ **别留孤儿 `node` 进程**（顺手核一下）。
+  5. ⚠️ 长任务**别走管道回显**（被工具层杀掉会整段丢输出）⇒ **先重定向落盘再读文件**；工具默认超时 120s，长跑须显式放大。
+- **凭据**：无（只判 `DEEPSEEK_API_KEY` 存在性）。
+- **锁**：无。
+
+---
+
+### 6 · 回报格式
+
+- **结论先行**：A1 是否达成（`forced` 能否翻到 `true`）；**若不能 ⇒ 直说**（走 A2 降级，并写明"恒真**未被**证伪"）。
+- **逐条**：A1 ／ A2 ／ A3 ／ B1 ／ B2 各贴**证据原文**。⛔ 不得意译 ／ 手工改写工具输出；原文按你通道现状落盘即可，**语言与编码差异原样保留**，但须**注明该段取自哪条通道**。
+- **未闭合项单列**。
+- **自曝**：跑歪了 ／ 判据要订正 ／ 发现矛盾 —— **直接写**。⭐ **「成因未知」是可接受的结论，别为叙事完整编一个。**
+
+---
+
+### 7 · 禁区
+
+1. ⛔ 不改 `harness/scripts/33b-thin-client.mjs` ／ `run-33b-remote-approval.mjs`（3.3-b 留档件）。
+2. ⛔ 不改 `harness/packages/dsh-driver/src/**` ／ `lib/**`（见 P7）。
+3. ⛔ 不覆盖 ／ 改写 ／ 删除 `D:\Code\_trae-evidence\381\run1..run9` 及 `peer33b`。
+4. ⛔ 不落任何凭据值（只判存在性）。
+5. ⛔ 不改 `TODO.md` ／ `docs/` ／ `archive/`；`exchange/log-trae.md` **只许追加你自己的回报段 ＋ 同步它自己的状态区**，别的 `log-*.md` 不碰。
+6. ⛔ 不顺手重构 ／ 美化无关代码；不改判据 J1 ／ J2 ／ J4 ／ J5 ／ J6 的语义（本块只修 §1 那五条）。
+7. ⛔ **不得为了让判据"好看"而伪造 `forced: true`** —— A1 若造不出来，**如实报**，那不是失败，是**有效结论**。
+
+---
 
 ---
 
