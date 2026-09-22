@@ -1,0 +1,22 @@
+{
+  "name": "@larryagent/dsh-driver",
+  "version": "0.0.1",
+  "description": "LarryAgent 的 DSH driver（DSH-3.8.1）：按 C13 形态起 dsh、常驻、把上游事件与出站反向请求交给上层、并且**能自己退出**（不靠 kill ／ 不靠 process.exit）。3.3-b 薄客户端骨架的语义继承者（⛔ 非其类本体）。",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}
