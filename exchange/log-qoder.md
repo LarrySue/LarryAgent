@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.7.5 · `(b)`** | Qoder | CVM（Linux ／ `49.232.129.252`） | ✅ **已回报 ＋ 两条待裁已裁并执行完毕（2026-09-22）**：`(b)` 闭合 ／ acp 一并删 ／ explicit 分支退役改脚本（`ba3e42e`） | 2026-09-22 |
+| **DSH-3.7.5 · `(b)`** | Qoder | CVM（Linux ／ `49.232.129.252`） | ✅ **已回报 ＋ 两条待裁已裁并执行完毕（2026-09-22）**：`(b)` 闭合 ／ acp 一并删 ／ explicit 分支退役改脚本（`ba3e42e`）｜ ⏳ **待 WB 复验**（复验结论未出前，以上均为执行方自述） | 2026-09-22 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.7.5」段**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯用 `git log -p -- exchange/log-qoder.md`。
 - ⭐ **派发前已重测前提（老大点名）** ⇒ 见文末《附 · WB 2026-09-22 重测前提实录》—— **其中 2 条旧登记被推翻 ／ 暴露新缺口**（§2-P2 待裁①②）。
@@ -342,3 +342,80 @@ stat: cannot statx '/tmp/step0.err': No such file or directory
 **证据包已更新**：CVM `~/qoder-evidence/375/` 现 **22 件**（新增 `pre2-acp.txt`／`post-acp.txt`／`p10-script-sync.txt`／`post2-acp.txt`／`bakpath-acp.txt`／`anchor2_iso.txt`，`README.txt` 末尾追加〈追加（2026-09-22 老大裁决执行）〉段）。
 
 @WorkBuddy @老大
+
+---
+
+## 2026-09-22 · 主职责巡检：文档一致性（全量过一遍 · 老大指令「过一遍你的主职责」）
+
+**方法**：① 三区 + 根级 + 4 份 AI 约束文件的清单与体量 ② 三区 README 索引 vs 实际 ③ **脚本扫全仓本地路径引用**（40 个 md / 524 条引用；脚本 `D:\Temp\docscan\deadlink.py`，输出 `D:\Temp\docscan\out.txt`）④ 逐处看上下文定性 ⑤ 今日变更（`larry-dsh-home` 删除 ／ `cvm-step0.sh` 退役 ／ `acp` 扩围）的文档承接核查。
+
+### 0. 一句话结论
+
+**体系仍健康，且有一处「意外地好」**：全仓 **524 条本地路径引用**里，**真正的待修死链为 0** —— 逐处看上下文后，绝大多数"未解析"是**带声明的历史溯源**（原文写明了"文件随之删除"/"**当时**路径…已移入"）或**上游/参考件内部路径**。**要报的是另一类：写法的歧义与今日变更的承接滞后。**
+
+### 1. 🔴 最新最硬：今日变更在 **docs 区**尚未承接（5 处）
+
+今日（09-22）发生了三件事：`~/larry-dsh-home/profiles/{sdk,acp}` 真删、`cvm-step0.sh` 的 `explicit` 分支退役（`ba3e42e`）。**`TODO.md` 已由 WB 同步**（`:568` 已写「3.7.5 · 已回报 · 待 WB 复验」＋ `:575` 已写「含 `acp` 扩围」）✓，**但 docs 区没有跟上**：
+
+| # | 位置 | 现文（节选） | 为何已过期 | 建议 |
+|---|---|---|---|---|
+| 1 | `docs/dsh/dsh-migration.md:740` | 「⚠️ **已定位的陷阱**：`harness/scripts/cvm-probes/*.sh` **全部钉** `DSH_HOME=$HOME/larry-dsh-home`… ⇒ **照抄这些脚本 = 无 key 假绿**」 | **双重失效**：① 脚本自 09-14 起改为 `${DSH_HOME:-$HOME/.dsh}`；② 今日 `explicit` 已退役为 `exit 3` ⇒ **该陷阱已不存在**，但此句用**现在时**陈述 | 加批注：〔2026-09-14 已改 `${DSH_HOME:-…}`；**2026-09-22 `explicit` 已退役（`exit 3`）⇒ 本陷阱不再成立**〕 |
+| 2 | `docs/production-env.md:512` | 表行「本机 `cvm-probes/*.sh` … ✅ **2026-09-14 已改**：`export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"`（…`cvm-step0.sh` 的 `MODE` 默认值由 `explicit` 翻为 `de…」 | 只反映 **09-14** 那次改动；今日**又改了一次**（explicit → 显式拒绝） | 补 `2026-09-22` 变更 |
+| 3 | `docs/production-env.md:516` | 「（改前形态留痕：…`cvm-step0.sh` 默认 `explicit` ⇒ **照抄 = 无 key 假绿**…）」 | 已自标"改前"，**框架正确**；但今日起该分支**连存在都已不是**那个形态（是 `exit 3`） | 一句批注即可：〔2026-09-22 起 `explicit` 已退役⇒照抄不再产生假绿〕 |
+| 4 | `docs/production-env.md:531` | 「⇒ **凭据落在 `~/.dsh`、可运行的 profile 落在 `~/larry-dsh-home`** —— 两者被劈开。」 | **事实基础已消失**：`~/larry-dsh-home` 的 `sdk`＋`acp` 两个 profile **今日全删** ⇒ "可运行的 profile 落在该 home"**已不成立** | 加批注并指明"劈开"形态已随退役终结 |
+| 5 | `docs/production-env.md:529` | 表行「`~/larry-dsh-home/profiles/sdk` \| base, sdk-app, storage-sqlite, plugin-storage-probe \| 101」 | 该 profile **今日已删** | 该表若已有"退役明细表"跟随，则**在此行加退役指向**即可（否则读者会去 `ls`） |
+
+⚠️ 说明：**这不是"谁漏了"的追责** —— 今日变更由我执行，而**派发稿 §3 的交付物里没有"docs 承接"这一项**（只要求回报入交流区）。**我作为一致性维护者在此报出**：按项目既有形制（如 `81a47cd`「全量文档承接」），这类结构性变更应有 docs 承接。
+
+### 2. 🟡 系统性：**上游路径与本仓库路径同名，写法无区分**（40+ 处）
+
+`docs/dsh/` 下多份稿直接写上游仓库的路径，且**与本仓库的 `docs/` 同名**：
+
+- `dsh-agents-md.md` **43 处**（`docs/architecture.md`、`docs/testing.md`、`packages/AGENTS.md`、`.agents/notes/…`、`snapshots/AGENTS.md`、`vendor/README.md`）
+- `dsh-015-capability-mapping.md` **6 处**（`docs/subsystems/approval.md` 等 —— ⚠️ **`docs/subsystems/` 在我们仓库里不存在**，只有上游有）
+- `dsh-015-notes-scan.md` 2 处；`dsh-015-upstream-inventory.md:138`；`dsh-38-a-protocol-design.md:76`；`exchange/log-trae.md:126`
+- `dsh-migration.md:157/168/1069` 的 `docs/implementation-spec.md` —— 实为**社区件内部路径**（`ref/community/EvilIrving__dsh-repro/…`）
+
+⇒ **风险**：读者（尤其 AI）会把 `docs/subsystems/approval.md` 当作本仓库文件去找，找不到；或更糟 —— 误以为"我们仓库里有子系统规格"。
+⇒ **建议**（低侵入）：给上游引用加**显式前缀**，如「上游 `docs/subsystems/approval.md`（`ref/dsh-bare @ dsh-v0.1.5-rc.2`）」或统一写成 `ref/dsh-bare:docs/…`。这与既有纪律「**上游引用必须带版本号**」是同一条的延伸。
+
+### 3. 🟢 真死链：**逐处核后为 0 条待修**
+
+A 类扫描出 66 处"未解析"，**逐处看上下文后全部可解释**，且**没有一处是"该修而没修"**：
+
+| 类型 | 例 | 为何不算问题 |
+|---|---|---|
+| **带声明的历史溯源** | `local-env.md:335/451`（"原文为 Trae 实测报告 `docs/dsh/dsh-b1-…`。2026-09-11 吸收至本节，**独立报告文件随之删除（内容等价）**"）；`TODO.md:47`（"该稿已于 `677523d` 处置（删除）"）；`dsh-migration.md:724` | **原文自己声明了文件已删** ⇒ 读者不会被误导；这正是"借会消失的地址"的**正确写法**（就地声明失效） |
+| **范本写法** | `dsh-38-a-protocol-design.md:4`（"含三份评审附录的存档版本 = git `074a894`（**当时**路径 `exchange/dsh-38-a-protocol-design.md`，**已随定稿移入本区**）"） | 明确标注"**当时**路径"＋去向 ⇒ **值得当作模板推广** |
+| **上游 / 参考件内部路径** | `dsh-agents-md.md` 43 处、`dsh-015-capability-mapping.md:137…`、`dsh-migration.md:157/168/1069` | 指向上游或 `ref/community/**` 内部，**不是本仓库路径**（见 §2，问题是写法歧义，不是死链） |
+| **计划描述（非引用）** | `product-positioning.md:444`／`HUMAN_NOTE.md:33` 的 `mobile/index.html`；`exchange/log-trae.md:98` 的 `run-381-driver.mjs` | 说的是"**计划**：响应式 UI 或独立 `mobile/index.html`" ⇒ 描述未来产物，**不是在指现有文件** |
+
+**但有两处值得单独点**（**已列为"已知暂缓"，故不重复上报**）：
+- `docs/product-positioning.md:444` 的 `../exchange/deployment-architecture.md` —— **docs→exchange 正面引用**，属老大 2026-09-17 明示"知情但暂缓"的四条之一 ⇒ **本单不再当问题提**（记此以免后人重复计数）。位置已从 `:344` 漂到 `:444`（文件因能力树改版变长）。
+
+### 4. ✅ 索引面：三区 README **全部与实际一致**
+
+| 区 | 索引 vs 实际 |
+|---|---|
+| `docs/README.md` | 顶层 6 件 + `dsh/` 子目录**全列**，且**明示"完整索引见 `dsh/README.md`"** ⇒ 无漂移 |
+| `docs/dsh/README.md` | `docs/dsh/` 实际 **10 个 md**，索引**逐条列出**（含新定稿的 `dsh-38-a-protocol-design.md`，并注明"三方评审已融合"+ 存档版 `074a894`）⇒ **本轮刚移入即已入索引**，无漂移 |
+| `archive/README.md` | 3 件实际文件**全列** ⇒ 无漂移 |
+| `exchange/README.md` | 7 个 log ＋ 3 个讨论稿 **全列**，与实际 11 件一致 ⇒ 无漂移 |
+
+⚠️ 一处**口径小差**（低）：`docs/README.md:20` 定义稳定落点为「`docs/` / `archive/` / `TODO.md`」三处；`exchange/README.md:31` 写「以 `docs/` 和 `archive/` 为主」**未含 `TODO.md`**。两处说的是同一条规则，建议统一。
+
+### 5. 📈 复报（非新问题）：`TODO.md` 体量再涨
+
+`TODO.md` 现 **610 行 / 173,502 字符**（我 09-17 报时为 481 行 / 110,743 字符 ⇒ **字符涨 57%**）。我 09-17 的分级建议（归档已闭环块 → 散文迁出 → 并台账 → 跨块事实收单点 → 长行拆段）**未动**。**本单只复报数字，不重复论证**；是否处理仍待老大裁。
+
+### 6. 本轮**不算问题**的（避免后人重复劳动）
+
+- **反引号路径按"仓库根相对"书写**是全项目惯例（如 `archive/roadmap-history.md` 里写 `docs/local-env.md`、`docs/production-env.md` 里写 `backend/config.yaml`）—— **不是缺陷**：markdown 链接才按文件相对解析，反引号路径只是**散文里的路径写法**。⚠️ 但**这条惯例没有任何文档写过** ⇒ 建议在 `docs/README.md` 加一句，免得新 AI 混用两种语义。
+- `.dsh-home/` ／ `~/.dsh` ／ `~/larry-dsh-home` 等**运行期 home 路径**：一律不按仓库文件解析（扫描已排除）。
+
+### 7. 本轮方法的两处**局限**（如实声明，别过度采信）
+
+1. **扫描脚本我调了三版**：第一版把 `package.json` 这类**泛指裸文件名**与 `~/`、`$DSH_HOME/`、盘符路径全算成"未解析"（假阳性海量）；第二版又把"只在按仓库根解析时才成立"的写法**回退掩盖**了。最终版分 A（真死链）／B（可疑写法）两类，**但判据仍是我定的启发式**，不是规范。凡结论我都**逐处看过上下文**才定级，未采信的原始输出在 `D:\Temp\docscan\out.txt`。
+2. **我未做**：锚点（`#section`）级校验、`docs/` 与 `TODO.md` 的**内容级**对账（只做了抽样：今日变更承接）、`archive/` 的逐条时效核对（该区本就是锁定历史）。这些若要做，需另立一轮。
+
+**我未改动任何文档**（职责边界；巡检结论供老大裁）。
