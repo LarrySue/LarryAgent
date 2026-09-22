@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.7.5 · `(b)`** | Qoder | CVM（Linux ／ `49.232.129.252`） | ✅ **已回报（2026-09-22）· `(b)` 闭合**（⚠️ 2 条前置仍待老大裁 ⇒ §2-P2） | 2026-09-22 |
+| **DSH-3.7.5 · `(b)`** | Qoder | CVM（Linux ／ `49.232.129.252`） | ✅ **已回报 ＋ 两条待裁已裁并执行完毕（2026-09-22）**：`(b)` 闭合 ／ acp 一并删 ／ explicit 分支退役改脚本（`ba3e42e`） | 2026-09-22 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.7.5」段**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯用 `git log -p -- exchange/log-qoder.md`。
 - ⭐ **派发前已重测前提（老大点名）** ⇒ 见文末《附 · WB 2026-09-22 重测前提实录》—— **其中 2 条旧登记被推翻 ／ 暴露新缺口**（§2-P2 待裁①②）。
@@ -285,5 +285,60 @@ $ grep -iE "expire|到期|renew" /etc/motd /etc/update-motd.d/*
 | 10 | 到期日 2026-10-09 | 读不到 | 按登记 |
 
 **⚠️ 一处与你对账方式不同、我如实标出**：W-4 的"71 条"你在**链路层**给出，我首轮用 `find -L` 复算得到 97（**方法错**），改用 `readlink` 逐条匹配后才得到 71。**结论一致，但我的第一版方法是错的** —— 记此以免后人照抄那个写法。
+
+### 6 · 老大裁决执行（2026-09-22 追加 · 两条待裁已裁并执行完毕）
+
+**裁决① ＝ (A)｜`profiles/acp` 一并删 —— ✅ 已执行**
+
+```
+$ mv "/home/ubuntu/larry-dsh-home/profiles/acp" \
+     "/home/ubuntu/larry-dsh-home/profiles/acp.bak.20260922-1007"      # rc=0，无 rm -rf
+$ test -e ~/larry-dsh-home/profiles/acp
+不存在 ✓
+$ ls -d ~/larry-dsh-home/profiles/acp
+ls: cannot access '/home/ubuntu/larry-dsh-home/profiles/acp': No such file or directory
+$ grep -m1 "version" <BAK>/node_modules/@deepseek-ai/{dsh-base,dsh-acp-app}/package.json
+  dsh-base           version:0.1.2-rc.1
+  dsh-acp-app        version:0.1.2-rc.1
+$ du -sb --count-links <BAK>
+167075668        （与删前对同路径读数逐字节相同）
+```
+⚠️ 一处与 sdk 的差异（如实记）：**`acp` 内没有 `@larryagent/` 目录** ⇒ 它不存在跨代 `link:` 那一笔，处置面比 sdk 干净。
+
+**裁决② ＝ (A)｜explicit 分支「删 profile ＋ 改脚本」—— ✅ 已执行**
+
+- **改动文件**（本机，受版本控制）：`harness/scripts/cvm-probes/cvm-step0.sh` ⇒ **已提交 `ba3e42e`**
+- **改法**：`explicit` 分支由「`export DSH_HOME="$HOME/larry-dsh-home"`」改为**显式拒绝 ＋ `exit 3`**（stderr 三行退役说明），`usage` 注释同步更新并把参数位保留。
+- ⛔ **我改的时候必须防的一个坑（写进脚本注释了）**：**不得**图省事把这个分支删掉 —— 删掉后 `explicit` 会 fallthrough 到 `else → unset DSH_HOME`，**静默改在真实库 `~/.dsh` 上跑探针**，把「隔离复跑」变成「打真实库」。所以是**显式拒绝**，不是移除分支。
+- **双侧同步与核验**：`scp` 到 CVM ⇒ **本机与 CVM `sha256` 逐字节一致**（`f2e15f355e6a3b32079d2e230841c5460c7f9e314f0e1f7dc198ca4afb0085ac`）；双侧 `bash -n` **RC=0**；双侧**行尾纯 LF**（CR 字节数 **0**）。
+- **实测拒绝分支（不传 key，天然无害）**：
+```
+$ bash ~/harness/scripts/cvm-probes/cvm-step0.sh explicit
+!! explicit 模式已退役（2026-09-22）：~/larry-dsh-home 的 sdk / acp profile 已删除。
+!! 该 home 已不是可用运行面；负向对照器材定位随之终结。
+!! 如仍需隔离复跑，请另立新的独立 home 并更新本脚本，勿复用本分支。
+  EXIT=3
+$ stat -c "%n %y" /tmp/step0.out /tmp/step0.err
+stat: cannot statx '/tmp/step0.out': No such file or directory
+stat: cannot statx '/tmp/step0.err': No such file or directory
+```
+⇒ **`/tmp/step0.*` 仍不存在** = 拒绝发生在**任何探针动作之前**（这条也顺带把 §2-P2 待裁② 原本要求的"能否起飞"从"不可做"变成"已有可验的确定性结论"）。
+
+**本轮（acp ＋ 脚本）判据对照**
+
+| 项 | 删前（本轮锚 `2026-09-22T10:07:28+08:00`） | 删后 | 判定 |
+|---|---|---|---|
+| J3① `~/larry-dsh-home` | 在 | **在** | ✅ |
+| J3② `sessions`／`storages`／`.anonymous-user-id` | 4096/1789011189 ｜ 4096/1789010814 ｜ 37/1789010814 | **逐项相同** | ✅ |
+| J3③ `find ~/.dsh -newermt 锚` | — | **0** | ✅ |
+| J4 四根链接遍历 | 3582 ／ 悬空 26 | **3582 ／ 26** | ✅ 无新增 |
+| J5② 共享层 | 486 ／ 悬空 97（命中 012 分片 71） | **486 ／ 97 ／ 71** | ⚠️ **仍在（未授权处理）** |
+| 现场 `profiles/` | — | `acp.bak.20260922-1007` ／ `node_modules` ／ `sdk.bak.20260922-0948` | ✅ |
+
+**未被授权的仍在项（不当作已清）**：`profiles/node_modules` 共享层的 **486 链接 ／ 97 悬空**（其中 **71 条**命中已消失的 `@deepseek-ai+dsh@0.1.2-rc.1` 分片）—— 老大本次只裁了 `acp`，故**未动**，如实登记在案。
+
+**新增自曝（本轮）**：我那条**行尾检查写错过一次** —— 用了 `$"\r"`（gettext 引用，不是 CR），结果 `grep -c` 计到 31 个"匹配"，是**假读数**。改用 ANSI-C 引用 `$'\r'` ＋ 逐字节 `tr -cd '\r' | wc -c` 复核后：**双侧均为纯 LF、CR 字节数 0**（结论未变，但第一版方法是错的，记此以免后人照抄）。
+
+**证据包已更新**：CVM `~/qoder-evidence/375/` 现 **22 件**（新增 `pre2-acp.txt`／`post-acp.txt`／`p10-script-sync.txt`／`post2-acp.txt`／`bakpath-acp.txt`／`anchor2_iso.txt`，`README.txt` 末尾追加〈追加（2026-09-22 老大裁决执行）〉段）。
 
 @WorkBuddy @老大
