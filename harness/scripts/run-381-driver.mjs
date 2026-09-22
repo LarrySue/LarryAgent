@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /**
  * DSH-3.8.1 · **验收脚本**（J1–J6 ＋ 反例对照 ＋ 双锚负向对照）
+ * ＋ DSH-3.8.2 增量：**A1** 反向对照（把 `forced`/`killCalled` 翻到 `true`）／**A2** `J3-c` 降级为 OBS 并声明恒真／
+ *   **B1** `preflight.channel` 按环境痕迹条件生成／**B2** `J2-b` detail 按 `envKeyPresent` 条件生成。
+ *   新增开关：`S381_CHANNEL`（显式通道名）／`S381_STRIP_KEY=1`（只在子进程 env 里剔除 key ⇒ 造"无 key"态）。
  *
  * 姿态自证
  *   - 场地：本机（Windows）；node ＝ `process.execPath` 自报（见 J0-preflight）
@@ -46,12 +49,30 @@ rmSync(OUT, { recursive: true, force: true })
 mkdirSync(OUT, { recursive: true })
 
 // ── 前置 ───────────────────────────────────────────────────────────────────
+/**
+ * DSH-3.8.2 · 缺陷 B1：`channel` **不得再输出未由依据支撑的确定值**。
+ * 口径（按此优先序）：① 调用方给了 `S381_CHANNEL` ⇒ 原样采纳，标 `channelSource='caller'`；
+ * ② 否则按**环境痕迹**推断（`MSYSTEM` ／ `TERM` 含 `xterm` ⇒ 疑似 Git Bash／MSYS；`PSModulePath` ⇒ 疑似 PowerShell），
+ *    并**显式标为推断**；③ 都无 ⇒ `channel: 'unknown'`。
+ */
+const channelInfo = (() => {
+  const explicit = process.env.S381_CHANNEL
+  if (typeof explicit === 'string' && explicit !== '') return { channel: explicit, channelSource: 'caller' }
+  const msystem = process.env.MSYSTEM ?? ''
+  const term = process.env.TERM ?? ''
+  const evidence = []
+  if (msystem !== '') evidence.push(`MSYSTEM=${msystem}`)
+  if (/xterm/i.test(term)) evidence.push(`TERM=${term}`)
+  if (evidence.length > 0) return { channel: '疑似 Git Bash ／ MSYS（推断）', channelSource: `inferred(${evidence.join(' ＋ ')})` }
+  if ((process.env.PSModulePath ?? '') !== '') return { channel: '疑似 PowerShell（推断）', channelSource: 'inferred(PSModulePath 存在)' }
+  return { channel: 'unknown', channelSource: 'none' }
+})()
 const preflight = {
   when: new Date().toISOString(),
   node: process.version,
   execPath: process.execPath,
   platform: process.platform,
-  channel: 'PowerShell/system（本机直跑 node）',
+  ...channelInfo,
   harness: HARNESS,
   evidence: OUT,
   dshBin: DSH_BIN,
@@ -60,7 +81,7 @@ const preflight = {
   keyPresent: process.env.DEEPSEEK_API_KEY !== undefined,
 }
 saveJson('J0-preflight.json', preflight)
-console.log(`[381] node=${preflight.node} at ${preflight.execPath}  key=${preflight.keyPresent ? '存在' : '不存在'}`)
+console.log(`[381] node=${preflight.node} at ${preflight.execPath}  key=${preflight.keyPresent ? '存在' : '不存在'}  channel=${preflight.channel}（${preflight.channelSource}）`)
 
 if (!preflight.driverLibExists) {
   console.error('[381] ❌ 前置缺失：driver 未构建 ⇒ cd harness && pnpm --filter @larryagent/dsh-driver run build（退出码 2）')
@@ -91,6 +112,9 @@ writeFileSync(overlayNoop, '# 空改动对照：对**已被 profile 层禁用**�
 writeFileSync(overlayMiss, '# 必不中：id 不存在 ⇒ 应当留下 not found 警告（且仍 exit 0）\n- id: 381-definitely-not-a-real-entry\n  disabled: true\n')
 
 const childEnv = { ...process.env, DSH_HOME: home, CI: '1' }
+// DSH-3.8.2 · B2 两态取证：`S381_STRIP_KEY=1` ⇒ **只在子进程 env 里剔除** `DEEPSEEK_API_KEY`（造"无 key"态）。
+// ⛔ 本进程 env 不动；凭据值从不读取 ／ 打印 ／ 落盘（子进程也只判存在性）。
+if ((process.env.S381_STRIP_KEY ?? '0') === '1') delete childEnv.DEEPSEEK_API_KEY
 const envFor = (extra = {}) => ({ ...childEnv, ...extra })
 
 function runSync(args, extraEnv = {}, timeout = 180_000) {
@@ -257,8 +281,17 @@ judge('J2-a initialize 往返成功（请求帧 ＋ 响应帧原文齐全）',
   `耗时=${String(j1?.initialize?.elapsedMs)}ms；请求帧=${JSON.stringify(initOut?.raw ?? null)}；响应帧=${JSON.stringify(initIn?.raw ?? null)}`)
 judge('J2-b ⭐ 「零 LLM 也能起」：initialize 往返成功，且该次运行**未产生任何 LLM 回合**',
   j1?.initialize != null && (j1?.notifications ?? []).filter((n) => n.method === 'session.event' && String(n.params?.event?.type ?? '') === 'turn/start').length === 0,
-  `envKeyPresent=${String(j1?.started.envKeyPresent)}（只判存在性；本轮跑在**有 key 的环境**下 ⇒ 无 key 环境的对照见 ` +
-  `run4：那次 envKeyPresent=false 且 initialize 照成）；该次 turn/start 通知数=${(j1?.notifications ?? []).filter((n) => n.method === 'session.event' && String(n.params?.event?.type ?? '') === 'turn/start').length}（应为 0）`)
+  // ⭐ DSH-3.8.2 · B2：detail **按 `envKeyPresent` 条件生成** —— ⛔ 不得再出现
+  //    「envKeyPresent=false（…本轮跑在**有 key 的环境**下…）」这种与同行读数自相矛盾的句子。
+  (() => {
+    const keyPresent = j1?.started.envKeyPresent === true
+    const turnStarts = (j1?.notifications ?? []).filter((n) => n.method === 'session.event' && String(n.params?.event?.type ?? '') === 'turn/start').length
+    return `envKeyPresent=${String(j1?.started.envKeyPresent)}（只判存在性）⇒ ` +
+      (keyPresent
+        ? '本轮**有** key（"无 key"的对照轮见 `run11`，历史对照 `run4`）'
+        : '本轮**无** key（已由 `S381_STRIP_KEY=1` 在子进程 env 里剔除 `DEEPSEEK_API_KEY`；"有 key"的对照轮见 `run10`）') +
+      `；该次 turn/start 通知数=${turnStarts}（应为 0）`
+  })())
 const realStderr = t1.stderr
 const llmErrLines = realStderr.split(/\r?\n/).filter((l) => /api.?key|unauthor|401|llm|deepseek/i.test(l))
 save('J2-child-stderr.txt', realStderr)
@@ -275,9 +308,14 @@ judge('J3-a 宿主（driver 进程）自行退出：code 0 / 信号为 null / �
 judge('J3-b ⭐ 自退的机制级证据：`beforeExit` 触发（`process.exit()` 不会触发它）',
   beforeExitRow !== undefined,
   `host-exit.log 原文 = ${JSON.stringify(beforeExitRow ?? null)}（含 event=beforeExit ＋ code=${String(beforeExitRow?.code)}）`)
-judge('J3-c 未依赖 kill：stop.forced / stop.killCalled 双 false',
-  realStop?.forced === false && realStop?.killCalled === false,
-  `forced=${String(realStop?.forced)} killCalled=${String(realStop?.killCalled)}；shutdown=${JSON.stringify(realStop?.shutdown ?? null)}`)
+// ⚠️ DSH-3.8.2 · A2 ／ A3：本条在本装置下是**构造性恒真**，**没有判别力** ——
+//    宿主传 `forceAfterMs: 0`（`381-driver-host.mjs`）⇒ 产品码 `src/index.ts:548` 的
+//    `if (!exited && forceAfterMs > 0)` **分支不可达** ⇒ `forced` ／ `killCalled` **必然为 false**。
+//    ⇒ 按 A2 降级为 `obs` 并**显式声明**；**判别力来自 J3-a ／ J3-b ／ J3-d**（＋ 下方 **A1** 反向对照把它翻到 true）。
+obs('J3-c ⚠️ 恒真条件（本装置下不可达 ⇒ 无判别力）：stop.forced / stop.killCalled 双 false',
+  `forced=${String(realStop?.forced)} killCalled=${String(realStop?.killCalled)}；shutdown=${JSON.stringify(realStop?.shutdown ?? null)}；` +
+  `⚠️ **恒真声明**：宿主 \`forceAfterMs: 0\` ⇒ \`src/index.ts:548\` 的 \`if (!exited && forceAfterMs > 0)\` 分支**不可达** ⇒ 这两个标志**必然为 false**；` +
+  `⇒ 本行**不作"能自退"的证据**（判别力来自 J3-a ／ J3-b ／ J3-d ＋ A1 反向对照）`)
 // ⭐ J3-① 的**后半**（首版漏了）：判据原文要的是「driver 进程**退出码** ＋ **从「收工信号」到「进程退出」的墙钟**」，
 //    而不是"宿主总墙钟"、也不是"收工信号→**子进程**退出"。这里用**同一时钟**的两个绝对时刻相减：
 //    `stop-requested`（driver 打点，被测进程内）↔ 验收脚本观测到的宿主退出时刻。
@@ -317,6 +355,38 @@ judge('J3-f 反例对照：33b 骨架的收尾**不是**自退（固定 4 s 后 
   `dsh 子进程退出 → 骨架进程退出 的间隔 ≈ ${peerExitToProcessEnd}ms（骨架源码原文见 J3-peer33b-tail.txt：「setTimeout(() => { try { child.kill() } catch {} process.exit(0) }, 4_000)」）；` +
   `骨架 exit code=${String(peerRun.code)} signal=${String(peerRun.signal)}；⛔ 它**没有** beforeExit（无法在被测进程外注册该监听 ⇒ 靠源码原文 ＋ Node 语义）`)
 void peerGapMs
+
+// ── A1 · ⭐ 反向对照（DSH-3.8.2 · 缺陷 A）：把 `forced` ／ `killCalled` **翻到 `true`** ──────────
+// 造法（⛔ 全部在**装置侧**，产品码只读 —— 派发稿 P7）：
+//   桩带 `S381_STUB_IGNORE_SHUTDOWN=1`（收到 shutdown 只打点、不回帧、不自退）＋ 宿主 `--forceAfterMs 1500`
+//   ⇒ `src/index.ts:548` 的 `if (!exited && forceAfterMs > 0)` **分支可达** ⇒ 应见 `force-kill` trace ＋ 双 true。
+// ⚠️ 本条是**独立子跑**，⛔ **不改**主跑的 `forceAfterMs: 0` ⇒ 主跑里 `J3-c` 仍是恒真（见该行 OBS）。
+// ⚠️ 假绿坑 4：本跑会让桩"故意不退" ⇒ 必须带看门狗 ＋ 小 `forceAfterMs`；跑完核一遍别留孤儿。
+const a1Marker = join(OUT, 'a1-forced.log')
+const a1StubLog = join(OUT, 'a1-forced-stub.log')
+const a1 = await spawnObserve(HOST, ['--mode', 'stub', '--prompt', '0', '--marker', a1Marker, '--forceAfterMs', '1500'], {
+  S381_STUB_LOG: a1StubLog,
+  S381_STUB_IGNORE_SHUTDOWN: '1',
+}, 90_000, 'a1-forced-host')
+const a1Report = parseHostReport(a1.stdout)
+const a1DriverRows = readJsonl(a1Marker)
+const a1StubRows = readJsonl(a1StubLog)
+const a1ForceKill = a1DriverRows.find((r) => r.event === 'force-kill') ?? null
+const a1Ignored = a1StubRows.find((r) => r.event === 'stub-shutdown-ignored') ?? null
+saveJson('A1-forced.json', {
+  report: a1Report,
+  driver: a1DriverRows,
+  stub: a1StubRows,
+  exit: { code: a1.code, signal: a1.signal, ms: a1.ms, watchdogFired: a1.watchdogFired },
+})
+judge('A1 ⭐ 反向对照：`forced` ／ `killCalled` 能被翻到 `true`（⇒ 主跑的 `false` 才有信息量）',
+  a1Report?.stop?.forced === true && a1Report?.stop?.killCalled === true &&
+  a1Report?.stop?.shutdown?.ok === false && a1ForceKill !== null && a1Ignored !== null,
+  `① HOST-REPORT.stop 原文 = ${JSON.stringify(a1Report?.stop ?? null)}；` +
+  `② driver 侧 \`force-kill\` trace 原文 = ${JSON.stringify(a1ForceKill)}；` +
+  `③ 同 run \`stop.shutdown.ok\` = ${String(a1Report?.stop?.shutdown?.ok)}（预期 false —— 桩不理 shutdown）；` +
+  `桩侧 \`stub-shutdown-ignored\` 原文 = ${JSON.stringify(a1Ignored)}；` +
+  `宿主 exit=${String(a1.code)} signal=${String(a1.signal)}（预期 3 ＝ 宿主自报"没干净自退"）`)
 
 // ── J4 · 反向请求：接住但⛔不自答（桩 dsh；双锚） ─────────────────────────
 async function stubVariant(label, answerWord, stubWaitMs, holdMs) {

@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.8.2 · 3.8.1 装置缺陷修复** | Trae | 本机（Windows） | 🚀 **已派发 · 待起跑**（修 3.8.1 装置的两处缺陷：`J3-c` 恒真无判别力 ／ 两处硬编码文本与环境脱钩）｜跟踪 = 下方 `## DSH-3.8.2` 段（判据权威落点 = `TODO.md`「DSH-3.8」区） | 2026-09-22 |
+| **DSH-3.8.2 · 3.8.1 装置缺陷修复** | Trae | 本机（Windows） | ✅ **已回报 · 待复核**（**A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立**；⭐ **A1 达成**：`forced`／`killCalled` 被翻到 `true`（**两条通道各独立复现**）⇒ `J3-c` 的构造性恒真**已被证伪**；证据 `D:\Code\_trae-evidence\381\run10`（PowerShell ＋ 有 key）／`run11`（Git Bash ＋ 无 key 态）／`run12`（caller 分支）｜跟踪 = 下方 `## DSH-3.8.2` 段；**回报见文末「✅ DSH-3.8.2 回报」**） | 2026-09-22 |
 | **DSH-3.8.1 · driver 成型** | Trae | 本机（Windows） | ✅ **已回报 · WB 复核成立（2026-09-22）**（**PASS 22 ／ FAIL 0 ／ OBS 10 ／ 未验 0**；key 分支实走 **(a)**：真 dsh 上跑通 J4-real-a/b ＋ J5-b ＋ J5-c，证据 `D:\Code\_trae-evidence\381\run9`；⚠️ **首版（run7，PASS 20）漏了三条判据的字面要求，经老大追问后返工**，见下方回报 §4 自曝 9。**WB 复验** = 独立复跑（Bash 通道／同 node 版本）`PASS 18／FAIL 0／未验 1` ⇒ 核心增量「能自己退出」独立复现；⚠️ 两处装置缺陷（`J3-c` 恒真无判别力 ／ 两处硬编码文本异环境自相矛盾）见 `exchange/log-workbuddy.md`） | 2026-09-22 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
@@ -473,5 +473,131 @@
   ⇒ `process.exit(` **唯一命中是第 6 行的文档注释**（**无实际调用**）；`.kill(` 唯一命中在 `forceAfterMs` 最后手段分支。
 - 临时 home（**run9** 两个，`S381_KEEP_HOME=1` **保留供复核**）：`D:\Temp\Sys\larry-381-ZQfrhi`（J1/J2/J3/J6 用，**157.2 MB ／ 19 660 文件**）＋ `D:\Temp\Sys\larry-381-real-YE5qib`（真 dsh 审批链用，157.2 MB ／ 19 667 文件）；本轮另按开关清了 **4 个**遗留 home（157.2 MB × 4：`larry-381-BlFuKF` ／ `larry-381-FuT5Me` ／ `larry-381-real-CipvZ1` ／ `larry-381-real-LfOJVO`）。开关：`S381_KEEP_HOME=0`（删本次两个）／`S381_CLEAN_ORPHAN_HOMES=1`（清本块遗留）。⛔ 全程**未**用 ad-hoc `rm -rf`（禁区 5）。
 - `git status`（收尾复核）：本块产物已入库 —— `d8913ce`（driver ＋ 三件装置 ＋ 回报）／`08f93bf`（(a) 分支补跑 ＋ 收尾两段等待）；**返工改动**＝`M exchange/log-trae.md` ／`M harness/scripts/run-381-driver.mjs`（补 J3-g ／ J5-c ／ J6-d 判据 ＋ 本回报订正）。证据目录在仓外（`D:\Code\_trae-evidence\381`），不入库。
+
+---
+
+## ✅ DSH-3.8.2 回报 · 3.8.1 装置缺陷修复（两处）
+
+> 执行人 **Trae** ｜ 场地 **本机（Windows）** ｜ 判定 **成立：A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立**
+> 证据 `run10\`（**PowerShell 通道 ＋ 有 key**：`PASS 22 ／ FAIL 0 ／ OBS 11 ／ 未验 0`）／`run11\`（**Git Bash 通道 ＋ 无 key 态**：`PASS 18 ／ FAIL 0 ／ OBS 8 ／ 未验 1`）／`run12\`（**caller 分支**：`PASS 18 ／ FAIL 0 ／ OBS 8 ／ 未验 1`）—— run11／12 的那 1 处未验＝真 dsh 段，是本块**刻意**用 `S381_REAL_APPROVAL=0` 关掉的
+> 命令一律：`node harness/scripts/run-381-driver.mjs`（`S381_EVIDENCE_DIR=D:\Code\_trae-evidence\381`；`S381_RUN=run10｜run11｜run12`）
+> ⛔ **本块只改装置**（3 件脚本），**未重判 3.8.1**；`run1..run9` ＋ `peer33b` 为**冻结物证**，本轮**未覆盖**（收尾核实：其 `summary.json` mtime 仍为当日 10:38–11:47，读数与登记一致）。
+
+### 0 结论先行（按 §0 三个结论**显式拆开**）
+
+| # | 结论 | 本块判定 | 靠什么 |
+|---|---|---|---|
+| ① | 装置**不再输出与环境矛盾的文本** | ✅ **成立** | **B1** 三档分支实跑、两条通道给出**不同**值；**B2** 两态各一次，每句与同行 `envKeyPresent` **自洽** |
+| ② | ⭐ **`forced` ／ `killCalled` 真能被翻到 `true`** | ✅ **成立（A1 达成）** | **两条通道各独立复现**：`forced=true` ／ `killCalled=true` ／ `shutdown.ok=false` ／ driver 侧 `force-kill` trace 在 ／ 桩侧 `stub-shutdown-ignored` 在 |
+| ③ | 3.8.1 的「driver 能自己退出」**仍成立** | **维持**（本块**不动** J1–J6 语义） | run10 里 J3-a ／ J3-b ／ J3-d ／ J3-g 仍 **PASS**（`exit=0` ／ `beforeExit` 触发 ／ 36 ms ／ 48 ms） |
+
+⇒ **恒真已被证伪**：那两个 `false` 从"构造性恒真"变成"**有反向对照撑着的实测值**"。
+
+### 1 交付物（3 件，全在 `harness/scripts/`）＋ 新增开关
+
+| # | 物 | 改动 | 物证 |
+|---|---|---|---|
+| 1 | `381-stub-dsh.mjs` | 新增 `S381_STUB_IGNORE_SHUTDOWN`（缺省 `0`）：置 `1` 时收到 `shutdown` **只打点、不回帧、不自退**。⭐ 该文件 diff ＝ **+10 ／ −0（纯新增）** | `a1-forced-stub.log` 的 `stub-shutdown-ignored` |
+| 2 | `381-driver-host.mjs` | 新增 `--forceAfterMs <N>`（缺省 `0` ＝ 现行为不变）＋ **A3 注释**（恒真根源） | `A1-forced.json`；注释原文见 §2-A3 |
+| 3 | `run-381-driver.mjs` | ① **A1** 新增反向对照子跑；② **A2** `J3-c` 降级 `obs` ＋ 恒真声明；③ **B1** `preflight.channel` 条件生成；④ **B2** `J2-b` detail 条件生成 | 见 §2 逐条 |
+
+**新增开关**：`S381_CHANNEL`（显式通道名 ⇒ `channelSource='caller'`）／`S381_STRIP_KEY=1`（**只在子进程 env 里**剔除 `DEEPSEEK_API_KEY`，造"无 key"态）。
+
+### 2 逐条判据（命令 ＋ 原始输出 ＋ 判定）
+
+**A1 ⭐ 反向对照（核心）** —— `run10`（PowerShell）＋ `run11`（Git Bash）**各一次，均 PASS**
+
+```
+node harness/scripts/run-381-driver.mjs   # 内部子跑：node 381-driver-host.mjs --mode stub --prompt 0 \
+                                          #   --forceAfterMs 1500  ＋ env S381_STUB_IGNORE_SHUTDOWN=1
+```
+- **① `HOST-REPORT.stop` 原文（run10）**：
+  `{"stopRequestedAt":"2026-09-22T07:24:42.288Z","totalMs":10022,"childWasAliveAtStop":true,"shutdown":{"ok":false,"error":"shutdown timed out after 5000ms"},"childExit":{"exited":true,"code":null,"signal":"SIGTERM","msSinceStopRequest":10020},"forced":true,"killCalled":true,"pendingReversesAtStop":0,"exitedBeforeStreamClose":false,"activeResourcesBefore":[],"activeResourcesAfter":["PipeWrap","ProcessWrap","PipeWrap"],"processExitCalled":false}`
+- **①（run11 独立复现）**：同形，`"stopRequestedAt":"2026-09-22T07:31:34.794Z"`，`"totalMs":10031`，`"msSinceStopRequest":10030`，`"forced":true,"killCalled":true`
+- **② driver 侧 `force-kill` trace 原文（run10）**：`{"t":"2026-09-22T07:24:52.301Z","event":"force-kill","reason":"child did not exit within 1500ms after shutdown"}`
+  （run11：`{"t":"2026-09-22T07:31:44.817Z","event":"force-kill","reason":"child did not exit within 1500ms after shutdown"}`）
+- **③ 同 run `stop.shutdown.ok` ＝ `false`**（预期 false —— 桩不理 shutdown）；桩侧原文（run10）：
+  `{"t":"2026-09-22T07:24:42.289Z","role":"stub-dsh","pid":42688,"event":"stub-shutdown-ignored","frameId":"req_0a839c1642a54910b4b747b0bd49397a","note":"按 S381_STUB_IGNORE_SHUTDOWN=1：不回 shutdown 帧、不自退 ⇒ 等 driver 的 force-kill（A1 期望观测）"}`
+- **宿主退出码**：`exit=3 signal=null`（预期 3 —— 宿主自报 `stop.forced !== false` ⇒ "没干净自退"）
+- **判定：PASS**（`A1-forced.json` 落盘；run11 同结构）
+
+**A2 `J3-c` 降级 ＋ 恒真声明** —— 改后源码（`run-381-driver.mjs:311-318`）原文：
+```
+// ⚠️ DSH-3.8.2 · A2 ／ A3：本条在本装置下是**构造性恒真**，**没有判别力** ——
+//    宿主传 `forceAfterMs: 0`（`381-driver-host.mjs`）⇒ 产品码 `src/index.ts:548` 的
+//    `if (!exited && forceAfterMs > 0)` **分支不可达** ⇒ `forced` ／ `killCalled` **必然为 false**。
+//    ⇒ 按 A2 降级为 `obs` 并**显式声明**；**判别力来自 J3-a ／ J3-b ／ J3-d**（＋ 下方 **A1** 反向对照把它翻到 true）。
+obs('J3-c ⚠️ 恒真条件（本装置下不可达 ⇒ 无判别力）：stop.forced / stop.killCalled 双 false',
+```
+新 run 里的**打印原文**（run10；run11 同）：
+```
+OBS   J3-c ⚠️ 恒真条件（本装置下不可达 ⇒ 无判别力）：stop.forced / stop.killCalled 双 false  forced=false killCalled=false；shutdown={"ok":true,"result":{}}；⚠️ **恒真声明**：宿主 `forceAfterMs: 0` ⇒ `src/index.ts:548` 的 `if (!exited && forceAfterMs > 0)` 分支**不可达** ⇒ 这两个标志**必然为 false**；⇒ 本行**不作"能自退"的证据**（判别力来自 J3-a ／ J3-b ／ J3-d ＋ A1 反向对照）
+```
+⇒ 判定 **PASS**（判定面：`status` 已由 `PASS` 变 `OBS`，且声明在 detail 里）；**副作用如实记账**：run10 计数因此为 `PASS 22 ／ OBS 11`（J3-c 由 PASS→OBS `−1／+1`，A1 新增 PASS `+1`）。
+
+**A3 源头注释** —— `381-driver-host.mjs:86-91` 原文：
+```
+  // ⛔ **恒真的根源**（DSH-3.8.2 · A3）：`forceAfterMs === 0` ⇒ 产品码 `src/index.ts:548` 的
+  //    `if (!exited && forceAfterMs > 0)` **分支不可达** ⇒ `stop.forced` ／ `stop.killCalled` **必然为 false**。
+  //    ⇒ 正式跑里这两个 `false` **没有判别力**（`J3-c` 已按 A2 降级为 OBS 并显式声明）；
+  //    判别力来自 **A1 反向对照**：`--forceAfterMs 1500` ＋ 不理 `shutdown` 的桩（`S381_STUB_IGNORE_SHUTDOWN=1`）
+  //    ⇒ 该分支可达 ⇒ 双 `true`（见 `A1-forced.json`）。
+  forceAfterMs,
+```
+（另一处在 `run-381-driver.mjs:311-314`，即 A2 那四行注释。）⇒ 判定 **PASS**。
+
+**B1 `preflight.channel` 条件生成** —— 三档分支**各实跑一次**，`J0-preflight.json` 原文：
+
+| run | 通道 | `channel` | `channelSource` |
+|---|---|---|---|
+| **run10** | PowerShell/system（`node D:\App\node\node.exe`） | `疑似 PowerShell（推断）` | `inferred(PSModulePath 存在)` |
+| **run11** | Git Bash（`D:\App\Git\bin\bash.exe -l`，`MSYSTEM=MINGW64`） | `疑似 Git Bash ／ MSYS（推断）` | `inferred(MSYSTEM=MINGW64)` |
+| **run12** | PowerShell ＋ `S381_CHANNEL=caller-declared-PowerShell` | `caller-declared-PowerShell` | `caller` |
+
+⇒ 判定 **PASS**（两条真实通道输出**不同值**；第三档 `caller` 亦实跑）。**反证**（旧硬编码串是否还在）：
+```
+Select-String harness\scripts\run-381-driver.mjs -Pattern 'PowerShell/system（本机直跑 node）'
+⇒ 0 命中
+```
+
+**B2 `J2-b` detail 条件生成** —— 两态各一次，**打印原文**：
+- 有 key（`run10`）：`envKeyPresent=true（只判存在性）⇒ 本轮**有** key（"无 key"的对照轮见 `run11`，历史对照 `run4`）；该次 turn/start 通知数=0（应为 0）`
+- 无 key（`run11`，`S381_STRIP_KEY=1` 在子进程 env 里剔除）：`envKeyPresent=false（只判存在性）⇒ 本轮**无** key（已由 `S381_STRIP_KEY=1` 在子进程 env 里剔除 `DEEPSEEK_API_KEY`；"有 key"的对照轮见 `run10`）；该次 turn/start 通知数=0（应为 0）`
+
+⇒ 判定 **PASS**（两句均与同行的 `envKeyPresent=<bool>` **自洽**；⛔ 已不再出现 `envKeyPresent=false（…本轮跑在**有 key 的环境**下…）` 这种矛盾句）。
+
+### 3 未闭合项（单列）
+
+**无未闭合判据（A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立）。** 以下两条是**前提与过程**的记账：
+
+1. **P2 三件指纹（改动前）** —— 与 WB 09-22 读数**一致**：`run-381-driver.mjs` **595** LF 行 ／ `381-driver-host.mjs` **161** LF 行 ／ `381-stub-dsh.mjs` **153** CRLF 行；sha256 = `FA93AC07…A6C2E664` ／ `2909FFA0…E91F8DE164` ／ `638F9754…09BBBE690`。
+2. **P3 行尾（改动前后各核一次）** —— LF ／ LF ／ **CRLF**，改后仍是 **CRLF=163 ／ 裸 LF=0**（桩）＋ **裸 LF ／ 0 CRLF**（另两件）⇒ 未被编辑器整份改尾，diff 无全文件噪声。
+
+### 4 自曝
+
+1. ⛔⭐ **我自己揪出并回退了一处"不合字面"**：第一版我给桩的 `stub-start` 打点加了 `ignoreShutdown` 字段 —— 这使「缺省 `0` ＝ 现行为**逐字不变**」**不再字面成立**。⇒ 回退该行，桩的改动变成 **+10 ／ −0（纯新增，不动任何既有行）**，并把 run10／run11 **全部重跑**，使交付物与物证一致。本回报只引**回退后**的终版物证（run10 首版已作废，pid／时间戳不同）。
+2. **`S381_CHANNEL`（caller 分支）是我实现的代码路径，在我动手前走不到** ⇒ 补 **run12** 覆盖，否则"三档口径"里有一档**无物证**。
+3. **桩的 `S381_STUB_IGNORE_SHUTDOWN=1` 只挡"因 `shutdown` 而自退"**；`rl.on('close')`（stdin EOF）那条退出路径**未挡**。理由：A1 里 `kill()` 发生在**任何关流之前**（物证 `exitedBeforeStreamClose:false` ⇒ 第一段等待没成功才走 force），故该路径在 A1 中**不可达**；保留它是为了万一 `kill()` 失效**不留孤儿**（假绿坑 4）。**若把判据的"不 exit"读成"任何路径都不退" ⇒ 本条不合字面，请裁**。
+4. ⚠️ **A1 的时序与直觉不同（如实报）**：`forceAfterMs` 只**决定是否 kill**，**不决定何时** kill —— 实测时序是「`shutdown` 请求超时 **5 s** ⇒ 再等 `max(shutdownTimeoutMs,1000)`＝**5 s** ⇒ 才 `kill()`」，`totalMs≈10022`。我按判据字面只传 `--forceAfterMs 1500`；若 WB 期望"1.5 s 后就 kill"，那是产品码 `stop()` 的语义，⛔ 本块按 **P7 不动产品码**。
+5. **`A1-forced.json` 的 `activeResourcesAfter` 列出三根管道** —— 与 3.8.1 的 J3-e 同一个陷阱（已关闭未回收的句柄也会被列）⇒ 本块**只作 OBS**，不作泄漏判据。
+6. **run11／run12 的 `未验 1` 不是缺陷**：那是我刻意 `S381_REAL_APPROVAL=0` 关掉真 dsh 段的（省 key 通道）⇒ 这两轮**不能**用于判 J4-real ／ J5-b。
+7. **WB 的 `--forceAfterMs` 行号锚（`src/index.ts:532/548`）复核成立**：`532` ＝ 缺省值 `shutdownTimeoutMs + 2_000`；`548` ＝ `if (!exited && forceAfterMs > 0)`。行号未漂移。
+
+### 5 诚实边界（**没**验的东西）
+
+1. **B1 的"依据"本身是启发式**：`MSYSTEM` ／ `TERM` ／ `PSModulePath` 是**痕迹**而非身份证明。本机 Git Bash 里 **`PSModulePath` 也在**（继承自 PowerShell）—— 只因我先判 `MSYSTEM` 才没落错。⇒ 判据要的"**不许再说确定值**"成立；"**推断得对**"**未验**。
+2. **`unknown` 分支（口径 ③）未实跑**（需要一份三样痕迹都没有的 env）⇒ 代码路径存在，**无物证**。
+3. **A1 只证"能被翻到 `true`"**，不证"翻上去之后行为正确"（例如 kill 后有无僵尸／句柄是否回收）——本块只读到 `childExit.exited=true` ／ `signal=SIGTERM`。
+4. **两条通道的 node 都是 `v24.14.1`**（同一份 `D:\App\node`）⇒ **未复现** WB 的"Bash 通道读 managed `v22.22.2`"现象；P4 的该差异**本块未解释**（不替它编）。
+5. **A1 的 10 s 级时序只各采一次**（run10／run11），未做重复采样。
+6. **本块不动** 3.8.1 的 J1／J2／J4／J5／J6 语义；那五组的读数**沿用**冻结物证 `run9`（run10 亦复跑成立，仅作"装置改后仍可用"的旁证）。
+
+### 6 通道与卫生
+
+- **通道**：run10 ＝ PowerShell/system；run11 ＝ **Git Bash**（`D:\App\Git\bin\bash.exe -l`，`MSYSTEM=MINGW64`）；run12 ＝ PowerShell ＋ caller 覆盖。⚠️ 本机 `bash` 传参**会吃引号** ⇒ 长命令走**脚本文件**（`_run11.sh`）而非内联 `-lc '…'`。
+- ⛔ **凭据零接触**：run10 走**既有通道** —— `backend/config.yaml` 第 16 行的 `api_key`（该文件受 `.gitignore` 保护）读进**子进程 env**；值**未打印／未落盘／未进本回报／未进任何命令行文本**；跑完立即 `Remove-Item Env:\DEEPSEEK_API_KEY`。**老大给的那把测试 key 本块一次也没用过。**
+- **临时 home**（`S381_KEEP_HOME=1` 保留供复核）：run10 `D:\Temp\Sys\larry-381-0zBPQY`（157.2 MB ／ 19 660 文件）＋ `D:\Temp\Sys\larry-381-real-RUVsbk`（157.2 MB ／ 19 667 文件）；run11 `larry-381-cfFpmO`；run12 `larry-381-HSJdEW`。首轮试跑的 3 个遗留 home 已按 `S381_CLEAN_ORPHAN_HOMES=1` 清除（157.2 MB × 3）。⛔ 全程**未**用 ad-hoc `rm -rf`。
+- **孤儿核查**（假绿坑 4）：`Get-CimInstance Win32_Process -Filter "Name='node.exe'"` ⇒ 仅 2 个 **WorkBuddy MCP**（`sheetagent` ／ `weixinpay`），**无本块遗留**。
+- `git status`（收尾）：见紧随其后的提交（本块改动 = 3 件脚本 ＋ 本文件）。
 
 ---

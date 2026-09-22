@@ -16,6 +16,8 @@
  *   S381_STUB_REVERSE_WAIT_MS 等答案的上限（缺省 6000）
  *   S381_STUB_EMIT            是否在 prompt 后发反向请求（缺省 1）
  *   S381_STUB_IDLE_AFTER      等完答案后是否发 `session/status idle`（缺省 1）
+ *   S381_STUB_IGNORE_SHUTDOWN 置 `1` 时**收到 `shutdown` 只打点、不回帧、不因此自退**（缺省 0 ＝ 现行为**逐字不变**）
+ *                             ⭐ DSH-3.8.2 · A1 用：把 driver 的 `force-kill` 分支从"不可达"逼成**可达**
  */
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -25,6 +27,8 @@ const LOG = process.env.S381_STUB_LOG ?? null
 const WAIT_MS = Number(process.env.S381_STUB_REVERSE_WAIT_MS ?? 6000)
 const EMIT = (process.env.S381_STUB_EMIT ?? '1') !== '0'
 const IDLE_AFTER = (process.env.S381_STUB_IDLE_AFTER ?? '1') !== '0'
+/** DSH-3.8.2 · A1 反向对照开关（缺省 `0` ⇒ 现行为不变）。 */
+const IGNORE_SHUTDOWN = (process.env.S381_STUB_IGNORE_SHUTDOWN ?? '0') === '1'
 const SESSION_ID = process.env.S381_STUB_SESSION_ID ?? 'session-stub-1'
 const REVERSE_FRAME_ID = 's-1'
 const REVERSE_REQUEST_ID = 'stub-rev-1'
@@ -123,6 +127,12 @@ rl.on('line', (line) => {
   }
   if (method === 'shutdown') {
     log({ event: 'stub-request-in', method, frameId: id })
+    // ⭐ DSH-3.8.2 · A1 反向对照：置 `S381_STUB_IGNORE_SHUTDOWN=1` 时**只打点、不回帧、不 exit**
+    //    ⇒ driver 的 `if (!exited && forceAfterMs > 0)` 分支**可达**（把恒真的 forced/killCalled 翻到 true）。
+    if (IGNORE_SHUTDOWN) {
+      log({ event: 'stub-shutdown-ignored', frameId: id, note: '按 S381_STUB_IGNORE_SHUTDOWN=1：不回 shutdown 帧、不自退 ⇒ 等 driver 的 force-kill（A1 期望观测）' })
+      return
+    }
     // ⭐ 收工前把"那条反向请求到底有没有被答"结清一次：**确定性**优于靠等一个 6 s 窗口
     if (reversePending !== null) {
       clearTimeout(reverseTimer)

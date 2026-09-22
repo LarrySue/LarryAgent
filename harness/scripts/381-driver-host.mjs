@@ -11,7 +11,7 @@
  * 用法：
  *   node 381-driver-host.mjs --mode real|stub --prompt 0|1 --home <临时home> [--patch <file>]...
  *                            --marker <driver打点> [--answer none|allowed-once|rejected]
- *                            [--waitMs N] [--holdMs N]
+ *                            [--waitMs N] [--holdMs N] [--forceAfterMs N]
  * 输出：stdout 打一行 `HOST-REPORT {json}`（验收脚本据此判读）。
  */
 import { randomUUID } from 'node:crypto'
@@ -39,6 +39,8 @@ const answerWord = argOf('--answer', 'none')
 const promptText = argOf('--promptText', '只做这一件事：不要调用任何工具，直接回一句 ok。')
 const waitMs = Number(argOf('--waitMs', mode === 'stub' ? 12_000 : 60_000))
 const holdMs = Number(argOf('--holdMs', 1_500))
+/** ⚠️ DSH-3.8.2 · A1：缺省 `0` ⇒ 现行为**不变**（正式跑不用它；只有 A1 反向对照传 `1500`）。 */
+const forceAfterMs = Number(argOf('--forceAfterMs', '0'))
 const stubPath = resolve(import.meta.dirname, '381-stub-dsh.mjs')
 
 /**
@@ -81,7 +83,12 @@ const driver = new DshDriver({
   marker,
   reverseIdleWarnMs: 2_000,
   shutdownTimeoutMs: 5_000,
-  forceAfterMs: 0, // ⛔ 本装置**不启用**最后手段 ⇒ forced 必须为 false（否则判据当场失败）
+  // ⛔ **恒真的根源**（DSH-3.8.2 · A3）：`forceAfterMs === 0` ⇒ 产品码 `src/index.ts:548` 的
+  //    `if (!exited && forceAfterMs > 0)` **分支不可达** ⇒ `stop.forced` ／ `stop.killCalled` **必然为 false**。
+  //    ⇒ 正式跑里这两个 `false` **没有判别力**（`J3-c` 已按 A2 降级为 OBS 并显式声明）；
+  //    判别力来自 **A1 反向对照**：`--forceAfterMs 1500` ＋ 不理 `shutdown` 的桩（`S381_STUB_IGNORE_SHUTDOWN=1`）
+  //    ⇒ 该分支可达 ⇒ 双 `true`（见 `A1-forced.json`）。
+  forceAfterMs,
   ...(mode === 'stub' ? { launch: { command: process.execPath, args: [stubPath] } } : {}),
   hooks: {
     onNotification(method, params) {
