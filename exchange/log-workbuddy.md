@@ -191,6 +191,8 @@
    建议改为：**「⛔ 禁止人工改写／意译；工具链自身的语言与编码差异须原样保留，并注明该段取自哪条通道（原生 shell ／ DSH pwsh ／ 沙箱运行器）」**。
    同类（Claude 侧新暴露）：派发稿 §7「Key 值不得落任何文件／日志／工具输出」与 **Tier 0 红线①**（老大授权临时 Key 不受此限、不必扫）**互相矛盾** ⇒ 派发稿模板的**凭据条款**与**原文条款**建议同批修订。
 
+2. ⚠️ **Qoder 装了 repo 级 git 钩子，会让「提交」看起来失败**（2026-09-23 WB 撞上）—— `.git/hooks/post-commit` ／ `post-checkout` 带 `# BEGIN Qoder AI tracker`，每次提交都拉起 `D:/App/Qoder/.../Qoder.exe` 的 worker；该 worker 读注册表 ⇒ 在 WB 沙箱里触发 `reg.exe` 黑名单 ⇒ **整条命令被 SIGTERM、退出码非 0、打印 `PROGRAM BLOCKED BY SECURITY POLICY`，而提交其实已成功**（实测 `e6f3b04` 在库、工作区 clean）。⇒ **本仓判提交成败一律看 `git log -1` ＋ `git status`，不看退出码**；对其他 AI 同样成立（钩子对所有提交者生效）。建议：老大裁定「保留 ／ 移除该钩子」（WB 未改，属其他 AI 的运行时资产）。
+
 ## 🗂 已清理段落（按交流区规矩）
 
 - **2026-09-23 清理**：未结项第 2 条《CVM 沙箱降档是否接受》**已裁（老大：接受降档）** ⇒ 回填 `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉④（含两处归因修正）＋ `TODO.md` DSH-3.5 段。
