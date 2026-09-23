@@ -211,3 +211,70 @@ $ timeout 20 git --version                      → git version 2.52.0.windows.1
 - **aerince 的锚版本读不出**（无 peerDeps）⇒ 按 G4 标 🔴、**不进结论**。
 - **未做** npm 站内搜索；GitHub 侧只 1 次方向搜索（抽样）；**未拉取**新发现的 4 件（rich-indexing / dcp / context-lens / dsh-context）⇒ 它们仍是 🟡。
 - 全部结论**只在「本地 Bash 通道 ＋ 内置搜索/抓取工具 ＋ git over 全局代理」内成立**，不可外推。
+
+---
+
+### 🔁 补遗（2026-09-23 · 老大告知代理已开后的追加；**只改本文件**）
+
+**背景**：原报告自报两条未做，其一＝**npm 站内搜索**。代理开后补做；**全程只读 —— 未落任何文件、未 clone、未装**（`ref/` 我未动）。
+
+#### ① 检索账 · 追加 2 条通道
+
+| # | 通道 | 动作 ／ 检索式 | 时间 | 扫描量 ／ 结果 |
+|---|---|---|---|---|
+| 8 | 联网 · npm registry 搜索 | `registry.npmjs.org/-/v1/search?text=dsh+compaction` | 09-23 | `total=18146`；**前 20 条逐条读** |
+| 9 | 联网 · npm 包元数据 | `/latest` 端点 ＋ **整包 packument**（dist-tags ／ 版本清单 ／ 发布时间） | 09-23 | 5 件；另核 2 件官方包的整包 packument |
+
+（通道自检：走 `socks5://127.0.0.1:7890` ⇒ `http_code=200`）
+
+#### ② 候选表 · 追加
+
+##### B-5 · **npm 通道独有**的新候选（🟡 注册表级；名录与目录站**均未见**）
+
+| 候选 | 版本 ／ License | peerDeps（**锚版本判据**） | 命中 | 档 | 借鉴点 |
+|---|---|---|---|---|---|
+| `Zhuchen00123/dsh-compaction-cacheaware` | 0.1.11 ／ MIT | `@deepseek-ai/dsh-*: ^0.1.0-rc.6` | T3 T6 | B | **cache-aware** 压缩后端（自述 "Reasonix-style"），replaces/enhances `compaction-basic` with `compact_ratio` ⇒ ⚠️ **与项目关心的缓存成本直接相关** |
+| `TsFreddie/dsh-compaction-instant` | 0.1.4 ／ MIT | `^0.1.0-rc.6` | T2 T3 | B | "**near-lossless deterministic** compaction engine"，自称 **drop-in replacement for `dsh-compaction-basic`** |
+| `helibeiqi/dsh-compaction-pro` | 0.1.0 ／ MIT | **全 `"*"`** ⇒ 锚版本**无可判**（G4） | T2 T3 | B | **"bilingual"** 高保真递归压缩（自称 drop-in upgrade over basic）⇒ 中文场景值得一看 |
+| `gendui123/dsh-compaction-probe` | 0.1.0 ／ MIT | 仅 `cordis` ＋ `schemastery` | **T5** | **A?** | ⭐ **T5 的现成验证装置**：日志每一个 `compaction/*` 事件，并**探 `shadowedSeqs` 是否仍解析为可读事件** |
+| （官方）`@deepseek-ai/dsh-compaction-image-offload` | **0.1.6-alpha.1** ／ MIT | `@deepseek-ai/dsh-compaction: ^0.1.6-alpha.1` | T6 | B | ⚠️ **只在 0.1.6 线存在 ⇒ 我方锚版拿不到**（见下面「发现 2」） |
+
+##### ⭐ 渠道级发现（两条 —— 比单个候选更重要）
+
+**发现 1 · npm 的 `@deepseek-ai/*` 有 dist-tag 陷阱，且它直接动摇 §14 参考件 3 的一条判据基础**
+
+实读整包 packument：
+```
+@deepseek-ai/dsh-compaction        dist-tags = { latest: 0.0.1-rc.5（08-12）, next: 0.1.5-rc.3（09-22）, alpha: 0.1.7-alpha.2（09-22） }   共 23 版
+@deepseek-ai/dsh-compaction-basic  dist-tags = { latest: 0.0.1-rc.3,           next: 0.1.5-rc.3,        alpha: 0.1.7-alpha.2 }          共 24 版
+```
+⇒ **`latest` 指向 08-12 的 `0.0.1-rc.5`，而同一个包**早已有 `0.1.5-rc.3` / `0.1.6-alpha.*` / **`0.1.7-alpha.2`**（均 09-22 发布）。
+⚠️ **若只查 `latest`，会得出"官方包还停在 0.0.1"的错误结论。**
+而 §14 参考件 3 对 `dsh-api-gateway`／`dsh-typert-*` 的「**不可启用**」判据，原文写的正是「**`latest` tag 停在 `0.0.1-rc.1`**」—— **两条形态完全同源**。
+⇒ **建议（强化我 P2 的复核建议）**：复核 gateway 时**必须用 `next` ／ `alpha` dist-tag 与仓库 tag 双查**；**若"不可启用"只建立在 `latest` 上，该结论需要重验**。
+
+**发现 2 · 锚版落后速率的实测**（规格 §5-5 要的口径，此前缺硬数据）
+```
+0.1.5-rc.2  ← 我方锚（09-15 拍定）
+0.1.5-rc.3      published 2026-09-22 05:40
+0.1.6-alpha.1 ／ .2
+0.1.7-alpha.1 ／ .2   published 2026-09-22 15:50
+```
+⇒ **09-22 一天之内**，上游从 `0.1.5-rc.3` 推到 **`0.1.7-alpha.2`**（4 个版本）；且 **0.1.6 线已出现 compaction 家族新件**。
+
+#### ③ 评论 · 追加与修正（与上面观察分开）
+
+**修正 · 「版本脱节判断」：维持"不成立"，但**必须**补一条上游侧的持续成本**
+- 我逐件核了社区件的 peerDeps：`cacheaware` ＝ `^0.1.0-rc.6` ／ `instant` ＝ `^0.1.0-rc.6` ／ `compaction-pro` ＝ **全 `"*"`** ／ `probe` ＝ 仅 cordis ⇒ **并不统一要求 ≥0.1.6** ⇒ **"社区壁垒"不成立，原判维持**。
+- ⚠️ **补一条**：**上游自身**已在 0.1.6/0.1.7 线新增 compaction 家族件（`image-offload`，peer `^0.1.6-alpha.1`）⇒ **锚版拿不到；这不是社区问题，是锚版位置问题** ⇒ 归入「跟随 rc 的持续成本」，**建议报老大**（§5-5 的原话虽指社区，但这条证据类型相同、量级更大）。
+
+**新增评论**
+1. ⭐ **"观测／验证类"第三层又添一件**（`gendui123/dsh-compaction-probe`，专探 `shadowedSeqs` 可读性）⇒ **我原报告"建议补第三层（上下文构成观测）"的判断被独立加强**：T5 缺的确实是**观测手段**，而社区已在做这件事。
+2. ⚠️ **npm 上存在「同名搬运件」，会污染版本判断**：`@monotykamary/` ／ `@x1a0f3n9/` ／ `@stackstackstack/` ／ `@dangzhuotong/` ／ `@alatastudio/` ／ `@prettier-ai/` ／ `@xneog/` 各自重发了 `dsh-compaction`（**描述逐字相同**："Abstract compaction service seam (ctx.compaction) for the DeepSeek Harness"），**版本号却各不相同**（0.1.9 ／ 0.1.5-rc.5 ／ 0.1.7 ／ 0.1.0-rc.7 ／ 0.1.1-rc.4 ／ 0.1.2-alpha.1 ／ 0.1.0）⇒ **登记与检索必须写全 `@scope`**，否则会把搬运件当官方件、把它们的版本号当上游代际。
+3. **`dsh-compaction-pro` 的 peerDeps 全是 `"*"`** ⇒ 属 G4 的"字段在、但锚版本读不出" ⇒ 建议 §1-G4 补一句：**`"*"` 与"读不出"**同档处理（都不进结论）。
+
+#### ④ 边界 · 追加
+
+- 本轮**只读**：**未落任何文件、未 clone、未装**；`ref/` 未动。
+- 📌 **我的一处近错已自查纠正、记此警示**：我先用 **`/latest` 端点**取版本，差点把"官方包停在 `0.0.1`"写成结论；改查**整包 packument** 才发现那是 **dist-tag 问题**（`next`／`alpha` 早已到 `0.1.7`）。⇒ **`/latest` ≠ 最新发布**；凡"版本判断"必须走整包 packument 或仓库 tag。
+- npm 元数据（license ／ peerDeps ／ version）属**注册表级证据** ⇒ B-5 整组仍标 **🟡**（未读源码）。
