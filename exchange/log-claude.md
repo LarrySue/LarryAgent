@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.7.4-T·P** | Claude | **CVM（Linux）** | ✅ **已复核（WB 2026-09-21）** —— 三问**全成立**（WB **独立取物证**：装置三件 sha 现场逐位一致 ／ 交付件双侧一致 ／ 残留全清 ／ **Windows 侧回归由 WB 现场独立复跑，三方逐字段比对仅 3 处预期差异**）；**3 处订正**（件数 13→11 ／ CVM 侧文件名 `-posix.mjs` ／ 交办项落点应为 `production-env.md` 且「RemoveIPC」归因**未复现**）⇒ **判定 ／ 三处订正已承接**（原「🔍 WB 复核订正」节已按交流区规矩清理）｜ 落点 = `TODO.md`「DSH-3.7.4-T」段 ＋ `archive/roadmap-history.md`；回溯 `git log -p -- exchange/log-claude.md` ｜⚠️ 结论**取自 `917f45d` 版树**（⛔ 不得当"当前版本"外推） | 2026-09-20 |
-| **DSH-3.4-R** | Claude | 本机（联网检索 · 只读参考） | ✅ **已交付（2026-09-23）** —— 报告见本文件 `## 📊 DSH-3.4-R 调研报告`；**已按授权调整流程 3 处**（不重复扫名录 ／ 主攻 WB 标"未读"的官方 spec ＋ 社区源码 ／ T5 挖到底），理由与具体改动见报告 §0-B；⚠️ **同时暴露规格的结构性问题**（WB 报告内嵌规格 §12 ⇒ 五方独立性在流程上不成立）**待裁**，见报告 §0-A；⚠️ 联网三通道实测 **2 条不可用 ＋ 1 条只到转述级** ⇒ 社区部分**全部 🟡** | 2026-09-23 |
+| **DSH-3.4-R** | Claude | 本机（联网检索 · 只读参考） | ✅ **已交付（2026-09-23）** —— 报告见本文件 `## 📊 DSH-3.4-R 调研报告`；**已按授权调整流程 3 处**（不重复扫名录 ／ 主攻 WB 标"未读"的官方 spec ＋ 社区源码 ／ T5 挖到底），理由与具体改动见报告 §0-B；⚠️ **同时暴露规格的结构性问题**（WB 报告内嵌规格 §12 ⇒ 五方独立性在流程上不成立）**待裁**，见报告 §0-A。**➕ 当晚梯子开启后已出补充段**（同文件 `## 🔁 DSH-3.4-R 补充调研`）：5 件社区件**全部 clone 成功并实读源码**（🟡→🟢，全 MIT）⇒ 含 **3 处订正 ＋ 3 处升级**（⚠️ clone 失败归因**订正为"梯子未开"**，原"打掉规格 §8"撤回 ／ `fast-compaction-dsh` **补 ⛔ 外呼风险标注** ／ `isCompactCheckpointSource` 判为**必要不充分**）；**汇总请以补充段为准** | 2026-09-23 |
 
 - 已完成并复验（各段已按交流区规矩清理；3.0.x 系列与 DSH-2 系列均已在 `TODO.md` 承接）：**3.7.3-T ✅（WB 复核：T1–T4 四项判定均成立，另补 1 条更强的 ＋ 记我方派稿缺陷 1 处）** ／ **3.7.4-T ✅（WB 复核：`T-1` 独立复跑逐条一致 ＋ `T-2` 三方字段比对一致；2 处差异均**非断言项**）**。
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.7.4-T」段**；本区只放**怎么做**。⚠️ 需回溯时用 `git log -p -- exchange/log-claude.md`。
@@ -161,5 +161,134 @@
 **我的倾向（供裁）**：最可能的解释不是"谁测错了"，而是**触发条件不同** —— `RemoveIPC` 是 **logind 会话级**行为，其触发依赖**登录会话如何结束**（正常登出 ／ ssh 断开 ／ 会话未真正销毁）。⇒ 建议**不要**二选一归档，而是：① 由 WB 补记"未复现"时的**具体做法**（命令 ＋ 会话结束方式 ＋ 通道四元组），② 与我方的做法逐字段比对，**差异项即真结论**（这比"到底有没有"更有价值：它直接决定 `production-env.md` 里该怎么写部署注意事项）。
 
 **我不私自裁定**（红线③ ＋ 派发纪律：规格有遗漏 ／ 结论冲突即暴露停手等裁决）。@WorkBuddy @老大
+
+---
+
+## 🔁 DSH-3.4-R 补充调研（2026-09-23 晚 · **梯子开启后** · 追加段）
+
+**背景**：老大中途开了梯子 ⇒ 原报告 §① 判定"不可用"的两条通道**当前可用**。本节是**通道改变后的复测与增量**，⛔ **不覆盖原报告**（原报告的受限结论保留原状，差异本身即"报告须注明通道"的实例）。
+
+**通道四元组（本节全部结论的适用范围）**：本机（宿主 bash ／ MSYS）＋ node 侧无关（纯 git ／ 文件操作）＋ 用户级（无提权）＋ **本机 git 全局 socks5 代理 `127.0.0.1:7890`（梯子已开）**。
+
+### ⚠️ 订正 1：原报告对 clone 失败的**归因错了**（这条最重要）
+
+| | 原报告 §① #3（2026-09-23 白天） | **实况（梯子开启后复测）** |
+|---|---|---|
+| 现象 | `Failed to connect to github.com port 443 after 21s` | `git ls-remote` **立即成功** |
+| 我的归因 | "**链路级不可达，不是代理配置问题**"（因清代理后报错形态与规格 §8 不同） | ✅ **梯子未开** ⇒ 真因是**代理后面没有出口**，报错形态差异只是超时点不同 |
+| 处置 | 清代理（`-c http.proxy= -c https.proxy=`）后仍失败 ⇒ 我判定规格 §8 描述不适用 | ⚠️ **清代理是反向操作** —— 本机全局 `socks5://127.0.0.1:7890` **本身就是要用的那条路** |
+
+⇒ **撤回**原报告"打掉规格 §8"的隐含结论；**规格 §8 的说法（代理是根因、绕法是清代理）在"梯子关着"的条件下成立**，而**梯子开着时正相反：必须留着这个代理**。⇒ 正确表述应为：**"克隆失败先看梯子状态，再看代理配置"** —— 两种条件对应两种相反操作，⛔ 不可写成单条规则。
+
+### ①′ 检索账追加
+
+| # | 通道 | 动作 | 结果 |
+|---|---|---|---|
+| 6 | 联网 · `git clone`（**梯子开**） | `git clone --depth 1` × 5 个社区件 → `D:\Code\_claude-evidence\34r\community\` | **✓ 5/5 成功**（3.5M ／ 419K ／ 167K ／ 136K ／ 751K） |
+| 7 | 本地实读（clone 物） | 结构普查 ／ LICENSE ／ package.json 锚版本 ／ 测试标题 ／ 关键源码与测试**全文** | 见下 |
+
+### ②′ 候选表（**B 组升级：🟡 → 🟢**）
+
+**G1 通关**：5 件**全部 MIT**（逐件读 LICENSE 首行确认）。
+
+| 候选 | 类型 | 入口 | LICENSE | **锚版本（实读）** | 命中 | 档 | 借鉴点 | ⛔**不可参考／风险** | 它怎么验的 | 证据 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ⭐⭐ **`Tyan66666/billion-context-dsh`** | 引擎 ＋ 工具层（acp-kernel backend） | `src/`（6,263 行）／ `tests/`（**30 个 spec**）／ `docs/`（**17 个设计文档**） | MIT | peer `>=0.1.5-alpha.1 <0.1.6-0` ／ devDep pin `0.1.5-rc.2` ／ **且有自动化守卫** ⇒ ✅ **同代** | T2 T3 T4 T5 **T6** | **A** | **本批唯一"同代 ＋ 可读源码 ＋ 有测试 ＋ 有文档"四全的件**（明细见 ③′） | 依赖上游 `acp-kernel`（外部仓库）；非我方场景 | 见 ③′‑1 | 🟢 |
+| `kolawong/fast-compaction-dsh` | 引擎（判定式） | `src/`（1,493 行）／ `tests/`（**6 个 spec**） | MIT | ⚠️ devDeps 全 `link:../deepseek-harness/...` ⇒ **锚不可从包声明读出** | T2 T3 T5 | **B** | verdict 式 keep/truncate/drop；**verbatim 保留**；**pins 机制**；**降级四轴**（见 ③′‑4） | ⛔⛔ **整段会话外呼第三方 API**（见 ③′‑5 风险订正） | 单元层 6 spec ＋ `scripts/e2e.ts` ／ **`scripts/inspect-compaction.mjs` 检视器** | 🟢 |
+| `aerince/dsh-active-context-pruning` | 插件（工具驱动压缩） | `index.js` 347 ／ `lib.js` 119 ／ **`check.js` 65** | MIT | ⚠️ **未声明任何 deps** ⇒ 锚不明 | T2 T3 T5 | **B** | 见 ③′‑3（自查脚本范式） | 工具驱动（模型主动压），非自动触发 | **零依赖自查脚本**（`node:assert/strict`，退出码即判据） | 🟢 |
+| `zixin947/dsh-compact` | **装配/策略层**（依赖 `dsh-compaction-basic` ＋ `dsh-command-compact` 为 peer） | `lib/`（5 文件） | MIT | peer 全 `^0.1.0-rc.7`，README 明写「面向 `dsh 0.1.0-rc.7`」⇒ ⚠️ **明确脱节** | T2 | **C** | 带 Web 设置卡的整包 | ⚠️ **错代**（0.1.0 线；跨方言断代） | 无测试件 | 🟢 |
+| `snow-The/dsh-session-handoff` | **handoff ＋ ACP 压缩双功能** | `lib/acp*.js` ＋ `test/acp*.mjs` | MIT | 未见 seam 声明 | T3 T4 | **B**（**我改档**，原 WB 归 C） | 见 ③′‑6 | 混合体，借鉴须拆分 | 12 个 `.mjs` 测试（含 `acp.test.mjs` 254 行） | 🟢 |
+
+**⚠️ 归类异议现已证实（🟢）**：`snow-The/dsh-session-handoff` **确有独立 ACP 压缩子系统** —— `lib/acp-config.js`(194) ／ `lib/acp-recommend.js`(98) ＋ `test/acp.test.mjs`(254) ／ `acp-config.test.mjs`(87) ／ `acp-recommend.test.mjs`(63) ＋ 两份设计文档 `COMPAT-ACP.md` ／ `DESIGN-ACP-GRAPH.md`。⇒ WB 的 C 档"属 handoff 不属 compaction"**不成立**，建议改 **B 档**。
+
+### ③′ 评论追加（补充调研的实质增量）
+
+**1. ⭐⭐ 最硬的一条：`replace` surfaceOp 方言**按会话版本**断代**（🟢 逐字引自 `billion-context-dsh/tests/peer-range.test.ts` 头部注释）
+
+> "The replace surfaceOp protocol is DRAFTED per session version by a strict validator that accepts **EXACTLY three keys**: `dsh-session <= 0.1.3-alpha.2` wants `{ op, start, end }`, `>= 0.1.5-alpha.1` wants `{ op, startSeq, endSeq }`. The engine emits one dialect only, so hosts on older lines **reject every compress at runtime** — admitting them in the peer range would be a lie."
+
+⇒ **对 3.4 的直接含义（我方锚 `0.1.5-rc.2`）**：
+- 我方**必须用 `{op, startSeq, endSeq}`**；写成 `{op, start, end}` 在 0.1.5 上会被**运行时拒绝**（而非静默忽略）。
+- 0.1.5 线还**同时**改了另两处（同一注释）：assistant 落定形状 **`stream` 必填** ／ **禁止 assistant replace 携带 `sourceEventSeqs`**。
+- ⇒ **这是"为什么必须锁 0.1.5"的独立证据链**，建议并入 `TODO.md` S2 段的判据区（⛔ 该文件我只读，不擅自改）。
+- ⚠️ **但该断代来自第三方注释，非我方实测** ⇒ 证据等级 **🟢（源码实读）但不等于我方环境已验**；若要入判据，建议按我方惯例**在 CVM ／ 本机跑一次"旧方言被拒"的负向对照**才算"已验"。
+
+**2. ⭐⭐ 官方判据的精确语义（🟢 实读官方源码 `packages/compaction/compaction/src/checkpoint.ts`）—— 我方判据必须加强**
+
+```ts
+const COMPACT_CHECKPOINT_MARKER = Object.freeze({ kind: 'plugin', plugin: 'compact' } as const)
+export function isCompactCheckpointSource(source) {
+  return source.kind === 'plugin' && source.plugin === COMPACT_CHECKPOINT_MARKER.plugin
+}
+```
+- 生成端 `compactCheckpointSource(compactionId, sourceCommandId?)` 才**附加** `compactionId`。
+- ⇒ **判据端只看 `kind` ＋ `plugin` 两个字段，不校验 `compactionId`** ⇒ 任何 `{kind:'plugin',plugin:'compact'}` 的 user 消息都为真。
+- ⇒ ⚠️ **订正我原报告 §③.2 的建议**：`isCompactCheckpointSource` 是**必要不充分** —— **必须再断言该 source 的 `compactionId` 与同批 `compaction/start` ／ `compaction/summary` 事件的 id 一致**。
+- ✅ **官方自己就是这么做的**：`invariant.spec.ts` 的负向用例里有 `/compaction checkpoint id .* does not match compaction\/start id/` ⇒ **predicate 定位 ＋ invariant 校验 id**，两条合起来才是完整判据。
+- ✅ **旁证一致**：`aerince` 的自查判据用 `source.plugin === 'compact'` —— 与官方 marker **逐字一致**（正面互证，非自造约定）。
+
+**3. ⭐⭐ 一个"判据写在错误位置"的现成实例（🟢 引自 `billion-context-dsh/tests/byte-stability.test.ts` 头注）**
+
+> "The messages a provider can cache are the ones the agent loop puts on the wire: `session.deriveMessages()` … **NOT** the engine's own `eventsToCoreMessages(surfaceEventsOf(session))` projection … **Asserting on the projection proves nothing about the request bytes — an earlier version of this file made exactly that mistake**."
+
+⇒ **对 3.4 的含义**：断言落在"会话里的事件 ／ kernel 投影"上，**证明不了发给模型的内容**。我方"近文原文保留 ／ 摘要注入"的判据**必须落在 `session.deriveMessages()`**（与官方 `:762` 的判据用法**独立互证** ✓）。
+⇒ 且该件**诚实划了边界**："NOT pinned here: 请求信封（tools ／ headers）与引擎真实的 surface 写入 —— 那些需要宿主 loop，由 `npm run test:e2e` 在**线级**检查" ⇒ **单元层 ＋ e2e 线级两层分工**，与我方"测试分层原则"同构；⭐ **建议我方 3.4 也照此配一条线级检查**。
+
+**4. ⭐ `fast-compaction-dsh` 的测试组织（**测试范式可借鉴，引擎不可用**）**：四轴 ——
+- **pairing**：`collectToolCalls` 按 call id 配对 ＋ **`pins calls whose result is missing`**（未闭合的 call 被钉住）／`reports orphan results`
+- **pinning（保护窗口的显式实现，正是我方"近文保留"的机制对偶）**：`isPinned` = 钉住**第一条消息** ＋ **最新尾部** ＋ **system head 之后的第一条对话消息**
+- **verbatim**：`keeps text verbatim and applies per-call decisions` ／ **`never touches pinned calls`** ／ `emits a placeholder when everything is dropped` ／ `reports the character reduction`
+- **degradation（配置层故障注入 —— 我在 A 段评审里提的"降级要能分态"的现成范例）**：`settings-broken.spec.ts` = 无 settings provider 时只用组合配置 ／ 存储段过不了 schema 时**保留组合值并告警**
+- 另有 `fitState`：**`degrades inputs before texts`**（降级顺序被断言）／`throws when nothing fits`
+
+**5. ⛔⛔ 风险订正（这条必须在汇总时看到）：`fast-compaction-dsh` 把整段会话外呼第三方 API**
+
+- `src/jev.ts:13-14`：`SYSTEM_ONE_URL = 'https://api.typesafe.ai/v1/systemone'`
+- `:3-4` 注释："one POST per batch of `noul` questions against the TypeSafe System One endpoint, authenticated with `TYPESAFE_API_KEY`"
+- ⛔ `:7`：**"The `state` sent with every request is the whole fitted conversation"** ⇒ **每次压缩把整段会话内容发往 `api.typesafe.ai`**
+- 正面项：4 条降级路径（无候选 ／ 被禁用 ／ 应答非法 ／ 缩减不足）+ `redacts the apiKey from the described wire view`
+- ⇒ **判定**：技术路线（verbatim 保留）有参考价值，但其**引擎不可作参考实现** —— 对本项目（个人项目 ＋ 成本敏感 ＋ 数据安全边界）属**外部数据出站 ＋ 外部可用性依赖**双风险。**⛔ 我原报告把它列为"⭐ 另一条路线"而未标风险，此处订正为「路线可借鉴 ／ 引擎不可参考」。**
+
+**6. ⭐⭐ 方法论文档：`billion-context-dsh/docs/upstream-tracker.md`（本批对我方**最可移植**的一件）**
+
+它把"依赖上游会漂移"这件事**机械化**了：
+- 规则：「上游缺陷一律走 **上游 issue + PR → 升级 pin → 解除本地 workaround**；**任何本地 workaround 必须登记**，上游修复后**必须删除**」
+- 每道"门"有**解除条件清单**，且要求**同一个 PR 内四步走完**（上游发布 → bump pin → 解除本地锁定 → 状态改 `resolved`）
+- **机读标记**：「代码里带 `UPSTREAM:` 注释指向本行 —— **它还在，就说明这道门没关**」＋ 用**测试断言翻转**（如把 characterization 断言改判）作为解除动作
+- 状态机：`waiting-upstream` ／ `merged-released` ／ `resolved`（**已解决的也不删，留档作证据链**）
+- 实例：`acp-kernel#93 → PR#123` **明确标注 open 未合并**；`#335` 用 `tests/checkpoint-span.test.ts` **以 characterization 锁定当前（已知有缺陷的）行为**，而不是假装它是对的
+- ⇒ ⭐ **建议我方 3.4 ／ 3.7 参照建立同类机制**（我方同样"锚在别人的版本上"）。⛔ 但这是**建议**，落点属 `TODO.md` ／ `docs`（我的只读区），**由 WB ／ 老大定**。
+
+**7. ⭐ `aerince` 的自查脚本范式**：`check.js` 用 `node:assert/strict` ＋ 末尾 `console.log("ok")`，**零依赖 ／ 无测试框架 ／ 退出码即判据**。含**边界语义断言**：`pressureLevel(700, 600, 700) === "hard"` ⇒ **取等号算 hard（闭区间）**；`parseLimit("60%") → {kind:'ratio',value:0.6}` ／ `"154000" → {kind:'tokens'}` ⇒ ⭐ **比例与绝对值两种阈值形态**。⚠️ 局限：**纯逻辑层自查，无端到端**。
+
+**8. 版本脱节判断（最终版，逐件硬判）**
+
+| 件 | 声明的锚（实读） | **判定** |
+|---|---|---|
+| `billion-context-dsh` | peer `>=0.1.5-alpha.1 <0.1.6-0`；devDep pin `0.1.5-rc.2`；**＋ 自动化守卫**（`peer-range.test.ts` 断言"接受整条 0.1.5 线"且"拒绝 0.1.6+ 与 0.2.x"） | ✅ **同代（且唯一带守卫的）** |
+| `fast-compaction-dsh` | devDeps 全 `link:../deepseek-harness/...` ⇒ **不可从包声明读出** | 🔴 **待核**（须看其 harness 检出） |
+| `dsh-active-context-pruning` | **未声明任何 deps** | 🔴 **待核** |
+| `dsh-session-handoff` | 未见 seam 声明 | 🔴 **待核** |
+| `dsh-compact` | peer 全 `^0.1.0-rc.7` ＋ README 明写 | ⚠️ **明确脱节**（0.1.0 线） |
+
+⇒ **修正我原报告 §③.3 的判断**：原写"新找到的 3 件均未见矩阵行"。现升级为 —— **"未见矩阵行"里已有 1 件拿到硬判定（`dsh-compact` 脱节）／ 1 件拿到硬判定（`billion-context-dsh` 同代且带守卫）／ 2 件仍待核**。⇒ 「**按件标注**」的建议**更加成立**。
+
+**9. ⚠️ 一条我未能证实但必须记的现象**：`billion-context-dsh` 远端当日的分支名含 `2026-09-23_checkpoint-source-kind` ／ `2026-09-23_direct-kind-classification` —— **日期即今天，且涉 compaction 领域词**。⇒ 说明该件**当前正在活跃开发**。⚠️ **对"参考件"的双面含义**：活跃 = 参考价值高；活跃 = **我们据以判断的状态会漂移**（我这次读的 HEAD 是 `171e5fb`，⛔ 引用时必须带这个 sha）。**我不做进一步推测**（可能与别的 AI 活动无关）。
+
+### ④′ 本路诚实边界（补充段）
+
+- **仍未读任何其他 AI 的交流区**（含 `log-workbuddy.md`）✓ 独立性在本段内保持。
+- 本段**只读了 5 件的源码与测试，未跑过其中任何一件**（未 `npm i` ／ 未执行其测试）⇒ **"它怎么验的"是读出来的，不是跑出来的** ⇒ 证据等级 🟢 指"源码实读"，⛔ 不指"已复现其验证有效"。
+- `billion-context-dsh` 的 `tests/` 我只**全文读了 4 个**（`peer-range` ／ `tool-pairing-host` ／ `byte-stability` ／ `region.test.ts` 的标题），其余为**标题级**。
+- 订正记录：**订正 1（clone 归因）** ／ **订正 2（`fast-compaction-dsh` 风险标注）** ／ **订正 3（`isCompactCheckpointSource` 必要不充分）** ／ **升级 1（B 组 🟡→🟢）** ／ **升级 2（归类异议已证实）** ／ **升级 3（版本脱节逐件硬判）**。
+- 全部结论的通道四元组见本段开头；⛔ **不可外推到其他机器 ／ 梯子关闭状态**。
+
+### ⑤′ 留痕
+
+- 5 件完整副本（`--depth 1`）：`D:\Code\_claude-evidence\34r\community\{billion-context-dsh,fast-compaction-dsh,dsh-compact,dsh-active-context-pruning,dsh-session-handoff}\`（⛔ 全在仓库外）
+- `billion-context-dsh` 实读 HEAD：`171e5fbf29996e92258a79ba6c5cc4c640fb8eb2`
+- 官方 `checkpoint.ts` 实读来源：`ref/dsh-bare` @ tag `dsh-v0.1.5-rc.2`（本机，未联网）
+
+@WorkBuddy（汇总：**本节对原报告有 3 处订正 ＋ 3 处升级，请以本节为准**）@老大
 
 ---
