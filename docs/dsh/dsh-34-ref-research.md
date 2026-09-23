@@ -140,7 +140,7 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 
 ## 9 交付与落点
 
-- 报告写进**各自交流区文件**（WB 另有汇总落点，见 §10）
+- 报告写进**各自交流区文件**（＝ §10 登记的那一份）
 - 规则有歧义 ／ 不可执行 ⇒ **就地暴露并停手等裁决**（对齐 `exchange/README.md` 协作规则「升级路径」），不静默处理
 - 无硬时限（老大节奏：无固定交付压力）
 - 收齐后：WB 汇总 → 候选池 ＋ 排序 ＋ 借鉴点 → 回填 `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉**3.4 行**
@@ -151,7 +151,7 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 
 | 方 | 落点 | 状态 |
 |---|---|---|
-| **WB** | `exchange/log-workbuddy.md` | 📬 已派发（WB 自承，报告与本稿汇总区合并） |
+| **WB** | `exchange/log-workbuddy.md` | 📬 已派发（WB 自承；**报告落自己的交流区**，不落本稿 —— 规格稿须对五方中立） |
 | **Trae** | `exchange/log-trae.md` | 📬 已派发 |
 | **Claude** | `exchange/log-claude.md` | 📬 已派发 |
 | **Qoder** | `exchange/log-qoder.md` | 📬 已派发 |
@@ -165,94 +165,4 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 
 > 待填。字段：候选池（合并去重）／ 分档统计 ／ 各方通道对照 ／ 分歧点 ／ 版本脱节判断 ／ 建议深读清单（Top N）。
 >
-> ⏳ **已到**：**WB 侧 = §12**（2026-09-23 自承）｜ **待**：Trae ／ Claude ／ Qoder ／ Other。
-
----
-
-## 12 WB 侧调研报告（自承 · 2026-09-23）
-
-> 按本稿 §4 三段格式。WB 同时是汇总方 ⇒ 本段只交**自己那一路**的结果，**不代替**其他四方；五方收齐后再填 §11。
-
-### ① 检索账（可复算）
-
-| # | 通道 | 动作 ／ 检索式 | 时间 | 扫描量 ／ 结果 |
-|---|---|---|---|---|
-| 1 | 本地 · 上游主仓（裸仓库 `ref/dsh-bare`，tag `dsh-v0.1.5-rc.2`） | `git ls-tree -r packages/compaction/` ＋ `git show <tag>:<path>` 读 4 件 README ＋ `src/index.ts`（172 行）＋ `src/config.ts` ＋ `docs/subsystems/compaction.md`（结构） | 2026-09-23 | compaction 家族 4 件 ／ context 家族 1 组 |
-| 2 | 本地 · 官方包（`~/.dsh/profiles/sdk/node_modules/@deepseek-ai/`） | `ls -d *compaction*` | 2026-09-23 | **3 件在**：`dsh-compaction-basic` ／ `dsh-compaction-tool-result-pruner` ／ `dsh-command-compact`（契约 `dsh-compaction` 不在扁平层，只在上游主仓与 `.pnpm` 深层） |
-| 3 | 本地 · 社区名录 `ref/awesome-dsh-plugin.md`（3,386 行） | 宽扫 `compact\|prun\|summar\|headroom\|compress\|context budget\|token budget\|context window` ⇒ **458 条**；紧扫（**强相关词 ∧ 非 UI 噪音词**）⇒ **75 条**；再逐条读描述 | 2026-09-23 | 3,386 行全量 ／ 定稿候选 ~18 条 |
-| 4 | 联网 · WebSearch | `giter00/dsh-headroom DeepSeek Harness plugin compaction tool output` | 2026-09-23 | 5 命中（含 dsh.so ／ dsh.pub 注册表 ／ 同名异物） |
-| 5 | 联网 · WebSearch | `aerince/dsh-active-context-pruning DeepSeek Harness compaction API` | 2026-09-23 | 5 命中（含注册表**版本矩阵** ／ awesome 站 ／ 中文解读） |
-
-**未做（留给其他方，避免同通道重复）**：GitHub 站内搜索 ／ npm 站内搜索 ／ `deepseek-harness-plugin.com` 目录站 ／ 拉取任何候选源码到 `ref/community/`。
-
-⚠️ **通道说明**：本地 git 走 **Bash 通道**；联网走**内置搜索工具**（供应商 Provider 1）。按本项目铁律，**通道不同则结论不可互推** —— 本报告结论只在上述通道内成立。
-
-### ② 候选表
-
-#### A 组 · 官方 ／ 上游（🟢 我方实读源码或 README）
-
-| 候选 | 类型 | 入口 | 锚版本 | 命中 | 档 | 借鉴点 | ⛔ 不可参考 | 它怎么验的 | 证据 |
-|---|---|---|---|---|---|---|---|---|---|
-| `@deepseek-ai/dsh-compaction`（契约） | 官方 | `ref/dsh-bare:packages/compaction/compaction/`；签名 `src/index.ts:96-172`；子系统参考 `ref/dsh-bare:docs/subsystems/compaction.md`（238 行） | **我方锚版本身** | T1 T5 | **A** | 三操作 `compactIfNeeded(agent,trigger,signal)` ／ `compactNow(agent,signal,sourceCommandId?)` ／ `compactRegion(start,end,agent,signal?)`；`abstract class CompactionEngine extends Service` ＋ `super(ctx,'compaction')`；**日志括号锁**：`compaction/start` →（summarize）→ `compaction/summary` → **唯一 surface 变更**（一条 `user/message` 带 `surfaceOp:{op:'replace',startSeq,endSeq}`）→ `compaction/end`；**checkpoint marker 从 cordis-free 子路径 `./checkpoint` 导出** ⇒ ⭐ **验「摘要注入」的现成机读判据**；`toolPairingBalancedBefore/After(session,seq)` 做边界吸附 | 无（我方自做 Provider 的正本） | 官方仓自带 tests（本轮未读） | 🟢 |
-| `@deepseek-ai/dsh-compaction-basic` | 官方 Provider | `~/.dsh/profiles/sdk/node_modules/@deepseek-ai/dsh-compaction-basic/`；上游 `packages/compaction/compaction-basic/`（`src/` 5 文件 ＋ **5 个 spec**） | 锚版本身 | T2 T4 T5 T6 | **A** | ⭐ **T4 量化锚**：`thresholdRatio` **0.8**（`floor(routedContextWindow × ratio)`）／ `retainRatio` **0.16**（保留最新 16% 原文逐字）／ `retainTokens`（绝对值，与 ratio 互斥）／ `maxTokens` 8192 ／ `compactionRetries` 1 ／ `maxOverflowRetries` ／ `auto` ／ `modelPolicies`（每模型覆盖）；**触发点 = `agent/pre-step` 前置**（自动）＋ `agent/request-error` 的 `CONTEXT_WINDOW_EXCEEDED`（溢出恢复）；**`summarize()` 是唯一子类钩子**（覆写即换摘要来源：模板 ／ 远端）；替换消息用 **`<compacted-summary>`** 标签包裹、`GenerateOptions.purpose='compaction'`、原文摘要在 `compaction/summary` 事件上 | 无（正本） | 官方 5 个 spec（本轮未读） | 🟢 |
-| `@deepseek-ai/dsh-compaction-tool-result-pruner` | 官方 | 同上（profile 内 `<1000>`） | 锚版本身 | T2 T3 T6 | **A** | ⭐ **「压了但保原文」的最强现成范式**：超 `thresholdChars`(8192 码点) 的结果 → 头 `headChars`(4096) ＋ 标记 `[... tool result middle pruned ...]` ＋ 尾 `tailChars`(1024)；**原文留在 append-only log**，替换件以 `sourceEventSeqs` 引用原事件 ⇒ **重放可复原**；`compaction/prune` **shadow-price 事件**紧 precede 替换；**不发模型调用**，可能因此**跳过摘要** | 无 | 官方 tests（未读） | 🟢 |
-| `@deepseek-ai/dsh-command-compact` | 官方命令 | 同上 | 锚版本身 | T5 T6 | B | `/compact` **不消耗 model turn**；报告「压缩条目数 ＋ 估计省 token」；mid-turn ／ 已在压缩 ⇒ unavailable；**不接受参数** | — | 官方 tests | 🟢 |
-| `@deepseek-ai/dsh-token-meter` | 官方 | 上游 `packages/llm/token-meter/` | 锚版本身 | T4 T6 | B | 触发判定的**测量服务**：singleton `ctx.tokenMeter`；⚠️ **四字符≈1 token 启发式，明确低估 CJK 与 JSON schema** | — | — | 🟢（README 引述） |
-| 上游 `docs/subsystems/compaction.md`（238 行） | 上游主仓 | `ref/dsh-bare:<path>` | 锚版本身 | T1 T2 | **A** | 结构：`compaction/*` 事件 ／ `CompactionResult` ／ service ／ tool-result pruning outcomes ／ **Cordis API**（`ctx.compaction` ／ `ctx.toolResultPruner`）⇒ 精确签名与每事件 payload 的权威落点 | — | — | 🟢（**仅读结构**，内容未读 ⇒ 内容面 🟡） |
-| 上游设计 note `.agents/notes/implemented/feature/2026-06-18-compaction-capability-seam.md` | 上游主仓 | `ref/dsh-bare:<path>` | 锚版本身 | T1 | B | seam 分裂 ＋ session/llm 依赖的**设计理由**（本轮只从契约 README 里看到路径，**未读内容**） | — | — | 🟡（仅见引用） |
-| 上游 `docs/config-catalog.md#deepseek-aidsh-compaction-basic` ／ `#…-tool-result-pruner` | 上游主仓 | 同上 | 锚版本身 | T4 | B | 「每个可接受字段的**穷尽来源**」（未读） | — | — | 🟡（未读） |
-
-#### B 组 · 社区（🟡 README ／ 注册表级 —— **本轮一件源码都没读**）
-
-| 候选 | 入口 | LICENSE | 锚版本 | 命中 | 档 | 借鉴点 | ⛔ 不可参考 | 它怎么验的 | 证据 |
-|---|---|---|---|---|---|---|---|---|---|
-| `aerince/dsh-active-context-pruning` | 名录 L1273 ／ `github.com/aerince/dsh-active-context-pruning` | **MIT** | 注册表矩阵：v0.1.0 对 **`dsh 0.1.5-rc.2` ✓ L5 runtime verified**（另 0.1.6-α1 ／ 0.1.3-α2 ／ 0.1.3-α1 ／ 0.1.2-rc.1 亦 ✓） | T2 T3 T5 | **A** | ⭐ **与我方最同题**：**模型自选** surface seq 范围、**模型自写摘要**，走官方 `ctx.compaction.compactRegion`；产物 = `acp_status` ／ `acp_compress` ／ `acp_decompress` ／ `acp_search` 四工具 ＋ `/acp` 命令；**`preserveRecent`（默认 2，含未闭合工具调用）** ⇒ 「近文保留」的现成参数化；`minTokens:200`；`minContextLimit:"60%"` ／ `maxContextLimit:"70%"`（**与官方 0.8 不同**，是另一套取值）；`acp_decompress` **只读原文、不撤销 replace**；**摘要必须比被藏内容短**，否则官方引擎拒绝 | ① 它是**工具驱动**（模型主动压），与 S2 判据（自动/显式触发）**不完全同构**；② `acp_` 前缀**不是** Agent Client Protocol（官方 `@deepseek-ai/dsh-acp`）—— 命名歧义；③ **依赖官方 basic 提供 `compactRegion`**，不装 basic 它没意义 | README 给 `node check.js` 纯函数自检 ＋ `--dump-config` 验证；**无测试说明** | 🟡 |
-| `giter00/dsh-headroom` | 名录 L1298 ／ dsh.pub v0.3.0 | 未核 | 注册表：**`dsh 0.1.2-rc.1` ✓ L5（2026-09-05）**；0.1.3-α2 ◐ L4；⚠️ **未见 `0.1.5-rc.2` 行** | T2 T3 T5 T6 | B | ⭐ **「压了但可逐字节取回」**：挂 `tools/post-execute`，**结果物化前**替换文本；**内容路由 ＋ 专用压缩器**（JSON 透视 `_keys`/`_rows`/`_common`；grep 按文件折叠；日志连续重复行折叠但保 error/fail/exception/assert；表格保表头首尾、中间 offload；长文本 Kompress）；**CCR store 存原文 ＋ marker**，模型可 `headroom_retrieve(id=…)` **逐字节取回**；**代码默认不压**；自述省 token：JSON 65.6% ／ grep 41.3% ／ log 56.8% ／ CSV 59.8% ／ prose 94.7% | ① 它是 **tool-output 压缩**（与官方 pruner 同生态位），**不是** conversation summarization ⇒ **不解决"近文原文保留 ＋ 摘要注入"**；② 自述 **Kompress 默认评分器是启发式模拟、非真模型推理**，输出可读性有限；③ 引入 `headroom_retrieve` = **新增模型工具面**（官方取向是"人工命令、无模型工具"）；④ **版本矩阵未见我们锚版** | 自带 `scripts/verify-compress.mjs` ／ `verify-apply.mjs`：断言结构化事实保留、code ／ short ／ error 输出**字节不变**、CCR 可取回、**NEEDLE-42 在压视图不可见但可取回** | 🟡 |
-| `ljsysfurryACE/dsh-compaction` | 名录 L1334 | 未核 | 未核 | T2 T3 | B | ⭐ **「自做 Provider」的实样**：Compaction backend **以确定性语义抽取器替换 LLM 摘要**（保 code ／ paths ／ commands，丢 chatter）＋ 自述 28.4x KV 压缩 | 未读源码 | 未核 | 🟡 |
-| `ICCuse/dsh-premise-guard` | 名录 L1310 | 未核 | 未核 | T5 T6 | **A?** | ⭐⭐ **与我方判据反向同题**：**压缩后前提漂移守卫** —— 当摘要**丢掉了关键字面锚**时注入一次性提示 ⇒ 「摘要含可验证 nonce ／ 锚」这条判据的**现成对照装置** | 未读 | 未核 | 🟡 |
-| `yoza10635/dsh-argp` | 名录 L1253 | 未核 | 未核 | T2 T3 | B | 「LLM proposes, **deterministic guards dispose**」＋ per-atom shrink（extract ／ summary ／ …）⇒ **守卫式压缩**：模型只提议、确定性守卫裁决 | 未读 | 未核 | 🟡 |
-| `JohnXu22786/context-pruner` | 名录 L1323 | 未核 | 未核 | T2 T3 | B | **确定性筛选器**裁 stale ／ duplicate ／ failed ／ oversized，描述称 **"through the official …"**（截断，疑走官方接口） | 未读 | 未核 | 🟡 |
-| `songoao25/dsh-auto-compact` | 名录 L1379 | 未核 | 未核 | T4 | B | 一键应用**调优过的 threshold ／ retention 预算 ＋ 每模型策略** ⇒ 官方阈值参数的**实践取值**参考 | 未读 | 未核 | 🟡 |
-| `falling-ts/dsh-force-compact` | 名录 L1105 | 未核 | 未核 | T4 | B | **强制触发压缩**（低上下文模型场景）⇒ T4「逼出触发」的现成思路 | 未读 | 未核 | 🟡 |
-| `ICCuse/dsh-file-memory` | 名录 L1308 | 未核 | 未核 | T3 | C | 文件式工作记忆：**关键前提逐字存盘**，以无损穿过压缩 | 未读 | 未核 | 🟡 |
-| `zhubaohi/dsh-qwen38-compaction-fix` | 名录 L1044 | 未核 | 未核 | T6 | B | **坑实证**：压缩调用与 session-title 调用**需禁 thinking**，否则高 reasoning 把 `maxTokens` 吃掉 ⇒ 与官方已知限制（`maxTokens` 截断可被 hidden reasoning 消耗）**对上** | 未读 | 未核 | 🟡 |
-| `Tyan66666/billion-context-dsh` | 名录 L1388 | 未核 | 未核 | T2 | C | 与上表 `aerince` 同题（"Active Context Pruning"）⇒ 疑 fork ／ 同源，**待去重** | 未读 | 未核 | 🟡 |
-| `Icstick/dsh-context-maid` | 名录 L1128 | 未核 | 未核 | T3 T6 | C | content-aware tool-output slimming ＋ dead-log sweep ＋ 钉住用户要求与在飞工作 ＋ archive-then-… | 未读 | 未核 | 🟡 |
-| `ishuowang/dsh-sideband` | 名录 L1131 | 未核 | 未核 | T3 | C | 冻结有限 session 快照、**异步摘要**（不打断在跑 agent） | 未读 | 未核 | 🟡 |
-| `LFM097384/Context-Prism` | 名录 L1330 | 未核 | 未核 | T3 | C | 项目级本地上下文引擎（检索 ／ 压缩 ／ 优先级） | 未读 | 未核 | 🟡 |
-| `qwert702/dsh-context-compressor` | 名录 L1192 | 未核 | 未核 | T4 | C | UI 层「一键压缩」（会话标题栏按钮） | 未读 | 未核 | 🟡 |
-| `snow-The/dsh-session-handoff` ／ `whiteS18/dsh-handoff-button` | 名录 L1211 ／ L1231 | 未核 | 未核 | T3 | C | 交接文档式摘要（export ／ resume ／ status）⇒ **属 handoff，不属 compaction** | 未读 | 未核 | 🟡 |
-| `vibeinging/dsh-agent-budget` | 名录 L758 | 未核 | 未核 | T4 | C | agent-tree token 预算管理 | 未读 | 未核 | 🟡 |
-
-#### D 组 · 排除（**G3 闸门的实测印证**）
-
-- 名录宽扫 **458 条**命中里，绝大多数是 **UI 语义**（`context menu` ／ 折叠 ／ 侧栏 ／ 面板 ／ chip）；收紧规则（强相关词 ∧ 非 UI 噪音词）后 **75 条**；逐条读描述后**真相关 ~18 条**。⇒ **「不许按关键词计数判相关」这条闸门是必要的**，且**名录无 compaction 专类**，必须落到 `Sessions & Messages`(1061) ／ `Memory`(1265) 两个分类里逐条读。
-
-### ③ 评论（与上面的观察分开）
-
-1. **3.4 的参考件横跨两个生态位，混了会在错误的层面设计。**
-   - **(a) conversation compaction**：官方契约 ＋ basic ＋ command-compact；社区 `aerince` ／ `ljsysfurryACE` ／ `yoza10635` ／ `songoao25` ／ `falling-ts`。→ **与 3.4 同题**。
-   - **(b) tool-output 压缩 ／ 可逆取回**：官方 pruner；社区 `headroom` ／ `context-pruner` ／ `context-maid`。→ 只在**「压什么」上互补**，**不解决**「摘要注入 ＋ 近文原文保留」。
-   - ⇒ 若把 (b) 当 (a) 参考，会把 S2 做成"工具输出瘦身"，**判据永远验不到"近文原文保留"**。
-
-2. **契约面不需要社区。** 官方契约 ＋ 上游 `docs/subsystems/compaction.md` ＋ `src/index.ts` 已是**完整正本**（🟢，实读）。社区的价值集中在 **T3（策略）／ T4（阈值实践）／ T5（守卫与验证）**。
-
-3. **T5 可能有一个"白送"的机读判据，且正反面都有现成件。** 契约的 checkpoint marker 从 **cordis-free 子路径**导出 ⇒ 验「摘要注入」**不必自造探针**；而 `ICCuse/dsh-premise-guard` 提供**反向**做法（摘要丢锚即告警）⇒ 两者合起来正好覆盖我方「摘要含可验证 nonce」的正反两侧。**建议列入 Top 深读。**
-
-4. **T4 的量化锚已由官方给出，且有量可算。** 阈值 = 路由模型窗口 × **0.8**、保留 **16%** 逐字、摘要输出上限 **8192**。若 `contextWindow` 1M 成立，则「1 轮逼出」需注入约 **80 万 token 量级** —— 这正是判据要「开跑前给 token ／ 费用上限」的**量纲依据**（不再是毛估）。
-   ⚠️ **且有一条系统性偏差**：`ctx.tokenMeter` 用**四字符≈1 token** 的启发式、**明确低估 CJK** ⇒ 中文填充文本的**真实 token 数高于估值**，构造时须以**真 token 读数**校准，别用字符数反推。
-
-5. **版本脱节判断（老大注要求）—— 暂判「社区红利可用」，无需上报脱节。** 依据：`aerince` 在 **`dsh 0.1.5-rc.2` 上拿到 L5 runtime verified**；官方三件与锚版**同代**（本机 profile 内即是）。⚠️ **唯一待核**：`giter00/dsh-headroom` 的注册表矩阵**未见我们锚版行**（最新行 = 0.1.2-rc.1 ✓）。⇒ 这不构成"脱节"，但**该件的兼容性不能假定**。
-
-6. **两条值得单独记的坑。**
-   - **摘要被截断是真实失败模式**：`zhubaohi/dsh-qwen38-compaction-fix` 与官方 Dev Note 都指向 **hidden reasoning tokens 吃掉 `maxTokens`** ⇒ 我方判据要能区分「**没压**」与「**压了但摘要被截**」，否则"摘要含 nonce"失败时无法归因。
-   - **`dsh-headroom` 的 CCR 模式引入新模型工具**（`headroom_retrieve`），与官方"compaction 是人工命令、无模型工具"取向**相反** ⇒ 若借鉴，**那是产品决策，不是实现细节**，须走老大拍板而非在 3.4 里顺手做掉。
-
-7. **⚠️ 同名异物（检索陷阱，已实测撞到）**：`giter00/dsh-headroom`（tool 输出压缩**插件**）≠ `wjxn13/dsh-headroom`（Python Headroom **代理**，需 pip venv 约 50MB、走"线路切换"），二者都会命中 "dsh-headroom"。⇒ 登记与检索**必须写全 `owner/repo`**。（旁证：另有 `Zenjibad/headroom-stats-plugin` 服务于代理线。）
-
-### ④ 本轮诚实边界
-
-- **社区件一件源码都没读** —— 全部 🟡（README ／ 注册表级）。所有 B 组条目的「借鉴点」**只是候选线索，不是已核事实**。
-- 上游有 **3 件只读了结构未读内容**：`docs/subsystems/compaction.md`（238 行，只读标题）、设计 note、config-catalog。
-- **未做** GitHub ／ npm 站内搜索；**未拉**任何候选到 `ref/community/`；**未装**任何件（§3.0 纪律）。
-- 上述所有结论**只在「本地 Bash 通道 ＋ 内置搜索工具」这两条通道内成立**，不可外推。
+> ⏳ **待**：WB（`exchange/log-workbuddy.md`）／ Trae ／ Claude ／ Qoder ／ Other。
