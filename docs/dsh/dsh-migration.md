@@ -857,6 +857,36 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - ⚠️ **"前后对照"实验须在单租户窗口内做**：CVM 上曾观测到第三方活跃会话（`who` 见 `pts/0`），且 `~/.dsh/profiles` 的 mtime 与自己的动作**同秒**变动；但**对照实验打回**（取 mtime → 跑 `--help` → 再取 mtime，前后完全一致）⇒ 只能记"**观测到、未归因**"。⇒ 凡"取状态 → 跑命令 → 再取状态"类归因，**必须先确认窗口内无第三方活动**，否则证据自动降级。（这条比"2G 内存"更硬地支持 3.0 采数窗口**冻结其他活动**。）
 - **各执行人各自做一次通道核查**、各自出《我方执行说明》（三种工具形态的坑不同，**谁也不能替谁许愿**）。
 - ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **landlock 判定不可互搬**（实测：ABI 5+ 的掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）。
+
+##### DSH-3.5 · S3 sandbox：CVM 前置核查实测回填（WB 2026-09-23 dry-run）
+
+> **姿势**：按切片细则「先 dry-run 再判定」执行第一轮 —— **不出判定、只钉场地**；**零写入、零装包、零 LLM 调用（⇒ 未使用任何 Key）**。通道：WB `ssh` 前台 → CVM（`ubuntu@49.232.129.252`）；两轮只读探针 ＋ 一次 landlock 正证。
+
+**① `bwrap`：已证不存在；且"装上"这条路实际是堵的**（后半为本轮新增，原预案未覆盖）
+- `dpkg` 未装（apt 有候选 `0.9.0-1ubuntu0.3`，**dry-run 未装** —— 装它会改变场地）。⇒ 按源码 `linux: ["bwrap","landlock"]` 的链式仲裁，**永远只走 landlock rung**，与 `TODO.md` 3.5 预案一致。
+- ⚠️ **`apparmor_restrict_unprivileged_userns=1`**（Ubuntu 24.04 默认）⇒ 实测 `unshare --mount` ／ `--pid` ／ `--user --map-root-user` **全 FAIL**（`Operation not permitted`），仅不带映射的 `--user` 可用。**bwrap 依赖 mount ns ＋ userns 映射** ⇒ **即使装上 bwrap 也起不来**。⇒ 该前置从「装不装」升级为**要不要放开主机级 AppArmor**（`sysctl kernel.apparmor_restrict_unprivileged_userns=0`，需 root）—— 取舍见 ④。
+
+**② landlock rung：可用 ＋ 内核真实强制（正证，非"建了规则集就算"）**
+- `--probe` 语义（读 `node-addon-system/src/main.c` 定死）：`MAX_ABI 5L`（`:94`）／ `*partial = abi < MAX_ABI`（`:237`）／ 掩码按协商 ABI 裁剪（`:184-189`）。⇒ **CVM ABI=4 ⇒ `partial=true`**，probe 打印 `landlock: partially enforced (older ABI)` 且 **exit 0**（是"降级接受"，不是 fail）。
+- **WB 独立正证**（`python3` ctypes，与 DSH 互为独立通道）：ABI **4** → `PR_SET_NO_NEW_PRIVS` OK → `create_ruleset` OK → `restrict_self` OK → **读 `/etc/hostname`、`/etc/os-release` 均 `EACCES`** ⇒ 内核确实强制。
+- ⚠️ **一处既有表述须精确化**：〈ABI 边界〉原写「ABI 5+ 掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`」—— 该实测**成立**，但主语是**人工喂高位掩码**；**DSH 自身不会**触发（掩码按协商 ABI 裁剪，ABI 4 下只声明 `ABI1_MASK|REFER|TRUNCATE`）。⇒ **不得读成"DSH 在 ABI 4 上会失败"**（同 `MEMORY.md`〈实现正确、声明过度〉型）。
+- **ABI 4 与 5 的实际差距 = `LL_FS_IOCTL_DEV` 一位**（`main.c:85`：ABI 4 只加 TCP 位）⇒ 对"文件读写沙箱"几乎无影响。
+
+**③ fail 形态：fail-closed（源码 ＋ 文档双重钉死；dry-run 未依赖上机即成立）**
+- `main.c:23-28` 原文：ruleset 建不了 / 内核不强制 ⇒ **`exit 125` 且不 exec 被包装命令**；老 ABI 的 best-effort 限制**被接受**但必 `fprintf(stderr, "landlock-run: partial enforcement (older Landlock ABI)")` 上报。
+- `dsh-sandbox-local/README.md:57`：unusable runner ⇒ **`confine()` 抛 `SANDBOX_UNAVAILABLE`**。
+- ⇒ **CVM 不会因 bwrap 缺失而 fail-open**：要么走 landlock（partial 但强制），要么整体 unavailable 并抛错。
+
+**④ ⚠️ dry-run 暴露的实质降档（待老大裁；不属 dry-run 判定范围）**
+- bwrap profile = **read-only host root ＋ fresh `/dev` ＋ private PID namespace**（`README.md:75`）；landlock rung **只管文件系统**（无 PID/mount ns，**亦无网络** —— `test-env.md:102` 已记其源码**无 `LANDLOCK_ACCESS_NET`**，沙箱内照样联网）。
+- ⇒ **CVM 上 bwrap 不可得 ⇒ 沙箱只剩"文件系统 allow-list"**：「防误操作 / 防越权写」够用，**「防数据外泄」不够**。选项 ① 接受降档 ② 放开主机 AppArmor 换 bwrap。**待裁。**
+
+**⑤ 顺手采得的其余场地事实（与 3.9 采数口径共用）**
+- **cgroup v2 齐备**：`memory.current` ／ `.peak` ／ `.events` ／ `.pressure` 均 readable；当前 `oom 0 ／ oom_kill 0`。
+- 路径映射：`~/larry-dsh-home`（**无凭据**）／ `~/.dsh`（**有凭据**，键 `version` ／ `records` ／ `refs`）／ `~/larry-data/larry.db` = **57,344 B，mtime 2026-09-16 18:47**（3.9 待回传的唯一副本）。
+- ⚠️ **裸跑 `node` / `dsh` 不可信**（非登录 shell 的 PATH 不含）⇒ 绝对路径 `~/node/bin/node`（v22.22.2）／ `~/harness/node_modules/.bin/dsh`。与 `test-env.md §6.2` 同族，**CVM 侧亦成立**。
+- `~/harness` 树**无 `.git`**（非受管副本，手工同步）。
+- 场地**非独占**：`~/claude-tp-evidence` ／ `~/qoder-evidence` ／ `~/claude-305` ／ `~/.dsh-015` 等**他方 AI 产物在库**；`~/harness/scripts/sandbox-probe/` 存 6 件**前人探针** —— ⚠️ 其中 `sandbox-denial-probe.mjs` 头注释自述「**本机 Windows**」、用 `USERPROFILE` ／ `C:\Windows\…` ⇒ **是 Windows 探针被搬到 Linux 机的**，勿当 CVM 器材直接跑。
 - ⚠️ **CVM 产出不得是唯一副本**（机器 2026-10-09 到期）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
 - ⚠️ **启动 / 装载类观测的「假绿三连」**（2026-09-16 实测，逐条都有反例 —— 判「环境可用 / profile 可用」前必读）：
   - ① **`dsh --profile <p>` 在 profile 不存在时同样 `exit 0` ＋ 双流全空** —— dsh 会自动把 home 建成**空壳 profile**（`dependencies: {}`），CLI 再从**自身安装树**解析 bundles ⇒ **`exit 0` 永远不能单独当判据**（与 `--help` / `--dump-config` 同类，只是这次骗过的是 boot 探针本身）。

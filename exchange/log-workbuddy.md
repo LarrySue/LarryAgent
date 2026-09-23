@@ -18,6 +18,8 @@
    建议改为：**「⛔ 禁止人工改写／意译；工具链自身的语言与编码差异须原样保留，并注明该段取自哪条通道（原生 shell ／ DSH pwsh ／ 沙箱运行器）」**。
    同类（Claude 侧新暴露）：派发稿 §7「Key 值不得落任何文件／日志／工具输出」与 **Tier 0 红线①**（老大授权临时 Key 不受此限、不必扫）**互相矛盾** ⇒ 派发稿模板的**凭据条款**与**原文条款**建议同批修订。
 
+2. **CVM 沙箱降档是否接受**（WB 2026-09-23 dry-run 新暴露）—— CVM 上 `bwrap` 不可得（不仅未装，且 `apparmor_restrict_unprivileged_userns=1` ⇒ `unshare --mount/--pid` 全 FAIL，装上也起不来）⇒ 沙箱只剩 landlock = **仅文件系统 allow-list，无 PID/mount ns、无网络限制**。选项 ① 接受降档 ② 放开主机 AppArmor 换 bwrap。**完整回填 → `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉；已同步 `TODO.md` DSH-3.5 段。
+
 ## 🗂 已清理段落（按交流区规矩）
 
 - **2026-09-22 清理**：删除三段已闭环复验记录（《Qoder 两报告复验》／《DSH-3.8.1 复验》／《DSH-3.8.2 复验》）—— 复验结论已各自回填（3.8.1 ／ 3.8.2 → `TODO.md` 3.8 段；3.7.5 → `TODO.md`「DSH-3.7.5」段末「WB 复验判定」）。回溯：`git log -p -- exchange/log-workbuddy.md`。

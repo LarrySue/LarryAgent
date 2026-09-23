@@ -85,11 +85,12 @@
 #### DSH-3.5 · S3 sandbox 三档接入（→ 2.7.1 Linux 侧）
 
 - [ ] 三档（read-only / workspace-write / danger）各自拒绝与提权流程生效 + **fail-closed 成立**
-- [ ] **前置核查：目标机 `bwrap` 是否存在**（DSH Linux 链 = `['bwrap','landlock']` 两个 rung ⇒ probe 仲裁；不存在则永远只走 landlock rung）
-- [ ] 加判据：**DSH 的 sandbox ruleset 在 CVM 上建立成功**，并**单独判其失败形态**（fail-open 还是 fail-closed —— 决定生产安全）
+- [x] ✅ **前置核查：目标机 `bwrap` 是否存在 —— ⭐ 已核：不存在（WB 2026-09-23 dry-run）** ⇒ DSH **永远只走 landlock rung**（与预案一致）。⚠️ 且**“装上 bwrap”这条路实际堵死**：`apparmor_restrict_unprivileged_userns=1` ⇒ `unshare --mount/--pid` 全 FAIL（bwrap 依赖 mount ns + userns 映射）。**回填 → `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉**
+- [ ] 加判据：**DSH 的 sandbox ruleset 在 CVM 上建立成功**，并**单独判其失败形态**（fail-open 还是 fail-closed —— 决定生产安全）—— ⭐ **fail 形态已由源码预先钉死 = fail-closed**（`main.c:23-28`：`exit 125` 且不 exec；`README:57`：招 `SANDBOX_UNAVAILABLE`）⇒ 判定轮只需**在真 DSH 上复核**该形态
 - [ ] 器材：`D:\Temp\Sys\claude-wsl-probe\landlock_probe.py`（ABI 自适应 + `--fs-mask` 负向开关 + `VERDICT=` 机读行）
-- [ ] ⭐ **执行姿势：先 dry-run 再判定**（2026-09-14 定「WSL 不参与」的**替代手段**，见 DSH-3 段）—— 探针第一次上 CVM 时**先跑一轮不出判定的 dry-run**（只打印 ABI / 路径映射 / 权限探针 / `bwrap` 存在性），确认场地与预期一致后再跑判定轮。⚠️ 这是替代"WSL 预演"的姿势（CVM 10-09 到期、机会一次性），**不是可省的步骤**
-- ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **判定只能写在 CVM 上，不得互搬**（实测：ABI 5+ 掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）
+- [x] ✅ **执行姿势：先 dry-run 再判定 —— 已完成（WB 2026-09-23，只读／零装包／零 Key）**：ABI=**4**（landlock **正证通过**：设规则后读 `/etc/hostname` 被 `EACCES`）／`bwrap` **不存在**／路径映射与 cgroup v2 齐备／**ABI 4 ⇒ `partial`**（差 `IOCTL_DEV` 一位）。⚠️ 原定位是"替代 WSL 预演"的姿势（CVM 10-09 到期）；**CVM 期限已确认非硬约束**（老大 2026-09-23：续费成本可忽略），但 dry-run 本身仍为必要前置
+- ⚠️ **ABI 边界（2026-09-23 精确化）**：CVM = **4** / WSL = **7** ⇒ **判定只能写在 CVM 上，不得互搬**。⚠️ 原表述「ABI 5+ 掩码喂 ABI 4 ⇒ `create_ruleset` 直接 `EINVAL`」**限于“人工喂高位掩码”**；**DSH 自身按协商 ABI 裁剪掩码（`main.c:184-189`）不会 EINVAL** ⇒ 勿读成“DSH 在 ABI 4 上会失败”
+- [ ] ⚠️ **待裁（dry-run 新暴露）：CVM 沙箱降档是否接受** —— bwrap 不可得 ⇒ 只剩 landlock（**仅文件系统 allow-list；无 PID/mount ns、无网络限制**）：「防误操作／防越权写」够用，**「防数据外泄」不够**。选项 ① 接受降档 ② 放开主机 AppArmor（root 改 `kernel.apparmor_restrict_unprivileged_userns=0`）换 bwrap
 
 #### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
 
