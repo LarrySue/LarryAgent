@@ -78,9 +78,9 @@
 #### DSH-3.4 · S2 compaction 接入（→ 2.9.2）
 
 - [ ] **compaction provider 插件**（`ctx.compaction` 是契约 ⇒ 自做 Provider 即换策略，消费者不动）
-- [ ] 构造法：**注入大段填充文本逼出触发**（勿真灌 200+ 轮 —— `contextWindow` 实测 1M，"200+ 轮"这个数字本身待核）
-- [ ] 判据：摘要注入 **且** 近文原文保留 + 摘要含可验证 nonce 片段
-- [ ] ⚠️ 开跑前先给 **token / 费用上限**，写进判据
+- [ ] 构造法：**注入大段填充文本逼出触发**（勿真灌 200+ 轮）⇒ ⭐ **量级阶梯与预算已算清**：`docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 compaction：测试量级阶梯与预算〉
+- [ ] 判据：摘要注入 **且** 近文原文保留 + 摘要含可验证 nonce 片段。⚠️ **「近文原文保留」必须注明走哪条路径**：压力路径按 `retainRatio`(0.16) 保留尾部；**手动 `/compact` 硬编码 `retainTokens=0` ⇒ 只留最后 1 条**（`compaction-basic/src/index.ts:380-384`）⇒ 只用 `/compact` 验会把「只留最后一条」误判成立
+- [ ] ⚠️ 开跑前先给 **token / 费用上限**，写进判据 —— 建议（WB 2026-09-23，**待老大定额**）= 主线 L0＋L1＋L2 ⇒ **30 万 input ／ 10 万 output**（预计实耗 10~20%）；加 L3 ⇒ 80 万 input
 - [ ] 📚 **参考件调研（广撒网）已派发（2026-09-23）**：五方（WB ／ Trae ／ Claude ／ Qoder ／ Other）**各自独立**检索 ／ 梳理 ／ 筛选并出评论报告 ⇒ **筛选规则 ／ 报告格式 ／ 反纪律 ／ 必扫区 = `docs/dsh/dsh-34-ref-research.md`**（稳定落点）；收齐后由 WB 汇总并回填 `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉3.4 行
 
 #### DSH-3.5 · S3 sandbox 三档接入（→ 2.7.1 Linux 侧）
@@ -89,9 +89,9 @@
 - [x] ✅ **前置核查：目标机 `bwrap` 是否存在 —— ⭐ 已核：不存在（WB 2026-09-23 dry-run）** ⇒ DSH **永远只走 landlock rung**（与预案一致）。⚠️ 且**“装上 bwrap”这条路实际堵死**：`apparmor_restrict_unprivileged_userns=1` ⇒ `unshare --mount/--pid` 全 FAIL（bwrap 依赖 mount ns + userns 映射）。**回填 → `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉**
 - [ ] 加判据：**DSH 的 sandbox ruleset 在 CVM 上建立成功**，并**单独判其失败形态**（fail-open 还是 fail-closed —— 决定生产安全）—— ⭐ **fail 形态已由源码预先钉死 = fail-closed**（`main.c:23-28`：`exit 125` 且不 exec；`README:57`：招 `SANDBOX_UNAVAILABLE`）⇒ 判定轮只需**在真 DSH 上复核**该形态
 - [ ] 器材：`D:\Temp\Sys\claude-wsl-probe\landlock_probe.py`（ABI 自适应 + `--fs-mask` 负向开关 + `VERDICT=` 机读行）
-- [x] ✅ **执行姿势：先 dry-run 再判定 —— 已完成（WB 2026-09-23，只读／零装包／零 Key）**：ABI=**4**（landlock **正证通过**：设规则后读 `/etc/hostname` 被 `EACCES`）／`bwrap` **不存在**／路径映射与 cgroup v2 齐备／**ABI 4 ⇒ `partial`**（差 `IOCTL_DEV` 一位）。⚠️ 原定位是"替代 WSL 预演"的姿势（CVM 10-09 到期）；**CVM 期限已确认非硬约束**（老大 2026-09-23：续费成本可忽略），但 dry-run 本身仍为必要前置
+- [x] ✅ **执行姿势：先 dry-run 再判定 —— 已完成（WB 2026-09-23，只读／零装包／零 Key）**：ABI=**4**（landlock **正证通过**：设规则后读 `/etc/hostname` 被 `EACCES` —— ⚠️ **该掩码系探针自设的更严掩码；DSH 的 landlock profile 读权限是全开的（`readOnly:['/']`）⇒ 此正证只证「内核强制」，不得读成「DSH 沙箱挡读敏感文件」**，见 `docs/dsh/dsh-migration.md` §3.6② 姿势自证）／`bwrap` **不存在**／路径映射与 cgroup v2 齐备／**ABI 4 ⇒ `partial`**（差 `IOCTL_DEV` 一位）。⚠️ 原定位是"替代 WSL 预演"的姿势（CVM 10-09 到期）；**CVM 期限已确认非硬约束**（老大 2026-09-23：续费成本可忽略），但 dry-run 本身仍为必要前置
 - ⚠️ **ABI 边界（2026-09-23 精确化）**：CVM = **4** / WSL = **7** ⇒ **判定只能写在 CVM 上，不得互搬**。⚠️ 原表述「ABI 5+ 掩码喂 ABI 4 ⇒ `create_ruleset` 直接 `EINVAL`」**限于“人工喂高位掩码”**；**DSH 自身按协商 ABI 裁剪掩码（`main.c:184-189`）不会 EINVAL** ⇒ 勿读成“DSH 在 ABI 4 上会失败”
-- [ ] ⚠️ **待裁（dry-run 新暴露）：CVM 沙箱降档是否接受** —— bwrap 不可得 ⇒ 只剩 landlock（**仅文件系统 allow-list；无 PID/mount ns、无网络限制**）：「防误操作／防越权写」够用，**「防数据外泄」不够**。选项 ① 接受降档 ② 放开主机 AppArmor（root 改 `kernel.apparmor_restrict_unprivileged_userns=0`）换 bwrap
+- [x] ✅ **已裁（老大 2026-09-23）：接受降档（选项 ①）** —— `bwrap` 不可得 ⇒ CVM 上沙箱永远走 landlock rung；**不动主机 AppArmor**（选项 ② 不采纳）。⚠️ 裁定附**两处归因修正**（WB 读源码所得）：① **bwrap profile 同样不管网络**（`bwrapProfileArgs()` 无 `--unshare-net`，`sandbox-local/src/profiles.ts:17`）；② **读写权限两条 rung 等价**（bwrap `--ro-bind / /` ≡ landlock `readOnly:['/']` ＋ 写白名单）。⇒ 降档净损失仅「私有 PID ns ＋ `--die-with-parent` ＋ workspace-write 的临时 `/tmp`」三条，**与防误写／防外泄均无关**；选项 ② 代价是**主机级**（影响全机进程）⇒ 收益不抵。**不新造缺口**（「防外联另做」原样有效，`production-env.md:165-166`）。**完整回填 → `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉④**
 
 #### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
 

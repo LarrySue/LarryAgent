@@ -756,7 +756,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | S0 ② | plugin mount **以 boot 时 `activate` 打点为准**。⚠️ **`--dump-config` 是假绿源** —— 实测只组配置树、不激活插件（探针行**出现在 dump 里但没执行**） |
 | S0 ④ | "落盘 + 回读" → **回读结果里能查到同一 nonce**（不是"文件存在 / 条数够"） |
 | S1 | 用例扩到 5 条：批准 / 拒绝 / **超时** / **抛错** / **渠道断裂** —— 后三条须 fail-closed **且留可观测日志**（⚠️ 静默 fail-closed 会制造假绿）；观测点 = **工具 handler 入口打点**，UI 与 DSH 日志只作旁证 |
-| S2 | **弃"灌 200+ 轮"**（`contextWindow` 实测 1M，"200+"来源不明）→ 改用**注入大段填充文本、1 轮逼出**；判据加"摘要含可验证 nonce 片段 + 近文原文保留"；开跑前给 **token / 费用上限** |
+| S2 | **弃"灌 200+ 轮"**（`contextWindow` 实测 1M，"200+"来源不明）→ 改用**注入大段填充文本、1 轮逼出**；判据加"摘要含可验证 nonce 片段 + 近文原文保留"；开跑前给 **token / 费用上限**。⇒ ⭐ **测试量级阶梯与预算 = 本稿 §3.6〈DSH-3.4 · S2 compaction：测试量级阶梯与预算〉** |
 | S3 | 加两条：① **`bwrap` 存在性前置**（Linux 链 = `['bwrap','landlock']` 两个 rung）② **DSH 的 ruleset 建立成功** + **失败形态判定**（fail-open / fail-closed 决定生产安全） |
 | S4 | 加 **双写一致性模型** —— ⚠️ SQLite + ChromaDB **双写不是事务** ⇒ 须定义 ChromaDB 不可达时的降级行为与召回路径 |
 
@@ -858,6 +858,53 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - **各执行人各自做一次通道核查**、各自出《我方执行说明》（三种工具形态的坑不同，**谁也不能替谁许愿**）。
 - ⚠️ **ABI 边界**：CVM = **4** / WSL = **7** ⇒ **landlock 判定不可互搬**（实测：ABI 5+ 的掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`）。
 
+##### ⭐ DSH-3.4 · S2 compaction：测试量级阶梯与预算（WB 2026-09-23 拟；定额待老大）
+
+> **为什么先算这个**：S2 要逼出压缩，而压缩阈值直接绑在**模型容量**上（默认 1M ⇒ 阈值 80 万）⇒「1 轮逼出」花多少钱完全由容量决定。本节把**每一段钱能测出什么**排成阶梯，并给出**三个官方杠杆**（可把成本降一到两个数量级）。⚠️ 除标注外全为 🟢（读 `dsh-v0.1.5-rc.2` 源码所得）。
+
+**① 阈值从哪来（三行源码即全部真相）**
+- `thresholdTokens = floor(contextWindow × thresholdRatio)`（`compaction-basic/src/config.ts:144`）；`retainTokens = floor(contextWindow × retainRatio)`（`:145-147`）；默认 `thresholdRatio` **0.8** ／ `retainRatio` **0.16**（`:20,23`）；`maxTokens` **8192**（摘要输出上限，`:91`）；`compactionRetries` **1**（`:92`）；`retainRatio` 必须 **<** `thresholdRatio`（load 期硬约束，`:185-190`）。
+- `contextWindow` **不是常量**：由 adapter 按**确切路由**提供 —— DeepSeek adapter `DEFAULT_CONTEXT_WINDOW = 1_000_000`（`llm-deepseek/src/adapter.ts:147`）；**每个 catalog model 可单独给 `contextWindow`**，adapter 级还有 **`defaultContextWindow`**（`llm-deepseek/src/index.ts:193`，未列出的 pass-through id 也继承它）。
+- ⇒ **默认配置下阈值 = 80 万估算 token**（`TODO.md` 原记「实测 1M」与源码一致 ✅）。
+- ⚠️ **官方文档自身脱节**：`.agents/notes/implemented/architecture/2026-07-20-routed-model-context-and-compaction-policy.md:19` 写「两个内建模型各公布 **256,000**」——与本 tag 常量（**1M**）不符 ⇒ **以代码为准**（该 note 定稿于 07-20，常量后改）。
+
+**② 三个杠杆（省钱的实质在这里）**
+1. ⭐ **改小 `contextWindow`** ⇒ 阈值线性下降。`defaultContextWindow: 20000` ⇒ 阈值 **16,000**（比 80 万低 **50×**）。这是**官方配置面，不是 hack**。⚠️ 代价：属**容量被改写的夹具** ⇒ 判定只能写「机制成立（容量 20k 下）」，**不得外推成「1M 下亦然」**（除非另跑 L4）。
+2. ⭐ **填充一律用 ASCII，不用中文** —— 官方明说固定 `4 字符 = 1 token` 启发式**严重低估 CJK 与 JSON schema**（`packages/llm/token-meter/README.md:64,148`；实现在 `estimate.ts:13,53`，按 **UTF-16 code unit** 长度计）。⇒ 达到**同一「测量压力」**所需的**真实** token：中文远高于 ASCII（**方向已由官方钉死；倍率须用一次真调用的 `usage` 实测校准**，勿凭记忆填数）。⇒ **中文填充会把成本成倍抬上去。**
+3. **`maxTokens`（摘要输出上限）可调**，默认 8192，可按 target 覆盖于 `modelPolicies` ⇒ 小档调小（如 2048）压住输出成本。⚠️ 但 **thinking 的 hidden reasoning 会吃 `maxTokens` 造成摘要截断**（官方 Dev Note ＋ 社区 `zhubaohi/dsh-qwen38-compaction-fix` 双证）⇒ 若开 thinking，**别调太小**。
+
+**③ 阶梯（每档：怎么造 ／ 量级 ／ 能测出 ／ 测不出）**
+
+| 档 | 怎么造 | 量级 | 能测出 | 测不出 |
+|---|---|---|---|---|
+| **L0** 零调用 | 故意配非法（`retainRatio ≥ thresholdRatio`）或塞未知 key | **0 token** | **配置真被这个引擎读进去**（load 期必抛错：`config.ts:185-190`／`:280`）；插件装配层注册 | 任何运行时行为（⚠️ `--dump-config` 是假绿源：只组配置树、不激活插件） |
+| **L1** 手动 `/compact` | 会话有 **≥3 个 surface 节点**（含 system head）后发 `/compact` | ~**1 万** input ＋ ≤8192 output（**1 次摘要调用**） | ① 完整括号 `compaction/start` → `compaction/summary` → `user/message(surfaceOp:replace)` → `compaction/end`（`region.ts:455-484`）② ⭐ **摘要注入的机读判据** = checkpoint marker（`source.kind='plugin' ∧ plugin='compact'`，`checkpoint.ts:19,49`；`isCompactCheckpointSource()` 可直接调用）③ summary 文本里 nonce 是否存活 ④ 原文仍在 append-only log（替换件带 `sourceEventSeqs`）⑤ **`compaction/summary` 事件自带 `usage`** ⇒ 现成的成本判据 ⑥ **反向对照（免费）**：非 idle 调 `/compact` ⇒ `ManualCompactionError.code='busy'` | ❌ **`retainRatio` 的 16% 尾部保留**（手动路径**硬编码 `retainTokens = 0`**，`index.ts:380-384` ⇒ 只保留**最后 1 个节点** ＋ 配对回退）❌ 自动触发 ❌ overflow 恢复 |
+| **L2** 小窗口自动压力 | `llm-deepseek.defaultContextWindow: 20000`（或该 model `contextWindow: 20000`）＋ **必须 2 个 turn** | 阈值 16k ⇒ ≈**3 × 16k ≈ 5 万**（主请求 ×2 ＋ 摘要输入 ×1） | ① `agent/pre-step` **自动**触发（无需人工命令）② ⭐ **阈值边界上下双跑**：15,999 不压 ／ 16,000 压 ⇒ 「真按 `floor(容量 × 0.8)` 算」的硬证据 ③ ⭐ **「近文原文保留」的正面判据**：尾部 ≈ `floor(20000 × 0.16) = 3200` token 原文留在 surface（`selectCompactableRange`，`region.ts:116-154`）④ **tool-pairing 边界吸附**：造一个跨越边界的未应答 `assistant/tool-call`，看边界是否回退 | ❌ 真 1M 容量 ❌ overflow 恢复 |
+| **L3** 中窗口 ／ 多段（可选） | `defaultContextWindow: 100000`；或在小窗口下**连压两次** | ~**20–40 万** | ① **多代压缩**：已有 `<compacted-summary>` 时的**合并语义**（`summarizer.ts:65`：视为 PRIOR checkpoint ⇒ 保留仍真事实、丢弃过期、合并为新单块）② `compactionRetries` 的收敛循环与**压不动的抛错路径**（压完仍超阈值 ⇒ 抛 `compaction still above threshold after N attempts`，`index.ts:329-332`）③ 长历史下估算偏差累积 | 同 L2 |
+| **L4** 真锚（默认 1M） | 默认配置灌 80 万 | **≥ 160 万** input | 「容量不改变机制」的**正面物证** | — |
+| **L5** 真溢出恢复 | 真发出**超过模型真实窗口**的请求 | 每次 **≥ 100 万** input 且被拒 | `agent/request-error` ＋ `maxOverflowRetries`（`index.ts:180-224`） | — |
+
+**④ 为什么建议 L4 ／ L5 不做**
+- **L4**：机制里**唯一的容量依赖**就是 `floor(contextWindow × thresholdRatio)` 这一处纯算术（`config.ts:144`）＋ 每步重解析模型信息（`index.ts:294`）——均已读源码 🟢 ⇒ **推理上不必花 160 万 token 去证**。要物证再单跑。
+- **L5**：**改小 `contextWindow` 造不出 overflow** —— `CONTEXT_WINDOW_EXCEEDED` 由 adapter 从**提供方真实错误**归一化（`adapter.ts:346` `isContextWindowExceededError`），**没有本地预检** ⇒ 只能真灌到超真窗口。且 **S2 判据（摘要注入 ＋ 近文保留 ＋ nonce）不含 overflow** ⇒ 属**另一档**，建议单列（与 3.5／3.9 并列），不在 3.4 主线上烧钱。
+
+**⑤ 不必实测就能算出的成本方向（三条，写进判据用）**
+- ⭐ **压力档至少 2 个 turn**：`routedTarget()` 读 `session.requestHeader()`，**首轮 pre-step 无 header ⇒ 直接返回 `null` 不压**（`index.ts:53-61, 265`）⇒ 第一个 turn 只负责「把填充灌进去并建立 header」，第二个 turn 才压 ⇒ **预算 ≈ 3 × 阈值**。
+- **摘要调用的输入 = 被压那段的前缀**（system ＋ tools ＋ 区域消息，`region.ts:528-547`）⇒ **成本 ∝ 被压区间**，与总历史同阶；**不是**「只有输出 8k 那么便宜」。
+- **工具 schema 本身也算压力**（`estimate.ts:estimateToolsTokens`：`ceil(JSON.stringify(tools).length / 4)`）⇒ 实际所需填充 = 阈值 −（系统提示 ＋ 工具 schema ＋ 既有历史）。⇒ 本机工具多时，这部分是**免费的填充**。
+
+**⑥ 判据必须增补的一条（本轮读源码新发现的缺口）**
+- **「近文原文保留」必须注明走哪条路径**：**压力路径**按 `retainRatio` 保留**尾部 16%**；**手动 `/compact`** 硬编码 `retainTokens = 0`（`index.ts:380-384`）⇒ **只保留最后 1 个 surface 节点**。⇒ 若只用 `/compact` 验收，会拿到「只留最后一条」的结果却**误判为判据成立**。
+- ⭐ **顺带得到 3.4「换 Provider」的第一个实际靶子**：若产品要求**手动 `/compact` 也保留近文尾部**，则 **`compaction-basic` 不满足** ⇒ 必须自做 Provider（或 fork）。
+
+**⑦ 一条产品观察（不是我们定，交老大）**
+- 官方摘要提示词要求 **「Write concise English engineering prose」** ＋「Preserve exact file paths, commands, error strings, **identifiers**, numeric values, function signatures…」（`summarizer.ts:61`）⇒ ① **中文会话的摘要会被写成英文**（我们是中文优先产品 ⇒ 要不要换提示词属产品决策）；② **nonce 判据有官方提示词背书**（"identifiers" 被明确要求保留）⇒ 判据设计成立，但**仍非保证**（LLM 行为，非确定性）。
+
+**⑧ 建议预算（**待老大定额**）**
+- **主线 = L0 ＋ L1 ＋ L2** ⇒ 预计实耗 **5～10 万 input ／ 1～3 万 output**；建议**上限 30 万 input ／ 10 万 output**（含重跑与边界双跑 3～6 倍余量）。
+- 追加 **L3** ⇒ 上限提到 **80 万 input**。
+- **L4 ／ L5 另立**，不计入本上限。
+
 ##### DSH-3.5 · S3 sandbox：CVM 前置核查实测回填（WB 2026-09-23 dry-run）
 
 > **姿势**：按切片细则「先 dry-run 再判定」执行第一轮 —— **不出判定、只钉场地**；**零写入、零装包、零 LLM 调用（⇒ 未使用任何 Key）**。通道：WB `ssh` 前台 → CVM（`ubuntu@49.232.129.252`）；两轮只读探针 ＋ 一次 landlock 正证。
@@ -869,6 +916,9 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 **② landlock rung：可用 ＋ 内核真实强制（正证，非"建了规则集就算"）**
 - `--probe` 语义（读 `node-addon-system/src/main.c` 定死）：`MAX_ABI 5L`（`:94`）／ `*partial = abi < MAX_ABI`（`:237`）／ 掩码按协商 ABI 裁剪（`:184-189`）。⇒ **CVM ABI=4 ⇒ `partial=true`**，probe 打印 `landlock: partially enforced (older ABI)` 且 **exit 0**（是"降级接受"，不是 fail）。
 - **WB 独立正证**（`python3` ctypes，与 DSH 互为独立通道）：ABI **4** → `PR_SET_NO_NEW_PRIVS` OK → `create_ruleset` OK → `restrict_self` OK → **读 `/etc/hostname`、`/etc/os-release` 均 `EACCES`** ⇒ 内核确实强制。
+- ⚠️ **姿势自证（2026-09-23 修正）：该正证用的是「拒读」掩码，≠「DSH 的 landlock profile 会拒读」。**
+  DSH 的 landlock grants 实为 `landlockGrantArgs({ readOnly: ['/'], readWrite: ['/dev/null'] (+ '/tmp' + workspaceRoot，仅 workspace-write) })`（`packages/sandbox/sandbox-local/src/profiles.ts:32-38`）⇒ **整棵 `/` 是允许读的**，白名单只约束**写**。
+  ⇒ 该正证只证「**内核确实强制**」，**不得读成「DSH 沙箱会挡住读敏感文件」**；本机**非独占**（他方 AI 产物在库）时，沙箱内**照样可读**。
 - ⚠️ **一处既有表述须精确化**：〈ABI 边界〉原写「ABI 5+ 掩码喂 ABI 4 内核 ⇒ `create_ruleset` 直接 `EINVAL`」—— 该实测**成立**，但主语是**人工喂高位掩码**；**DSH 自身不会**触发（掩码按协商 ABI 裁剪，ABI 4 下只声明 `ABI1_MASK|REFER|TRUNCATE`）。⇒ **不得读成"DSH 在 ABI 4 上会失败"**（同 `MEMORY.md`〈实现正确、声明过度〉型）。
 - **ABI 4 与 5 的实际差距 = `LL_FS_IOCTL_DEV` 一位**（`main.c:85`：ABI 4 只加 TCP 位）⇒ 对"文件读写沙箱"几乎无影响。
 
@@ -877,9 +927,16 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - `dsh-sandbox-local/README.md:57`：unusable runner ⇒ **`confine()` 抛 `SANDBOX_UNAVAILABLE`**。
 - ⇒ **CVM 不会因 bwrap 缺失而 fail-open**：要么走 landlock（partial 但强制），要么整体 unavailable 并抛错。
 
-**④ ⚠️ dry-run 暴露的实质降档（待老大裁；不属 dry-run 判定范围）**
-- bwrap profile = **read-only host root ＋ fresh `/dev` ＋ private PID namespace**（`README.md:75`）；landlock rung **只管文件系统**（无 PID/mount ns，**亦无网络** —— `test-env.md:102` 已记其源码**无 `LANDLOCK_ACCESS_NET`**，沙箱内照样联网）。
-- ⇒ **CVM 上 bwrap 不可得 ⇒ 沙箱只剩"文件系统 allow-list"**：「防误操作 / 防越权写」够用，**「防数据外泄」不够**。选项 ① 接受降档 ② 放开主机 AppArmor 换 bwrap。**待裁。**
+**④ ✅ dry-run 暴露的实质降档 —— 老大 2026-09-23 裁定：接受（选项 ①）**
+
+- 裁定：**接受降档**。**不动主机 AppArmor**（`kernel.apparmor_restrict_unprivileged_userns` 保持 `1`）⇒ CVM 上沙箱永远走 landlock rung。
+- ⚠️ **两处归因修正（WB 2026-09-23 读源码所得；修正本段原表述）** —— 原表述把降档代价记为「防数据外泄不够」，**该归因错、且高估了选项 ② 的收益**：
+  1. **bwrap profile 同样不管网络**：`bwrapProfileArgs()` 原文 = `['--ro-bind','/','/','--dev','/dev','--unshare-pid','--proc','/proc','--die-with-parent']`（`packages/sandbox/sandbox-local/src/profiles.ts:17`）—— **无 `--unshare-net`**。⇒「网络隔离」**两条 rung 都没有**，不是 bwrap 的收益。
+  2. **bwrap 与 landlock 的读/写权限等价**：bwrap = `--ro-bind / /`（全只读可读）；landlock = `readOnly: ['/']` ＋ 写白名单（同文件 `:32-38`）⇒ **读权限两者都全开，写权限两者都只白名单**。
+- ⇒ **降档的真实净损失只有三条**：① **私有 PID ns**（沙箱内看不见宿主进程；`/proc` 亦来自私有 ns）② `--die-with-parent`（防孤儿进程）③ workspace-write 档的**临时 `/tmp`**（bwrap 给 `--tmpfs /tmp`，landlock 给真实 `/tmp` 白名单）。**三条都与「防误操作 ／ 防越权写 ／ 防外泄」无关。**
+- ⇒ **选项 ②（放开主机 AppArmor）代价/收益不匹配**：代价是**主机级**（放开后影响全机所有进程，不只 DSH），买到的是 PID 隔离 ＋ 孤儿进程回收 ⇒ **不采纳**。
+- ✅ **一致性核对（不新造缺口）**：`production-env.md:165-166` 早已记「landlock 无 `LANDLOCK_ACCESS_NET`，实测沙箱内照样联网 ⇒『上了 sandbox 就不怕数据外泄』是错的，**防外联必须另做**（网络策略 / 无外网路由）」⇒ 该承接点**原样有效**。
+- ⚠️ **仍未实测（诚实边界）**：landlock 读白名单为 `['/']` 时，`/proc/<pid>/…` 一类路径的**可见性取决于进程权限而非沙箱**；CVM **非独占**（他方 AI 产物在库）⇒ 该暴露面**未实测量化**，不在本裁定范围。
 
 **⑤ 顺手采得的其余场地事实（与 3.9 采数口径共用）**
 - **cgroup v2 齐备**：`memory.current` ／ `.peak` ／ `.events` ／ `.pressure` 均 readable；当前 `oom 0 ／ oom_kill 0`。
