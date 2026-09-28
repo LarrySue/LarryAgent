@@ -167,6 +167,7 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 > **为何现在可以写进来**：规格稿的「中立」需求**只在各方独立作业期间成立**（防污染）。**四方交付齐 ＋ 融合轮完成（2026-09-28）⇒ 该窗口已关闭**，本稿对"下一批读者"而言是**成果**而非在用的规格。
 > **汇总口径（老大 2026-09-23）**：各方交付**取当下状态当一版看待**（不管改过几次、不区分轮次）；**版本锚定不做深度追踪**（DSH 演进快、社区在探索期 ⇒ 持续观察）。
 > **收口时点**：2026-09-28 ｜ **Other 编外任务已由老大取消**（`ebe96e5`）⇒ 五方实为四方。
+> **修订（2026-09-28）**：二次**通读**四方全文，补入首版**跳读漏掉**的两段 —— Claude「补充调研」段与 Qoder「补遗」段 —— 及其方法级增量。
 
 ### 11.1 交付与污染披露（先讲限制，再讲结论）
 
@@ -174,11 +175,11 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 |---|---|---|---|---|
 | **WB** | `exchange/log-workbuddy.md` | 轮 1 ＋ 轮 2 ＋ 融合轮 | 裸仓 ／ 官方包 ／ 本地名录 ／ 内置搜索；**轮 2 起** GitHub REST ＋ npm registry ＋ 浅克隆 | ✅（梯子 09-23 晚开）→ **6 件** |
 | **Trae** | `exchange/log-trae.md` | 原报告 ＋ 融合轮 | 本机 PowerShell ＋ 裸仓 ／ 名录 ＋ `git clone` | ✅（当日）→ **9 件** |
-| **Claude** | `exchange/log-claude.md` | 原报告 ＋ 补遗 ＋ 融合轮 | 本机 bash ＋ 裸仓 ＋ 内置搜索 | ❌（3 件 clone 全失败 ＋ WebFetch 被拦）→ 社区 **0 件** |
-| **Qoder** | `exchange/log-qoder.md` | 原报告 ＋ 补遗 ＋ 融合轮 | 本地 ＋ **目录站** ＋ GitHub 搜索 ＋ `git clone` | ✅ → **2 ＋ 7 件** |
+| **Claude** | `exchange/log-claude.md` | 原报告 ＋ **补充调研** ＋ 融合轮 | 本机 bash ＋ 裸仓 ＋ 内置搜索；**补充调研起**加联网 `git clone` | ⚠️ **两阶段**：白天 ❌（3 件 clone 全失败 ＋ WebFetch 被拦）→ **晚梯子开后 ✅ 5/5 clone 成功** ⇒ 社区实读 **5 件**（**不是 0 件**） |
+| **Qoder** | `exchange/log-qoder.md` | 原报告 ＋ 补遗 ＋ 融合轮 | 本地 ＋ **目录站** ＋ GitHub 搜索 ＋ `git clone`；**补遗起**加 **npm registry（整包 packument）** | ✅ → **2 ＋ 7 件** |
 | ~~Other~~ | ~~`exchange/log-other.md`~~ | **任务已取消** | — | — |
 
-⚠️ **一条必须先讲的方法论限制**：规格稿曾内嵌 WB 报告（**§12**，2026-09-23 提交 `b5f420f`），而该 §12 **在五方按规格作业的期间处于公开状态** —— **Claude 与 Qoder 都在各自报告里明确写"已读到它"**。
+⚠️ **一条已披露的限制**（**老大 2026-09-28 口径**：独立性非必要条件、结果优先 ⇒ **保留披露，但不据此给任何候选打折**）：规格稿曾内嵌 WB 报告（**§12**，2026-09-23 提交 `b5f420f`），而该 §12 **在五方按规格作业的期间处于公开状态** —— **Claude 与 Qoder 都在各自报告里明确写"已读到它"**。
 ⇒ **凡与 WB 轮 1 结论重合的项，只能记 1 条通道，不是 2 条。** 本汇总据此**不把"多方都提到"当作独立互证**；**只有明确来自不同通道的实做（11.4 后两列）才算交叉验证**。
 ⇒ 这也解释了 11.5 里官方件相关条目占多数：它们**本就出自同一份上游**，重合是**必然而非互证**。
 
@@ -215,11 +216,11 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 | `TsFreddie/dsh-compaction-instant` | MIT | 预发布歧义 | Qoder 🟢 | ⭐ **零模型调用路线的完整实现**（VCC「会话编译器」移植）：shadowed 区间编译为**仅原文 token 的引用式视图**，每次删改带 **`(seq N)` 指针**；配 `recall`／`search` 工具 ⇒ **「可回取」第二态的本地实现**；⛔ 无摘要 ⇒ 「摘要含 nonce」判据不适用 |
 | `helibeiqi/dsh-compaction-pro` | MIT | `*` ⇒ 与"读不出"同档 | Qoder 🟢 | **只换 `summarize()`**：高保真模板（保数值／路径／命令／标识符）＋ **`language:'auto' 跟随会话语言`** ⇒ **中文会话摘要的第三个现成样本** |
 | `JohnXu22786/context-pruner` | MIT | 预发布歧义（`>=0.0.1-rc.5`） | Trae 🟢 | 接 seam；**自带「未闭合压缩事务」检查**（`compaction/start` 无配对 `end`）⇒ 做"压缩中／失败态"观测可直接抄的形状 |
-| `snow-The/dsh-session-handoff` | MIT | 读不出 | Trae 🟢 ／ Claude 归类异议 | 用 `compactRegion` 做活动上下文压缩；自述**官方 `compactRegion` 只接受配对平衡范围**（与官方 `toolPairingBalanced*` 一致，**交叉验证成立**）；⚠️ Claude 指出它是 **handoff ＋ compaction 双功能件**，不宜只按 handoff 归档 |
-| `Tyan66666/billion-context-dsh` | 未核 | ✅ 正锚：`>=0.1.5-alpha.1 <0.1.6-0`（**含自带守卫测试**） | Claude 🟡 | **CompactionEngine backend 实样**（自做 Provider）；acp-kernel 自 `billion-context-pi` **逐字移植**（有上游可追） |
-| `kolawong/fast-compaction-dsh` | 未核 | 未核 | Claude 🟡 | ⭐ **天然对照组**：Verdict 式（keep／truncate／drop）、**明确「用判定替代有损 LLM 摘要」且保留内容逐字** ⇒ 反衬我方「摘要含可验证 nonce」判据的必要性 |
+| `snow-The/dsh-session-handoff` | MIT | 读不出（未见 seam 声明） | Trae 🟢 ／ Claude 🟢 | ⭐ **归类异议已证实**：确有**独立 ACP 压缩子系统**（`lib/acp-config.js` 194 行 ／ `acp-recommend.js` 98 行 ＋ 3 个 `.mjs` 测试 ＋ `COMPAT-ACP.md`／`DESIGN-ACP-GRAPH.md`）⇒ **WB 原 C 档不成立，Claude 建议改 B**。用 `compactRegion` 做活动上下文压缩；自述**官方 `compactRegion` 只接受配对平衡范围**（与官方 `toolPairingBalanced*` 一致，**交叉验证成立**）；⚠️ Claude 指出它是 **handoff ＋ compaction 双功能件**，不宜只按 handoff 归档 |
+| ⭐⭐ `Tyan66666/billion-context-dsh` | MIT（逐件读 LICENSE 首行） | ✅ **正锚**：`>=0.1.5-alpha.1 <0.1.6-0`（`default=true` **实跑**）＋ devDep pin `0.1.5-rc.2` ＋ ⭐ **自动化守卫** `tests/peer-range.test.ts` | **Claude 🟢**（补充调研实读） | **A 档 · 本批唯一「同代 ＋ 可读源码（6,263 行）＋ 有测试（30 spec）＋ 有文档（17 篇）」四全件**：`CompactionEngine` backend 实样（自做 Provider）；acp-kernel 自 `billion-context-pi` 逐字移植；**反向对照已过**（对 `0.1.6-alpha.1`／`0.1.6`／`0.2.0` = `false`）；⚠️ 依赖外部 `acp-kernel` 仓；⚠️ 当日分支名含 `2026-09-23_checkpoint-source-kind` ⇒ **活跃开发中，引用须带 sha**（实读 HEAD `171e5fb`） |
+| `kolawong/fast-compaction-dsh` | MIT | 🔴 **读不出**（devDeps 全 `link:../deepseek-harness/…`） | **Claude 🟢** | **B 档**：⭐ **天然对照组** —— Verdict 式（keep／truncate／drop）、**明确「用判定替代有损 LLM 摘要」且保留内容逐字**；`pins` 机制（钉第一条 ＋ 最新尾部 ＋ system head 后第一条）；6 spec ＋ `scripts/e2e.ts` ＋ `scripts/inspect-compaction.mjs` 检视器。⛔⛔ **重大风险：把整段会话外呼第三方 API**（`src/jev.ts:13-14` `https://api.typesafe.ai/v1/systemone`；`:7` 明写 "the `state` sent with every request is the whole fitted conversation"）⇒ **路线可借鉴、引擎不可作参考实现**（对本项目 = 外部数据出站 ＋ 外部可用性依赖**双风险**） |
 | `falling-ts/dsh-force-compact` | MIT | ⛔ **真脱节**：`>=0.1.7-alpha.1` | Trae 🟡 | "低上下文模型下强制压缩" ＋ 精修过的 compaction prompt；走 engine 的 idle manual 入口 `compactNow` |
-| `zixin947/dsh-compact` | 未核 | 预发布歧义（`^0.1.0-rc.7`） | Claude 🟡 | 仅确认是带 README 的独立 repo（**Claude 原判"明确脱节"已在融合轮自发订正为"歧义"**） |
+| `zixin947/dsh-compact` | MIT | **预发布歧义**：`^0.1.0-rc.7`（`default=false` ／ `incl=true` **实跑**） | **Claude 🟢** | **C 档**：装配／策略层（依赖 `dsh-compaction-basic` ＋ `dsh-command-compact` 为 peer）＋ 带 Web 设置卡的整包。⚠️ **Claude 两度自我订正**：原判"明确脱节" →（补充调研）"明确脱节（0.1.0 线）" →（融合轮**实跑后**）判定为**「过度声明」**，形态与 `context-pruner`／`headroom` 同类 ⇒ **归「预发布歧义」** ⇒ ⭐ **"脱节"与"歧义"必须分开写**（前者影响选型、后者只影响安装姿势） |
 
 **层② · tool-output 压缩 ／ 可逆取回**（只在「压什么」互补，**不解决**「摘要注入 ＋ 近文原文保留」）
 
@@ -259,7 +260,7 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 |---|---|---|
 | **WB** | 唯一做了 **GitHub REST 规模扫描** ＋ **npm 注册表直查** | ① 生态规模（211 仓）＋ **按痛点簇登记**；② **npm 版本梯** ＋ ⭐ **`latest` dist-tag 陷阱**（官方 compaction 包的 `latest` 指向 `0.0.1-rc.x`，`next` 才是 `0.1.5-rc.3` ⇒ **裸 `npm i` 会装错版**）；③ ⭐ **`dsh.plugin.json` 非官方契约** ＋ **官方契约 = `package.json#dsh.bundle.patch`**；④ 会话日志**分代表在锚版逐条核对**；⑤ 名录落点**条目级实测** ＋ 计数口径订正 |
 | **Trae** | 社区**落位最广**（9 件实读）＋ 全程 PowerShell | ① **T3 的三条独立答案**（`argp` 保真校验 ／ `headroom` 外部 store ／ `dcp` 只覆写 summarize）；② 版本脱节**单列一节**（规格 §5-5 要求）；③ C 档线索 10 条；④ **前置修正 4 处**（名录计数 ／ 规格 §6③ 过期 ／ 代理今日可用 ／ spec 数） |
-| **Claude** | **联网不可用**（clone ＋ WebFetch 双失败）⇒ 被迫转向**本地深挖** | ⭐⭐ **官方测试件判据表**（本任务**最大独家增量**）：`invariant.spec.ts` 的 **18 条负向 ＋ 17 条正向**判据（**带错误信息正则，即"拒绝的理由"可机读**）／`toolPairingBalanced*` 的近文边界语义 ／ `compaction.spec.ts` 的契约形状。**官方自带 = 零兼容风险 ＋ 断言即判据** |
+| **Claude** | **两阶段**：白天**联网不可用**（clone ＋ WebFetch 双失败）⇒ **被迫转向本地深挖**；**晚梯子开后**补做联网（5/5 clone 成功） | ① ⭐⭐ **官方测试件判据表**（本任务**最大独家增量**）：`invariant.spec.ts` 的 **18 条负向 ＋ 17 条正向**判据（**带错误信息正则，即"拒绝的理由"可机读**）／`toolPairingBalanced*` 的近文边界语义 ／ `compaction.spec.ts` 的契约形状。**官方自带 = 零兼容风险 ＋ 断言即判据**；② ⭐⭐ **方言断代从"第三方注释"升为「上游双 tag 类型 ＋ 运行期校验器」实测**（🟢🟢，不再依赖第三方注释）；③ ⭐⭐ **判据位置**：必须落在 `session.deriveMessages()`，**不是**引擎自己的 `eventsToCoreMessages(surfaceEventsOf(session))` 投影 —— 第三方 `byte-stability.test.ts` 头注**自曝其早期版本正犯此错**（见 11.5‑12）；④ ⭐⭐ **`isCompactCheckpointSource` 的精确缺陷**（不校验 `compactionId`，见 11.5‑2）；⑤ ⭐ `billion-context-dsh/docs/upstream-tracker.md`（**上游追踪机制**）；⑥ ⛔ `fast-compaction-dsh` 的**第三方 API 外呼风险** |
 | **Qoder** | 唯一进 **目录站** ＋ 唯一产出 **T5 探针件** | ① **目录站实测 333 plugins、无 compaction 专类** ⇒ ⭐ **"只用目录站会系统性漏掉这一族"**；② **`gendui123/dsh-compaction-probe`**（T5 装置）＋ 实读后**抓出它恒红**；③ **三层分法**（compaction ／ tool-output ／ **观测验证**）⇒ 补上 WB 二分法漏掉的第三层；④ 融合轮**新落位 7 件**并实读 |
 
 ### 11.5 跨方一致结论
@@ -278,7 +279,7 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 | # | 结论 | 为什么可信 |
 |---|---|---|
 | 1 | **契约面不需要社区** | 官方契约 ＋ 生成式文档（**有 `verify-cordis-catalog` 防漂移**）＋ 测试件三者互锁；四方均独立指向同一结论 |
-| 2 | **「摘要注入」有现成机读判据** | `isCompactCheckpointSource()`（上游 `checkpoint.ts`）＋ `aerince` **独立写出同一谓词**（`lib.js:73-77`）⇒ 判据是 `type==='user/message' ∧ source.kind==='plugin' ∧ source.plugin==='compact'`。**不必自造 nonce 探针**，但 ⇒ ⚠️ 它是**必要不充分**：只判它会漏"近文没保留" |
+| 2 | **「摘要注入」有现成机读判据** | `isCompactCheckpointSource()`（上游 `checkpoint.ts`）＋ `aerince` **独立写出同一谓词**（`lib.js:73-77`）⇒ 判据是 `type==='user/message' ∧ source.kind==='plugin' ∧ source.plugin==='compact'`。**不必自造 nonce 探针**，但 ⇒ ⚠️ 它是**必要不充分**，且**两个维度都不够**：① **假阳性** —— 谓词**只看 `kind` ＋ `plugin`、不校验 `compactionId`**（`checkpoint.ts` 实读）⇒ **任何** `{kind:'plugin',plugin:'compact'}` 的 user 消息都为真；官方自己的完整判据 = **predicate 定位 ＋ invariant 校验 id**（`invariant.spec.ts` 负向用例：`/compaction checkpoint id .* does not match compaction\/start id/`）② **漏检** —— 它不覆盖"近文是否保留" |
 | 3 | **T3 的权威答案在官方 basic** | 尾部按 token 预算 verbatim 保留（`retainRatio` 0.16）＋ 从尾反向累加 ＋ **不切 tool 对**。⇒ **来源偏好不能凌驾证据等级**（Trae A3） |
 | 4 | **判据必须能区分「四问 ＋ 三结局」** | ① 是否触发 ② 摘要是否被截 ③ 是否完好。⚠️ **失败态在 surface 上与"没触发"同形**（官方政策：摘要失败**保留最新 durable surface**，不缩不丢）⇒ 只能靠**事件侧**分 |
 | 5 | **「原文可取」有三态，判据须先定口径** | ① 留 surface（官方 `retainRatio` 路）／② 可回取（`headroom` ／ `instant` 路）／③ 仅在 append-only log（官方 pruner 路）。⇒ ⛔ **若判据只认 ①，会把 ②③ 误判为不合格；若把 ③ 也算"保留原文"，则该判据形同虚设** ⇒ **建议写死「近文」= ①** |
@@ -288,6 +289,8 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 | 9 | **换摘要来源有三条路** | 路 A 子类覆写 `summarize()`（⚠️ 代价高于预期：私有常量未导出 ＋ 不收指令参数）；路 B **外部包装** `compaction.summarize = …`；路 C **`llm/stream` ＋ `purpose==='compaction'`**（两个独立实现都用它 ⇒ **社区公认接缝**）。⇒ 「覆写即换」的乐观表述**已收敛** |
 | 10 | **参考件分三层，不是两层** | ① conversation compaction（**与 3.4 同题**）／② tool-output 压缩（只在"压什么"互补）／③ **观测验证**（T5 落点）。⇒ 只按二分法会漏掉 ③ 整类，而 T5 缺的**正是观测手段** |
 | 11 | **两条代码级硬约束**（可写进我方实现） | ① replace `surfaceOp` **恰好三键**（多一即抛）；② 字段名 **V0/V2 `{start,end}` → V3 `{startSeq,endSeq}`**（写旧名运行期抛错） |
+| 12 | ⭐ **判据必须落在 `session.deriveMessages()`** | 供方**能缓存的是 agent loop 放上网线的东西**，⛔ **不是**引擎自己的 `eventsToCoreMessages(surfaceEventsOf(session))` 投影 ⇒ **在"会话事件 ／ kernel 投影"上断言，证明不了发给模型的内容**（第三方 `byte-stability.test.ts` 头注**自曝其早期版本正犯此错**）。⚠️ **请求信封（tools ／ headers）与引擎真实 surface 写入需宿主 loop** ⇒ **单元层 ＋ 线级（e2e）两层分工**（与官方测试分层同构） |
+| 13 | ⭐ **负向判据在「运行期校验器」层另有一组** | 与 `invariant.spec.ts`（**测试层**）**不同层次、两处都要**：`surface.ts` 运行期抛 —— `sourceEventSeqs must include every shadowed surface node` ／ `must not be empty` ／ `must not contain duplicates` ／ `must reference earlier events: N >= current seq M`（Claude **双 tag 实读**）；另 **`assistant/message` 的 `sourceEventSeqs` 类型级为 `never` 且运行期抛**（`surface.ts:275`） |
 
 ### 11.6 分歧点与待核项（红线③ —— 摆矛盾，不裁决）
 
@@ -300,6 +303,8 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 | 5 | `ljsysfurryACE` 仓根有无 LICENSE | **Trae 记「无」**；**WB 实测「有」** | **时点差**：09-24 该仓提交「添加 GPL-3.0 许可证」⇒ **GPL 红线结论不变、依据升级为「实体 ＋ 字段 ＋ README」三处** |
 | 6 | `aerince` 的注册表矩阵可信度 | 矩阵标 `0.1.5-rc.2 ✓ **L5 runtime verified**` vs **三方源码级发现其 `session.events` 路径在锚版失效** | ⚠️ **待核**：建议**把该矩阵的"验证范围"列为待核项** —— 它可能验的是"能装上／能加载"，**不是全部代码路径** |
 | 7 | `giter00/dsh-headroom` 锚版本 | WB 记注册表最新行 = `0.1.2-rc.1`；Trae 记声明区间**不接纳**；Qoder 记区间**含锚版** | **一律标"声明级"**，而以**实跑**为准（本任务**禁装**，故止于待核）。且 WB 另有更硬的判断：其 `engines.dsh` 写在 `dsh.plugin.json` 里 ⇒ **该字段无上游校验** |
+| 8 | ⭐ **`deriveEventMessage` 是否失效**（**第五处分歧**，2026-09-28 复核补） | **Claude 融合轮 §②‑5**：称它是**模块级导出**（`index.ts:29`）、"**不是 session 方法**"，故探针调用被 `?.` 静默跳过；**WB 实测**：**两者都存在** —— `:29` re-export **＋** `Session` 类**有实例方法**（`index.ts:854-855`：`deriveEventMessage(event){ return deriveEventMessage(event) }`，注释 `:849` 明写 "Instance face of the pure per-node export"） | **WB 对** ⇒ 探针写 `session.deriveEventMessage?.(raw)` **不会被 `?.` 跳过** ⇒ **该探针失效是单点（仅 `session.events`），不是"双重"**。⚠️ Claude 自标"🟠 高度可疑（源码级推断）**未穷尽全仓 grep**"⇒ **它留了余地，但"双重失效"论断应订正为单点** |
+| 9 | ⭐ **clone 失败归因**（Claude 补充调研**订正 1**） | 原报告：清代理后仍失败 ⇒ 判"**链路级不可达**、规格 §8 不适用"；**实况**：梯子开后 `git ls-remote` **立即成功** | **真因 = 梯子未开**（代理后面没有出口）⇒ **"代理是根因 ／ 绕法是清代理"只在「梯子关着」时成立**；**梯子开着时正相反：必须留着 `socks5://127.0.0.1:7890`（清代理才是反向操作）** 。⇒ ⭐ **正确表述 = "克隆失败先看梯子状态，再看代理配置"**（两种条件对应**两种相反操作**，⛔ 不可写成单条规则）⇒ **规格 §8 只适用于梯子关闭态** |
 
 ### 11.7 版本观察（原「版本脱节判断」，**按老大口径降为观察、不做深度追踪**）
 
@@ -307,14 +312,19 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 
 | 类 | 判据 | 件 |
 |---|---|---|
-| **真通过**（`default` 即 true） | 包管理器实际行为即接纳 | `knighthongyu/dsh-handoff-compaction`（`^0.1.5-rc.2`）、`Tyan66666/billion-context-dsh`（`>=0.1.5-alpha.1 <0.1.6-0`） |
+| **真通过**（`default` 即 true） | 包管理器实际行为即接纳 | `knighthongyu/dsh-handoff-compaction`（`^0.1.5-rc.2`）、`Tyan66666/billion-context-dsh`（`>=0.1.5-alpha.1 <0.1.6-0`，**＋ 反向对照已过**：对 `0.1.6-alpha.1`／`0.1.6`／`0.2.0` = `false`，与其自带 `peer-range.test.ts` 守卫断言**逐条一致**） |
 | **预发布歧义**（`default=false` ／ `incl=true`） | 范围**看起来**覆盖我方，但 semver 预发布规则默认不认 | `context-pruner` ／ `headroom` ／ `cacheaware` ／ `instant` ／ `context-lens` ／ `zixin947/dsh-compact` |
 | **真脱节**（两栏皆 ✗） | 要求**高于**我方 | `yoza10635/dsh-argp`（`^0.1.7-alpha.2`）、`falling-ts/dsh-force-compact`（`>=0.1.7-alpha.1`） |
-| **不可判**（无 peer ／ `"*"` ／ 读不出） | 声明层无从判断 | `aerince` ／ `snow-The/session-handoff` ／ `helibeiqi/pro`（`*`）／ `probe` |
+| **不可判**（无 peer ／ `"*"` ／ 读不出） | 声明层无从判断 | `aerince`（**未声明任何 deps**）／ `snow-The/session-handoff`（未见 seam 声明）／ `helibeiqi/pro`（`*`，**与"读不出"同档**）／ `probe`（仅 `cordis` ＋ `schemastery`）／ `fast-compaction-dsh`（devDeps 全 `link:../deepseek-harness/…`） |
 
 **格局（观察，不作选型指令）**：社区**已分叉为两条线** —— **RC ／ stable 线（`0.1.5-rc.2`）** 与 **`0.1.7-alpha` 线**；`fan56/dsh-dcp` 更在 5 天内从前者**跳到**后者。⇒ **"社区红利"不是单一方向**，按老大口径**持续观察即可**；⚠️ 但**兼容性一律以"装上后实测"为准**（声明只能当线索 —— `dsh.plugin.json` 那条已证明声明可无上游校验）。
 
-### 11.8 建议深读清单（Top 12）
+**三条 2026-09-28 补入的观察**（Qoder 补遗 ＋ Claude 补充调研，均**注册表级**）：
+- ⚠️ **上游侧的持续成本（不是社区问题，是锚版位置问题）**：上游**自己**已在 `0.1.6`／`0.1.7` 线新增 compaction 家族件（`@deepseek-ai/dsh-compaction-image-offload`，peer `^0.1.6-alpha.1`）⇒ **我方锚版拿不到** ⇒ 归入「跟随 rc 的持续成本」。
+- ⚠️ **锚版落后速率实测**：`0.1.5-rc.2`（09-15 拍定）→ **09-22 一天之内**从 `0.1.5-rc.3` 推到 `0.1.7-alpha.2`（4 个版本）⇒ 落后是**日级**而非月级。
+- ⚠️ **npm 存在「同名搬运件」，会污染版本判断**：`@monotykamary/` ／ `@x1a0f3n9/` ／ `@stackstackstack/` ／ `@dangzhuotong/` ／ `@alatastudio/` ／ `@prettier-ai/` ／ `@xneog/` **各自重发** `dsh-compaction`（描述**逐字相同**、版本号**各不相同**：0.1.9／0.1.5-rc.5／0.1.7／0.1.0-rc.7／0.1.1-rc.4／0.1.2-alpha.1／0.1.0）⇒ ⛔ **登记与检索必须写全 `@scope`**；⭐ **两方独立发现同一件事**（WB 轮 2 ＋ Qoder 补遗）⇒ 这条算**跨通道互证**。
+
+### 11.8 建议深读清单（Top 14）
 
 **第一梯队 · 判据直接可用（官方，零兼容风险）**
 1. ⭐⭐ `packages/compaction/compaction/tests/invariant.spec.ts`（469 行）—— **18 条负向判据全带错误信息正则**，可**直接照抄成我方验收测试**
@@ -330,17 +340,21 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 9. ⭐ `giter00/dsh-headroom` —— **「可回取」路线**，用于**校准我方判据口径**（防误杀第二态）
 10. ⭐ `ICCuse/dsh-premise-guard` —— **nonce 判据的反向同题**（丢锚检测）
 11. `QuanhuZeYu/dsh-compaction-zh` ＋ `helibeiqi/dsh-compaction-pro` —— **中文会话摘要**的两个现成样本（官方指令硬编码英文）
+12. ⭐ `Tyan66666/billion-context-dsh`（**A 档 · 唯一「同代 ＋ 源码 ＋ 测试 ＋ 文档」四全件**）—— 其 `tests/peer-range.test.ts` 的**版本守卫断言**（"接受整条 0.1.5 线 ／ 拒绝 `0.1.6+` 与 `0.2.x`"）**可直接照抄成我方兼容性测试**；`tests/byte-stability.test.ts` 的**判据位置纪律**（见 11.5‑12）
 
 **第三梯队 · 观测 ／ 验证**
-12. ⭐⭐ `bowenliang123/dsh-context` 的 `docs/compatibility.md` —— **日志分代尺（V0–V4）＋ 验证方法学**（seam 矩阵 ／ 与官方 fold 差分 ／ 一次性 profile 装卸）；⚠️ `gendui123/dsh-compaction-probe` **路线可借鉴、装置须先修**（`session.events` 恒红）
+13. ⭐⭐ `bowenliang123/dsh-context` 的 `docs/compatibility.md` —— **日志分代尺（V0–V4）＋ 验证方法学**（seam 矩阵 ／ 与官方 fold 差分 ／ 一次性 profile 装卸）；⚠️ `gendui123/dsh-compaction-probe` **路线可借鉴、装置须先修**（`session.events` **单点**恒红，**字段面可直接抄**）
+14. ⭐⭐ `billion-context-dsh/docs/upstream-tracker.md` —— **本批最可移植的方法论**：把"依赖上游会漂移"**机械化**（上游缺陷走 **issue ＋ PR → 升 pin → 解除本地 workaround**；**任何 workaround 必须登记**；代码里 `UPSTREAM:` 注释作**机读标记**（"它还在，就说明这道门没关"）；状态机 `waiting-upstream`／`merged-released`／`resolved`（**已解决也不删，留档作证据链**）＋ 用**测试断言翻转**作解除动作）⇒ ⭐ 建议我方 3.4 ／ 3.7 参照建立同类机制
 
 ### 11.9 未决项与诚实边界
 
 **未决（需老大 ／ 3.4 开工时定）**
-1. **判据口径须写死**：① **「近文」= 留 surface**（否则会把"可回取"误杀）；② **「保留 N 条」用哪把尺**；③ **三结局必须能分开**（否则 nonce 丢失无法归因）。
+1. **判据口径须写死**：① **「近文」= 留 surface**（否则会把"可回取"误杀）；② **「保留 N 条」用哪把尺**；③ **三结局必须能分开**（否则 nonce 丢失无法归因）；④ **判据位置 = `session.deriveMessages()`**（11.5‑12），**不是** kernel 投影。
 2. **`aerince` 的注册表矩阵"L5 runtime verified"覆盖什么**（11.6-6）—— 待核，可能只验了装／载。
 3. **手动 `/compact` 硬编码 `retainTokens=0`**（只留最后 1 条）—— 若产品要手动压缩也保留近文尾部，**官方 basic 不满足** ⇒ ⭐ **"换 Provider"的第一个实际靶子**。
 4. **`headroom` 类件引入新模型工具**（`headroom_retrieve` 等）= **产品决策**，不是实现细节（官方取向是"人工命令、无模型工具"）。
+5. ⭐ **是否建立「上游追踪机制」**（参照 `billion-context-dsh/docs/upstream-tracker.md`，见 11.8‑14）—— 我方同样**锚在别人的版本上**（`dsh-dcp` 5 天内抬 peer 就是实例）⇒ 由老大 ／ WB 定落点。
+6. ⛔ **若考虑 `fast-compaction-dsh` 的 verbatim 路线，须先评估其第三方 API 外呼的数据边界**（11.2 层①）—— 本项目属**个人项目 ＋ 成本敏感 ＋ 数据安全边界** ⇒ **路线可借鉴、引擎不可参考**。
 
 **诚实边界（本汇总**继承**各方的边界，不新增**）**
 - ⛔ **四方全部止于「声明级 ／ 源码级」—— 无一件实装、实跑、实测**（§3.0 纪律：只参考不直装）。**所有"能不能用"都未到运行时。**
@@ -348,3 +362,4 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 - 三方**名录计数口径未统一** ⇒ 本稿**并列不合并**。
 - **§12 污染**（11.1）⇒ 与 WB 轮 1 重合项只记 1 条通道。
 - 本汇总**未新增任何实做**；所有事实均取自四方报告，且**每条已在报告内注明通道与时间**。
+- ⚠️ **本节自身的两处漏读已如实披露**：首版（`d1af516`）**跳读**了 Claude 的「补充调研」段（167–295）与 Qoder 的「补遗」段（217–283）⇒ 2026-09-28 **通读全文后补入**。⇒ ⭐ **教训：汇总必须连续通读全文，不得跳读分段** —— 跳读会把"**没读到**"伪装成"**没有**"。
