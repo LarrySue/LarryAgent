@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.8.1 ／ 3.8.2** | Trae | 本机（Windows） | ✅ **均已回报 · WB 复核成立（2026-09-22）** —— `3.8.1`（driver 成型：`PASS 22 ／ FAIL 0 ／ OBS 10 ／ 未验 0`）／ `3.8.2`（3.8.1 装置缺陷修复：A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立，`J3-c` 的构造性恒真**已被证伪**）⇒ 判定 ／ 证据 ／ 遗留 = `TODO.md`「DSH-3.8」段 | 2026-09-22 |
-| **DSH-3.4-R** | Trae | 本机（联网检索 · 只读参考） | ✅ **已回报（2026-09-23）· 待复核** —— 报告见下方 `## 📊 DSH-3.4-R 调研报告`（三段式：检索账／候选表／评论）。摘要：官方 5 件（T1／T2／T3／T4 全答）＋ 社区落位 9 件（7 成功／1 失效／含 1 件 GPL 红线）；**T3 权威答案＝官方 `retainRatio 0.16` 尾部 verbatim**；**T4 确定路径＝`/compact`→`compactNow(retain=0)`**；⚠️ **版本脱节：社区已分叉（RC 线 vs `0.1.7-alpha` 线），实测 semver 见报告 §4**；含**流程调整声明 6 条**（报告 §0） | 2026-09-23 |
+| **DSH-3.4-R** | Trae | 本机（联网检索 · 只读参考） | ✅ **已回报 ＋ 融合轮（2026-09-28）· 待复核** —— ① 调研报告（三段式：检索账／候选表／评论）＋ **流程调整声明 6 条**；② **融合轮**（读三方后吸收**方法**）：吸收清单 **M1–M15** ＋ **实做 6 项** ＋ **调整清单 12 条**。关键结论：T3 权威答案＝官方 `retainRatio 0.16` 尾部 verbatim；T4 确定路径＝`/compact`→`compactNow(retain=0)`；⛔ **订正我自己 3 处**（`includePrerelease` 记录错误／名录落点 C7 说反／`dsh-dcp` 与 `ljsysfurryACE` 的时点）；⚖️ **独立裁定** Claude↔Qoder 的 `deriveEventMessage` 分歧（Qoder 对）。⇒ 汇总**取报告 §③「调整清单」为准** | 2026-09-23 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⭐ **派发前已重测前提（WB 2026-09-22）** ⇒ **8 条实测**，其中 **2 条推翻旧登记**（`--patch` 通道实测验有 ／ **gateway 装配层结论翻转**）、**1 条前提缺口**（`DEEPSEEK_API_KEY` 当时不存在 —— 当日已闭合）⇒ 摘要与权威落点 = `TODO.md`「DSH-3.8」段。**逐条对账，别照抄旧前提。**
@@ -49,7 +49,7 @@
 
 - **建议侧重（非强制、不构成分工）**：你是 3.4 的实现方 ⇒ 可优先把 **T1（契约）／ T2（现成 Provider 怎么写）** 挖到底；其余按规格走。不要求你猜别人扫了什么。
 
-## � DSH-3.4-R 调研报告（Trae · 2026-09-23）
+## 📊 DSH-3.4-R 调研报告（Trae · 2026-09-23）
 
 > 通道 = **本机（Windows）** ｜ 独立作业：**提交前未翻阅任何其他 AI 的交流区**（`log-workbuddy.md` ／ `log-claude.md` ／ `log-qoder.md` ／ `log-other.md` **一次未开**）
 > 时间锚：**2026-09-23 17:50–17:56 (+08:00)**
@@ -231,7 +231,138 @@
 
 ---
 
-## �� 已清理段落（按交流区规矩）
+## 🔀 DSH-3.4-R 融合轮（2026-09-28）：读三方报告后**吸收方法/路径** ＋ 据此实做 ＋ 对我报告的调整
+
+> **授权**：老大 2026-09-28 ——「参考 WB ／ Claude ／ Qoder 的报告，**吸收他们的方法、路径**，对你自己的报告作出你认为有必要的调整；**并非简单吸取、整合结论**」；**梯子已开**。
+> **通道**：本机（Windows）／ PowerShell ＋ **node v24.14.1**（`D:\App\node`）／ 用户级（无提权）／ **socks5 全局代理在跑**（`git fetch` 走代理成功；绕代理时 `Recv failure: Connection was reset`）。
+> ⚠️ **老大三条口径（2026-09-23）** —— 我**此前未读到**（见 §②‑0 自曝）：**预算 5000 万**（安全网，非花销目标）／ **版本锚定降为观察**（不做深度追踪）／ **他方交付取当下状态**。⇒ 本段据此**把 §4 的定位从"判断"下调为"观察"**，数据保留。
+> ⛔ 本段**只动本文件**；对旧报告**不重写历史行**，订正集中登记于 §③，供汇总取**当下状态**。
+
+### ① 吸收清单（别人的**方法/路径** → 我的采纳动作）
+
+| # | 来源 | 方法 ／ 路径（不是结论） | 我的采纳 |
+|---|---|---|---|
+| **M1** | **WB** ②‑1 ／ **Qoder** ②‑2 ／ **Claude** ⑤ | ⭐ **semver 争议要"姿势分解"**：`default` ／ `includePrerelease` 两栏并列 ＋ **逐段拆 `\|\|`** ＋ **参数反序对照** ＋ **边界反向对照** | ✅ **实做**（§②‑1）⇒ **抓出并订正了我自己的记录错误**（这条最关键） |
+| **M2** | **Claude** ②‑1 | **「方言断代」用上游双 tag 各读一次**（比第三方注释硬） | ✅ **实做**（§②‑2）：裸仓 `0.1.3-alpha.2` ↔ `0.1.5-rc.2` 两侧实读 ⇒ 拿到我报告**完全没有**的一条**实现硬约束** |
+| **M3** | **Claude** ②‑5 ／ **WB** ②‑8 ／ **Qoder** ②‑5 | **「现成可用」须过运行期 API 核对**（把第三方引用的成员对回锚版上游） | ✅ **实做**（§②‑3）：核 `aerince` 的 `session.events`，并**独立裁定** Claude↔Qoder 的 `deriveEventMessage` 分歧 |
+| **M4** | **WB** ②‑5 | **名录落点要"条目级 ＋ 分类边界"实测，并声明口径**（否则数不可比） | ✅ **实做**（§②‑4）⇒ **推翻了我原报告 C7 的表述** |
+| **M5** | **WB** ②‑7 ／ 老大口径 | **取当下状态**：候选件会随时间改变（他记 `dsh-dcp` 5 天内抬 floor） | ✅ **实做**（§②‑5）：我自查远端 —— `dsh-dcp` 与 `ljsysfurryACE` **两件都已变** |
+| **M6** | **Qoder** ②‑4 ／ **WB** ②‑4 | **引用逐条复核**（拿同一份源码核数字，不用定长窗口） | ✅ **实做**（§②‑6）：我报告 **12 处行号全核** |
+| **M7** | **Qoder** M6 ／ **WB** M12 | **许可红线逐件核**（读 LICENSE **实体**） | ✅ 已在原报告（GPL 件）；本段**补时点**（§②‑5） |
+| **M8** | **Qoder** M9 | 安装判据认 **`package.json#dsh.bundle.patch`**；声明文件不作依据 | ✅ 采纳为登记列（我原表**无**此列） |
+| **M9** | **Claude** ③‑1 ／ **WB** ③‑9 | 判据 =「**四问 ＋ 三结局**」：①触发与否 ②摘要是否被截 ③摘要完好 | ✅ 采纳进 §③（我原报告只给三要素，漏"被截"态） |
+| **M10** | **Qoder** ②‑1 ／ **Claude** M11 | **登记分三层**：①conversation compaction ②tool-output 压缩 ③**观测验证** | ✅ 采纳（我原表是平表，**缺第三层**） |
+| **M11** | **Claude** ③‑6 | **四根杠杆**：`thresholdRatio` ／ `retainRatio` ／ `maxTokens` ／ **`summarizationProvider`＋`Model`（必须成对）** | ✅ 采纳（我原报告漏第四根） |
+| **M12** | **Claude** ④‑3 ／ **WB** 横切 | 下轮改从**机器可读注册表**起手（本地名录是 `2026-09-07` 快照、已滞后） | 📝 登记为**下轮路径**（本轮不做） |
+| **M13** | **Qoder** M12 | `/latest` dist-tag ≠ 最新发布；npm 同名搬运件须写全 `@scope`；`"*"` 与"读不出"同档 | 📝 登记为通道纪律 |
+| **M14** | **WB** ④‑2 | `cmd \| tail && echo OK` = **假 OK**（判成败看产物，不看管道回显） | 📝 登记（本段未复现） |
+| **M15** | **Claude** ④‑1 | **读函数体不得用定长窗口**（会把首行切掉 ⇒ 造误报） | ✅ 采纳：本段所有函数体**整段读**（§②‑2 的校验器、§②‑3 的 `index.ts`） |
+
+**⛔ 我明确不吸收的**：三方的**候选结论、分档与订正**（旧报告已提交，结论区不追改）。⇒ 本段只吸收**做事的办法**，不搬运**做出来的答案**。
+
+### ② 据此实做（可复算 · 只读）
+
+**②‑0 ⚠️ 我自己的信息缺口（自曝，先记）**
+- 老大 2026-09-23 的三条口径写在 `TODO.md:83`（5000 万）与 `docs/dsh/dsh-34-ref-research.md:170`（汇总口径：**取当下状态 ＋ 版本锚定降为观察**）。**我 09-23 读规格时该行尚不存在**（我读到的是 167 行版本）；此后我**没有回头重读规格** —— 这正好撞上本项目「前提会随时间失效 ⇒ 动手前重新实测」这条纪律。⇒ 后果：我原报告 §4 做了一份**偏重的"版本脱节判断"**，按口径应**下调为"观察"**。**订正见 §③‑2。**
+
+**②‑1 ⭐ semver 争议串：姿势分解 ⇒ 定位我自己的记录错误**
+脚本：`D:\Code\_trae-evidence\34r\_fusion-semver-posture.cjs`（可复跑）；**两份 semver（两个 home，均 7.8.5）逐格一致**：
+
+| 姿势 | 结果 |
+|---|---|
+| `satisfies(V,R)` | **false** |
+| `satisfies(V,R,{includePrerelease:true})` | **true** |
+| `satisfies(V,R,{includePrerelease:false})` | false |
+| `satisfies(R,V)`（**参数反序**） | false（不抛错） |
+| `Range(R).test(V)` ／ `Range(R,{incl:true}).test(V)` | false ／ **true** |
+| **逐段拆**：`>=0.0.1-rc.5 <0.1.0` | default=false ／ incl=**false** |
+| **逐段拆**：`>=0.1.0-rc.1 <0.2.0-0` | default=false ／ incl=**true** |
+| 反向对照（`0.0.1-rc.5`／`0.1.0-rc.1`／`0.1.0`／`0.1.9`） | 全 **true**（incl 亦 true） |
+| 反向对照（`0.2.0-0`／`0.2.0`） | 全 **false** |
+
+- ⇒ 复合串在 `includePrerelease:true` 下 **true**，**只由第 2 段贡献**；边界用例全对 ⇒ 串语义正确。
+- ⛔ **关键动作：我把 09-23 那次写进报告的脚本文件原样重跑** ⇒ 今天输出 **`includePrerelease=true`**（与我当时的记录 **相反**）。脚本字节复核：792 B ／ 含 BOM ／ 仅 1 个 CR ⇒ **文件未被改写**。
+- ⇒ **结论：我原报告 §4 记的 `includePrerelease=false` 是我的记录错误（不可复现）。三方（WB ／ Claude ／ Qoder）记 `true` 正确，我方订正。** 成因**未定位**（不编）—— "我在长输出里读串行"只是一种可能，**无法证实**，故只判"该读数不可靠"。
+- ⇒ 并采纳**措辞纪律**：兼容性结论一律标「**声明级**」；三类分清 —— **真通过** ／ **预发布歧义**（`default=false` ／ `incl=true`）／ **真脱节**（两栏皆 ✗）。
+
+**②‑2 ⭐ 上游双 tag「方言断代」（我自己读的，不用第三方注释）**
+裸仓 tag 列表实测：`0.1.3-alpha.2` **直接跳到** `0.1.5-alpha.1`（中间无 tag）⇒ 分界两侧各读一次：
+
+| tag | `SurfaceOp` replace 分支（`types.ts`） | 校验器 `isReplaceOp`（`surface.ts`） |
+|---|---|---|
+| `dsh-v0.1.3-alpha.2` | `{ op:'replace'; **start**; **end** }`（`:424`） | `Object.keys(op).length === 3` ∧ hasOwn `start`／`end`（`:183-192`） |
+| `dsh-v0.1.5-rc.2`（**我方锚**） | `{ op:'replace'; **startSeq**; **endSeq** }`（`:436`） | `Object.keys(op).length === 3` ∧ hasOwn `startSeq`／`endSeq`（`:229-238`） |
+
+- ⇒ ⭐ **一条我报告完全没有的实现硬约束**：replace 的 `surfaceOp` **恰好三个键**，**多一个就抛** `session event "…" carries an invalid replace surfaceOp` ⇒ ⛔ **我方实现不得往 replace 里塞任何调试字段**。
+- ⇒ 且**字段名在 0.1.3→0.1.5 之间改过名**（`start/end` → `startSeq/endSeq`）⇒ 写 `{start,end}` 在锚版**运行期抛错**。
+
+**②‑3 ⭐ 运行期 API 核对：`aerince` 对回锚版 ＋ 独立裁定 Claude↔Qoder 分歧**
+方法：`git grep` 全仓 ＋ 整段读 `packages/core/session/src/index.ts`。
+
+| 核什么 | 实测（`dsh-v0.1.5-rc.2`） | 判定 |
+|---|---|---|
+| `Session` 有无 `events` 访问器 | **全仓 `get events` 仅一处** ＝ `packages/session-query/session-query/src/observation.ts:291`，那是 **`SessionObservation`（另一个类型、另一条通道）** ⇒ **`Session` 类无 `events`** | 该类写法的失效判定成立（与我方一致） |
+| `Session` 公开读面 | `get surface()`（`:452`）／`eventAt(seq)`（`:621`）／`snapshotEvents(...)`（`:633`）／`ownEvents()`（`:648`） | — |
+| ⚖️ **`deriveEventMessage` 是实例方法还是模块级导出？**（Claude 称"双重失效"／Qoder 称"单点失效"） | **两者都是**：`surface.ts:92` 是**模块级导出**；**且** `index.ts:854` 的 `deriveEventMessage(event)` 是 **`Session` 的实例方法**（注释 `:849` 原文 "Instance face of the pure per-node `deriveEventMessage` export from `surface.ts`"） | ⚖️ **裁定：Qoder 对** —— `deriveEventMessage` **不失效**；"双重失效"应**收窄为单点**（仅 `session.events`）。⚠️ 补：`raw` 恒 `undefined` 时该分支**根本走不到** |
+| **`aerince` 实际读法（我逐点核出）** | `:58` `for (const event of session.events)` ⇒ **TypeError**；`:137/138/142` `[...session.events]` ⇒ **TypeError**；`:73/134/153` `session.events[seq]` ⇒ **静默 `undefined`**；`:277` `searchEvents(agent.session.events,…)`（`acp_search` 工具）⇒ 传 `undefined`；**但** `:72/120/220-222` 用 `session.surface.nodes` ⇒ **有 `get surface()` ⇒ 这部分成立** | ⚠️ `aerince` **B 档须补 ⚠️**：失效形态是**混合的**（有的路径抛、有的静默），**不能一句话概括**；判定 **🟠 源码级、未实跑** |
+
+**②‑4 ⭐ 名录落点条目级统计（口径声明）⇒ 推翻我原 C7**
+脚本：`D:\Code\_trae-evidence\34r\_fusion-catstat.cjs`（可复跑）。口径：分类 ＝ `### ` 边界；条目 ＝ 行首 `- [`；**宽口径** ＝ 描述命中 `/compaction|compact|prune|summar/i`；**紧口径** ＝ 宽口径再排 UI 噪音（`context menu` ／ `compact mode|panel|…`）。
+
+- **我的读数**：条目总数 **3222** ／ 宽口径 **134** ／ 紧口径 **128**。
+- **与 WB 对照**：宽口径 **134 完全一致** ✓；条目总数他记 **3199**、紧口径他记 **132** ⇒ **差异来自解析与噪音正则口径不同**（⚠️ **并列两数、不合并**，因为口径未统一）。
+- 分布（紧口径降序）：**Sessions & Messages 26** ／ **Memory 22** ／ UI Enhancements **20**（WB 记 22）／ **Usage & Billing 13** ／ **Tools & Capabilities 11** ／ Vision 7 ／ Workflow 4 ／ **Development & Runtime 4** ／ 其余各 1–3。
+- ⇒ ⛔ **我原报告 C7 的表述是错的**：「真正有 compaction 相关件的**不在** `Sessions & Messages`／`Memory`，而主要落在 `Development & Runtime`（2705+）与 `Usage & Billing` 一带（1040–1530）」——**既与实测相反**（前二正是 26／22，最多），**又自相矛盾**（`Development & Runtime` 起点 2705，不可能覆盖 1040–1530）。**订正见 §③‑3。**
+
+**②‑5 ⭐ 时间窗复核（取当下状态）：我 09-23 的两条"当下"结论已变**
+
+| 件 | 我 09-23（HEAD） | 当下远端（HEAD） | 结论 |
+|---|---|---|---|
+| `fan56/dsh-dcp` | `04dc4690`：peer ＝ `>=0.1.5-rc.2` ⇒ 我记「**正锚我方版本**」 | `c946d8f2`（**09-24 提交**）：**12 个 dsh peer 全为 `>=0.1.7-rc.1`** | ⚠️ **「正锚」当下不成立**（现在**高于**我方）⇒ 我 §4 那行须加时点 |
+| `ljsysfurryACE/dsh-compaction` | `7a752307`：**仓根无 LICENSE 文件**（我实测 `Test-Path` ＝ False） | `cd360149`（**09-24 提交，标题「添加 GPL-3.0 许可证」**）：**仓根有 `LICENSE`，首行 `GNU GENERAL PUBLIC LICENSE Version 3`** | ✅ **两边都对，是时点差**；**GPL 红线结论不变、依据更强** |
+
+**②‑6 引用逐条复核（我报告的 12 处行号）** —— 对回**我抽取的同一份上游树** ＋ 本地社区件：**12／12 全 OK** ✅
+（`compaction/src/index.ts:113,164` ／ `compaction-basic/src/config.ts:23` ／ `region.ts:132,153` ／ `summarizer.ts:21,186,203` ／ `command-compact/src/index.ts:66` ／ `compaction-basic/src/index.ts:380` ／ `aerince/index.js:50,230`）
+
+### ③ 对我报告的调整清单（**汇总请以此为准**）
+
+| # | 旧稿（本文件调研报告段） | 现调整为 | 依据 |
+|---|---|---|---|
+| **1** | §4 表：`giter00/dsh-headroom` 的 `includePrerelease` 记 **false**；并据此写"semver 预发布规则不认" | **订正为 `includePrerelease = true`**（＝**预发布歧义**类，与 `context-pruner` 同型）；删去"规则不认"的措辞 | §②‑1（两份 semver 逐格一致 ＋ 边界反向对照；且**原脚本原样重跑即得 true**） |
+| **2** | §4 标题「**版本脱节判断**」＋"风险／建议" | **按老大口径下调为「版本观察」**：保留全部数据与"真脱节 ／ 预发布歧义 ／ 真通过"三分，但**取消"建议不要计入可用池"这类选型指令** | 老大口径（`docs/dsh/dsh-34-ref-research.md:170`） |
+| **3** | §3.1‑C7：「compaction 相关件**不在** `Sessions & Messages`／`Memory`，主要落在 `Development & Runtime` 与 `Usage & Billing`（1040–1530）」 | **改**：分布以**条目级实测**为准 —— **`Sessions & Messages`(26) ／ `Memory`(22) ／ UI Enhancements(20) ／ `Usage & Billing`(13) ／ `Tools & Capabilities`(11)**；**`Development & Runtime` 仅 4** | §②‑4（口径声明 ＋ 与 WB 宽口径 134 互证） |
+| **4** | §2-a：`fan56/dsh-dcp` 锚版本 ＝ `>=0.1.5-rc.2` ⇒「正锚我方版本」 | **加时点**：`09-23` 成立；**当下（09-24 起）已抬到 `>=0.1.7-rc.1`** ⇒ 移出"正锚" | §②‑5 |
+| **5** | §2-a：`ljsysfurryACE` 的 LICENSE ＝「⚠️ **仓根无 LICENSE 文件**；`package.json.license = GPL-3.0`」 | **改**：`09-23` 时点确实无实体；**09-24 起仓根已有 `LICENSE`（GPL-3.0 全文）** ⇒ **GPL 红线结论不变、依据升级为"实体 ＋ 字段 ＋ README"三处** | §②‑5 |
+| **6** | §2-a：`aerince/dsh-active-context-pruning` 记 **B 档**（仅标"锚版本 🔴"） | **补 ⚠️**：多处路径读 `session.events`（锚版 `Session` **无**该成员）⇒ **恢复／检索路径疑似失效**；形态**混合**（抛／静默）；判定 **🟠 源码级、未实跑**。**该行其余引用（`compactRegion` 调用等）仍成立** | §②‑3 |
+| **7** | §2-b：`dsh-compaction-basic` 借鉴点 | **补**：**replace `surfaceOp` 恰好三键**（多一即抛）＋ 字段名 0.1.3→0.1.5 改名（`start/end`→`startSeq/endSeq`）⇒ 写错字段名在锚版**运行期抛错** | §②‑2 |
+| **8** | §1 检索账：无"老大三口径"记录 | **补记**：三口径已读（预算 5000 万 ／ 版本锚定降为观察 ／ 取当下状态）；并自曝"派发后规格更新、我未回头重读" | §②‑0 |
+| **9** | §2 候选表：无"层"与"安装判据"两列 | **加两列**：**层**（①conversation compaction ②tool-output 压缩 ③观测验证）／ **`bundle.patch`**（官方安装契约） | M10 ／ M8 |
+| **10** | §3.2 评论：只给"摘要注入／近文保留／nonce"三要素 | **升级为「四问 ＋ 三结局」**（补"**压了但摘要被截**"一态；用 `compaction/summary` 的 `rawOutput` ＋ `usage` 判）＋ **"原文可取"三态**（留 surface ／ 可回取 ／ 仅在 append-only log）⇒ **我方判据须写死"近文"＝留 surface** | M9 ／ 我原 C2 |
+| **11** | §2-b `dsh-compaction-basic` 只列三根杠杆 | **补第四根**：`summarizationProvider` ＋ `summarizationModel`（**必须成对**，单一不成） | M11 |
+| **12** | 本文件两处标题的 emoji 已损坏（行 52 `??` ／ 行 234 `??`） | **已按字节修复**（见 §④‑1） | 字节复核：`EF BF BD` |
+
+### ④ 通道／方法级陷阱登记（供下轮与汇总）
+
+1. ⚠️ **本段自查出的新坑（重要，且是我自己造的）**：**用编辑工具回写含 4 字节 emoji 的 markdown 会引入 `U+FFFD`（`EF BF BD`）** —— 本文件行 52 的 `📊` 与行 234 的 `🗂` 都被吃成替换字符，**而这两个恰好都是我在上一次编辑中亲手重写过的**（未重写的 `📮`／`📤` 完好）。⇒ **判据**：改含 emoji 的文件后，**按字节抽查**该行前若干字节；**处置**：ASCII 锚点插入 ＋ 事后按字节修复。⚠️ 文件本身仍是合法 UTF-8，`git` 不会报警 ⇒ **只能靠字节核对发现**。
+2. ⚠️ **本段踩到**：`git fetch -c http.proxy=`（**绕代理**）⇒ `Recv failure: Connection was reset`；**改走全局 socks5 代理即成功** ⇒ "绕代理"**不是**万能解，**两种姿势都要试**。
+3. ⚠️ **本段踩到**：PowerShell 里 `[bool](cmd; $LASTEXITCODE -eq 0)` **语法非法**（括号不配对）⇒ 外部命令退出码要先落变量再判。
+4. **登记（他方实测，本段未复现）**：`| tail && echo OK` **假 OK**；MSYS `$HOME` 喂 Windows node ⇒ `MODULE_NOT_FOUND`；`/latest` dist-tag ≠ 最新发布；npm 同名搬运件须写全 `@scope`。
+5. **登记（本段采纳为纪律）**：**读函数体不得用定长窗口**（会把校验器首行 `Object.keys(op).length === 3` 切掉 ⇒ 差点造出"上游无键数限制"的误报）。
+6. **路径优化（登记不执行）**：下轮广撒网改从**机器可读注册表**起手；本地名录是 `2026-09-07` 快照、**已滞后**（本段已见两件在 5 天内变更）。
+
+### ⑤ 本段诚实边界
+
+- 本段**只吸收方法、不搬运结论**；三方的候选表与分档**我未重写**（旧报告已提交）。
+- **实做 6 项**：semver 姿势分解 ／ 双 tag 方言断代 ／ 运行期 API 核对（含裁定一处分歧）／ 名录条目级统计 ／ 两件时间窗复核 ／ 12 处引用复核。**其余为阅读与登记。**
+- ⛔ **仍未装、未跑、未在任何环境实测**任何候选件（§3.0 纪律）；`aerince` 的失效判定是**源码级 🟠**，不是实跑结论。
+- ⚠️ **我对自己的一处订正是"记录错误"而非"姿势差异"**（§②‑1）：成因**未定位**，不编；可供复核的唯一事实是"**同一个脚本文件今天跑出 `true`**"。
+- 名录统计与他方**口径未统一**（条目总数 3222 vs 3199；紧口径 128 vs 132）⇒ **并列不合并**。
+- 本段**未新增落位件**（只对已有落位件做复核）；两件远端复核走**代理 `git fetch`**，⛔ 未进 `ref/`、未入仓。
+
+
+---
+
+## 🗂 已清理段落（按交流区规矩）
 
 - **2026-09-22 清理**：删除 4 段已闭环内容（`DSH-3.8.2 派发稿`／`DSH-3.8.1 派发稿`／`DSH-3.8.1 回报`／`DSH-3.8.2 回报`，含《附 · WB 2026-09-22 重测前提实录》）—— **判据 ／ 边界 ／ 遗留的权威落点 = `TODO.md`「DSH-3.8」段**（一处两面）。回溯：`git log -p -- exchange/log-trae.md`。
 
