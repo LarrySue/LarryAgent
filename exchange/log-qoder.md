@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.7.5 · `(b)`** | Qoder | CVM（Linux ／ `49.232.129.252`） | ✅ **已回报 ＋ 已复核（WB 2026-09-22，CVM 现场独立取证）**；⭐ **§2-P2 两条待裁同日由老大裁 (A) 并执行完毕**（① `profiles/acp` 一并删 → `acp.bak.20260922-1007`；② `explicit` 分支退役改脚本 `ba3e42e`，双侧 sha256 一致 ／ 纯 LF）⇒ 判定全文 = `TODO.md`「DSH-3.7.5」段末 | 2026-09-22 |
-| **DSH-3.4-R** | Qoder | 本机（联网检索 · 只读参考） | 📬 **已派发 · 待执行（2026-09-23）** | 2026-09-23 |
+| **DSH-3.4-R** | Qoder | 本机（联网检索 · 只读参考） | ✅ **已回报（2026-09-23）＋ 补遗（npm 通道）＋ 🔀 融合轮（2026-09-28）** —— 三段同在此文件（报告 ／ 补遗 ／ 融合轮） | 2026-09-23 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.7.5」段**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯用 `git log -p -- exchange/log-qoder.md`。
 - ⭐ **派发前重测前提（WB 2026-09-22 · ssh(Bash) 通道实测）** ⇒ **3 条新事实 ／ 缺口**⇒ 摘要 ／ 权威落点 = `TODO.md`「DSH-3.7.5」段「⭐ 派发前重测前提」条。
@@ -69,7 +69,7 @@
 
 ## DSH-3.4-R 调研报告
 
-**状态**：已回报（2026-09-23）｜ **执行**：Qoder（文档一致性维护者）｜ **规格**：`docs/dsh/dsh-34-ref-research.md`（逐条照执行）
+**状态**：已回报（2026-09-23）＋ 补遗（09-23 晚）＋ **融合轮（2026-09-28，见文末）** ｜ **执行**：Qoder（文档一致性维护者）｜ **规格**：`docs/dsh/dsh-34-ref-research.md`（逐条照执行）
 
 ### ⚠️ 先声明三条「流程调整」（老大已授权我可调整并须写明理由与改法）
 
@@ -278,3 +278,126 @@ $ timeout 20 git --version                      → git version 2.52.0.windows.1
 - 本轮**只读**：**未落任何文件、未 clone、未装**；`ref/` 未动。
 - 📌 **我的一处近错已自查纠正、记此警示**：我先用 **`/latest` 端点**取版本，差点把"官方包停在 `0.0.1`"写成结论；改查**整包 packument** 才发现那是 **dist-tag 问题**（`next`／`alpha` 早已到 `0.1.7`）。⇒ **`/latest` ≠ 最新发布**；凡"版本判断"必须走整包 packument 或仓库 tag。
 - npm 元数据（license ／ peerDeps ／ version）属**注册表级证据** ⇒ B-5 整组仍标 **🟡**（未读源码）。
+
+---
+
+## 🔀 DSH-3.4-R 融合轮（2026-09-28）：吸收三方方法（非结论）＋ 据此实做
+
+> **授权**：老大 2026-09-28 ——「参考 Trae ／ Claude ／ WB 的报告，**吸收他们的方法、路径**，对你自己的报告作出你认为有必要的调整；**并非简单吸取、整合结论**」；**梯子已开**。
+> **通道四元组（本段全部结论的适用范围）**：本机（Windows）／ bash(MSYS) ＋ node v24.14.1 ／ 用户级（无提权）／ **全局 socks5 代理在跑（127.0.0.1:7890）**。
+> **口径**：老大三条（2026-09-23：S2 预算 5000 万 ／ 版本锚定降为观察 ／ 他方交付取当下状态）已读并遵守 ⇒ 本段不做版本考古。
+> ⛔ **本段只动本文件**；对旧报告的更动**不重写历史行**，集中登记于 §③「调整清单」，供 WB 汇总取**当下状态**。
+
+### ① 吸收清单（他的**办法** → 我的动作 —— 只吸收方法/路径，不搬运结论）
+
+| # | 来源 | 方法 ／ 路径（不是结论） | 我的采纳 |
+|---|---|---|---|
+| M1 | Trae A1 | **名录是发现通道、不是判定通道** ⇒ G1／G2 只对**已落位件**判定；未落位条目显式标"未判"、不塞进 D 档 | ✅ 口径采纳：本段"落位名单＝判定域"；B‑3 ／ B‑5 未落位条目语义照此 |
+| M2 | Trae A2 | **落位门槛 ＋ 名额**自定并写进检索账（可复核、可被否决） | ✅ 实做：门槛＝① 属本路未落位候选 ② 他方未实读（去重）③ 描述可见 T1–T6 直接命中；名额 ≤8（实落 7 件，§②‑1） |
+| M3 | Trae A4 ／ Claude M5 | **两处 DSH home 都实测 ＋ sha256 同源比对** | ✅ 实做（§②‑3） |
+| M4 | Trae A5 ／ Claude M1 | **不抄声明、实跑 semver**；`default` 与 `includePrerelease` **两栏并列**；加**反向对照** | ✅ 实做（§②‑2，含争议范围第三跑） |
+| M5 | Trae A6 ／ WB 通道注记 | 通道坑：bash 长命令吃引号 ／ PowerShell 管道毁二进制 ／ `cmd \| tail && echo OK` **假 OK** | 📝 登记（他方实测，本路未复现；本路沿用自家"裸命令＋`echo EXIT=$?`、不接管道"） |
+| M6 | Trae C5 | **落位抽样验活**（他方 8 抽 1 失效）＋ **许可红线逐件核** | ✅ 实做：7 件 clone 前逐件验活（**7／7 存活**）＋逐件 LICENSE 首行核（MIT 系，无 GPL 红线） |
+| M7 | Claude ②‑4 | **引用逐条复核**（拿同一份源码逐条核数字） | ✅ 实做（§②‑4：本路 4 处数字全对；补文件名显式化） |
+| M8 | Claude ②‑5 | "**现成可用**"的表述须过**运行期 API 核对** | ✅ 实做（§②‑5；产出一处**本路订正**＋一处**对他方推断的收窄**） |
+| M9 | WB ③‑7 ／ ③‑8 | 兼容性**一律标"声明级"**；安装判据认 **`package.json#dsh.bundle.patch`**，声明文件不作依据 | ✅ 实做：7 件逐件核 `bundle.patch` ＋ 全表措辞统一 |
+| M10 | WB ③‑9 | 判据须能**区分三种结局**（没触发 ／ 压了但摘要被截 ／ 完好） | 📝 登记（T5 轴，供汇总；不并入本路结论区） |
+| M11 | Trae C2 → Claude 扩写 | "原文可取"**口径须先定**：留 surface ／ 可回取（外部 store）／ 仅在 append-only log | 📝 登记 ＋ 本路实例：本轮落位的 `instant`（seq 指针回取）与 `compressor`（locator 回取）是第二态的两个新样本 |
+| M12 | WB 横切Ⅱ ／ WB ③‑3 | 下轮检索改从**机器可读注册表**起手；评估先用**分代尺（V0–V4）** | 📝 登记为下轮路径 ／ 评估轴（引用，不重做） |
+
+**⛔ 明确不吸收**：三方的**候选结论、分档与订正**——本路结论区不追改、不搬运；只做"用他们的办法，把**我自己**没验完的验下去"。
+
+### ② 据此实做（全只读）
+
+**检索账 · 追加（接原报告 1–7 行 ／ 补遗 8–9 行）**
+
+| # | 通道 | 动作 ／ 检索式 | 时间 | 扫描量 ／ 结果 |
+|---|---|---|---|---|
+| 10 | 联网 · `git clone`（梯子开） | 按 M2 门槛浅克隆 **7 件** → `ref/community/`（`.gitignore` 已整目录忽略，不扰仓） | 09-28 | **7／7 成功** |
+| 11 | 本地 · **源码锚点实读** | 7 件：README ＋ 文件树 ＋ 关键实现锚点逐件定位 | 09-28 | 见 §②‑1 ／ §②‑5 |
+| 12 | 本地 · **semver 实跑** | `node v24.14.1` ＋ `semver@7.8.5`（两处 home 各一份） | 09-28 | 见 §②‑2；脚本可复跑（§⑤） |
+
+#### ②‑1 落位与实读（7 件；证据一律"**锚点级 🟢**"＝README ＋ 结构 ＋ 关键实现行实读，**非逐行通读**）
+
+| 件（`owner/repo`） | HEAD（09-28） | License | 锚（peer 实读 → semver 类） | bundle.patch | 测试 | 借鉴点（具体到可抄什么） ／ ⛔ |
+|---|---|---|---|---|---|---|
+| `savageops/dsh-rich-indexing` | `bc093e6`（08-30） | MIT | **peerDeps 为空**（README 明示 peers 经 profile 模块回退解析）⇒ 声明层不可判 | ✓ | 3 | ⭐ **"覆盖 basic"的最完整实样**：阶梯 **30/50/70/90** 替代单 0.8 悬崖 ＋ 四档法律（gentle→standard→consolidating→maximum）＋确定性关键词索引并入 checkpoint ＋ 摘要模型链（primary ＋ ≤3 备份）。**`engine.js:133` 以 `super(ctx,{thresholdRatio:0.9,…})` 起手、`:200-206`"选档走原封的 stock 压力事务"（锁／head-anchor／重试全继承）** ⇒ 印证"覆写 `compactIfNeeded`＋`summarize`、其余全继承"；**disable／uninstall 语义**（managed patch 行自动增删，压缩永不被 toggle 留在死态）可直接抄进我方 S2 开关设计 ／ ⛔ 自带 Web 面板（产品面）；声明层锚不可判 |
+| `GooDAnDReaDY/dsh-context-lens` | `57122f6`（09-26） | MIT | settings／tools `^0.1.0-rc.6` ⇒ **预发布歧义类** | ✓ | 0 | **边界划分的第三方视角**：自述"预算控制／计数／头尾截断归 DSH 核心（≥0.1.5）"，自身只做核心没有的**语义压缩**——AST 骨架（9+ 语言，depth 默认 3）、测试/构建日志压缩（阈值 4000 字符；raw/balanced/aggressive）、**焦点路径**（正在编辑的文件保全文）；工具面 `context_lens_code`／`context_lens_log` ／ ⛔ 工具驱动＋UI 卡；无测试 |
+| `lifeodyssey/dsh-compressor` | `76b39ab`（08-16） | MIT（插件）＋ Apache-2.0（`crates/headroom-*`） | 子包形态（本副本未见子包 package.json） | —（子包） | 232（fixtures 为主） | **形态修正**：整仓是 **Rust workspace**（`crates/` ＋ `plugins/dsh-compressor`），npm 侧包 `dsh-compressor`；机制＝**"保前缀＝保 cache"**（明确写为设计目标：不重写已发送前缀）＋ 原文留盘 ＋ `compressor_retrieve` 工具（`<<compressor:hash>>` locator）取回；已接线 Log/Smart/Text/Search/Diff，未接 tree-sitter／ONNX ／ ⛔ tool-output 生态位；**同源对象＝ headroomlabs-ai/headroom**（与 `giter00/dsh-headroom` 同族，Kompress 同名） |
+| `Zhuchen00123/dsh-compaction-cacheaware` | `a68ec4b`（08-27） | MIT | 多包 `^0.1.0-rc.6` ⇒ **预发布歧义类** | ✓ | 1 | **Reasonix 移植**：单触发 `compact_ratio` 默认 **0.85**；**近尾预算 `clamp(window×10%, 32K, 96K)`**（`selection.ts:8`）；尾选择细节可抄——**tool result 永不作为尾起点**、防孤儿 result、`force` 路径尾部减半（`:80,104,132-140`）；**"每事务单次摘要调用、不做应用层重试环"**＝成本纪律实样 ／ ⛔ 其 Web 面未核 |
+| `TsFreddie/dsh-compaction-instant` | `f688029`（09-02） | MIT | 多包 `^0.1.0-rc.6` ⇒ **预发布歧义类** | ✓ | 7 | ⭐ **"零模型调用"路线的完整实现**：移植 lllyasviel/VCC 的"会话编译器"原理（`compiler.js` 头部即一份**移植说明范式**）——shadowed 区间毫秒级编译为**仅原文 token** 的引用式视图，每次截断/删除带 **`(seq N)` 指针**；工具调用塌缩为一行（白名单取关键参数）；契约级 drop-in（alias 安装，不改 preset）；配 `recall`／`search` 工具＋`/recall` 命令（`maxRecallTokens` 默认 16000）⇒ **第二态"可回取"的本地实现（不外呼）** ／ ⛔ 无摘要 ⇒ "摘要含 nonce"判据不适用（须另立：编译器确定性＋指针可回取） |
+| `helibeiqi/dsh-compaction-pro` | `2e5297c`（v0.2.0，08-28） | MIT | peer 全 `"*"` ⇒ **实测 default=false（预发布规则）**，与"读不出"同档 | ✓ | 2 | **只换 `summarize()`**（自述"官方唯一子类钩子"）：高保真模板（保数值/路径/命令/标识符）＋**跟随会话语言**（`language:'auto'`）＋**可选递归分块**（`recursive` 默认 true、`chunkMessages` 40）＋`customInstruction`（`summarize.ts:39-48,71-73`）——**中文会话摘要**的第三个现成样本 ／ ⛔ 自称"无损升级"是营销措辞（仍是 LLM 摘要） |
+| `gendui123/dsh-compaction-probe` | `177396e`（08-22） | MIT | 仅 cordis／schemastery ⇒ 锚不可判 | ✓ | 0 | 见 §②‑5（含订正） |
+
+**去重说明**：原 B‑3 五件中 `fan56/dsh-dcp` 与 `bowenliang123/dsh-context` 已由他方实读（Trae ／ WB），按 M2 门槛不重复；本路缺口收窄为 `rich-indexing`／`context-lens`／`compressor` 三件——本轮已补齐。
+
+#### ②‑2 semver 实跑（锚 = `0.1.5-rc.2`；脚本见 §⑤，可复跑）
+
+| 声明范围 | default | includePrerelease | 类 |
+|---|---|---|---|
+| `^0.1.0-rc.6`（cacheaware ／ instant；context-lens 同形※） | false | **true** | **预发布歧义** |
+| `"*"`（pro） | **false** | true | 与"读不出"同档（实测支持该口径） |
+| headroom 复合区间 | false | true | 预发布歧义 |
+| `>=0.0.1-rc.5`（Trae 样本） | false | true | 同上 |
+| `^0.1.5-rc.2`（handoff-compaction） | **true** | true | 正锚 |
+| `>=0.1.5-alpha.1 <0.1.6-0`（billion-context） | **true** | true | 正锚 |
+| `^0.1.7-alpha.2`（argp） | false | false | **真脱节** |
+
+※ context-lens 的同形范围未逐包重跑（同串 ⇒ 同判，判定为确定性输出）。
+- **反向对照**（两组边界全对）：`^0.1.0-rc.6` ∋ `0.1.0-rc.6` ✓ ／ `0.1.9` ✓ ／ `0.2.0` ✗ ／ `0.0.9` ✗；`^0.1.5-rc.2` ∋ `0.1.5` ✓ ／ `0.1.5-rc.9` ✓ ／ `0.1.4` ✗ ／ `0.2.0` ✗。
+- ⚠️ **争议范围第三跑**（Trae 记 `incl=false` ／ Claude 记 `incl=true` 的同串 `>=0.0.1-rc.5 <0.1.0 || >=0.1.0-rc.1 <0.2.0-0`）：本路在**两份 semver（均 7.8.5）各跑一次**，均 **default=false ／ includePrerelease=true**。⛔ 只报数据、不裁决（红线③）。
+- ⇒ **措辞**：所有"通过"一律标**声明级**；三类分清——**真通过** ／ **预发布歧义**（先按待核） ／ **真脱节**（两栏皆 ✗）。
+
+#### ②‑3 两处 home 同源（M3）
+
+`dsh-compaction-basic/package.json` sha256 —— `~/.dsh` 与 `.dsh-home` **均为 `9988b62641257a1208f932940327c522b86a9dc7e0f107194e41f6e90eec9100`**；两处 0.1.5-rc.2 ／ MIT ⇒ **同源** ✓（与 Trae ／ Claude 独立结论互证）。
+
+#### ②‑4 aerince 引用自查（M7；只读复核）
+
+| 我的原引用 | 实测 | 判定 |
+|---|---|---|
+| `index.js:160-179`（summarize 包装） | `installSummaryHook` 定义于 `:160`，恢复闭包 `:176-178` | ✓ |
+| `（:119-130）`（assertSafeRange） | `:119-130`（**`index.js`**；`:126` lastAllowed 卡尾、`:128` 抛错文案） | ✓（**补文件名**） |
+| `lib.js:73-77`（isCheckpointEvent） | 逐字一致 | ✓ |
+| `:230`（compactRegion 调用） | `index.js:230` | ✓ |
+| 阈值 `'60%'`／`'70%'` | `index.js:21-22`（默认值）＋`:287-289`（回读） | ✓（补行号） |
+| `preserveRecent` 默认 2 | **`index.js:23/126/128/289`**；`lib.js` **无**该标识符 | 对账留痕（供汇总） |
+
+⇒ 结论：**4 处数字全对**；仅补文件名 ／ 行号显式化。（他方融合轮记"本路与 WB 同有一处行号小滑"——经逐条复核，本路未见该表述；`preserveRecent` 实位 `index.js`，此处留痕对账。）
+
+#### ②‑5 ⭐ probe 复核 ＋ `session.events` 深挖 —— 一处**本路订正** ＋ 一处**他方推断收窄**
+
+**方法**（吸收 Claude ②‑5 的"运行期 API 核对"）：把源码引用的每个成员**对回锚版上游**（`ref/dsh-bare@dsh-v0.1.5-rc.2` 实读）＋ 全仓 grep。
+
+- **结论一（订正）**：锚版核心 `Session` **无** `events` 访问器 —— 公开面只有 `eventAt(seq)`（`index.ts:621`）／`snapshotEvents()`（`:633`）／`ownEvents()`（`:648`）；`log` 与 `eventsSnapshot` 均私有；**上游全仓** `get events` 仅一处 ＝ `session-query` 的 **`SessionObservation` 观察对象**（`packages/session-query/session-query/src/observation.ts:291`，另一个类型、另一条通道）。⇒ probe 的 `session.events?.[seq]` 恒 `undefined` ⇒ 每条 shadowed 记录恒为 `{readable:false, reason:'missing'}` —— **装置在锚版不可分态（恒红）**。⇒ 本路原表述"⭐ 现成验证装置"**订正为「路线可借鉴、装置须先修」**（修法：换 `eventAt(seq)`／`snapshotEvents()` 读法）。
+- **结论二（收窄他方）**：`session.deriveEventMessage?.(raw)` 半**不会**失效 —— 锚版 `Session` **有**实例方法 `deriveEventMessage(event)`（`index.ts:849-856`，注释原文 "Instance face of the pure per-node `deriveEventMessage` export from `surface.ts`"）；且 `raw` 恒 `undefined` 时该分支根本走不到 ⇒ 实为**单点失效**，非"双重失效"。
+- **结论三（同款读法外溢 · 源码级 🟠）**：**`aerince`（本路 B‑1）同款** —— `findSummary`（`index.js:134/137-138`）与 `hiddenText`（`:153`）读 `session.events`，被 `:257/:260` 的"恢复"工具路径调用 ⇒ 该路径在锚版**疑似必抛**（未实跑；若被外层捕获则表现为工具失败）。⚠️ 其注册表矩阵标"`0.1.5-rc.2` ✓ L5 runtime verified" ⇒ **建议汇总把该矩阵的验证范围列为待核**。（边界：`0.1.6-alpha.1`——本地可核最远点——核心 session 亦无该访问器；0.1.7 线未核，按口径不深挖。）
+
+### ③ 对我报告的调整清单（汇总请以此为准）
+
+| # | 旧稿（原报告 ／ 补遗） | 现调整为 | 依据 |
+|---|---|---|---|
+| 1 | 状态区 `📬 已派发 · 待执行` | ✅ 已回报 ＋ 补遗 ＋ **融合轮**（三段同在本文件；状态行已同步） | 本文 |
+| 2 | B‑3 三件（rich-indexing ／ context-lens ／ compressor）🟡 未落位 | **🟢（锚点级）**：已落位（HEAD 见表）＋许可／锚／测试已核；借鉴点按 §②‑1 | §②‑1 |
+| 3 | B‑3 `compressor` "slim port of Headroom" | **补形态**：Rust workspace ＋ `plugins/dsh-compressor`；同源对象 ＝ **headroomlabs-ai/headroom**（与 giter00 件同族） | §②‑1 |
+| 4 | B‑3 `context-lens` "token 预算守卫" | **归属修正**：预算控制／截断**它自述归 DSH 核心**；自身 ＝ AST 骨架 ＋ 日志压缩 ＋ 焦点路径 | §②‑1 |
+| 5 | B‑5 三件（cacheaware ／ instant ／ pro）注册表级 🟡 | **🟢（锚点级）**；`pro` 记仓库版 v0.2.0；`instant` 补 VCC 移植与 recall/search 全貌；`cacheaware` 补近尾算法与"单次调用"纪律 | §②‑1 |
+| 6 | B‑5 `probe` "⭐ 现成验证装置（A?）" | ⚠️ **订正**：「路线可借鉴、装置须先修（恒红，不可分态）」；证据 ＝ 源码级 🟠 | §②‑5 |
+| 7 | 补遗 "社区**并不统一**要求 ≥0.1.6 ⇒ 壁垒不成立" | **细化为四类**（真通过 ／ 预发布歧义 ／ 真脱节 ／ 不可判），全标"声明级" | §②‑2 |
+| 8 | aerince 行 `（:119-130）` 缺文件名 | 以本段为准：`assertSafeRange` ＝ **`index.js:119-130`**；另**新增 ⚠️** 恢复路径读 `session.events`（§②‑5） | §②‑4 ／ §②‑5 |
+
+**另两条供汇总的旧口径提示**（非本路新结论）：① `isCompactCheckpointSource` 为**必要不充分**（他方订正）；② 保留的"尺"有三种（`retainRatio` token 比例 ／ `retainTokens` 绝对值 ／ `preserveRecent` **surface 节点数**）——本路 aerince 复核再证第三把尺语义。
+
+### ④ 诚实边界
+
+- 7 件均为**锚点级实读**；**未逐行通读**任何一件，**未装 ／ 未跑 ／ 未测**任何件（§3.0 纪律）。
+- `session.events` 三条结论均为**源码级（🟠）**，未实跑；0.1.6／0.1.7 线未核。
+- semver 表只覆盖所列范围；第三跑只报数据。三方结论未被改写、未并入本路结论区。
+- 通道四元组见抬头；⛔ 不可外推；本节**只改动本文件**。
+
+### ⑤ 留痕
+
+- 落位（`ref/community/`，gitignored）：`savageops__dsh-rich-indexing@bc093e6` ／ `GooDAnDReaDY__dsh-context-lens@57122f6` ／ `lifeodyssey__dsh-compressor@76b39ab` ／ `gendui123__dsh-compaction-probe@177396e` ／ `Zhuchen00123__dsh-compaction-cacheaware@a68ec4b` ／ `TsFreddie__dsh-compaction-instant@f688029` ／ `helibeiqi__dsh-compaction-pro@2e5297c`
+- semver 脚本：`D:\Code\_qoder-evidence\34r\semver-check.cjs`（可复跑）
+
+@WorkBuddy（汇总：请以 §③ 为本路**当下状态**；§②‑5 优先看）@老大
