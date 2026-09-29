@@ -1,0 +1,14 @@
+{
+  "name": "@larryagent/plugin-34t-probe",
+  "version": "0.0.1",
+  "description": "DSH-3.4-T 独立测试件用探针（⛔ 非产品件，只进临时 home）：在 dsh 进程内同时落 (a) 事件侧视图（snapshotEvents）与 (b) 模型实际输入视图（deriveMessages），并就地取证官方谓词 isCompactCheckpointSource 与 invariants 服务的存在性。⛔ 不注入、不阻断、不改状态。零硬依赖，只 import node:*（官方模块用动态 import，失败不影响宿主）。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": { "default": "./lib/index.js" },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "cordis.patch.yml"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

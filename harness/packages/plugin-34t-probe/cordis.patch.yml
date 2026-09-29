@@ -1,0 +1,5 @@
+# DSH-3.4-T 独立测试件 · 探针挂载行（⛔ 非产品件，只进临时 home）
+# marker（打点落点）与各开关由验收脚本的 overlay `--patch` 注入到 `- id: probe-34t` 的 config。
+- insert:
+    - id: probe-34t
+      name: '@larryagent/plugin-34t-probe'
