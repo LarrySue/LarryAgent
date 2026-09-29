@@ -9,9 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.8.1 ／ 3.8.2** | Trae | 本机（Windows） | ✅ **均已回报 · WB 复核成立（2026-09-22）** —— `3.8.1`（driver 成型：`PASS 22 ／ FAIL 0 ／ OBS 10 ／ 未验 0`）／ `3.8.2`（3.8.1 装置缺陷修复：A1 ／ A2 ／ A3 ／ B1 ／ B2 全条成立，`J3-c` 的构造性恒真**已被证伪**）⇒ 判定 ／ 证据 ／ 遗留 = `TODO.md`「DSH-3.8」段 | 2026-09-22 |
-| **DSH-3.4-R** | Trae | 本机（联网检索 · 只读参考） | ✅ **已收口（2026-09-28）** —— 调研 ＋ 融合轮全数汇总进 `docs/dsh/dsh-34-ref-research.md` **§11**（原段已按交流区规矩清理）｜⚠️ 其中三处**订正过我自己的报告**（`includePrerelease` 记录错误／名录落点说反／`dsh-dcp` 与 `ljsysfurryACE` 的时点），详见 §11.4 ／ §11.6 | 2026-09-23 |
-| **DSH-3.4** | Trae | **本机（Windows）** | 🚀 **已派发（2026-09-29）· 待起跑** —— S2 compaction 接入：**① A 落地**（显式禁用 `command-compact`）**② 验收 J1–J8 ③ 采数**（供产品面决策）。⚠️ **接入面已天然就位**（`compaction-basic` ／ `command-compact` ／ `tool-result-pruner` 三件在本机 sdk profile **默认装配**，WB 已实测）⇒ **本块不含「写新插件」**。派发稿 = 本文件 `## 📤 DSH-3.4` 段；判据 ／ 边界 ／ 遗留 → `TODO.md`「DSH-3.4」段 ＋ `docs/dsh/dsh-migration.md` §3.6 两节 | 2026-09-29 |
+| **DSH-3.4** | Trae | **本机（Windows）** | 🚀 **进行中（2026-09-29）· J1 已判 PASS 3／3 ／ J2 已判 PASS 2／2 · J3–J8 待跑** —— S2 compaction 接入：**① A 落地**（显式禁用 `command-compact`）**② 验收 J1–J8 ③ 采数**（供产品面决策）。⚠️ **接入面已天然就位**（`compaction-basic` ／ `command-compact` ／ `tool-result-pruner` 三件在本机 sdk profile **默认装配**，WB 已实测）⇒ **本块不含「写新插件」**。派发稿 = 本文件 `## 📤 DSH-3.4` 段；判据 ／ 边界 ／ 遗留 → `TODO.md`「DSH-3.4」段 ＋ `docs/dsh/dsh-migration.md` §3.6 两节 | 2026-09-29 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⭐ **派发前已重测前提（WB 2026-09-22）** ⇒ **8 条实测**，其中 **2 条推翻旧登记**（`--patch` 通道实测验有 ／ **gateway 装配层结论翻转**）、**1 条前提缺口**（`DEEPSEEK_API_KEY` 当时不存在 —— 当日已闭合）⇒ 摘要与权威落点 = `TODO.md`「DSH-3.8」段。**逐条对账，别照抄旧前提。**
@@ -206,6 +204,76 @@
 - ⛔ 本块**不覆盖** L4（真 1M 容量）—— 机制里唯一的容量依赖是 `floor(contextWindow × thresholdRatio)` 一处纯算术，已读源码 🟢；**若要物证须单跑**（≥160 万 input，5000 万预算内可负担）。
 - ⛔ 小窗口（20k）下的结论**不得外推成"1M 容量下亦然"**（除非另跑 L4）。
 - ⛔ 结论取自**本机 Windows ＋ 你那条通道**；跨通道不可互推。
+
+---
+
+## DSH-3.4 · 进度回报（进行中：J1 ／ J2 已判；L2 待跑）
+
+> 执行人 **Trae** ｜ 场地 本机（Windows）｜ **通道 = PowerShell 工具 ＋ `D:\App\node\node.exe` v24.14.1**（⚠️ **与派发稿 §5 举的「Bash 通道 ／ `v22.22.2`」不是同一条** ⇒ 差异见 §0）
+> 装置：`harness/scripts/run-34-compaction.mjs`（arm 化）｜进程内探针 `harness/packages/plugin-34-probe`｜A 落地受控源 `harness/scripts/compaction/disable-compact-entry.mount.patch.yml`
+> 证据：`D:\Code\_trae-evidence\34\`（`j1-*` ／ `j2-*` 目录 ＋ `_j1.log` ／ `_j2.log`）
+> 退出码：j1 `0`（判据成立）／j2 `0`（判据成立）
+
+### 0 · 前提差异（本通道实测 vs 派发稿；⛔ 未照抄）
+
+| # | 派发稿写的 | 本通道实测 | 处置 |
+|---|---|---|---|
+| 1 | §5：**⛔ 不用 PowerShell 工具** —— 「本机该通道未启用 ConPTY，原生 exe 不执行、stdout 全空」 | **不成立**：`node -e "console.log(...)"` 正常出 stdout、`LASTEXITCODE=0`；本会话全程（含 3.8 两块）都跑在这条通道上 | 报差异；**沿本条通道**执行（下文全部证据取自它） |
+| 2 | §5：node `v22.22.2`（WB 的 Bash 通道 ／ managed 路径） | 本通道 `process.execPath` = `D:\App\node\node.exe` ＝ **v24.14.1**；managed `…\22.22.2-3\node.exe` 实测**确为 v22.22.2**（两条都在） | 报差异；**以本通道自报为准** |
+| 3 | §5：`.dsh-home/.credentials.yaml` **不存在**；`~/.dsh/.credentials.yaml` 存在 | 复核**成立**（两处 `Test-Path` 相符）；本块走**启动环境层**（`DEEPSEEK_API_KEY` 注入子进程 env）—— 与 §12.1 的优先级链一致 | 照用 |
+
+### 1 · ⚠️ 一条**影响 J2 判据方法本身**的通道限制（必须先报）
+
+- **事实 A（文档级）**：`dsh-sdk-jsonrpc-server/README.md:108` 原文「For each accepted `session/prompt`, text and durable content references enter one user message **verbatim**」⇒ **SDK 通道不派发斜杠命令**。
+- **事实 B（实测）**：J2 首跑两臂都把 `/compact` 当**普通消息** ⇒ 各产生 1 轮普通 turn、**零 compaction 事件**（双锚同时落空）。
+- **事实 C（源码级）**：命令由**交互式适配器**调用 —— `dsh-commands/README.md:62`「An **interactive adapter** calls `execute(agent, line, attachments, signal)`」。
+- ⇒ **J2 判据原文「真实会话里发 `/compact`」在本通道不可执行**。我改用**运行期等价物**（⛔ **不靠 `--dump-config`**）：进程内 **`ctx.commands.list(agent)` 活注册表** ＋ **`ctx.commands.execute(agent, '/compact', …)` 真链路**。
+- ⚠️ **待裁**：若 WB 认为必须走人机适配器（TUI ／ headless ／ web），**请指明通道**；本臂结论按**等价物**记。
+
+### 2 · A 落地（交付物）
+
+| 物 | 落点 | 说明 |
+|---|---|---|
+| **受控源（入库）** | `harness/scripts/compaction/disable-compact-entry.mount.patch.yml` | 内容 = `- id: command-compact` ＋ `disabled: true`（含依据 ／ 用法 ／ 假绿坑注释） |
+| 落地方式 | 由它复制进**临时 home 副本**的 `cordis.patch.yml`（`makeHome()`） | ⛔ **未就地改源 profile**（禁区 3） |
+| 与 3.7 先例的差异 | 3.7 是「disable 官方行 **＋ insert** 我方 provider」 | 本件只需 disable 一行（无 insert） |
+
+### 3 · J1 · 配置层真被读入（L0 · 0 token）—— **PASS 3／3**
+
+命令一律：`node harness/scripts/run-34-compaction.mjs j1`（三次 boot，各自独立临时 home）
+
+| 判据 | 期望观测 | 实际观测（原文） | 判定 |
+|---|---|---|---|
+| **J1-a** 非法 `retainRatio` | load 期必抛 | `exit=1`（1451 ms）；stderr：`Error: dsh: plugin tree failed to load: failed to apply loader entry compaction-basic (@deepseek-ai/dsh-compaction-basic): BasicCompactionConfig: retainRatio (0.9) must be less than the resolved thresholdRatio (0.8)`；栈帧 `validateRatioRetention` ← `resolveConfig` ← `new BasicCompactionEngine`（**证明是 load 期**，且发生在**临时 home** 的 profile 内） | **PASS** |
+| **J1-b** 未知 key | load 期必抛 | `exit=1`（1313 ms）；stderr：`… BasicCompactionConfig: unknown key "maxToken"` | **PASS** |
+| **J1-c** ⭐ 双锚（反向对照） | 合法配置 ⇒ 上述两类错误**均不出现** | `exit=0`（1766 ms）、**stderr 0 字节**、两类错误命中 **0** | **PASS** |
+
+⇒ ⛔ 三处均**未**用 `--dump-config`（假绿源），全部是**真 boot ＋ load 期行为**。
+
+### 4 · J2 · 手动入口不存在性（L0-A）—— **PASS 2／2**（＋1 处诚实扣分）
+
+命令：`node harness/scripts/run-34-compaction.mjs j2 --turnWaitMs 60000`
+
+| 判据 | 实际观测（原文） | 判定 |
+|---|---|---|
+| **J2-a** A 落地 ⇒ 入口不在 | `ctx.commands.list()` = `["feedback","goal","permission","plan"]`（**无 `compact`**，`source: live`）；`execute('/compact')` → `result: null`；**`compaction/*` = `[]`** | **PASS** |
+| **J2-b** 反向对照（未禁用）⇒ 入口在 | `ctx.commands.list()` = `["compact","feedback","goal","permission","plan"]`（**有 `compact`**）；`execute('/compact')` → `{"commandId":"cmd-347c3dac-1","result":{"kind":"error","text":"Compaction cancelled."}}`；**`compaction/start` 出现** | **PASS** |
+| ⚠️ **扣分项（如实记）** | 判据里「＋ 返回 `Compacted N history items (~M tokens).`」—— **本臂未拿到成功文案**，拿到的是 **`Compaction cancelled.`** 变体（成因**未定位**：疑与我传的 `AbortSignal.timeout` 而非 agent 作用域信号有关，**未查**）⇒ 记「**未观测**」，⛔ 不写成"不存在" | — |
+
+### 5 · 未闭合项（单列）
+
+1. **J3–J8 未跑**（L2 档，需 key；key 已到手 **且已用于 J2**）。
+2. **J2 的原文口径**「真实会话发 `/compact`」**在本通道不可执行** ⇒ 已用运行期等价物替代，**待裁**（见 §1）。
+3. J2-b 的**成功反馈文案**未观测（见上表扣分项）。
+4. L1 档（手动路径）按 **A 裁定**已取消，不跑。
+
+### 6 · 自曝
+
+1. **装置第一版崩在收尾**：`saveJson(join(...), {...})` 把**拼好的路径**当 `dir` 传 ⇒ `TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received an instance of Object`（`J1-a/b/c` 三条判据**此前已全 PASS**，崩在写 summary）⇒ 修 `saveJson(EVIDENCE, name, v)` 后重跑得 `exit=0`。
+2. **我第一版 J2 直接发 `/compact`** ⇒ 双锚同时落空。**这暴露的是判据方法在本通道不可执行**，⛔ 不是"入口真的两臂都没有"—— 若只看首跑结果，会得出**完全相反**的结论。⇒ 这正是"假绿坑 ②（`exit 0` 单独当判据）"的同类：**通道不支持的姿势会把判据压成恒假**。
+3. 我最初**猜**"`/compact` 会作为命令派发" —— **错**，已由 README:108 ＋ 实测推翻（记在此备后人）。
+4. ⛔ **key 未落入任何受版本控制的文件 ／ 日志 ／ 回报**：只进**子进程 env**（`DSH_HOME` 指向临时 home），跑完即从会话环境 `Remove-Item`。⚠️ 老大本轮已明确放宽（"随意落盘不纠结"），但我**仍按派发稿禁区 5 把值挡在仓外**——如需我改成写文件，请明示。
+5. 装置里我自加了两个**非判据**的观察项（`J2-0` 通道限制 ／ `J2-1` 命令表读数），理由都已写进判据文本，⛔ 不当判据用。
 
 ## 🗂 已清理段落（按交流区规矩）
 

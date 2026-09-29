@@ -1,0 +1,16 @@
+{
+  "name": "@larryagent/plugin-34-probe",
+  "version": "0.0.1",
+  "description": "DSH-3.4 装置用探针（⛔ 非产品件）：在 dsh 进程**内**观测 compaction 全链，并把**模型实际输入视图**（`session.deriveMessages()`）落盘。存在的唯一理由：口径④ 写死断言位置＝ deriveMessages()，而 SDK/JSON-RPC 客户端拿不到该视图。零硬依赖，只 import `node:*`。",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "lib/index.d.ts", "cordis.patch.yml"],
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

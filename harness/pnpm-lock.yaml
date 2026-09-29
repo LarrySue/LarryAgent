@@ -38,6 +38,8 @@ importers:
 
   packages/plugin-015-preset-probe: {}
 
+  packages/plugin-34-probe: {}
+
   packages/plugin-approval-answerer: {}
 
   packages/plugin-approval-probe: {}

@@ -1,0 +1,25 @@
+# DSH-3.4 · S2 · **A 裁定落地件**（受版本控制的源；⛔ 不只在 .dsh-home 里改）
+#
+# 依据：`docs/dsh/dsh-migration.md` §3.6 ⑤（A = **不做手动 /compact 入口**，老大 2026-09-29）
+#       ＋ `TODO.md`「DSH-3.4」第 3 条（「A ≠ 什么都不做 ⇒ 须显式禁用」）
+#
+# 为什么要显式禁用：官方默认组合**自带**该入口 ——
+#   `@deepseek-ai/dsh-base/cordis.patch.yml:325-326`
+#     - id: command-compact
+#       name: '@deepseek-ai/dsh-command-compact'
+#   （原文注释 :323-324「Human `/compact`: one useful reduction below the automatic threshold.」）
+#   ⛔ 不禁用 ⇒ 产品上就等于「做了这个入口」
+#
+# 用法（两者语义相同，前者用于复验、后者是生产落盘位置）：
+#   复验： dsh --profile <p> --patch <本文件绝对路径>
+#   生产： 把下面这一行**整体追加**进 $DSH_HOME/profiles/<p>/cordis.patch.yml
+#
+# 验收（⛔ 不得只用 `--dump-config` —— 它只组配置树、不激活插件，是假绿源）：
+#   真实会话里发 `/compact` ⇒ 断言**无 `compaction/start` 事件**、无 compact 反馈文本；
+#   反向对照（必做）：未禁用的 profile 发 `/compact` ⇒ **应出现** `compaction/start`
+#
+# 留痕：`--dump-config` 下官方该行**不会消失**，而是**保留 ＋ `disabled: true`**
+#       ⇒ ⛔ 别拿"行消失"当判据（会误判成未生效）。
+
+- id: command-compact
+  disabled: true

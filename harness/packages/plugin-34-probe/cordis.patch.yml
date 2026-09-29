@@ -1,0 +1,5 @@
+# DSH-3.4 装置用探针的挂载行（⛔ 非产品件）
+# marker（打点落点）由验收脚本的 overlay `--patch` 注入到 `- id: probe-34` 的 config。
+- insert:
+    - id: probe-34
+      name: '@larryagent/plugin-34-probe'
