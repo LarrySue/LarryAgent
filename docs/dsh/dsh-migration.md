@@ -888,7 +888,14 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - 依据：一份第三方 `byte-stability.test.ts` 的**头注自曝其早期版本正犯此错**（在事件侧断言）。
 
 **⑤ 关联的产品决策（未定 · 待老大拍）**
-- **手动 `/compact` 要不要也保留近文尾部？** —— **要** ⇒ 官方 basic **不满足**（硬编码只留 1 条）⇒ ⭐ **这就是「换 Provider」的第一个实际靶子**；**不要** ⇒ 判据中注明"手动路径不适用近文保留条款"，仅在压力路径验。
+- **手动 `/compact` 要不要也保留近文尾部？**
+- ⚠️ **三个前置事实（2026-09-29 补充实读 · 🟢 `dsh-v0.1.5-rc.2`）** —— 缺了它们会把选项的代价判错：
+  1. **差异硬编码、配置面改不动**：自动路径走 `selectCompactableRange(agent.session, measurement, spec.retainTokens)`（`compaction-basic/src/index.ts:317`）；手动路径在 `compactNow` 里**直接传字面量 `0`**（同文件 `:380-384`），**全程不读 `policy` / `spec`** ⇒ 配置面的 `retainRatio` / `retainTokens` **只作用于自动路径**。
+  2. **`0` ≠ "留 0 条"**：`region.ts:116-154` 第三参数语义 = 从尾部**倒序累计 token**，累计 ≥ 参数即停 ⇒ 传 `0` ⇒ 保留区 = **最后 1 个节点**，再经 `toolPairingBalancedBefore` **向前吸附到 tool-call / result 配对安全边界**（可能多留若干条）。
+  3. **官方默认组合自带 `/compact`**：`command-compact` 在 `packages/bundle/base/cordis.patch.yml:325` **启用**（注释原文："Human `/compact`: one useful reduction **below the automatic threshold**"）；`bundle/web-app/cordis.patch.yml:430` 置 `disabled: true`，但 cordis / ptc / standard **三个 preset 均提供** ⇒ **两条默认链路都会给用户这个入口**（不显式禁用即出现）。
+- **三个选项**：**A 不做手动入口**（不装 / 禁用 `command-compact`）⇒ 本决策**消解**，判据注明「手动路径不适用近文保留条款」；**B 做，接受官方语义**（手压后近文近乎清零、只剩摘要 ＋ 最后 1 条）；**C 做且自做 Provider**（子类覆写 `compactNow`，把 `0` 换成按配置算出的保留量）⇒ ⭐ **C 就是「换 Provider」的第一个实际靶子**。
+- ✅ **低成本验证（建议顺带做）**：**L1 档本就是"手动 `/compact`"** ⇒ 在该档顺带断言「保留了几个节点 / 多少 token」，即可把本条从**源码推断**升为**实测**（**零额外成本**）。
+- ⚠️ **无论选哪个，② 的「手动单列、不算通过」都可保留**（B 下天然不成立；C 下按新口径重定即可）。
 
 ##### ⭐ DSH-3.4 · S2 compaction：测试量级阶梯与预算（WB 2026-09-23 拟；**定额已定 = 总 token 硬上限 5000 万**，老大 2026-09-23）
 
