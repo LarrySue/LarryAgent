@@ -157,7 +157,18 @@ async function runSession({ dir, label, fills, prompts, disableCompact, overlays
     ...probeCfg,
   ]
   if (window !== null) {
-    cfg.unshift('# 夹具：改小容量（官方配置面，非 hack）', '- id: llm-deepseek', '  config:', `    defaultContextWindow: ${window}`)
+    // ⚠️ 夹具必须用 **per-model 覆盖**，不能只设 defaultContextWindow：
+    //   `dsh-llm-deepseek/lib/index.js:1580` = `configured?.contextWindow ?? connection.defaultContextWindow`，
+    //   而 `deepseek-flash` 在 `DEFAULT_MODELS`（:1843）里**自带** `contextWindow = 1e6` ⇒ defaultContextWindow 对它不生效。
+    //   该行同时是派发稿 §5 自己给的替代口径（"或该 model 的 contextWindow: 20000"）。
+    cfg.unshift(
+      '# 夹具：改小**路由模型**的容量（per-model；⚠️ defaultContextWindow 对目录模型无效）',
+      '- id: llm-deepseek',
+      '  config:',
+      '    models:',
+      '      - id: deepseek-flash',
+      `        contextWindow: ${window}`,
+    )
   }
   if (maxTokens !== null) {
     cfg.push('- id: compaction-basic', '  config:', `    maxTokens: ${maxTokens}`)
@@ -225,20 +236,25 @@ async function runSession({ dir, label, fills, prompts, disableCompact, overlays
   return { report, probeRows, driverRows, home, patchAfter }
 }
 
-/** 生成 ASCII 填充：`FILL-####` 独占标记 ＋ 定长正文（每 token ≈ 4 字符，按官方启发式）。 */
+/** 生成 ASCII 填充：`FILL-####` 独占标记 ＋ 定长正文。**字符数精确**＝`tokens*4`（官方启发式 ceil(len/4) ⇒ 恰好 tokens）。 */
 function makeFill(tokens, startIdx = 1) {
   const targetChars = tokens * 4
   const parts = []
   let chars = 0
   let i = startIdx
   while (chars < targetChars) {
-    const body = ` padding-${i} ${'x'.repeat(80)}`
-    const chunk = `FILL-${String(i).padStart(4, '0')}${body}`
+    const head = `FILL-${String(i).padStart(4, '0')} `
+    const body = 'x'.repeat(Math.max(1, Math.min(80, targetChars - chars - head.length - 1)))
+    const chunk = head + body
     parts.push(chunk)
-    chars += chunk.length + 1
+    chars += chunk.length + 1 // +1 = 换行
     i += 1
   }
-  return { text: parts.join('\n'), startIdx, endIdx: i - 1, chars }
+  let text = parts.join('\n')
+  // 精确对齐（补/裁到 targetChars；⛔ 不破坏 marker 结构）
+  if (text.length > targetChars) text = text.slice(0, targetChars)
+  else if (text.length < targetChars) text += '\n' + 'y'.repeat(targetChars - text.length - 1)
+  return { text, startIdx, endIdx: i - 1, chars: text.length }
 }
 
 // ── J2 · 手动入口「不存在」（L0-A · 0 compaction token，含双锚反向对照）──────
@@ -294,31 +310,40 @@ async function main() {
     if (!preflight.keyPresent) { console.error('前置缺失：J2 反向对照需要真 key（本臂要求 key 存在）'); process.exit(2) }
     await armJ2(dir)
   } else if (ARM === 'run') {
+    const fillsArg = argOf('--fills', null)
     const fillTokens = Number(argOf('--fill', '0'))
-    const turns = Number(argOf('--turns', '2'))
     const window = Number(argOf('--window', '20000'))
     const maxTokens = has('--maxTokens') ? Number(argOf('--maxTokens', '0')) : null
-    const label = argOf('--label', `run-fill${fillTokens}${maxTokens !== null ? `-mt${maxTokens}` : ''}${has('--a') ? '-A' : ''}`)
+    const tailTiny = has('--tinyLast')
+    const label = argOf('--label', `run-${fillsArg ?? fillTokens}${maxTokens !== null ? `-mt${maxTokens}` : ''}`)
     const dir = join(EVIDENCE, `${label}-${stamp}`)
     mkdirSync(dir, { recursive: true })
     saveJson(dir, 'preflight.json', preflight)
     if (!preflight.keyPresent) { console.error('前置缺失：本臂需要 key'); process.exit(2) }
+    const instr = '只回一句 ok，不要调用工具。'
     const fills = []
     const prompts = []
-    for (let t = 1; t <= turns; t += 1) {
-      if (fillTokens > 0) {
-        const f = makeFill(fillTokens, t === 1 ? 1 : fills[fills.length - 1].endIdx + 1)
+    let nextIdx = 1
+    const specs = fillsArg !== null ? fillsArg.split(',').map((x) => Number(x.trim())) : Array.from({ length: Number(argOf('--turns', '2')) }, () => fillTokens)
+    for (let t = 1; t <= specs.length; t += 1) {
+      const tk = specs[t - 1]
+      if (tk > 0) {
+        const f = makeFill(tk, nextIdx)
+        nextIdx = f.endIdx + 1
         fills.push({ turn: t, ...f })
-        // 第 1 个 turn 带上 nonce（⇒ 它落在「被压区间」里）
-        prompts.push(t === 1 && has('--nonce') ? `NONCE-34ALPHA7 ${f.text}\n\n只回一句 ok，不要调用工具。` : `${f.text}\n\n只回一句 ok，不要调用工具。`)
+        const body = t === 1 && has('--nonce') ? `NONCE-34ALPHA7\n${f.text}\n${instr}` : `${f.text}\n${instr}`
+        prompts.push(body)
       } else {
-        prompts.push(has('--nonce') && t === 1 ? 'NONCE-34ALPHA7 只回一句 ok，不要调用工具。' : '只回一句 ok，不要调用工具。')
+        prompts.push(t === 1 && has('--nonce') ? `NONCE-34ALPHA7 ${instr}` : instr)
       }
     }
+    if (tailTiny) prompts.push('ok')
     const res = await runSession({ dir, label, fills, prompts, disableCompact: has('--a'), window, maxTokens })
     console.log(`[34] arm=${label} dir=${dir}`)
-    console.log(`[34] 通知里 compaction/* = ${JSON.stringify(res.report.compactionNotifications.map((x) => x.type))}`)
+    console.log(`[34] compaction/* = ${JSON.stringify(res.report.compactionNotifications.map((x) => x.type))}`)
     console.log(`[34] turnEnd=${res.report.turnEndCount} 探针行=${res.probeRows.length}`)
+    const pre = res.probeRows.filter((r) => r.event === 'pre-step').map((r) => r.totalTokens)
+    console.log(`[34] pre-step totalTokens 序列 = ${JSON.stringify(pre)}`)
     process.exit(0)
   } else {
     console.error(`未知 arm：${ARM}`); process.exit(2)

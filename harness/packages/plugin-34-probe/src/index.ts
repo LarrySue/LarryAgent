@@ -27,7 +27,7 @@ import { dirname } from 'node:path'
 export const name = 'plugin-34-probe'
 
 /** ⚠️ 复数 `sessions`：单数会 pending（3.7 ／ Claude 复验的既有教训）。 */
-export const inject = ['sessions', 'tokenMeter']
+export const inject = ['sessions', 'tokenMeter', 'llm']
 
 export interface Config {
   /** 打点 JSONL 落点（绝对路径）。**未配 ⇒ 本插件静默不装**（便于产品链路里保留本件）。 */
@@ -143,6 +143,23 @@ export function apply(ctx: any, config: Config = {}): void {
     }
   }
 
+  /**
+   * ⭐ 阈值判定当刻的真读数：`agent/pre-step` 是 compaction-basic 做压力判定的位置
+   * （`compaction-basic` 在此调 `compactIfNeeded(agent,'pressure',signal)`）。
+   * ⛔ 只读、只记，**必定 `next()`**，不改链路。
+   */
+  ctx.on('agent/pre-step', (payload: any, next: any): unknown => {
+    try {
+      const session: any = payload?.agent?.session
+      let m: any = null
+      try { m = ctx.get('tokenMeter')?.measure(session) ?? null } catch { m = null }
+      emit({ event: 'pre-step', sessionId: session?.id ?? null, totalTokens: m?.totalTokens ?? null, nodeCount: Array.isArray(m?.nodes) ? m.nodes.length : null })
+    } catch (e: any) {
+      emit({ event: 'pre-step-error', error: String(e?.message ?? e) })
+    }
+    return typeof next === 'function' ? next() : undefined
+  })
+
   ctx.on('session/event', (session: AnySession, event: any): void => {
     try {
       const type = event?.type ?? null
@@ -163,6 +180,20 @@ export function apply(ctx: any, config: Config = {}): void {
       snapshot(payload?.agent?.session, 'idle')
       if (idleCount === 0) {
         idleCount = 1
+        // ⭐ 夹具生效的直接读数：路由模型的 contextWindow（`modelInfoFor` 用 `configured?.contextWindow ?? defaultContextWindow`）
+        try {
+          const llm: any = ctx.get('llm')
+          if (llm != null && typeof llm.resolveModelInfo === 'function') {
+            void Promise.resolve(llm.resolveModelInfo('deepseek-official', 'deepseek-flash', AbortSignal.timeout(30_000))).then(
+              (info: any) => emit({ event: 'model-info', provider: 'deepseek-official', model: 'deepseek-flash', contextWindow: info?.context?.contextWindow ?? null, defaultMaxTokens: info?.defaultMaxTokens ?? null }),
+              (e: any) => emit({ event: 'model-info', error: String(e?.message ?? e) }),
+            )
+          } else {
+            emit({ event: 'model-info', error: 'no llm.resolveModelInfo' })
+          }
+        } catch (e: any) {
+          emit({ event: 'model-info', error: String(e?.message ?? e) })
+        }
         // 运行期命令注册表（等价物：证「该入口在不在」，⛔ 不靠 --dump-config）
         try {
           const svc: any = (typeof ctx.get === 'function' ? ctx.get('commands') : undefined) ?? ctx.commands

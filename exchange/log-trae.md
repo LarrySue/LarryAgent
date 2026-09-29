@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.4** | Trae | **本机（Windows）** | 🚀 **进行中（2026-09-29）· J1 已判 PASS 3／3 ／ J2 已判 PASS 2／2 · J3–J8 待跑** —— S2 compaction 接入：**① A 落地**（显式禁用 `command-compact`）**② 验收 J1–J8 ③ 采数**（供产品面决策）。⚠️ **接入面已天然就位**（`compaction-basic` ／ `command-compact` ／ `tool-result-pruner` 三件在本机 sdk profile **默认装配**，WB 已实测）⇒ **本块不含「写新插件」**。派发稿 = 本文件 `## 📤 DSH-3.4` 段；判据 ／ 边界 ／ 遗留 → `TODO.md`「DSH-3.4」段 ＋ `docs/dsh/dsh-migration.md` §3.6 两节 | 2026-09-29 |
+| **DSH-3.4** | Trae | **本机（Windows）** | 🚀 **进行中（2026-09-29）· J1–J8 全判 PASS**（J1 3／3 ／ J2 2／2 ／ J3 阈值双跑 15999 不压·16000 压 ／ J4 摘要注入三条证据齐 ／ J5 近文原文保留 ／ J6 三态可分 ／ J7 fail-closed ／ J8 成本）—— 判定 = **（甲）机制成立**；**（乙）产品可接受 ⛔ 不判**（只采数）。⚠️ 三处前提订正：`defaultContextWindow` 对目录模型**无效**（须 per-model）／SDK 通道**不派发**斜杠命令／L2 夹具须**多头＋足量尾部**。⇒ S2 compaction 接入：**① A 落地**（显式禁用 `command-compact`）**② 验收 J1–J8 ③ 采数**（供产品面决策）。⚠️ **接入面已天然就位**（`compaction-basic` ／ `command-compact` ／ `tool-result-pruner` 三件在本机 sdk profile **默认装配**，WB 已实测）⇒ **本块不含「写新插件」**。派发稿 = 本文件 `## 📤 DSH-3.4` 段；判据 ／ 边界 ／ 遗留 → `TODO.md`「DSH-3.4」段 ＋ `docs/dsh/dsh-migration.md` §3.6 两节 | 2026-09-29 |
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3」区**（**一处两面**）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⭐ **派发前已重测前提（WB 2026-09-22）** ⇒ **8 条实测**，其中 **2 条推翻旧登记**（`--patch` 通道实测验有 ／ **gateway 装配层结论翻转**）、**1 条前提缺口**（`DEEPSEEK_API_KEY` 当时不存在 —— 当日已闭合）⇒ 摘要与权威落点 = `TODO.md`「DSH-3.8」段。**逐条对账，别照抄旧前提。**
@@ -274,6 +274,92 @@
 3. 我最初**猜**"`/compact` 会作为命令派发" —— **错**，已由 README:108 ＋ 实测推翻（记在此备后人）。
 4. ⛔ **key 未落入任何受版本控制的文件 ／ 日志 ／ 回报**：只进**子进程 env**（`DSH_HOME` 指向临时 home），跑完即从会话环境 `Remove-Item`。⚠️ 老大本轮已明确放宽（"随意落盘不纠结"），但我**仍按派发稿禁区 5 把值挡在仓外**——如需我改成写文件，请明示。
 5. 装置里我自加了两个**非判据**的观察项（`J2-0` 通道限制 ／ `J2-1` 命令表读数），理由都已写进判据文本，⛔ 不当判据用。
+
+---
+
+## DSH-3.4 · 回报（J1–J8 全判）· 2026-09-29
+
+> **结论先行**：**（甲）机制成立** —— 自动压力路径下「**摘要被注入**」＋「**近文原文保留**」**同时成立且可机读验证**（J4 ／ J5 ／ J6 全 PASS）；**（乙）产品可接受** ⛔ **不判**（按派发稿 §0，只采数）。
+> 通道：PowerShell ＋ `D:\App\node\node.exe` v24.14.1 ｜ 证据：`D:\Code\_trae-evidence\34\`（`j1-*` ／ `j2-*` ／ `j3cal-*` ／ `j3-below-15999-*` ／ `j3-at-16000-*` ／ `j3-at-16000-A-*` ／ `j7-maxtokens256-*`）
+> ⛔ **未观测 ≠ 不存在**：本报告凡"未观测"处均已逐条标注。
+
+### 7 · J3 · 自动路径触发（L2）＋ ⭐ 阈值边界双跑 —— **PASS**
+
+⚠️ **夹具被改（前提订正，见 §9-1）**：派发稿 §5 ／阶梯 L2 写的 `llm-deepseek.defaultContextWindow: 20000` **对 `deepseek-flash` 不生效** —— 该模型在 `DEFAULT_MODELS` 里**自带** `contextWindow = 1e6`（`dsh-llm-deepseek/lib/index.js:1843`），而取值式是 `configured?.contextWindow ?? connection.defaultContextWindow`（`:1580`）⇒ 必须 **per-model 覆盖**（派发稿自己给的替代口径：「或该 model 的 `contextWindow: 20000`」）。夹具 = `models: [{ id: deepseek-flash, contextWindow: 20000 }]`。
+**夹具生效的直接读数**（探针 `model-info`，非 `--dump-config`）：`{"provider":"deepseek-official","model":"deepseek-flash","contextWindow":20000,"defaultMaxTokens":256000}` ⇒ 阈值 = `floor(20000 × 0.8)` = **16000**。
+
+| 臂 | `agent/pre-step` 的**真读数** | `compaction/*` | 判定 |
+|---|---|---|---|
+| **j3-below-15999**（fills 4781,3400） | `[0, 12578, **15999**]` | **`[]`** | **不压** __PASS__ |
+| **j3-at-16000**（fills 4782,3400） | `[0, 12579, **16000**]` | `["compaction/start","compaction/summary","compaction/end"]` | **压** __PASS__ |
+| **j3-at-16000-A**（同上 ＋ `--a` 落地） | `[0, 12583, 16004]` | `["compaction/start","compaction/summary","compaction/end"]` | **压**（A 落地状态下同样触发）__PASS__ |
+
+⇒ ⭐ **`floor(容量 × 0.8)` 的硬证据成立**：**15999 不压 ／ 16000 压**，且读数取自**判定当刻**（`agent/pre-step`），不是事后推断。
+⇒ 结构 = 3 个 turn（**必须 2 个 turn 以上**，与派发稿一致：`routedTarget()` 首轮无 header ⇒ 首轮只建 header）。
+
+### 8 · J4 ／ J5 ／ J6 ／ J7 ／ J8
+
+**J4 · 摘要注入 —— PASS（三条证据齐）**
+| 证据 | 读数（原文） |
+|---|---|
+| **A 机读** | 末次 `session.deriveMessages()` 里 **i=1 `role=user` `src=plugin/compact`**（chars 1416 ／ 1236）⇒ 谓词 `kind==='plugin' ∧ plugin==='compact'` **真** |
+| **B ⭐ id 一致性**（防谓词假阳性） | checkpoint 的 `sourceCompactionId` = `e8620600-3d6a-44c8-8ddf-cfc3d63d885c`（A 臂）／`c4ec8faf-e119-4c73-99a5-cf76b5862072`（非 A 臂），与 `compaction/start`／`summary`／`end` 的 `compactionId` **三处逐字相同** |
+| **C nonce** | 摘要文本里 **`NONCE-34ALPHA7` 逐字出现 = True**（两臂皆真）；且摘要**首段直接引用了它**：`- User message contained a nonce header \`NONCE-34ALPHA7\` followed by 211 filler lines …` |
+
+**J5 · 近文原文保留（口径①留 surface ＋④在 deriveMessages 上断言）—— PASS**
+- 被压区间：`shadowedRange=8..13` ／ `shadowedSeqs=[8,9,13]` ／ `shadowedTokenCount=**4927**`（A 臂 4931）
+- 压缩后 `deriveMessages()` = 6 条，**i=2 `src=user/`、chars=**13616**、**150 个 `FILL-` marker**（`FILL-0397`…`FILL-0546`）⇒ **被压区间之后的原文节点逐字仍在模型输入视图里** ✅
+- **尺与量**：`retainRatio` 路（⛔ 非 `retainTokens`／`preserveRecent`）；实测保留 ≈ **13616/4 = 3404 token** vs 期望 `floor(20000 × 0.16)` = **3200** ⇒ **+6.4%**（**在数量级内**；方向可由 `toolPairingBalancedBefore` **向头部吸附**解释，非偏差）
+- ⛔ 两个"不算"都**未**被当判据：log 层恒真未用；「可回取」未用（本块未装任何社区件）
+
+**J6 · 三态可分（只从事件侧）—— PASS**
+| 态 | 臂 | 事件侧观测 |
+|---|---|---|
+| **(i) 没触发** | j3-below-15999 | `compaction/* = []`；末快照 **8 节点、0 个 checkpoint** |
+| **(ii) 触发但摘要被截** | j7-maxtokens256 | `["compaction/start","compaction/end"]`（**无 summary**）；末快照 **8 节点、0 个 checkpoint** |
+| **(iii) 完好** | j3-at-16000 | `["compaction/start","compaction/summary","compaction/end"]`；末快照 **6 节点、1 个 checkpoint** |
+⇒ ⭐ **(i) 与 (ii) 在 surface 上确实同形**（都是"8 节点、无 checkpoint"）⇒ **只能靠事件侧分**，与口径③一致 ✅
+⇒ **"有 start 无 end ＝ orphaned lock" 本批未观测**（j7 的 end 带 error 到达 ⇒ 是**配对完整的失败态**，不是 orphaned）。
+
+**J7 · 摘要截断 = fail-closed —— PASS**
+- 做法：`compaction-basic.maxTokens: 256`（其余同 j3-at）
+- 观测：`compaction/end.data.error = "**summarization truncated at the token cap (incomplete checkpoint)**"`（官方原文）；**无 `compaction/summary`** ⇒ **未注入半截摘要** ✅
+- surface **不缩不丢**：末快照仍 8 节点、原文节点（i=1 chars=19144）仍在、**无 checkpoint** ✅；`totalTokens` 停在 16018（> 阈值）且**未静默重试** —— 与"fail-closed"一致
+- ⚠️ 派发稿要求一并观察"provider 是否如实上报 `max-tokens`"：**本轮如实上报了**（否则不会抛该错）⇒ **"静默注入半截摘要"这条可能路径本轮未观测到**
+
+**J8 · 成本 —— PASS（且与阶梯预估差一个数量级）**
+| 臂 | `compaction/summary.usage` 原文 |
+|---|---|
+| j3456（fills 9000,3400） | `{"inputTokens":393,"outputTokens":505,"totalTokens":15490,"cacheReadTokens":14592,"reasoningTokens":145}` |
+| j3-at-16000 | `{"inputTokens":505,"outputTokens":442,"totalTokens":?,"cacheReadTokens":11136}` |
+| j3-at-16000-A | `{"inputTokens":387,"outputTokens":398,"totalTokens":12049,"cacheReadTokens":11264,"reasoningTokens":119}` |
+⇒ **实际计费 ≈ input+output ≈ 0.79k–0.95k token**；`cacheReadTokens` 1.1–1.5 万命中**前缀缓存** ⇒ **摘要调用远比阶梯预估的「~1 万 input」便宜**（正是 `summarizer` 重放对话前缀的设计目的）。
+⇒ 主线累计实耗（含标定／失败臂）**远低于 5000 万硬上限**（量级：几万）。
+
+### 9 · §6 采数（⛔ 不给判定，交产品侧）
+
+| 采数项 | 实测 |
+|---|---|
+| **中文会话摘要的实际语言形态** | ⭐ **正文英文**：`## Primary Request and Intent` ／ `- Intent: verify instruction-following / nonce-tagged response behavior…`；**但把中文原句逐字引用**：`the explicit Chinese instruction: \`只回一句 ok，不要调用工具。\` ("Reply only with a single \`ok\`; do not call any tools.")` ⇒ **派发稿 §7-① 的预判被实测复现**（中文会话被官方提示词写成英文）· 原样全文已落盘：`J4-summary-text.txt`（两臂各一份） |
+| **保真度样本**（摘要 vs 原文的关键要素） | nonce **逐字**；填充区间**逐字**（`FILL-0001` … `FILL-0211`）；**路径／标识符在**：`DSH harness runtime context: file policy \`workspace-write\`, workspace \`D:\Code\LarryAge…`；中文指令原句**逐字**（含引号） |
+| 摘要长度 | 1073–1388 字符（`maxTokens` 默认 8192 未触顶） |
+
+### 10 · 自曝
+
+1. ⛔⭐ **派发稿的 L2 夹具在本机会失效**（§7 已述）：`defaultContextWindow` 对**目录模型**无效 ⇒ 若照抄会得到"**永远不压**"并误判"机制不成立"。**这是本块最值得记的一条**。
+2. ⛔⭐ **我第一版夹具（单条超大 fill ＋ 小尾巴）压不动**：`pre-step=16006 ≥ 16000` **已过阈值**，但 `compaction/* = []`。机制原因（源码级）：`selectCompactableRange` 需从尾部累计 ≥ `retainTokens=3200` 才停，单条 8221-token 的节点把**唯一可压节点**也吞进保留区 ⇒ 返回 `null`（＝契约里那句"a single oversized retained unit cannot be repaired through surface compaction"）。⇒ 夹具改为**多头 ＋ 足量尾部**（head 4782 ／ tail 3400）后成立。**若只看第一版结果，会得出与事实相反的结论。**
+3. ⚠️ **口径偏差（我自己造的）**：L2 最初几臂**没加 `--a`**，而派发稿 §2-3 要求"J3–J8 全程保持手动入口已禁用" ⇒ 补跑 `j3-at-16000-A` 对齐（结论相同）。**偏差影响**：那几臂**未调用** `/compact`，入口存否不参与因果；但**口径上仍应禁用** ⇒ 已补，且把非 A 臂的用途限定为"夹具标定"。
+4. 装置 bug ×2：① `saveJson(join(...), {...})` 把路径当 `dir`（`J1` 判据全 PASS 后崩在写 summary）；② 标定解析正则先匹配到日志里的 `[34]` 标签 ⇒ 都修后重跑。
+5. ⚠️ **`.ps1` 脚本被 Windows PowerShell 5.1 按 GBK 读** ⇒ 中文注释乱码导致语法错 ⇒ 改**内联执行**（本项目已登记的通道坑之一，此处再中一次）。
+6. ⛔ **key 未落入任何受版本控制的文件／日志／回报**；只进子进程 env，每臂跑完即清除。⚠️ 老大本轮已放宽（"随意落盘不纠结"），我**仍按派发稿禁区 5 挡在仓外**。
+
+### 11 · 未闭合项（单列）
+
+1. **orphaned lock（有 `start` 无 `end`）未观测** ⇒ 记"未观测"，⛔ 不写"不存在"。
+2. **L4（真 1M 容量）／L5（真溢出恢复）不覆盖**（派发稿边界）⇒ 本块结论**不得外推**成"1M 下亦然"。
+3. **J2 的原文口径**「真实会话发 `/compact`」在本 SDK 通道**不可执行**（见上段 §1）⇒ 用运行期等价物替代，**待裁**；J2-b 的成功反馈文案**未观测**。
+4. **`(ii)` 态的另一条可能路径**（provider 不上报 `max-tokens` ⇒ 静默注入半截）**本轮未观测到**。
+5. J5 的保留量实测 **+6.4%** 于期望值 —— 已用 tool-pairing 吸附解释，但**未单独造"跨边界未应答 tool-call"来正面验证吸附**（阶梯 L2 的可选项，未做）。
 
 ## 🗂 已清理段落（按交流区规矩）
 
