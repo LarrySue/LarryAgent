@@ -871,7 +871,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 **② 尺 = `retainRatio`**（判"保留多少"的计量口径）
 - 官方**三套语义并存**：`retainRatio`（token 比例，默认 **0.16**）／ `retainTokens`（绝对值，**与 ratio 互斥**）／ 社区件 `preserveRecent`（**节点数**，如默认 2）。
-- ✅ **写死：以 `retainRatio` 为准** ⇒ **期望保留量 ＝ `floor(被压区间 token × 0.16)`**（可复算）。
+- ✅ **写死：以 `retainRatio` 为准** ⇒ **期望保留量 = 下界 `floor(contextWindow × retainRatio)` ＋ surface 节点粒度向上吸附**（`config.ts:145-147` 定 `retainTokens = floor(contextWindow × retainRatio)`；`region.ts:132-139` 从尾部倒序累计到 ≥ `retainTokens` 即停 ⇒ **实测值 ≥ 该下界**，多出部分由节点粒度与 `toolPairingBalancedBefore` 吸附解释）。⚠️ **2026-09-29 复验订正**：原写「`floor(被压区间 token × 0.16)`」有**两处错** —— ① **分子错**（源码用 `contextWindow`，不是"被压区间 token"数）；② **非等式**（是下界 ＋ 吸附，不是"＝"）。**实测参照**：`contextWindow = 20000` ⇒ 下界 3200，实测保留节点 `meter.nodeTokens` = **3412**（+6.6%，节点吸附）。
 - ⚠️ **手动路径不适用（✅ 已裁 A，老大 2026-09-29）**：产品**不做**手动 `/compact` 入口 ⇒ 本条款**只在自动路径上成立**。留痕：官方 `compactNow` 硬编码 `retainTokens = 0`（`compaction-basic/src/index.ts:380-384`）⇒ 只留最后 1 条、**不满足**本条款；若日后改判 B／C，此条须按新口径重定（见 ⑤）。
 - **软阈值（防虚假精确）**：保留量**不设精确区间**，只做**数量级报警** —— 实测若 `< 1%` 或 `> 50%` 于期望值，须**报出并解释**（可能实际走了 `retainTokens` 或 `preserveRecent` 而非 ratio）。⚠️ 此阈值口径系 WB 拟，老大可收紧。
 
