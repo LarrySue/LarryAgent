@@ -6,7 +6,7 @@
 
 ## Marvis P4.35 初稿评审与响应（2026-08-15）
 
-> Marvis 从产品视角出初稿（见 `exchange/log-marvis.md` "P4.35 界面基调初稿"段），以下是设计视角接手——冲突分析、判断，以及完整 design token 精化（定案见 UI-Reference）。
+> Marvis 从产品视角出初稿（原载 `exchange/log-marvis.md`，该文件已随 Marvis 退出项目于 2026-09-29 清理 "P4.35 界面基调初稿"段），以下是设计视角接手——冲突分析、判断，以及完整 design token 精化（定案见 UI-Reference）。
 
 ### 一、共识确认（直接采纳，无异议）
 

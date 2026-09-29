@@ -362,7 +362,7 @@
 - **仍未装、未跑、未在任何环境实测**任何候选件（§3.0 纪律）；`session.events` 与 `probe` 的判定均为**源码级 🟠**，⛔ 不是实跑结论。
 - **新克隆 2 件**到**仓外**（`D:\Temp\_wbverify\34ref\clone`）：`ljsysfurryACE/dsh-compaction` ／ `fan56/dsh-dcp` —— ⛔ **未进 `ref/`、未入仓**。
 - 通道四元组见本段抬头；⛔ 不可外推。
-- 本段**未读** `log-other.md`（任务已由老大取消）／ `log-marvis.md` ／ `log_design.md`。
+- 本段**未读** `log-other.md`（任务已由老大取消）／ `log-marvis.md`（已于 2026-09-29 随 Marvis 退出项目删除）／ `log_design.md`。
 
 ## ⏳ 未结项（待老大采纳）
 
@@ -372,6 +372,7 @@
 
 ## 🗂 已清理段落（按交流区规矩）
 
+- **2026-09-29 · Marvis 退出归置**：老大裁定「Marvis 正式退出本项目」（① 文件删除 ② 未闭环提案不再保留 ③ 产品署名保留）。处置：① 删除 `exchange/log-marvis.md` —— 内容已于此前全部承接（P4.35 界面基调初稿 → `docs/ui-reference.md` §0–§5；时间对齐提案 → `exchange/discussion-time-context.md`；ai-governance 四条修正／两次复盘看法／归档幂等评审 → 各自落点）；② 唯一未闭环的「名词解释／规范用语」提案随文件终止（老大：直接删，不另留待议位）；③ 全库引用修补 9 处（`README.md` 名单、`docs/ui-reference.md` 受众、`docs/ai-governance.md` §3、`exchange/README.md` 索引、`discussion-time-context.md` ×5、`log_design.md`）；④ 产品「关于」弹窗署名**保留**（署名记贡献、非在职状态）。⛔ 未动：`archive/` 与 `docs/dsh/dsh-migration.md` 的历史采纳留痕、`backend/tests/test_archive.py` 注释、`HUMAN.md`／`HUMAN_NOTE.md`（人类治理区）。回溯：`git log -p -- exchange/log-marvis.md`。
 - **2026-09-28 清理**：未结项原第 2 条《Qoder repo 级 git 钩子致「提交」看似失败》**已闭环翻篇** —— 证据双侧：**老大查明 Qoder 侧更新已修复／调整该行为** ＋ **WB 复现确认不再触发**（2026-09-28 本轮及上一轮 `git commit` 均 `exit 0`、无 `PROGRAM BLOCKED`）。⇒ 该隐患不再挂起。**通用纪律保留**：本仓判 `git commit` 成败一律看 `git log -1` ＋ `git status`，**不看退出码**（工具层故障会伪装成提交失败；与「回收站 API 退出码不可采信」同族）。回溯：`git log -p -- exchange/log-workbuddy.md`（`e6f3b04`／`36d4962`）。
 - **2026-09-23 清理**：未结项第 2 条《CVM 沙箱降档是否接受》**已裁（老大：接受降档）** ⇒ 回填 `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉④（含两处归因修正）＋ `TODO.md` DSH-3.5 段。
 - **2026-09-22 清理**：删除三段已闭环复验记录（《Qoder 两报告复验》／《DSH-3.8.1 复验》／《DSH-3.8.2 复验》）—— 复验结论已各自回填（3.8.1 ／ 3.8.2 → `TODO.md` 3.8 段；3.7.5 → `TODO.md`「DSH-3.7.5」段末「WB 复验判定」）。回溯：`git log -p -- exchange/log-workbuddy.md`。

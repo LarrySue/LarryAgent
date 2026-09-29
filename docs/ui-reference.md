@@ -1,6 +1,6 @@
 # LarryAgent UI 参考（权威）
 
-> 本文件是 LarryAgent 前端 UI 设计的**单一权威参考**。所有 AI（Trae 实现 / Claude 测试 / Marvis 产品 / UI 设计 / WB 复验）以本文件为 UI 约定的最终真相源。
+> 本文件是 LarryAgent 前端 UI 设计的**单一权威参考**。所有 AI（Trae 实现 / Claude 测试 / UI 设计 / WB 复验）以本文件为 UI 约定的最终真相源。
 >
 > **权威层级**：`client/src/styles/tokens.css`（代码数值事实）> 本文件（设计定案）> 交流区过程记录（历史讨论，**不承载定案**）；交流区为 AI 间临时会话空间，不做长期保留。
 > 代码与设计不一致时以代码为准，并应回写本文件。

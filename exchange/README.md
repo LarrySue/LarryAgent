@@ -14,7 +14,6 @@
 - `log-claude.md` — Claude Code（代码检查测试）
 - `log-trae.md` — Trae CN（代码具体编写）
 - `log-qoder.md` — Qoder（文档一致性维护者）
-- `log-marvis.md` — Marvis（产品宏观 / 用户代言）
 - `log-other.md` — 编外 AI 区（老大按需点将，不属固定分工、不受各角色约束文件管辖）；各条标注 AI 名与日期，供整理采纳
 
 **讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）：

@@ -205,7 +205,7 @@ cd client && npm run test:unit
 
 ## 多 AI 协作
 
-本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**Marvis**（产品宏观）、**Qoder**（文档一致性维护）、**WorkBuddy**（架构协调与复验），另有独立的 UI 设计角色。
+本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**Qoder**（文档一致性维护）、**WorkBuddy**（架构协调与复验），另有独立的 UI 设计角色。**Marvis**（产品宏观）已于 2026-09-29 退出项目。
 
 分工定义、约束加载机制与协作规则见 `docs/ai-governance.md`。
 
