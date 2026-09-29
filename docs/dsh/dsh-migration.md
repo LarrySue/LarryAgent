@@ -872,7 +872,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 **② 尺 = `retainRatio`**（判"保留多少"的计量口径）
 - 官方**三套语义并存**：`retainRatio`（token 比例，默认 **0.16**）／ `retainTokens`（绝对值，**与 ratio 互斥**）／ 社区件 `preserveRecent`（**节点数**，如默认 2）。
 - ✅ **写死：以 `retainRatio` 为准** ⇒ **期望保留量 ＝ `floor(被压区间 token × 0.16)`**（可复算）。
-- ⚠️ **手动 `/compact` 单列**：`compactNow` 硬编码 `retainTokens = 0`（`compaction-basic/src/index.ts:380-384`）⇒ **只留最后 1 条**，**不算通过**（否则会把「只留最后一条」误判为"近文保留成立"）。
+- ⚠️ **手动路径不适用（✅ 已裁 A，老大 2026-09-29）**：产品**不做**手动 `/compact` 入口 ⇒ 本条款**只在自动路径上成立**。留痕：官方 `compactNow` 硬编码 `retainTokens = 0`（`compaction-basic/src/index.ts:380-384`）⇒ 只留最后 1 条、**不满足**本条款；若日后改判 B／C，此条须按新口径重定（见 ⑤）。
 - **软阈值（防虚假精确）**：保留量**不设精确区间**，只做**数量级报警** —— 实测若 `< 1%` 或 `> 50%` 于期望值，须**报出并解释**（可能实际走了 `retainTokens` 或 `preserveRecent` 而非 ratio）。⚠️ 此阈值口径系 WB 拟，老大可收紧。
 
 **③ 三结局须可分**（判"怎么区分三种结果"）
@@ -887,15 +887,20 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - ⛔ **不在 `session.events` ／ kernel 投影 ／ surface 内部结构上断言** —— 在事件流上断言**证明不了发给模型的内容**。
 - 依据：一份第三方 `byte-stability.test.ts` 的**头注自曝其早期版本正犯此错**（在事件侧断言）。
 
-**⑤ 关联的产品决策（未定 · 待老大拍）**
-- **手动 `/compact` 要不要也保留近文尾部？**
+**⑤ 关联的产品决策（✅ **已裁 A** · 老大 2026-09-29）**
+- 原问题：手动 `/compact` 要不要也保留近文尾部？
+- ✅ **裁定 = A「不做手动入口」**（老大原话大意：「就用你说的 A 路径，也就是自动压缩的路径，这一块我觉得没什么问题」）⇒ 压缩**只走自动路径**，本决策**消解**；判据注明「**手动路径不适用近文保留条款**」（已落 ② 与 `TODO.md` 判据行）。
+- ⚠️ **A ≠ 什么都不做**：官方默认组合**自带**该入口（见下方前置事实 3）⇒ **必须显式禁用**，否则「不做」会自动变成「做了」。
 - ⚠️ **三个前置事实（2026-09-29 补充实读 · 🟢 `dsh-v0.1.5-rc.2`）** —— 缺了它们会把选项的代价判错：
   1. **差异硬编码、配置面改不动**：自动路径走 `selectCompactableRange(agent.session, measurement, spec.retainTokens)`（`compaction-basic/src/index.ts:317`）；手动路径在 `compactNow` 里**直接传字面量 `0`**（同文件 `:380-384`），**全程不读 `policy` / `spec`** ⇒ 配置面的 `retainRatio` / `retainTokens` **只作用于自动路径**。
   2. **`0` ≠ "留 0 条"**：`region.ts:116-154` 第三参数语义 = 从尾部**倒序累计 token**，累计 ≥ 参数即停 ⇒ 传 `0` ⇒ 保留区 = **最后 1 个节点**，再经 `toolPairingBalancedBefore` **向前吸附到 tool-call / result 配对安全边界**（可能多留若干条）。
   3. **官方默认组合自带 `/compact`**：`command-compact` 在 `packages/bundle/base/cordis.patch.yml:325` **启用**（注释原文："Human `/compact`: one useful reduction **below the automatic threshold**"）；`bundle/web-app/cordis.patch.yml:430` 置 `disabled: true`，但 cordis / ptc / standard **三个 preset 均提供** ⇒ **两条默认链路都会给用户这个入口**（不显式禁用即出现）。
-- **三个选项**：**A 不做手动入口**（不装 / 禁用 `command-compact`）⇒ 本决策**消解**，判据注明「手动路径不适用近文保留条款」；**B 做，接受官方语义**（手压后近文近乎清零、只剩摘要 ＋ 最后 1 条）；**C 做且自做 Provider**（子类覆写 `compactNow`，把 `0` 换成按配置算出的保留量）⇒ ⭐ **C 就是「换 Provider」的第一个实际靶子**。
-- ✅ **低成本验证（建议顺带做）**：**L1 档本就是"手动 `/compact`"** ⇒ 在该档顺带断言「保留了几个节点 / 多少 token」，即可把本条从**源码推断**升为**实测**（**零额外成本**）。
-- ⚠️ **无论选哪个，② 的「手动单列、不算通过」都可保留**（B 下天然不成立；C 下按新口径重定即可）。
+- **三选项与落选理由（留痕）**：**A 不做手动入口**（不装 ／ 禁用 `command-compact`）⇒ 决策消解、判据注明「手动路径不适用」——✅ **本次采纳**；**B 做、接受官方语义**（手压后近文近乎清零、只剩摘要 ＋ 最后 1 条）⇒ 不采纳；**C 做且自做 Provider**（子类覆写 `compactNow`，把 `0` 换成按配置算出的保留量）⇒ 原记「⭐ 即『换 Provider』第一个实际靶子」，**随 A 一并取消**（不做入口则无此需求）。
+- ✅ **A 的落地动作与验收（2026-09-29 新增）**：
+  - **落地**：在我方 bundle patch 里对 `command-compact` 显式置 `disabled`（base bundle 默认启用；cordis ／ ptc ／ standard 三 preset 均提供）—— 落地前须先确认我方 profile 实际走哪条 preset 链路。
+  - **验收（运行时判据）**：真实会话里发 `/compact` ⇒ 断言**无 `compaction/start` 事件**、无 compact 反馈（见 ③ 新增 **L0‑A** 档）。⛔ **不得只靠 `--dump-config` 作证**（L0 已定：只组配置树、不激活插件 ＝ 假绿源）。
+- ⚠️ **连带影响（诚实列出）**：**阶梯 L1 档（手动路径）失去构造手段** —— 它原本是最便宜的「完整括号」夹具（~1 万 input、人工可控、随时可触发）；A 下该入口不存在 ⇒ 其 6 项观测点（括号 ／ checkpoint marker ／ nonce ／ log 留原文 ／ `usage` 成本 ／ `busy` 反向对照）**须搬至 L2 自动压力档**，其中 `busy` 反向对照系**手动专有 ⇒ 消失**。代价 ＝ 首次验证 **~1 万 → ~5 万 input**（5000 万预算内可忽略）＋ **失去「人工可控、不依赖阈值」的调试夹具**（此为真实损失，非金钱损失）。
+- ⚠️ **留痕**：② 的「手动路径不适用」随 A 生效；若日后改判 B ／ C，② 与本节须按新口径重定（C 下 L1 档恢复使用）。
 
 ##### ⭐ DSH-3.4 · S2 compaction：测试量级阶梯与预算（WB 2026-09-23 拟；**定额已定 = 总 token 硬上限 5000 万**，老大 2026-09-23）
 
@@ -917,7 +922,8 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | 档 | 怎么造 | 量级 | 能测出 | 测不出 |
 |---|---|---|---|---|
 | **L0** 零调用 | 故意配非法（`retainRatio ≥ thresholdRatio`）或塞未知 key | **0 token** | **配置真被这个引擎读进去**（load 期必抛错：`config.ts:185-190`／`:280`）；插件装配层注册 | 任何运行时行为（⚠️ `--dump-config` 是假绿源：只组配置树、不激活插件） |
-| **L1** 手动 `/compact` | 会话有 **≥3 个 surface 节点**（含 system head）后发 `/compact` | ~**1 万** input ＋ ≤8192 output（**1 次摘要调用**） | ① 完整括号 `compaction/start` → `compaction/summary` → `user/message(surfaceOp:replace)` → `compaction/end`（`region.ts:455-484`）② ⭐ **摘要注入的机读判据** = checkpoint marker（`source.kind='plugin' ∧ plugin='compact'`，`checkpoint.ts:19,49`；`isCompactCheckpointSource()` 可直接调用）③ summary 文本里 nonce 是否存活 ④ 原文仍在 append-only log（替换件带 `sourceEventSeqs`）⑤ **`compaction/summary` 事件自带 `usage`** ⇒ 现成的成本判据 ⑥ **反向对照（免费）**：非 idle 调 `/compact` ⇒ `ManualCompactionError.code='busy'` | ❌ **`retainRatio` 的 16% 尾部保留**（手动路径**硬编码 `retainTokens = 0`**，`index.ts:380-384` ⇒ 只保留**最后 1 个节点** ＋ 配对回退）❌ 自动触发 ❌ overflow 恢复 |
+| **L0‑A** 手动入口不存在性（⭐ **A 专属**，2026-09-29 裁 A 后新增） | 真实会话里发 `/compact` | **0 token** | **该入口确实不在**：无 `compaction/start` 事件 ／ 无 compact 反馈 ⇒ ⭐ **A 落地的验收判据** | 任何压缩行为（本档只证「入口不在」）。⛔ **不得只靠 `--dump-config` 作证**（同 L0：假绿源） |
+| **L1** 手动 `/compact`（⛔ **A 下不适用** · 2026-09-29 留痕） | 会话有 **≥3 个 surface 节点**（含 system head）后发 `/compact` | ~**1 万** input ＋ ≤8192 output（**1 次摘要调用**） | ① 完整括号 `compaction/start` → `compaction/summary` → `user/message(surfaceOp:replace)` → `compaction/end`（`region.ts:455-484`）② ⭐ **摘要注入的机读判据** = checkpoint marker（`source.kind='plugin' ∧ plugin='compact'`，`checkpoint.ts:19,49`；`isCompactCheckpointSource()` 可直接调用）③ summary 文本里 nonce 是否存活 ④ 原文仍在 append-only log（替换件带 `sourceEventSeqs`）⑤ **`compaction/summary` 事件自带 `usage`** ⇒ 现成的成本判据 ⑥ **反向对照（免费）**：非 idle 调 `/compact` ⇒ `ManualCompactionError.code='busy'` | ❌ **`retainRatio` 的 16% 尾部保留**（手动路径**硬编码 `retainTokens = 0`**，`index.ts:380-384` ⇒ 只保留**最后 1 个节点** ＋ 配对回退）❌ 自动触发 ❌ overflow 恢复 |
 | **L2** 小窗口自动压力 | `llm-deepseek.defaultContextWindow: 20000`（或该 model `contextWindow: 20000`）＋ **必须 2 个 turn** | 阈值 16k ⇒ ≈**3 × 16k ≈ 5 万**（主请求 ×2 ＋ 摘要输入 ×1） | ① `agent/pre-step` **自动**触发（无需人工命令）② ⭐ **阈值边界上下双跑**：15,999 不压 ／ 16,000 压 ⇒ 「真按 `floor(容量 × 0.8)` 算」的硬证据 ③ ⭐ **「近文原文保留」的正面判据**：尾部 ≈ `floor(20000 × 0.16) = 3200` token 原文留在 surface（`selectCompactableRange`，`region.ts:116-154`）④ **tool-pairing 边界吸附**：造一个跨越边界的未应答 `assistant/tool-call`，看边界是否回退 | ❌ 真 1M 容量 ❌ overflow 恢复 |
 | **L3** 中窗口 ／ 多段（可选） | `defaultContextWindow: 100000`；或在小窗口下**连压两次** | ~**20–40 万** | ① **多代压缩**：已有 `<compacted-summary>` 时的**合并语义**（`summarizer.ts:65`：视为 PRIOR checkpoint ⇒ 保留仍真事实、丢弃过期、合并为新单块）② `compactionRetries` 的收敛循环与**压不动的抛错路径**（压完仍超阈值 ⇒ 抛 `compaction still above threshold after N attempts`，`index.ts:329-332`）③ 长历史下估算偏差累积 | 同 L2 |
 | **L4** 真锚（默认 1M） | 默认配置灌 80 万 | **≥ 160 万** input | 「容量不改变机制」的**正面物证** | — |
@@ -934,7 +940,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 **⑥ 判据必须增补的一条（本轮读源码新发现的缺口）**
 - **「近文原文保留」必须注明走哪条路径**：**压力路径**按 `retainRatio` 保留**尾部 16%**；**手动 `/compact`** 硬编码 `retainTokens = 0`（`index.ts:380-384`）⇒ **只保留最后 1 个 surface 节点**。⇒ 若只用 `/compact` 验收，会拿到「只留最后一条」的结果却**误判为判据成立**。
-- ⭐ **顺带得到 3.4「换 Provider」的第一个实际靶子**：若产品要求**手动 `/compact` 也保留近文尾部**，则 **`compaction-basic` 不满足** ⇒ 必须自做 Provider（或 fork）。
+- ⚠️ **原记「3.4『换 Provider』第一个实际靶子」已随 A 裁定取消（2026-09-29）**：不做手动入口 ⇒「手动也保留近文尾部」这一需求不存在 ⇒ 该靶子**不再成立**。当前**唯一现实的候选靶子**是 ⑦ 的「**中文会话摘要被官方提示词写成英文**」（要不要换摘要提示词 —— **仍待老大定**，不属本决策）。
 
 **⑦ 一条产品观察（不是我们定，交老大）**
 - 官方摘要提示词要求 **「Write concise English engineering prose」** ＋「Preserve exact file paths, commands, error strings, **identifiers**, numeric values, function signatures…」（`summarizer.ts:61`）⇒ ① **中文会话的摘要会被写成英文**（我们是中文优先产品 ⇒ 要不要换提示词属产品决策）；② **nonce 判据有官方提示词背书**（"identifiers" 被明确要求保留）⇒ 判据设计成立，但**仍非保证**（LLM 行为，非确定性）。

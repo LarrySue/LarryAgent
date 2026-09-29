@@ -194,7 +194,7 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 | **A3** | `dsh-compaction-basic`（默认 Provider）`packages/compaction/compaction-basic/` | T2 T3 T4 T6 | ⭐⭐ **T3 的权威答案在本件**：`thresholdRatio` **0.8** ／ `retainRatio` **0.16**（尾部逐字）／ `retainTokens`（绝对值，与 ratio **互斥**）／ `maxTokens` **8192** ／ `compactionRetries` **1**；`selectCompactableRange` **从尾反向累加**、**从不切开 tool-call/result 对**；**`summarize()` 是唯一子类钩子**；摘要框 `<compacted-summary>`；**截断 = 抛 `MAX_TOKENS`（fail-closed，不缩不丢）** |
 | **A4** | ⭐ 官方**第 4 根杠杆**：`summarizationProvider` ＋ `summarizationModel`（`config.ts:30-31,89-90`，**必须成对**，`:254-271` 校验） | T2 T4 | 可把**摘要调用单独改路由**（小窗口会话交大窗口模型）——WB 轮 2 的增量，其余三方原报告均无 |
 | **A5** | `dsh-compaction-tool-result-pruner` | T2 T3 T6 | 超 **8192 码点** → 头 **4096** ＋ `[... tool result middle pruned ...]` ＋ 尾 **1024**；**原文留 append-only log**、替换件以 `sourceEventSeqs` 引用 ⇒ 重放可复原；`compaction/prune` **shadow-price** 事件；**不发模型调用**；切片按 **Unicode code point** |
-| **A6** | `dsh-command-compact`（`src/index.ts:66`） | T4 | `/compact` → `compactNow` → `selectCompactableRange(...,0)` ⇒ **不灌历史也能一次压到位**；⚠️ **手动路径硬编码 `retainTokens=0` ⇒ 只留最后 1 条**（与 `retainRatio` 语义不同，是判据陷阱） |
+| **A6** | `dsh-command-compact`（`src/index.ts:66`） | T4 | `/compact` → `compactNow` → `selectCompactableRange(...,0)` ⇒ **不灌历史也能一次压到位**；⚠️ **手动路径硬编码 `retainTokens=0` ⇒ 只留最后 1 条**（与 `retainRatio` 语义不同，是判据陷阱）⛔ **2026-09-29 裁 A：本件不进我方栈**（产品不做手动入口）—— 本行留作「为何不能用手动路径验收」的依据 |
 | **A7** | `dsh-token-meter`（`packages/llm/token-meter/src/estimate.ts`） | T4 T6 | 触发判定的**测量服务**（`ctx.tokenMeter.measure(session)`）；⚠️ **四字符≈1 token 启发式，明示低估 CJK 与 JSON schema** |
 | **A8** | ⭐ **官方测试件 8 件 ／ 11 个 spec ／ 5,371 行**（`packages/compaction/*/tests/`） | T1 T3 T4 T5 T6 | ⭐⭐ **判据不必自造** —— 详见 **11.8 第一梯队**。Claude 全文实读 3 件（`invariant` 469 ／ `tool-pairing` 417 ／ `compaction` 171），其余 5 件四方合抓标题面 |
 | **A9** | ⭐ **官方安装契约**：`apps/cli/src/plugin.ts:43-44` 读 `package.json#dsh.bundle.patch` | T6 | ⭐ **`dsh.plugin.json` 上游全仓无任何引用**（WB 全仓 grep 实测）⇒ 社区件里那份清单**无上游校验、不能当兼容性依据**；无 `dsh.bundle` 者被记为 plain dependency、**不入 profile 层** |
@@ -349,14 +349,14 @@ giter00/dsh-headroom                 ← 压 tool 输出、保原文
 ### 11.9 未决项与诚实边界
 
 **⭐ 已决（2026-09-29）**
-- **判据口径四条已写死** ⇒ 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 判据口径四条〉；执行面 = `TODO.md`「DSH-3.4」段判据行。（原未决项第 1 条，现移出。）
+- **① 判据口径四条已写死** ⇒ 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 判据口径四条〉；执行面 = `TODO.md`「DSH-3.4」段判据行。（原未决项第 1 条，现移出。）
+- **② 手动 `/compact` 产品决策 = A「不做该入口」**（老大 2026-09-29 裁）⇒ 压缩只走自动路径，判据注明「手动路径不适用」；⚠️ **A ≠ 什么都不做**（官方默认组合自带 ⇒ 须显式禁用），**验收 ＝ 真实会话发 `/compact` 无 `compaction/start` 事件**；连带 **L1 档失去构造手段**（观测点搬 L2）、**新增 L0‑A 档**验「入口不存在性」⇒ 详见同节 ⑤ ／ ③。（原未决项第 2 条，现移出。）
 
 **未决（需老大 ／ 3.4 开工时定）**
 1. **`aerince` 的注册表矩阵"L5 runtime verified"覆盖什么**（11.6-6）—— 待核，可能只验了装／载。
-2. **手动 `/compact` 硬编码 `retainTokens=0`**（只留最后 1 条）—— 若产品要手动压缩也保留近文尾部，**官方 basic 不满足** ⇒ ⭐ **"换 Provider"的第一个实际靶子**。（⚠️ **产品决策，待老大拍** —— ⭐ **三个前置事实**（**配置改不动** ／ **`0` 的实际保留语义** ／ **官方默认组合自带 `/compact`**）＋ **三选项 A／B／C** ＝ `dsh-migration.md` §3.6〈S2 判据口径四条〉⑤；✅ **低成本验证 = L1 档顺带断言**）
-3. **`headroom` 类件引入新模型工具**（`headroom_retrieve` 等）= **产品决策**，不是实现细节（官方取向是"人工命令、无模型工具"）。
-4. ⭐ **是否建立「上游追踪机制」**（参照 `billion-context-dsh/docs/upstream-tracker.md`，见 11.8‑14）—— 我方同样**锚在别人的版本上**（`dsh-dcp` 5 天内抬 peer 就是实例）⇒ 由老大 ／ WB 定落点。
-5. ⛔ **若考虑 `fast-compaction-dsh` 的 verbatim 路线，须先评估其第三方 API 外呼的数据边界**（11.2 层①）—— 本项目属**个人项目 ＋ 成本敏感 ＋ 数据安全边界** ⇒ **路线可借鉴、引擎不可参考**。
+2. **`headroom` 类件引入新模型工具**（`headroom_retrieve` 等）= **产品决策**，不是实现细节（官方取向是"人工命令、无模型工具"）。
+3. ⭐ **是否建立「上游追踪机制」**（参照 `billion-context-dsh/docs/upstream-tracker.md`，见 11.8‑14）—— 我方同样**锚在别人的版本上**（`dsh-dcp` 5 天内抬 peer 就是实例）⇒ 由老大 ／ WB 定落点。
+4. ⛔ **若考虑 `fast-compaction-dsh` 的 verbatim 路线，须先评估其第三方 API 外呼的数据边界**（11.2 层①）—— 本项目属**个人项目 ＋ 成本敏感 ＋ 数据安全边界** ⇒ **路线可借鉴、引擎不可参考**。
 
 **诚实边界（本汇总**继承**各方的边界，不新增**）**
 - ⛔ **四方全部止于「声明级 ／ 源码级」—— 无一件实装、实跑、实测**（§3.0 纪律：只参考不直装）。**所有"能不能用"都未到运行时。**
