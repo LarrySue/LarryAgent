@@ -79,7 +79,8 @@
 
 - [ ] **compaction provider 插件**（`ctx.compaction` 是契约 ⇒ 自做 Provider 即换策略，消费者不动）
 - [ ] 构造法：**注入大段填充文本逼出触发**（勿真灌 200+ 轮）⇒ ⭐ **量级阶梯与预算已算清**：`docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 compaction：测试量级阶梯与预算〉
-- [ ] 判据：摘要注入 **且** 近文原文保留 + 摘要含可验证 nonce 片段。⚠️ **「近文原文保留」必须注明走哪条路径**：压力路径按 `retainRatio`(0.16) 保留尾部；**手动 `/compact` 硬编码 `retainTokens=0` ⇒ 只留最后 1 条**（`compaction-basic/src/index.ts:380-384`）⇒ 只用 `/compact` 验会把「只留最后一条」误判成立
+- [ ] 判据：摘要注入 **且** 近文原文保留 + 摘要含可验证 nonce 片段。⭐ **口径四条已写死（2026-09-29）** ⇒ 权威落点 `docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 判据口径四条〉：① **「近文」= 留 surface**（`session.deriveMessages()` 输出里尾部逐字可见；⛔ **log 里有不算**（官方压缩不删 log，恒真等于没验）／ ⛔ **「能回取」不算**（那是 tool-output 压缩生态位））；② **尺 = `retainRatio`(0.16)**，期望保留量 `floor(被压区间 token × 0.16)`；⚠️ **手动 `/compact` 单列**（硬编码 `retainTokens=0` ⇒ 只留最后 1 条，**不算通过**，`compaction-basic/src/index.ts:380-384`）；③ **三态须可分**（没触发 ／ 摘要被截 `MAX_TOKENS` ／ 完好）—— ⚠️ **(i)(ii) 在 surface 上同形** ⇒ **只从事件侧判**（`compaction/start` ／ `summary`(带 `rawOutput` ＋ `usage`) ／ `end`；**有 `start` 无 `end` ＝ 失败，须 fail-loud**）；④ **断言位置 = `session.deriveMessages()`**（⛔ 不在 `session.events` ／ kernel 投影 ／ surface 内部结构上断言）
+- [ ] 🔀 **产品决策（待老大拍）**：**手动 `/compact` 要不要也保留近文尾部？** —— **要** ⇒ 官方 basic **不满足**（硬编码只留 1 条）⇒ ⭐ 这就是 **「换 Provider」的第一个实际靶子**；**不要** ⇒ 判据中注明「手动路径不适用近文保留条款」，仅在压力路径验
 - [x] ✅ **已定额（老大 2026-09-23）：总 token 硬上限 = 5000 万（50M）** —— 口径「范围内随便搞、**非**要求用完」。⚠️ **预算仍写进判据**：按量纲预计实耗极低（主线 L0＋L1＋L2 ≈ **5~10 万 input**；加 L3 ≈ 再多 20~40 万）⇒ **50M 是安全网，不是花销目标**。量级阶梯与「不做档」理由 ⇒ `docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 compaction：测试量级阶梯与预算〉
 - [x] ✅ **参考件调研（广撒网）已收口（2026-09-28）**：五方（WB ／ Trae ／ Claude ／ Qoder；**Other 已取消**）各自独立检索 ／ 梳理 ／ 筛选并出评论报告 —— **四方交付齐 ＋ 融合轮完成** ⇒ **规则原文 = `docs/dsh/dsh-34-ref-research.md` §1–§10**；**汇总（候选池 ／ 分档统计 ／ 通道对照 ／ 分歧点 ／ 版本观察 ／ 深读清单 Top 12）= 同稿 §11**。⚠️ **汇总口径（老大 2026-09-23）**：各方交付取当下状态当一版看待（不管改过几次、不区分轮次）；**版本锚定不做深度追踪**（DSH 演进快、社区探索期 ⇒ 持续观察即可）
 
