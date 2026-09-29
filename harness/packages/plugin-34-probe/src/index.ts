@@ -124,7 +124,20 @@ export function apply(ctx: any, config: Config = {}): void {
       const nodeEvents = nodes.map((seq) => {
         let ev: any = null
         try { ev = typeof session.eventAt === 'function' ? session.eventAt(seq) : null } catch { ev = null }
-        return { seq, type: ev?.type ?? null, source: ev?.data?.message?.source ?? null }
+        // ⚠️ payload 形状**按事件类型分叉**（实读 `session/types.ts`「SessionEventMap」）：
+        // `user/message: UserMessage` ⇒ `source` 在 **`data` 顶层**；
+        // `system/message` ／ `assistant/message` ／ `tool/result` = `{ turn, step, message: XMessage }`
+        // ⇒ `source` 在 **`data.message`** 下。
+        // ⛔ 原写法只取 `data.message.source` ⇒ **对 `user/message` 恒 null**：是**覆盖不全**，
+        // 不是"死字段"（实测 35 份 snapshot：system 35/35 ＋ assistant 57/57 有值，user 0/92）。
+        const payload: any = ev?.data ?? null
+        return {
+          seq,
+          type: ev?.type ?? null,
+          source: payload?.message?.source ?? payload?.source ?? null,
+          /** payload 的键集：形状一旦变化可从这里直接看出，不必再猜。 */
+          dataKeys: payload != null ? Object.keys(payload) : null,
+        }
       })
       const rows: any[] = msgs.map((m: any, i: number) => brief(m, i, i >= msgs.length - fullTextTail || m?.source?.plugin === 'compact'))
       emit({
