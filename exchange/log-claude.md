@@ -64,7 +64,7 @@ if (!keepHome) {
 
 ---
 
-- **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.4」段（＋「DSH-3.7.4-T」段）**；本区只放**怎么做**。⚠️ 需回溯时用 `git log -p -- exchange/log-claude.md`。
+- **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ `archive/roadmap-history.md`（「DSH-3.4」段 2026-10-01 归档 ／ 「DSH-3.7.4-T」段；原写 `TODO.md`「DSH-3.4」段）**；本区只放**怎么做**。⚠️ 需回溯时用 `git log -p -- exchange/log-claude.md`。
 - ⚠️ **通用纪律**：
   1. **报告须注明通道** —— 同一台机器上，不同工具树 ／ 不同 shell 会话会给出**不同 node 版本**与不同文件系统视图 ⇒ 结论不可跨通道互推（"Bash 通道"这种写法对别人而言是**另一条**）。
   2. **"没有 ／ 不存在"须附检索式与遍历范围**，否则不可验、等于没回答。
