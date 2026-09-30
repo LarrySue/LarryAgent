@@ -49,14 +49,70 @@
 
 ## ⏳ 未结项（待老大裁）
 
-1. **`docs/` 5 处「2026-09-22 变更承接滞后」**（2026-09-22 主职责巡检 §1；WB 复验时逐处读取确认**仍未修**）：
-   - `docs/dsh/dsh-migration.md:740` —— 「`cvm-probes/*.sh` 全部钉 `larry-dsh-home` ⇒ 照抄 = 无 key 假绿」用**现在时**陈述；而该形态自 09-14 已改、`explicit` 分支 09-22 已退役 ⇒ **该陷阱已不存在** ⇒ 建议加批注。
-   - `docs/production-env.md:512` ／ `:516` ／ `:529` ／ `:531` —— 只反映 09-14 那次改动 ／ 表行所载 profile **已于 09-22 删除**（`:531` 的「凭据与可运行 profile 被劈开」**事实基础已消失**）。
-   - ⛔ 建议**只加批注 ＋ 加退役指向**，不改叙述本身（`docs/` 属 AI 不动区 ⇒ 待老大裁 ／ 或授权后在授权范围内执行）。
-2. **上游路径与本仓库路径同名、写法无区分**（同次巡检 §2，40+ 处）：`docs/dsh/` 下多稿直接写上游仓库路径（如 `docs/subsystems/approval.md`），与本仓 `docs/` 同名 ⇒ 读者会当本仓文件去找。建议给上游引用加**显式前缀**（如 `ref/dsh-bare:docs/…`）。**未裁。**
-3. **稳定落点口径小差**（巡检 §4）：`docs/README.md:20` 定三处（`docs/` ／ `archive/` ／ `TODO.md`）；`exchange/README.md:31` 写「以 `docs/` 和 `archive/` 为主」**未含 `TODO.md`** ⇒ 建议统一。**未裁。**
-4. **反引号路径「仓库根相对」惯例无文档记载**（巡检 §6）：是全项目惯例却没写进任何文档 ⇒ 建议在 `docs/README.md` 加一句。**未裁。**
-5. **`TODO.md` 精简「第二刀 ／ 第三刀」**（同次专题 §2）：第二刀 = 压 `### 待派发` 段；第三刀 = `#### DSH-3 · 贯穿规则` 迁 `docs/`。⇒ **老大 2026-09-22 裁：先搁置，等 DSH-3 完成后再议。**
+> **2026-09-30 全量巡检已逐条刷新**（上版 = 09-22）；新增 3 条标 🆕。
+> ⭐ **已消**（本轮核对确认）：TODO 精简「**第二刀**」（09-30 已由 A1 完成）；「3.4-T 状态行滞后」（已随 A1 压缩修正）。
+> 详细证据 ／ 建议 ／ 合规对照见下方〈全量职责巡检报告（2026-09-30）〉。
+
+1. **`docs/` 承接滞后批注 —— 仍 5 处（09-30 现状复核：仍未修）**：`docs/dsh/dsh-migration.md:796`（原 :740）／`docs/production-env.md:461`／`:512`／`:514`／`:529-531` 一带 —— 均为 `larry-dsh-home` ／ `explicit` 的**现在时**陈述，与"09-14 已改脚本、09-22 已退役＋删 profile"的现状不符。⛔ 建议**只加批注 ＋ 退役指向**（一处统一批注可覆盖五处，草样见巡检报告 §③-B）。
+2. **上游路径与本仓库路径同名、写法无区分 —— 仍未修**（计数刷新：`docs/dsh` 内 `docs/subsystems/` **14 处**、`packages/…` 形态 **39 处**；另 `dsh-agents-md.md` 全文快照有 **39 处**上游链接形态）⇒ 建议统一加机制说明或显式前缀。
+3. **稳定落点口径小差 —— 仍未统一**：`docs/README.md:20` 定三处（含 `TODO.md`）vs `exchange/README.md:30`「以 `docs/` 和 `archive/` 为主」（未含）。
+4. **反引号路径「仓库根相对」惯例 —— 仍未入档**：建议 `docs/README.md` 加一句。
+5. **`TODO.md` 精简**：第二刀 ✅（09-30）；**第三刀**（`DSH-3 · 贯穿规则` 迁 `docs/`）按原裁**等 DSH-3 完成后议**。
+6. 🆕 **`docs/local-env.md:706` 活指针 1 处**：末句「实际跟踪点在 `exchange/log-claude.md` 的 `DSH-3.7.4-T·P` 块」——活区清理后会静默失活 ⇒ 建议改指 `TODO.md`（或注明"活区、以 TODO 为准"）。
+7. 🆕 **`docs/dsh/README.md` 文件索引缺 `dsh-34-ref-research.md`**（52 KB；3.4-R 规格＋汇总）⇒ 建议补一行。
+8. 🆕 **（提请规则层定）`docs/product-positioning.md` 4 处讨论稿引用**（`:265/:351/:410/:444` 指向 `exchange/` 下的稿）——`docs/README.md` 规则「只引用稳定落点」对"讨论稿"无明文 ⇒ 规则补例外或稿内加注，二选一。
+
+---
+
+## 📋 全量职责巡检报告（2026-09-30）
+
+> **命令来源**：老大「跑一次全量职责」。**范围**：根级（`README.md` ／ `HUMAN.md` ／ `HUMAN_NOTE.md` ／ `TODO.md`）＋ `docs/`（含 `dsh/`）＋ `archive/` ＋ `exchange/`。
+> **方法（可复算）**：① 目录 × 索引清单比对；② 死链脚本（node 内联：扫 md 的 `](path)` 本地链接，双基准解析 = 文件相对 ／ 仓根相对）；③ 变更点驱动的 grep 抽查（对照 09-30 当日提交批）；④ 体量比对。**只读巡检 —— 未改任何被查文件**（本文件除外）。
+> **口径**：与 09-24 报告（D 盘）不同，本轮**以"自 09-22 巡检以来的变更点"为抽查主轴**；已闭环项不复述。
+
+### ① 索引一致性（清单 × 实际）
+- ✅ `docs/README.md`（7 条全对）／`archive/README.md`（3 件全对）／`exchange/README.md`（6 日志 ＋ 3 讨论稿全对；`log-marvis` 已除名 ✓）。
+- ❌ **新发现**：`docs/dsh/README.md` 文件索引**缺 `dsh-34-ref-research.md`** —— 该文件 52 KB（3.4-R 规格 §1–10 ＋ 五方汇总 §11；09-28 收口），属"永久保留"区却未登记。建议补条目，样：
+  `- \`dsh-34-ref-research.md\` — DSH-3.4 参考件调研（规格 ＋ 汇总）：§1–10 规则原文（硬闸门 ／ 反纪律 ／ 必扫区）；§11 汇总（候选池 ／ 通道对照 ／ 分歧点 ／ 版本观察 ／ 深读清单 Top14）。`
+
+### ② 死链扫描（node 内联脚本 · 只读）
+- 覆盖 **40 个 md**（根级＋`docs`＋`archive`＋`exchange`＋`harness` 等；排除 `node_modules` ／ `ref` ／ `.workbuddy` ／ 各证据目录）。结果：本地链接 **39 处**、"断" **39 处** —— **全部位于 `docs/dsh/dsh-agents-md.md`**，且**均为上游引文内的相对路径**（`docs/architecture.md` ／ `packages/README.md` ／ `.agents/…`）。
+- ⇒ **不是本仓死链**，而是**「上游路径 vs 本仓同名无区分」的实例集中地**（并入下方未结项 2）。建议：该文件文首加一行机制说明（「文中路径均为上游仓（`ref/dsh-bare`）内路径，非本仓」）。
+- 边界：本仓 markdown 链接形态本身极少（惯例用反引号路径 ⇒ 未结项 4）；本脚本只查 `](…)`，**不查反引号路径**（噪声过大，暂缓）。
+
+### ③ 过期陈述抽查（变更点驱动）
+**A. 今日已同步项（复核 ✓，无问题）**：A 落地落盘记录（`dsh-migration.md:957`「已追加 ✅ 09-30」＋备份名）｜Provider 观察项（`:1003` 靶子取消 ／ `:1005-1006` ⑦「已裁 …转入长期观察」）｜`dsh-src` 四处善后（`archive/roadmap-history.md:695` ／ `dsh-migration.md:726` ／ `local-env.md:384,425,435-436`，全带退役说明＋重建方式）｜TODO 3.4 段（L80-91 收口完备）｜「调研中」**零残留**｜「当前无条目」已订正（`dsh-migration.md:1193`）。
+
+**B. 仍未修（09-22 遗项 · 现状复核）—— `larry-dsh-home` 相关 5 处**：
+- `docs/dsh/dsh-migration.md:796`：「cvm-probes/*.sh **全部钉** `DSH_HOME=$HOME/larry-dsh-home`…照抄 = 无 key 假绿」——现在时；该形态 09-14 已参数化、`explicit` 分支 09-22 已退役。
+- `docs/production-env.md:461`：同款「钉死此路径」（§12.5 表 "要填吗" 列）。
+- `docs/production-env.md:512`：`cvm-step0.sh` 的 `explicit` 默认值描述（09-22 已退役 ⇒ 需批注）。
+- `docs/production-env.md:514`：「降级为**负向对照器材**」——该定位**在 09-22 删 profile 之前就已不成立**（脚本已拒、器材本体已删）。
+- `docs/production-env.md:529-531` 一带（附一之补）：表内 `~/larry-dsh-home/profiles/sdk` 行未标「已于 09-22 删除（→ `*.bak.20260922-*`）」。
+- ⛔ 建议**统一批注草样**（一处可覆盖五处）：
+  > ⚠️ **2026-09-22 后形态**：`cvm-probes/*.sh` 已参数化（`${DSH_HOME:-$HOME/.dsh}`）；`cvm-step0.sh` 的 `explicit` 分支已**退役**（显式拒绝 ＋ `exit 3`，`ba3e42e`）；`~/larry-dsh-home` 的 `sdk` ／ `acp` profile 已删（→ `sdk.bak.20260922-0948` ／ `acp.bak.20260922-1007`）⇒ 本节"钉死 ／ 器材"陈述均为**当时状态留痕**，勿再照抄。
+- ⛔ 只加批注 ＋ 退役指向，**不改叙述本身**（`docs/` 属 AI 不动区 ⇒ 待老大裁 ／ 授权后执行）。
+
+**C. 活指针 1 处（新）**：`docs/local-env.md:706` 末句「实际跟踪点在 `exchange/log-claude.md` 的 `DSH-3.7.4-T·P` 块」——**活区清理后会静默失活**。建议改指 `TODO.md`。
+- 对照（合规范式，均带"已清理＋git 回溯"）：`dsh-015-capability-mapping.md:237` ／ `dsh-38-a-protocol-design.md:574` ／ `local-env.md:573` ／ `dsh-34-ref-research.md:182` ✓。
+
+**D. 规则口径类（提请定夺，非错误）**：`docs/product-positioning.md:265/351/410/444` 指向 `exchange/` 下讨论稿（web-search-design ／ deployment-architecture ／ discussion-time-context）——`docs/README.md` 规则「只引用稳定落点」对"讨论稿"**无明文**；另 `ai-governance.md:255`（"开发前先读 log-trae ／ log_design"）属**行动指南例外**，合规。
+
+### ④ 旧发现复核（`HUMAN.md`「Qoder观察到的问题」4 条 · 状态提醒）
+- **#1「加模型零代码」不符 —— 未处置**：`README.md:145` 表述仍在（「可任意新增 … 无需改代码」）；抽查 `backend/models/llm.py:56` `_MODEL_PROVIDER_MAP` 仍为硬编码表、`:73` 抛错文案仍是 "Add it to …" ⇒ 现状与旧判**一致，提醒处置**（口径建议同旧：「加 provider 段零代码，加模型需登记一行映射」）。
+- **#3（`server.host/port` 死配置）**：抽查 `uvicorn.run` 零命中 ／ `server.host|port` 零命中 ⇒ **与旧判一致（未变）**。
+- **#4（`auth.py` 非恒定时间比较）**：`compare_digest` 零命中 ⇒ **未见按建议修改**。
+- **#2（`config.example` 漂移）**：本轮**未逐条重验**（如需可下轮补）。
+- （四条均在老大自有文件里跟踪；本区只做状态提醒，不重复建条目。）
+
+### ⑤ 结构与精简判定
+- `TODO.md`：09-30 一日两轮压缩 **93.6 KB → 70.9 KB（−24%）**（待派发段 −26%）⇒ **原「第二刀」已消**；「第三刀」仍按原裁等 DSH-3 完成后议。**本轮无新增精简提案。**
+- 四区体量健康（`docs` 800K ／ `archive` 208K ／ `exchange` 300K ／ `TODO.md` 71K）；exchange 各日志无超载段；`docs/dsh/` 11 件全属「永久保留」区 ⇒ **无删除候选**；`archive/` 索引与实际一致。
+
+### ⑥ 本轮边界
+- 只读；未改任何被查文件（本文件除外）。未复核 `backend/` 与文档的**全面**一致性（仅按 HUMAN.md 旧发现抽查 3 条）；反引号路径未做存在性扫描（见 ②边界）。下轮可考虑：反引号路径全量扫描 ／ `config.example` 漂移复核。
+
+@老大（②③④内所有建议**均未动手**，等你裁）。
 
 ---
 
