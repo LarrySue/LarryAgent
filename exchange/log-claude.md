@@ -26,10 +26,6 @@
 
 ## 🗂 已清理段落（按交流区规矩）
 
-- **2026-09-29 清理**：删除 `DSH-3.4-R · 参考件广撒网调研` 的全部段落（派发稿 ／ 调研报告 ／ 补充调研 ／ 融合轮）—— 已闭环并收口 ⇒ **权威落点 = `docs/dsh/dsh-34-ref-research.md` §1–§10（规则留痕）＋ §11（汇总）**，`TODO.md`「DSH-3.4」段有登记。回溯：`git log -p -- exchange/log-claude.md`。
-
-- **2026-09-30 清理**：删除 `DSH-3.4-T` 的**派发稿 ＋ 回报全套**（`📤 DSH-3.4-T · 独立测试件` 8 节 ／ `📥 回报` T1–T6 ／ ⭐ 自曝三项 ／ 跨通道一致性表 ／ 交付物与建议）—— 已闭环并收口 ⇒ **权威落点**：判据与口径订正 = `TODO.md`「DSH-3.4」段（**三条口径订正 ＋ 两条判据增补**均已逐条落入）；机制 = `docs/dsh/dsh-migration.md` §3.6。**清理前已完成三处承接转登**：① 装置缺陷（`run-34t-probe.mjs` `makeHome()` 每臂不回收 home ⇒ 累积 21 份 ≈7.2 GB）→ `TODO.md`「DSH-3.4」段；② `invariants` 零防护 ＋ `sourceCommandId` 可分 → 同上「判据增补」子条；③ `RemoveIPC` 两通道分歧的完整对立面（含 Claude 侧"两次独立确证存在"与"未做的关键一步"）→ `docs/production-env.md` §列 9。回溯：`git log -p -- exchange/log-claude.md`。
-
 - **2026-09-30 清理（第二轮）**：删除 `## ⚠️ 待裁（Tier 0 红线③）：/dev/shm 的 RemoveIPC 归因` 段 —— ✅ **老大 2026-09-30 裁 A「就此结案」**（接受"成因未知"，⛔ 不补做对照实验）⇒ **权威落点 = `docs/production-env.md` 第 9 条**（含双方观测 ／ 机器事实 ／ Claude 侧建议 ／ 结案留痕 ／ 日后事故起点说明），**已闭环**。回溯：`git log -p -- exchange/log-claude.md`。
 
 ---
