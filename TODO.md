@@ -34,7 +34,7 @@
 #### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1）
 
 - [x] ✅ **`3.3-a` 已交回 · 复核已完成（WB 2026-09-21）** —— 机制接入三项**均成立**：装载与注册 ✅ ／ **scope filter ✅（两组真对照）** ／ **fail-closed ✅（6/6 `unavailable`、被保护动作 0 次）**；⚠️ 复核另**订正 1 处证据引文改写**（见本段末「复核订正」）｜ **scope-filtered answerer 插件**（TS）—— ⭐ 答者来源做成可替换接口 ✅（注入点 `approvalAnswerer`；真 DSH 就绪时序留给 3.3-b）｜ 交付 = `harness/packages/plugin-approval-answerer`（产品）＋ `plugin-approval-probe`（装置）＋ `scripts/run-33a-answerer-e2e.mjs`｜ 派发稿 = `exchange/log-trae.md`「DSH-3.3-a」段（⚠️ 活日志会被随时清理 ⇒ **判据与边界的权威落点仍是本文件 ＋ `docs/dsh/dsh-migration.md` §3.6**）
-- [ ] 🟢 **路已拍（老大 2026-09-14）：分阶段往 ② 走** —— 拆三段，证据与判据见 `docs/dsh/dsh-migration.md` §3.6〈S1 审批三段收敛路径〉：
+- 🟢 **路已拍（老大 2026-09-14）：分阶段往 ② 走** —— 拆三段，证据与判据见 `docs/dsh/dsh-migration.md` §3.6〈S1 审批三段收敛路径〉 —— ⚠️ **本行无剩余事项，留作三段框架锚**（a/b 已复核 ／ c 已移出至「待派发」段）：
   - **3.3-a**（本阶段，可随批次 2 跑）**本地策略答者**（`ctx.approval` waterfall 的最终应答者）—— 验**机制接入**：scope filter / 日志可观测 / fail-closed
     - ⚠️ **诚实边界**：「超时」「渠道断裂」两条是**同进程替身路径**（本地答者即同进程调用，无"渠道"可断）⇒ **3.3-a 单独不得声称"审批语义验成立"**
   - **3.3-b**（本阶段，**不依赖 3.8**）答者改为**真出站往返**：薄客户端（`JsonRpcLineTransport` + `onRequest`）↔ 本地 stub 对端 —— 验 ② 的真风险：跨进程等待 / 超时收尾 / 对端消失 / 取消传播
@@ -49,10 +49,10 @@
     - **验收基准（限制，不得跨出）**：结论取自 **`node v24.14.1` ＋ 本机 Windows**；**POSIX 分支未验**；`approval/request` 为**本块临时约定**的 method 名（3.8 定稿后可能改名）；那批结论依赖**符号链接装载**（将来改实体复制须重验）。
     - ⚠️ **装置代价**：每次运行在系统 TEMP 复制一份 sdk profile 真副本（**≈330 MB ／ 4.35 万文件**）；本块累计留下 **≈10.2 GB** 临时 home ⇒ 同类装置收尾须**显式清理**。
   - **3.3-c = 3.8** 对端换成 driver + 前端 ⇒ 人审批闭环 ⏩ **本月 2026-09-30 已单列为「待派发」段独立条目 ⇒ `DSH-3.3-c 人审批闭环`**（老大裁「先放着，看什么阶段更合适」）—— 本段**不再复述**，只留此指针。
-- [x] ✅ **用例覆盖 5 条已由 3.3-a ＋ 3.3-b 全验（WB 2026-09-30 对照判定）**：批准 ／ 拒绝（`main` 臂两分支）｜ 超时（`answertimeout` ＋ `lateabort`，**两路分清**：请求侧 `cancelled` ／ 答者侧自建计时器 `unavailable`）｜ 抛错（`nohandler` ⇒ `-32601` 归一为 `unavailable`）｜ 渠道断裂（`closestdin` ＋ `killpeer`，**两形态分别报**）—— 另 `noanswerer` 为负向对照。⚠️ **口径收窄（⛔ 不得读成"审批全验完"）**：所验的是**装置层机制**（stub 对端 ＋ 打点日志），**产品层真人在前端点击的闭环未验** ⇒ 归 **`DSH-3.3-c`**（见「待派发」段）。
+- [x] ✅ **用例覆盖 5 条已由 3.3-a ＋ 3.3-b 全验（WB 2026-09-30 对照判定）**：批准 ／ 拒绝（`main` 臂两分支）｜ 超时（`answertimeout` ＋ `lateabort`，**两路分清**：请求侧 `cancelled`（官方 `req.signal` 赛跑）／ 答者侧 `unavailable`（⚠️ **该计时器是测试装置自建、官方无此物** ⇒ `dsh-migration.md` §3.6 ②「须自做」；⛔ **不得读成产品能力**））｜ 抛错（`nohandler` ⇒ `-32601` 归一为 `unavailable`）｜ 渠道断裂（`closestdin` ＋ `killpeer`，**两形态分别报**）—— 另 `noanswerer` 为负向对照。⚠️ **口径收窄（⛔ 不得读成"审批全验完"）**：所验的是**装置层机制**（stub 对端 ＋ 打点日志），**产品层真人在前端点击的闭环未验** ⇒ 归 **`DSH-3.3-c`**（见「待派发」段）。
   - ⚠️ **一处未完整覆盖（诚实登记）**：「渠道断裂」的**进程级 kill 形态**实测**拿不到插件层 reject 打点**（`dsh-migration.md` §3.6 自述「两形态分别报、不合并」）⇒ 严格说该用例是**部分覆盖**。
   - ✅ **3.3-a 实测回填（WB 2026-09-21）**：本条原措辞「**answerer 超时**」已订正为「**超时**」—— `dsh-user-approval` 的 `decide()`（`lib/index.js:175-192`）**没有"答者超时"计时器**，唯一"放下"机制是**请求侧 `AbortSignal` 撤回**（`signal` 与应答赛跑，abort 先到 ⇒ 封 **`cancelled`**，**不是 `unavailable`**）。⇒ **3.3-b 的「超时收尾」大概率也走 signal 这条**，别再找一个不存在的「答者超时 API」。
-  - ⏱️ **超时值须先定死**（否则"超时路径"无法构造）：建议 **30 s**，写入判据；可依实测调整
+  - ⏱️ ~~**超时值须先定死**（否则"超时路径"无法构造）：建议 **30 s**，写入判据；可依实测调整~~ ⇒ ⛔ **本前提已被推翻（留痕，勿据以施工）**：3.3-a 实测证明**根本不存在"答者超时计时器"**（见上一条 `:54`），3.3-b 的「超时」两路（`answertimeout` / `lateabort`）**均由请求侧 `AbortSignal` 与应答赛跑决定**，**不是**由预设秒数决定 ⇒ **"先定死超时值"既无载体也无必要**；实测数值以两臂打点为准（`docs/dsh/dsh-migration.md` §3.6）。
 - [x] ✅ **观测点已在 3.3-a ／ 3.3-b 落地（WB 2026-09-30 对照判定）**：观测点 = **工具 handler 入口打点**（有行 = 真的执行了），UI 与 DSH 日志只作旁证 —— 3.3-b 复核记录有「**audit 序列完全一致**」＋ `-32601` 原始帧为证（`docs/dsh/dsh-migration.md` §3.6）。⚠️ 产品层真人操作的观测仍归 `DSH-3.3-c`。
 - 📚 **参考件（登记表 3.3 行，⚠️ 登记项、非待办）**：`ref/community/PerryLink__dsh-reach` —— **deferred answerer**（`approval/request` + `user-questions/request` 两个 waterfall，答案稍后从 IM 回来才兑现）+ `cardTimeoutSec`（超时）+ `bridge.dispose()`（结清待决）+ `inject: []` 降级矩阵；官方机制侧 `dsh-user-approval` / `dsh-permission-presets`。**权威落点 = `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉3.3 行**（本段只存指针）。
 
