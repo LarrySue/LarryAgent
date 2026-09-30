@@ -230,6 +230,17 @@ async function runSession({ dir, label, fills, prompts, disableCompact, overlays
   }
   report.compactionNotifications = compactionNotifs
   report.turnEndCount = turnEnds.length
+  report.home = home
+  // ⚠️ 临时 home 必须清：一次 `cp -r` 源 profile = **≈157 MB ／ ≈1.9 万文件**（实测），
+  //    跑几十臂就会堆出 GB 级垃圾（老大 2026-09-30 明确指出）。证据已全部落 `OUT`，
+  //    home 本身只是可再生的拷贝 ⇒ 默认删；要事后翻查就 `S34_KEEP_HOME=1`。
+  const keepHome = (process.env.S34_KEEP_HOME ?? '0') === '1'
+  if (!keepHome) {
+    try { rmSync(home, { recursive: true, force: true }); report.homeRemoved = true } catch (e) { report.homeRemoved = false; report.homeRemoveError = String(e?.message ?? e) }
+  } else {
+    report.homeRemoved = false
+    report.homeKeptBecause = 'S34_KEEP_HOME=1'
+  }
   saveJson(dir, `${label}.report.json`, report)
   const probeRows = readJsonl(marker)
   const driverRows = readJsonl(driverMarker)
