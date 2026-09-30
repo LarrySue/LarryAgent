@@ -482,7 +482,7 @@ Error: [test-isolation] FAIL: DSH_HOME 解析为 D:\Code\LarryAgent\.dsh-home，
 |---|---|---|---|
 | 1 | 会话级临时配置（真配置为基底只换持久化路径） | `isolated-setup.ts`：mkdtemp 临时 `DSH_HOME`（sessions/storages 全落临时）；**平移说明**：A-framework 下配置源是 profile 而非单一 yaml，本阶段隔离对象 = `DSH_HOME`（数据落点），配置基底平移推迟到 DSH-4 有真实 config 时 | ✅ 等价 |
 | 2 | 环境变量时序（conftest 先于收集） | **setupFiles 先于测试文件静态 import**——已实测（时序探针：setupFiles 设的 env 在 import 时可见） | ✅ 实测确认 |
-| 3 | key 一律占位符 | 基建不注入任何 key（DSH key 走环境变量）；**key 残留自检在主进程 teardown 内、rmSync 之前**（R1 修复：原挂在 worker exit 钩子从未触发；先扫后删顺序写死，命中高警） | ✅ R1 |
+| 3 | key 一律占位符 | 基建不注入任何 key（DSH key 走环境变量，测试Key不受限制）；**key 残留自检在主进程 teardown 内、rmSync 之前**（R1 修复：原挂在 worker exit 钩子从未触发；先扫后删顺序写死，命中高警） | ✅ R1 |
 | 4 | 密钥判定模式匹配（`endswith("_api_key")` 禁子串） | 平移说明：本阶段基建无密钥字段替换需求（不生成配置）；**该原则在 DSH-4 生成临时 config 时生效**——已记录为后续实现的硬约束（勿用 `"token" in k` 子串） | 📌 推迟生效（本阶段无配置生成） |
 | 5 | 断言"行为"非"动作" | `assertIsolated()`：**正向白名单**——resolve(DSH_HOME) 必须位于临时根（tmpdir）之下（R2 修复：原"≠真实库"精确比对有 unset 盲区——resolve('')=cwd 被放行，而 unset 时 dsh 向上查找写仓库根 .dsh-home；白名单一次覆盖：指向真实库 / 位于真实库内 / unset 落 cwd） | ✅ R2 |
 | 6 | `--real-api` 开关 | 平移说明：本阶段无真实 API 用例（无 LLM 测试）；开关语义在 DSH-6 接 e2e 时实现（默认跳过 + 显式开注入 key + 残留高警） | 📌 推迟（无真实 API 用例故无开关需求） |

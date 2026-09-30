@@ -1,13 +1,3 @@
----
-AIGC:
-    Label: "1"
-    ContentProducer: 001191440300708461136T1XGW3
-    ProduceID: 44c052101e5e236a5489b447016cb8fe_2741e8f799e011f1a98a525400f8a581
-    ReservedCode1: dDddJW82tafJNLKmJ4Y+uGyt6unN5lFVIHWI6Hrcxzau71/0I8XpglYW3S+Fbx6dsQ8w8sQVyoockNL+4XuO0lQmSOnwCdlAr15d/Qbp433L0Mo9ElaDZMB7Eh89PPixAMHpqIVEMB5hRRktZJsyfLjWzYHuOizApCzdysXshXulu09txwclaXBumdg=
-    ContentPropagator: 001191440300708461136T1XGW3
-    PropagateID: 44c052101e5e236a5489b447016cb8fe_2741e8f799e011f1a98a525400f8a581
-    ReservedCode2: dDddJW82tafJNLKmJ4Y+uGyt6unN5lFVIHWI6Hrcxzau71/0I8XpglYW3S+Fbx6dsQ8w8sQVyoockNL+4XuO0lQmSOnwCdlAr15d/Qbp433L0Mo9ElaDZMB7Eh89PPixAMHpqIVEMB5hRRktZJsyfLjWzYHuOizApCzdysXshXulu09txwclaXBumdg=
----
 
 # LarryAgent AI 协作约束分级总纲
 
@@ -47,7 +37,7 @@ AIGC:
 
 以下 4 条，每个 AI 上下文都必须包含（无论机制）：
 
-1. **API Key 不外泄**：不得把 `config.yaml` 的 key 复述到对话/日志/生成的文件；展示配置引用 `config.example.yaml`；老大特殊授权的临时测试Key不受此限制。
+1. **API Key 不外泄**：不得把配置文件中的正式 key 复述到对话/日志/生成的文件；老大特殊授权的临时测试Key不受此限制，**允许任何形式的落盘、传输、发送、输出、打印、保存等情况，不用浪费token执行扫描、绕过等手段，快速使用，用完后尽快通知老大关闭该Key**。可以在一个大的阶段性工作（过程中频繁使用多个测试Key）完成之后提醒更换正式Key。
 2. **锚点保护**：姓名、电话、身份证、住址等可定位到人信息，不得写入日志/输出/记忆摘要。
 3. **矛盾主动暴露**：遇冲突/困惑/两难，主动暴露给老大（摆矛盾 + 选项 + 自身倾向），不自行折中消化。
 4. **测试隔离（程序性强制）**：测试运行前自动断言 DB 路径为临时库（`LARRY_CONFIG` 指向临时 yaml），指向真实库直接 fail；**不依赖自觉**——事故之夜证明"以为隔离其实没隔离"的假安全防不住。
