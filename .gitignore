@@ -34,6 +34,13 @@ ref/
 # DSH-3.1/3.7.4 s0-e2e 证据目录（run-s0-e2e.mjs 的默认 S0_EVIDENCE_DIR = <repo>/.s0-evidence）
 .s0-evidence/
 
+# DSH-3.4 A 落地专项验收证据（verify-a-landing-profile.mjs 的默认输出目录；可随时重建）
+.s34a-evidence/
+
+# 各 AI 回传证据目录（历史遗留命名；⛔ 曾放过含明文 key 的脚本 ⇒ 补 ignore 防误入库）
+_trae-evidence/
+_claude-evidence/
+
 # IDE
 .vscode/
 .idea/
