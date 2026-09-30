@@ -49,7 +49,7 @@
 
 ## ⏳ 未结项（待老大裁）
 
-> **2026-09-30 全量巡检已逐条刷新**（上版 = 09-22）；新增 3 条标 🆕。
+> **2026-09-30 全量巡检已逐条刷新**（上版 = 09-22）；新增 3 条标 🆕；第 10 条为当晚事件登记（非巡检项，详见文末〈事件记录〉段）。
 > ⭐ **已消**（本轮核对确认）：TODO 精简「**第二刀**」（09-30 已由 A1 完成）；「3.4-T 状态行滞后」（已随 A1 压缩修正）。
 > 详细证据 ／ 建议 ／ 合规对照见下方〈全量职责巡检报告（2026-09-30）〉。
 
@@ -67,6 +67,8 @@
    - **低位残留（3 组，可随批回扫）**：① `archive/roadmap-history.md:664`（archive 锁定区，按规矩不改）；② `docs/production-env.md:483`（「值不得写进任何受版本控制的文件」比新口径严，建议加指向）；③ `harness/scripts` 5 处自设条款（`run-33b:13` ／ `run-34-compaction:9,64` ／ `run-34t-probe:13,80` ／ `run-381-driver:14` ／ `s0-run-with-file-key:8`）。
    - **替换稿（并入源头用，与四份副本逐字对齐）**：
      > 1. **API Key 不外泄**：不得把 `config.yaml` 的正式 key 复述到对话/日志/生成的文件；展示配置引用 `config.example.yaml`；老大特殊授权的临时测试Key不受此限制，**允许任何形式的落盘、传输、发送、输出、打印、保存等情况，不用浪费token执行扫描、绕过等手段，快速使用，用完后尽快通知老大关闭该Key**。
+
+10. 🆕 **官方桌面端三事实入档（09-30 晚事件 · 处置已闭环 · 非巡检项）**：建议入 `docs/local-env.md`：① **官方桌面客户端（0.2.x）默认用 `~/.dsh`**（未设 `DSH_HOME` 时；与本机 manual/历史区同址）；② **其约束通道 = `$DSH_HOME/AGENTS.md` ＋ 项目 AGENTS.md 链**（本仓两处皆无 ⇒ 零约束注入）；③ **启动即全量迁移**（V4 重写，无询问）。**附分家纪律**：任何机器跑官方客户端前先钉 `DSH_HOME`。详见文末〈事件记录 · 官方 DSH 桌面客户端〉。
 
 ---
 
@@ -463,3 +465,48 @@ $ timeout 20 git --version                      → git version 2.52.0.windows.1
 - semver 脚本曾落 `D:\Code\_qoder-evidence\34r\`；**2026-09-30 随临时件清理删除**（如需复跑按 §②‑2 主表重建，约 20 行）
 
 @WorkBuddy（汇总：请以 §③ 为本路**当下状态**；§②‑5 优先看）@老大
+
+---
+
+## 🧹 事件记录 · 官方 DSH 桌面客户端（评估 ＋ 处置 · 2026-09-30）
+
+> **命令来源**：老大 —— ①「先帮我看看，不要乱动，评估一下情况」（只读评估）；②「我决定先卸载它，后面我在别的机器上把它下载下来研究……我已经退出登录并且关掉客户端了，你按照你的计划来做」（授权处置）。
+> **通道四元组**：本机（Windows）／ bash(MSYS) ／ 用户级 ／ 本轮全本地操作（无联网）。
+
+### ① 事件与暴露
+
+- 老大今日装了**官方桌面客户端**（`D:\App\DSH\`，`DeepSeek Harness 0.2.0-rc.2` nightly，Electron）—— 一打开即**看到 LarryAgent 的历史测试会话**（工作区分组「LarryAgent」4 会话 ／「dsh-fresh」空 ／「未分组」6 会话）⇒ 疑为互相污染。
+- **评估结论：真污染，方向 = 客户端单向扫共享 home。** 机制：客户端默认 home 解析 = `$DSH_HOME` > `~/.dsh`；本机 `~/.dsh` 恰为我方 **manual ／历史测试区**（09-09 起）⇒ 首次启动即被**全量接管**：16:50–17:15 写入 **28 个文件**（文件级实测 = 11×V4 会话文件〔10 迁移 ＋ 1 新建空会话〕＋ 11×projcache ＋ `.credentials.yaml` ＋ `profiles/desktop/` 4 件 ＋ `workspace.json` 改写）。
+- **边界**：仓库（含 `.dsh-home`）／git 工作树／`profiles/{sdk,web,node_modules}`（09-17 遗留）**均未动** ⇒ 污染仅限 `~/.dsh` ＋ Windows 侧客户端目录（AppData／`D:\App`／快捷方式／注册表）。
+- 迁移形态 = **复制式**（新写 `session.v4.jsonl.zstd`，原 `session.jsonl.zstd` 未动）⇒ 删新文件即可恢复原状（本次按此执行）。
+
+### ② 风险评估（对「把官方客户端当项目 AI 之一加入」假设；老大两点均成立）
+
+- **① 交流歧义**：裸名 "DSH" 指代已 6+（上游框架／`ref/dsh-bare`／`harness/`／`.dsh-home`／`DSH-3.x`／桌面端）；且真正加入的实体是"桌面端里的一个 agent 任务"，非 DSH 本身 —— 连提问措辞都已含歧义。
+- **② 混淆致危险操作**（已可点名）：升级/清理错 home（它有"未询问即全量迁移"的**行为实证**）／版本线混用（它 0.2.0-rc.2 vs 我方锚 0.1.5-rc.2）／双环境重叠（违反"同一环境只用一个 DSH home"自定规则）。
+- **③ 约束注入缺口（补充中最硬）**：其原生指令通道 = `$DSH_HOME/AGENTS.md` ＋ 项目 AGENTS.md 链；实测**仓库无 AGENTS.md、`~/.dsh` 无 AGENTS.md** ⇒ 它进项目 = **零 Tier0、零 Tier1**。（具体后果：`backend/config.yaml` 真 key 在仓库里可被无红线 agent 读入会话 —— 而会话文件存客户端 home、UI 可见 = 正是红线①要防的场景。）
+- **④ 留痕/治理缺口**：无 exchange 日志、产出不进证据链 ⇒ 与复验铁律冲突。**⑤ 权限面/审批模型未审**。**⑥ 成本/出网不可观测**。
+- **路径**（若将来要用）：S0 分家（钉 `DSH_HOME`）→ S1 研究对象模式（独立工作区、不给仓库）→ S2 前置（AGENTS.md 约束 ＋ 登记 ＋ 命名纪律"桌面端"不裸称 DSH ＋ 版本纪律 ＋ 权限收紧）。
+
+### ③ 处置执行（老大裁：卸载；研究改在别的机器）
+
+| 动作 | 通道 ／ 方式 | 结果 ／ 证据 |
+|---|---|---|
+| 静默卸载 | 取注册表 `QuietUninstallString` → `Uninstall DeepSeek Harness.exe /currentuser /S` | ✅ 安装目录 ~8s 内清除；桌面＋开始菜单快捷方式已清；HKCU Uninstall 键 **0 匹配** |
+| `~/.dsh` 清理 | 逐件删：11×V4 ／ `.credentials.yaml` ／ `profiles/desktop/` ／ 11×今日 projcache ／ 新空会话目录（`session-02fcb592…`） | ✅ 复扫：V4 **11→0**；今日修改文件**仅剩 `workspace.json`**（见下） |
+| `workspace.json` 修复 | 移除**悬空引用**（客户端所建空会话） | ✅ node 复验仍为合法 JSON；其余 4 条引用对应旧会话文件在盘 ✓ |
+| AppData 清理 | 删 `Roaming/@deepseek-ai/`（Electron userData）＋ `Local/@deepseek-aidsh-desktop-updater/`（含 **289 MB** installer 缓存） | ✅ 复扫 absent |
+| **未动**（附理由） | HKCU 开始菜单磁贴缓存 2 处（`Start/TileProperties/W~com.deepseek.dsh` ＋ CloudStore 同项）—— Windows Shell 自维护数据，手删 CloudStore 有开始菜单布局受损风险 | 留痕备查 |
+| **保留**（非今日物） | `.anonymous-user-id`（09-09）／10×旧会话（`session.jsonl.zstd`）／`profiles/{sdk,web,node_modules}`（09-17）／`session_projcache.json`（09-10）／5×旧 projcache（`1366361c` ＋ 4×trae-probe） | ✅ 均未动（清理以最小侵入为界） |
+
+**终态**：`~/.dsh` 回到"09-17 形态"（历史遗留 ＋ manual 测试区，零今日客户端产物）；Windows 侧除磁贴缓存外全清；**本机不再有官方客户端**。
+
+### ④ 新环境事实（已登记为未结项第 10 条，待老大裁入 `docs/local-env.md`）
+
+1. **官方桌面端默认用 `~/.dsh`**（未设 `DSH_HOME` 时）→ **在任何机器上跑它之前，先钉 `DSH_HOME` 分家**，否则重演本次全量接管。
+2. **其约束通道 = `$DSH_HOME/AGENTS.md` ＋ 项目 AGENTS.md 链** → 想约束它必须先造 AGENTS.md（本仓当前没有）。
+3. **打开即全量迁移**（V4 重写 ＋ projcache 重建 ＋ workspace.json 改写），无询问、无确认。
+
+> 📌 **给"别的机器上研究"的三条提醒**：① 独立 home（`DSH_HOME` 指向专用目录）；② 工作区不要用含真 key 的仓库（含本仓）；③ 若坚持要给它项目权限 —— 先补 AGENTS.md 约束并登记进治理名单。
+
+@老大（处置全部执行完毕；④ 三事实入档待你裁）
