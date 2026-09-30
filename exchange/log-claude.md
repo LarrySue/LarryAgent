@@ -7,11 +7,62 @@
 
 ## 📮 在飞任务（状态区）
 
-**当前无在飞任务。**
-
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
+| **DSH-3.4-T 装置缺陷修复** | Claude | **本机（Windows）** | 🚀 **已派发（2026-09-30）** —— 修 `harness/scripts/run-34t-probe.mjs` 的**临时 home 泄漏**（详见下方派发稿） | 2026-09-30 |
 | **DSH-3.4-T** | Claude | **本机（Windows）** | ✅ **已交回并复验（WB 2026-09-29）** —— 靶子 = 「**3.4 的判据有没有判别力**」：**四条维度均有判别力**（T2 三档 4804／9608／19216 单调；T3 半判据 vs 完整判据两臂；T4 (a)/(b) 同刻不同读数；T5 A 落地反向对照）；**另出 3 处口径订正**（保留量是「下界＋节点吸附」／事件侧字段是 `event.data.source`／"压前"锚 `compaction/start`）＋ **2 条判据增补**（手动／自动可分 `sourceCommandId` ／ 断言"拒绝伪造 checkpoint"前先确认 `invariants` 是否挂载，本 profile 实测**未挂载 = 零防护**）。⛔ 不重判产品面 | 2026-09-29 |
+
+---
+
+## 🔧 DSH-3.4-T 装置缺陷修复（2026-09-30 派发）
+
+**背景**：`DSH-3.4-T` **已于 2026-09-29 交回并复验成立**（见上表）⇒ 该交付件**复核已放行**，本块是它遗留的**装置卫生缺陷**，修完即彻底结项。⚠️ **本块不改任何判据、不重判任何结论**（T1–T6 的判定保持原样）。
+
+### 要修的一件事（只有一件）
+
+**`harness/scripts/run-34t-probe.mjs` 的临时 home 不回收 —— 每臂泄漏一份完整 profile 副本。**
+
+- **现象**：每跑一臂，`makeHome()`（`:132`）`mkdtempSync(join(tmpdir(),'larry-34t-'))` 造一份临时 home，内含 `cpSync(SRC_SDK, …)` 的**完整 profile 副本（≈341 MB ／ 4.35 万文件）**，**跑完不删**。实测累积 **21 份 ≈7.2 GB**（老大 2026-09-30 已手工清掉 `D:\Temp\Sys\larry-34t-*`）。
+- **根因**：回收语句写在了**错的路径**上 —— `:518` 的 `rmSync(join(sub, 'home'), { recursive: true, force: true })`；其中 `sub = join(dir, label)`（`:499`）是**证据子目录**，**其下根本没有 `home` 这个子目录** ⇒ 该调用**恒 no-op**（`force: true` 连报错都不会有）。真正的 home 是 `makeHome()` 内部 `mkdtempSync` 出来的那个值 —— 它经 `:195` 解构为 `runSession()` 的**局部变量 `home`**，**函数返回时即丢失**，调用方拿不到 ⇒ 无从删。
+
+### 修法（照抄正解，勿自创）
+
+**正解已在同工程的姊妹装置里** ⇒ `harness/scripts/run-34-compaction.mjs:232-241`：
+
+```js
+const keepHome = (process.env.S34_KEEP_HOME ?? '0') === '1'
+if (!keepHome) {
+  try { rmSync(home, { recursive: true, force: true }); report.homeRemoved = true }
+  catch (e) { report.homeRemoved = false; report.homeRemoveError = String(e?.message ?? e) }
+} else {
+  report.homeRemoved = false
+  report.homeKeptBecause = 'S34_KEEP_HOME=1'
+}
+```
+
+**逐条要求**：
+
+1. **让 home 可被回收**：把 `home` 从 `runSession()` 传出来（返回 `{ report, …, home }`，与主块同形），**在真正持有它的作用域里删** —— ⛔ **不要再写 `join(sub,'home')` 这种猜路径**。
+2. **必需三件套**（照抄主块）：① `rmSync` **包 `try/catch`**（长路径在 Windows 上偶发失败，⛔ 不得让回收失败把整轮判红）；② 落 **`homeRemoved` 布尔**入证据 JSON；③ 失败时落 **`homeRemoveError`**。
+3. **保留开关**：`S34_KEEP_HOME=1` ⇒ 不删、落 `homeKeptBecause`（照抄主块语义，便于事后翻查）。
+4. **长路径兜底**：主块注释里提到的"含长路径失败兜底" —— 若主块有额外处理（如 `\\?\` 前缀或重试），**一并照抄**；若主块其实就是 `try/catch`，则照此即可。
+   - ⚠️ 若你认为还须加主块没有的兜底，**先说明理由再改**（⛔ 不要默默比主块多做一层 —— 两装置行为须可对照）。
+5. **收尾自证**：修完后**跑一轮**（哪怕是最小的单臂），**贴出**：① 本轮前后 `tmpdir()` 下 `larry-34t-*` 目录数（**应回到 0**）；② 证据 JSON 里 `homeRemoved === true`；③ 反向对照 —— 加 `S34_KEEP_HOME=1` 跑一次 ⇒ 目录**应存在**、`homeKeptBecause === 'S34_KEEP_HOME=1'`（**证明开关双向可用、非恒真**）。
+
+### ⛔ 禁区
+
+- **不改任何判据、不改 T1–T6 的任何期望值** —— 本块纯装置卫生。
+- **不重跑、不重判 3.4-T 的结论**（原证据快照为冻结物证）。
+- **不动 `run-34-compaction.mjs`**（它是正解来源，照抄即可）。
+- 若发现**还有别处也在泄漏**（如同装置其他临时目录），**报告出来**但⛔ **不擅自扩大范围** —— 由 WB 决定是否并入本块。
+
+### 报告要求
+
+- 按本区**通用纪律 6 条**（通道须注明 ／ "没有"须附检索式 ／ 自曝优于好看 ／ 未观测不得写成已证 ／ 应红应绿逐件读源码 ／ 收尾必核 `git status`）。
+- **交付 = 改动 + 一轮正反两向的自证读数**（上面第 5 条那三样）。
+- 完成后回写本区（`## 📮 在飞任务` 表内更新状态 ＋ 正文附回报），WB 复验后本块即结项。
+
+---
 
 - **判据、边界与遗留的权威落点 = `TODO.md`「DSH-3.4」段（＋「DSH-3.7.4-T」段）**；本区只放**怎么做**。⚠️ 需回溯时用 `git log -p -- exchange/log-claude.md`。
 - ⚠️ **通用纪律**：

@@ -54,10 +54,7 @@
   - ✅ **A 落地件状态（WB 2026-09-29 核 · 2026-09-30 落地并验）**：**受控源已入库** ✅ = `harness/scripts/compaction/disable-compact-entry.mount.patch.yml`（`- id: command-compact` ＋ `disabled: true`）；**生产落盘位置 `.dsh-home/profiles/sdk/cordis.patch.yml` 已追加该行** ✅（2026-09-30，老大授权；⚠️ `.dsh-home/` 未受 git 跟踪、落盘不进库，改前有备份 `cordis.patch.yml.bak-wb-20260930-100255`）。⭐ **落地已独立验收（WB 2026-09-30，专项装置 `harness/scripts/verify-a-landing-profile.mjs`）**：⛔ 既有 `j2` 两臂都是**装置自己 append** 禁用行 ⇒ **不覆盖**「落到源 profile 本体后是否生效」；本装置 `disableCompact: false`（⛔ 不 append，只依赖源 profile 的落地行）＋ **反向对照臂**（从副本摘掉该行）：主臂命令表 `names=["feedback","goal","permission","plan"]`、`hasCompact=false`；对照臂 `names=["compact",…]`、`hasCompact=true` ⇒ **唯一变量 = 那 2 行，读写能区分、非恒假** ⇒ **PASS**（证据 `.s34a-evidence/`）。⚠️ 会话本身因**本机无 key** 在 turn 层报 `MISSING_CREDENTIAL`，但命令表读数在 `agent/status:idle` 已产出、**与模型调用无关** ⇒ 不影响本判据。
 - [x] ✅ **已裁（老大 2026-09-30）：不自做 compaction Provider，用官方自带摘要** —— 两个诱因均**接受现状、不换**：① 官方摘要提示词**明文要求英文**（`summarizer.ts:61`「Write concise English engineering prose」）⇒ **中文会话的摘要会被写成英文**（我方是中文优先产品）——**接受**；② **保真度**（生成式摘要 ≈37% vs 逐字 ≈98%，见 `docs/product-positioning.md` 2.9.2）—— **转长期观察**。⇒ **原「先跑官方默认路径，不预做」就此转为定论**；**保真度 ／ 相关运行效果长期持续观察**（观察项已登记 ⇒ `docs/dsh/dsh-migration.md` §3.6 ⑦；⛔ **观察项本身不占 TODO 条目**，老大已计入自有文件）
 - [x] ✅ **① 3.4 已完成并收口（老大 2026-09-30）** —— 本条**自本条起不再有未完成项**。**落地范围**：官方默认 Provider 路径接入 ＋ 验收（J1–J8 ／ T1–T6，WB 复验成立）＋ 采数；**产品裁定**：不做手动 `/compact` 入口（A）／ 不自做 Provider（用官方英文摘要）／ 观察项不入本表。✅ **A 落地件已落到 profile 并独立验收通过**（见上方子条）；**另有 3 项未决**承自 `docs/dsh/dsh-34-ref-research.md` §11.9，⛔ **其中 2 项不属于 3.4、各有归宿**：`headroom` 类件引入新模型工具 = 产品决策；上游追踪机制 = **3.9 阶段收口**。**基线结论状态**：一切结论锚在 `dsh-v0.1.5-rc.2`，**留作参考**（老大 2026-09-30）—— ⛔ **换基线时须重验，不得跨版本外推**。
-- [ ] ⚠️ **装置缺陷待裁（独立测试件 `DSH-3.4-T` · 2026-09-30 由交流区清理承接登记）**：`harness/scripts/run-34t-probe.mjs` 的 `makeHome()`（`:132`）**每臂 `mkdtempSync` 一份完整 profile 副本（≈341 MB ／ 4.35 万文件）但跑完不回收** —— `:518` 的 `rmSync(join(sub,'home'))` **指向不存在的路径 ⇒ 恒 no-op**；实测累积 **21 份 ≈7.2 GB**（2026-09-30 已手工清掉 `D:\Temp\Sys\larry-34t-*`）。
-  - **对照**：主块装置 `harness/scripts/run-34-compaction.mjs`（`:239`）**有 `finally` 回收**并记 `report.homeRemoved` ⇒ **正解 = 照抄该 `finally`（含长路径失败兜底）**。
-  - **为何未改**：本装置是**已交付待复核件**（基线 `d808b60`），未擅自改动 ⇒ **复核放行后可改**。
-  - ⚠️ **同类装置收尾须显式清理**（`TODO.md` 3.3 段已立同源纪律）。**权重**：装置卫生问题，⛔ 不影响 3.4 任何判据结论。
+- 🚀 **装置缺陷已派回修（2026-09-30）** —— `harness/scripts/run-34t-probe.mjs` 临时 home 泄漏（≈341 MB ／ 4.35 万文件/臂；根因 = `:518` 回收语句写在 `join(sub,'home')` 这个**不存在的猜路径**上 ⇒ 恒 no-op）。✅ **已派 Claude**（本段不再复述判据与修法）⇒ **权威落点 = `exchange/log-claude.md`「DSH-3.4-T 装置缺陷修复」段 ＋ 本文件「待派发」段同名条目**。**权重**：装置卫生，⛔ 不影响 3.4 任何判据结论；3.4 段因此**无剩余未完成项**。
 
 #### DSH-3.5 · S3 sandbox 三档接入（→ 2.7.1 Linux 侧）
 
@@ -238,6 +235,10 @@
   - ⚠️ **前置须先核**：① 3.3-a/b 的机制结论**取自 `node v24.14.1` ＋ 本机 Windows**、`approval/request` 为**临时约定 method 名**（3.8 定稿后可能改名）⇒ ⛔ 不得直接外推到新协议形态；② 3.3-b 的**薄客户端 = 3.8 driver 骨架**（勿另起一套）；③ 场地**必须含 PC 前端**（CVM-only 不可验收，见上）。
   - **产物复用**：3.3-b 薄客户端 ＋ `DSH-3.8.1` driver ＋ `DSH-3.8.2` 修复后的装置。
   - **执行人 / 场地**：**待定**（属 3.8 实现链路，届时按 3.8 分工派 —— 现分工为 WB 出稿 ／ **Trae 承接实现**）。
+
+- 🚀 **`DSH-3.4-T 装置缺陷修复`（已派 · Claude ／ 本机 Windows · 2026-09-30）** —— 来源 = 3.4-T 交付件的**遗留装置卫生缺陷**（该件已复验通过 ⇒ **复核已放行**，故可改）。**要修的一件事**：`harness/scripts/run-34t-probe.mjs` 的**临时 home 不回收** —— 每臂 `mkdtempSync` ＋ `cpSync` 一份完整 profile 副本（**≈341 MB ／ 4.35 万文件**）却**跑完不删**，实测累积 **21 份 ≈7.2 GB**（老大已手工清）；根因 = `:518` 的回收写在 **`join(sub,'home')` 这个不存在的猜路径**上 ⇒ 恒 no-op（真 home 是 `runSession()` 的局部变量、返回即丢）。**正解 = 照抄姊妹件** `run-34-compaction.mjs:232-241`（`try/catch` ＋ `report.homeRemoved` ＋ `S34_KEEP_HOME=1` 开关）。
+  - ⛔ **不改任何判据、不重判 T1–T6**（纯装置卫生）；**验收** = 一轮正反两向自证（跑完 `larry-34t-*` 目录数回 0 ＋ `homeRemoved===true` ／ 加 `S34_KEEP_HOME=1` ⇒ 目录在 ＋ `homeKeptBecause` 有值）。
+  - **派发稿 = `exchange/log-claude.md`「DSH-3.4-T 装置缺陷修复」段**（⚠️ 活日志会被清理 ⇒ 判据与修法以该段为权威，本条目只作待派发登记）；**执行人**：**Claude**（其自己的交付件）；**权重**：⛔ 不影响 3.4 任何结论 ⇒ **可与其它块并行**。
 
 ---
 
