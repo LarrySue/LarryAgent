@@ -648,6 +648,35 @@ harness/package.json                         # 加 test:isolated 脚本
 > - 🔻 **订正 3（小）**：回报引的 J1 第二写者 `pid=32724`，落盘证据为 `45524`（疑两次 `open-try` 覆盖）⇒ 不影响结论。
 > - ⚠️ **未闭合（转出项，不阻断本项收口）**：① **跨交互登录会话的互斥性未实测**（本机只有 `console` 一个交互会话；`Local\` 前缀按 Win32 语义是会话本地 ⇒ **机制推断、非实测**，⛔ 不得声称"多用户 Windows 下也安全"）；② **B 锁的 TTL ／ 抢占 ／ 并发正确性不测**（自述明说 deliberately no expiry ⇒ 本项只证"死亡即释放"）；③ **POSIX `flock(2)` 侧未做**（不得用本项结论覆盖）；④ **证据原文层缺口待执行方说明**（订正 2）。
 
+#### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1）✅ **全段已归档（2026-09-30）**
+
+> **来源**：2026-09-30「TODO 梳理」时由 `TODO.md` 整段迁出（**迁出时正文零改动**，仅在段头加本节说明）。
+> **段内 `:N` 形式引用 = 归档前 `TODO.md` 行号**；其余形如 `lib/index.js:175-192` ／ `dsh-migration.md §3.6` 的引用不受影响。
+> ⚠️ **本段原第三块（旧称 `3.3-c`）已于同日正名为 `DSH-3.8 · 端到端审批闭环`（终验收）并留在 `TODO.md`「待派发」段** —— 它**依赖 A 段协议（3.8）而非 3.3**，见本段末。
+
+- [x] ✅ **`3.3-a` 已交回 · 复核已完成（WB 2026-09-21）** —— 机制接入三项**均成立**：装载与注册 ✅ ／ **scope filter ✅（两组真对照）** ／ **fail-closed ✅（6/6 `unavailable`、被保护动作 0 次）**；⚠️ 复核另**订正 1 处证据引文改写**（见本段末「复核订正」）｜ **scope-filtered answerer 插件**（TS）—— ⭐ 答者来源做成可替换接口 ✅（注入点 `approvalAnswerer`；真 DSH 就绪时序留给 3.3-b）｜ 交付 = `harness/packages/plugin-approval-answerer`（产品）＋ `plugin-approval-probe`（装置）＋ `scripts/run-33a-answerer-e2e.mjs`｜ 派发稿 = `exchange/log-trae.md`「DSH-3.3-a」段（⚠️ 活日志会被随时清理 ⇒ **判据与边界的权威落点仍是 `docs/dsh/dsh-migration.md` §3.6**）
+- 🟢 **路已拍（老大 2026-09-14）：分阶段往 ② 走** —— 拆三段，证据与判据见 `docs/dsh/dsh-migration.md` §3.6〈S1 审批三段收敛路径〉 —— ⚠️ **本行无剩余事项，留作三段框架锚**（a/b 已复核 ／ c 已正名移出至「待派发」段）：
+  - **3.3-a**（本阶段，可随批次 2 跑）**本地策略答者**（`ctx.approval` waterfall 的最终应答者）—— 验**机制接入**：scope filter / 日志可观测 / fail-closed
+    - ⚠️ **诚实边界**：「超时」「渠道断裂」两条是**同进程替身路径**（本地答者即同进程调用，无"渠道"可断）⇒ **3.3-a 单独不得声称"审批语义验成立"**
+  - **3.3-b**（本阶段，**不依赖 3.8**）答者改为**真出站往返**：薄客户端（`JsonRpcLineTransport` + `onRequest`）↔ 本地 stub 对端 —— 验 ② 的真风险：跨进程等待 / 超时收尾 / 对端消失 / 取消传播
+    - [x] ✅ **`3.3-b` 已交回 · 复核已完成（WB 2026-09-21）· 判定成立**（7 臂 66/66） ｜ **实测回填见 `docs/dsh/dsh-migration.md` §3.6** ｜ ⚠️ 复核**订正 2 处引文**（`-32601` 帧的 jsonrpcId ／ `selfVisibleAtApply=false` 无实物支撑；**均不影响结论**）＋ 补 3 条机制增量与 1 条装置代价（详见本段末「3.3-b 复核订正」）
+    - ⚠️ **主要成本**：不能用 `HarnessClient`（其 `start()` 只挂 `onNotification`）+ 其 `exports` 不含 `resolveDshLaunch` ⇒ **起子进程的启动参数要自己构造**
+    - ⭐ **产物不是一次性的**：薄客户端 = **3.8 driver 的骨架**
+  - ✅ **3.3-b 复核订正（WB 2026-09-21）**：
+    - **判定**：成立。7 臂 66/66（`main` 12 ／ `lateabort` 9 ／ `answertimeout` 9 ／ `noanswerer` 7 ／ `nohandler` 8 ／ `closestdin` 11 ／ `killpeer` 10）。**WB 现场独立复跑 `main` 臂 12/12 复现**：audit 序列完全一致、`relay`/`probe`/`peer` 三份日志归一化后逐条一致。
+    - **订正 1**：`-32601`「原始帧」引文的 `jsonrpcId` 与物证不符（回报 `req_166e580f…` ／ 物证六处均为 `req_88a77059…`；全仓 468 件搜前者**仅回报自身 1 次**）。⇒ **按回报给的 id 找不到那帧**；帧的其余部分逐字一致。
+    - **订正 2**：`selfVisibleAtApply=false` **无任何落盘支撑**（`_attempt1` 全 18 件无该字段；全仓该字段样本**恒为 `true`**）；该目录里唯一的 `false` 是 **`injectedAnswerer:false`**。⇒ 机制结论本身由 **`injectedAnswerer` 的 `false→true` 对照**支撑（实物在 `_attempt1/answerer.log` 与 `main/answerer.log`）。
+    - **机制增量（已回填 `dsh-migration.md` §3.6）**：① `dsh plugin add` 装**符号链接** ⇒ 插件 `import` 在 **harness 工作区**解析（插件要 import `@deepseek-ai/*` 必须登记进 `harness/package.json`）；② 跨插件 seam **必须 `provide` 在 root ctx**（`ctx.get` 的 `strict` 语义：owner fiber 非 ACTIVE 即 `undefined`）；③ `insert` 落列表末尾 ⇒ **控层序只能重排 `dsh.profile.bundles`**。
+    - **验收基准（限制，不得跨出）**：结论取自 **`node v24.14.1` ＋ 本机 Windows**；**POSIX 分支未验**；`approval/request` 为**本块临时约定**的 method 名（3.8 定稿后可能改名）；那批结论依赖**符号链接装载**（将来改实体复制须重验）。
+    - ⚠️ **装置代价**：每次运行在系统 TEMP 复制一份 sdk profile 真副本（**≈330 MB ／ 4.35 万文件**）；本块累计留下 **≈10.2 GB** 临时 home ⇒ 同类装置收尾须**显式清理**。
+  - **3.3-c** 对端换成 driver + 前端 ⇒ 人审批闭环 ⏩ **2026-09-30 已正名为 `DSH-3.8 · 端到端审批闭环`（终验收）并留在 `TODO.md`「待派发」段独立条目**（依 A 段协议；属 3.8 下游、不算 3.3 尾巴）—— 本段**不再复述**，只留此指针。
+- [x] ✅ **用例覆盖 5 条已由 3.3-a ＋ 3.3-b 全验（WB 2026-09-30 对照判定）**：批准 ／ 拒绝（`main` 臂两分支）｜ 超时（`answertimeout` ＋ `lateabort`，**两路分清**：请求侧 `cancelled`（官方 `req.signal` 赛跑）／ 答者侧 `unavailable`（⚠️ **该计时器是测试装置自建、官方无此物** ⇒ `dsh-migration.md` §3.6 ②「须自做」；⛔ **不得读成产品能力**））｜ 抛错（`nohandler` ⇒ `-32601` 归一为 `unavailable`）｜ 渠道断裂（`closestdin` ＋ `killpeer`，**两形态分别报**）—— 另 `noanswerer` 为负向对照。⚠️ **口径收窄（⛔ 不得读成"审批全验完"）**：所验的是**装置层机制**（stub 对端 ＋ 打点日志），**产品层真人在前端点击的闭环未验** ⇒ 归 **`DSH-3.8 · 端到端审批闭环`**（见 `TODO.md`「待派发」段）。
+  - ⚠️ **一处未完整覆盖（诚实登记）**：「渠道断裂」的**进程级 kill 形态**实测**拿不到插件层 reject 打点**（`dsh-migration.md` §3.6 自述「两形态分别报、不合并」）⇒ 严格说该用例是**部分覆盖**。
+  - ✅ **3.3-a 实测回填（WB 2026-09-21）**：本条原措辞「**answerer 超时**」已订正为「**超时**」—— `dsh-user-approval` 的 `decide()`（`lib/index.js:175-192`）**没有"答者超时"计时器**，唯一"放下"机制是**请求侧 `AbortSignal` 撤回**（`signal` 与应答赛跑，abort 先到 ⇒ 封 **`cancelled`**，**不是 `unavailable`**）。⇒ **3.3-b 的「超时收尾」大概率也走 signal 这条**，别再找一个不存在的「答者超时 API」。
+  - ⏱️ ~~**超时值须先定死**（否则"超时路径"无法构造）：建议 **30 s**，写入判据；可依实测调整~~ ⇒ ⛔ **本前提已被推翻（留痕，勿据以施工）**：3.3-a 实测证明**根本不存在"答者超时计时器"**，3.3-b 的「超时」两路（`answertimeout` / `lateabort`）**均由请求侧 `AbortSignal` 与应答赛跑决定**，**不是**由预设秒数决定 ⇒ **"先定死超时值"既无载体也无必要**；实测数值以两臂打点为准（`docs/dsh/dsh-migration.md` §3.6）。
+- [x] ✅ **观测点已在 3.3-a ／ 3.3-b 落地（WB 2026-09-30 对照判定）**：观测点 = **工具 handler 入口打点**（有行 = 真的执行了），UI 与 DSH 日志只作旁证 —— 3.3-b 复核记录有「**audit 序列完全一致**」＋ `-32601` 原始帧为证（`docs/dsh/dsh-migration.md` §3.6）。⚠️ 产品层真人操作的观测仍归 `DSH-3.8 · 端到端审批闭环`。
+- 📚 **参考件（登记表 3.3 行，⚠️ 登记项、非待办）**：`ref/community/PerryLink__dsh-reach` —— **deferred answerer**（`approval/request` + `user-questions/request` 两个 waterfall，答案稍后从 IM 回来才兑现）+ `cardTimeoutSec`（超时）+ `bridge.dispose()`（结清待决）+ `inject: []` 降级矩阵；官方机制侧 `dsh-user-approval` / `dsh-permission-presets`。**权威落点 = `docs/dsh/dsh-migration.md` §3.6〈参考实现登记表〉3.3 行**。
+
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件）
 
 > **本段分三块（2026-09-17 拆）**：**3.7.1 前置就位与定性**（✅ 已回报＋复验）→ **3.7.2 落盘 ＋ 自检 ＋ 真 e2e**（✅ 已回报＋复验，J1–J7 全成立）→ **3.7.3 工程卫生合并块**（✅ **已回报＋复验（Trae 2026-09-17 交付 ／ WB 2026-09-17 逐条回源复核：J1–J11 全成立）**，由 3.7.2 未闭合项转出 ＋ 3.2 判据缺陷合并）→ **3.7.3-T 独立测试件**（✅ **已回报＋复验**，判定均成立，另暴露 `dsh plugin add` 存量问题）。
