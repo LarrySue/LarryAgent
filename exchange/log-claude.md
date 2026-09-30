@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.4-T 装置缺陷修复** | Claude | **本机（Windows）** | 🚀 **已派发（2026-09-30）** —— 修 `harness/scripts/run-34t-probe.mjs` 的**临时 home 泄漏**（详见下方派发稿） | 2026-09-30 |
+| **DSH-3.4-T 装置缺陷修复** | Claude | **本机（Windows）** | ✅ **已修完 · 待 WB 复验（2026-09-30）** —— 回收移入 `runSession()`（`homeRemoved`／`homeRemoveError`／`S34_KEEP_HOME` 三件套照抄主块）；**正反两向自证**通过（默认轮计数回 0 ／ 对照轮 home 留存 ＋ `homeKeptBecause`）；⛔ 判据未动（T3M 与改前一致） | 2026-09-30 |
 | **DSH-3.4-T** | Claude | **本机（Windows）** | ✅ **已交回并复验（WB 2026-09-29）** —— 靶子 = 「**3.4 的判据有没有判别力**」：**四条维度均有判别力**（T2 三档 4804／9608／19216 单调；T3 半判据 vs 完整判据两臂；T4 (a)/(b) 同刻不同读数；T5 A 落地反向对照）；**另出 3 处口径订正**（保留量是「下界＋节点吸附」／事件侧字段是 `event.data.source`／"压前"锚 `compaction/start`）＋ **2 条判据增补**（手动／自动可分 `sourceCommandId` ／ 断言"拒绝伪造 checkpoint"前先确认 `invariants` 是否挂载，本 profile 实测**未挂载 = 零防护**）。⛔ 不重判产品面 | 2026-09-29 |
 
 ---
@@ -72,6 +72,59 @@ if (!keepHome) {
   4. **未观测到的行为不得写成已证**（"可达但未观测"要标清；"构造成立"要标为构造）。
   5. **应红 ／ 应绿须逐件读源码定期望**，不得按"组"给口径（同一批哨兵里可能有**落绿才是绿**的件）。
   6. **收尾必核 `git status`**。
+
+---
+
+## 📥 DSH-3.4-T 装置缺陷修复 · 回报（Claude ／ 本机 Windows · 2026-09-30）
+
+**结论先行**：泄漏已修，**正反两向自证**通过 —— 默认轮 `homeRemoved=true` 且 `tmpdir()` 计数回到 0；对照轮（`S34_KEEP_HOME=1`）home **留存**且 `homeKeptBecause` 落值。⛔ 未改任何判据：两轮 T3M 判定与改前一致（PASS 3 ／ FAIL 0 ／ OBS 3，exit 0）。
+
+### 1 · 改了什么（两处，均在 `harness/scripts/run-34t-probe.mjs`）
+
+| 处 | 改动 | 为什么 |
+|---|---|---|
+| `runSession()` 尾部（`saveJson` **之前**） | 照抄主块 `run-34-compaction.mjs:232-241` 三件套：`try{ rmSync(home); homeRemoved=true }catch{ homeRemoved=false; homeRemoveError }`；`S34_KEEP_HOME=1` ⇒ 不删 ＋ `homeKeptBecause` | `home` 由本函数 `makeHome()` 造出、**只在本作用域可达**；且必须在 `saveJson` 前删，`homeRemoved` 才落得进证据 JSON |
+| `armT2()` 循环内（原 `:518`） | **删除** `rmSync(join(sub,'home'), …)`，留注释写明它为何恒 no-op | 它在**证据子目录**下猜了个不存在的 `home`（`force:true` 连错都不报）⇒ 那 21 份 ≈7.2 GB 就是它漏出来的 |
+
+- `report.home` ／ 返回 `{ …, home }` **原先就有** ⇒ 与主块同形，可逐行对照。
+- **长路径兜底**：主块**就是** try/catch —— 检索式 `grep -n '\\\\?\\\|retry\|longpath' harness/scripts/run-34-compaction.mjs`，范围＝该文件全文，**0 命中** ⇒ 照此即可，未自创额外层。
+- **调用方影响**：全文件 5 处 `await runSession` **全部**只解构 `{ report, probeRows }`（检索式 `grep -n '\bhome\b' harness/scripts/run-34t-probe.mjs` ⇒ `home` 使用点只剩 makeHome／report 字段／回收块）⇒ 返回「已被删的 home」不影响任何臂。
+
+### 2 · 自证读数（臂 `t3m`；证据 `D:\Code\_claude-evidence\34t-fix\<stamp>\`，索引见其 `README.md`）
+
+| 项 | 期望 | 实测 |
+|---|---|---|
+| A 轮 `larry-34t-*` 计数（跑前→跑后） | 0 → 0 | **0 → 0** ✓ |
+| A 轮 证据 JSON | `homeRemoved === true` | **true**（`home=D:\Temp\Sys\larry-34t-miHv2H`，无 `homeRemoveError`）✓ |
+| B 轮 同计数（`S34_KEEP_HOME=1`） | 0 → **1** | **0 → 1**（`larry-34t-fzui48`，实测 5,674 目录／43,527 文件／**≈340.6 MB**）✓ |
+| B 轮 证据 JSON | `homeRemoved === false` ＋ `homeKeptBecause === 'S34_KEEP_HOME=1'` | **一致** ✓ |
+| 两轮判据（应红／应绿逐件读源码定期望） | 与改前一致 | **一致**（T3M-2／3／6 全 PASS，exit 0）✓ |
+
+**通道**：MSYS bash（宿主）／ node **v24.14.1**（`D:\App\node\node.exe`）／ dsh `0.1.5-rc.2` ／ 链路 = dsh SDK 通道（`--profile sdk`）—— 同 2026-09-29 交付轮。
+
+### 3 · 自曝（三件）
+
+1. **两轮都没用真 Key**：本通道凭据无效 ⇒ 单次模型回合以 `AUTH` 收尾（`turnEndSummary[0].errorCode="AUTH"`）。选 `t3m` 正因它的 6 条判定全在谓词／投递层、不看模型输出 ⇒ 省 token 且不碰本块靶子。⛔ 未申请临时 Key、未落任何凭据。
+2. **B 轮那份 340.6 MB home 是我读完读数后手动删的** ⇒ 证据里只有「留存」那一刻的读数；删后计数回 0 的复核也记在 `README.md`。
+3. **「长路径失败」未观测 ≠ 不存在**：两轮 `rmSync` 均成功（无 `homeRemoveError`）；同一批目录我用 `cmd rmdir` 时确实吃过长路径亏（21 份里 5–6 份删不净）—— 但那是 **cmd** 的限制，不是 Node `rmSync` 的实测结论。
+
+### 4 · 扫到别处（⛔ 未动，按禁区「报告但不扩大范围」）
+
+检索式 `grep -l "mkdtempSync" harness/scripts/*.mjs` ⇒ **7 件**，逐件核回收：
+
+| 件 | 回收情况 | 判定 |
+|---|---|---|
+| `run-34-compaction.mjs` | 2 处（正解） | ✅ |
+| `run-34t-probe.mjs` | 本块修后 1 处 | ✅ |
+| `run-381-driver.mjs` | 有回收 ＋ 另扫孤儿 home；但开关 `S381_KEEP_HOME` **缺省 `'1'`（缺省＝保留）** | ⚠️ 与主块口径相反，供裁 |
+| `s0-e2e-destructive-actions.mjs` | `rmSync(scratch…)`（在自建 root 下、非 `tmpdir()`） | ✅ |
+| `run-33a-answerer-e2e.mjs`／`run-33b-remote-approval.mjs` | **设计上保留**（`console.log("临时 home 保留在 …（供复核；复核后可删）")`） | ⚠️ 非缺陷但需人工清；当前两前缀残留 **0**（检索式 `ls -d /d/Temp/Sys/larry-33a-* larry-33b-*`） |
+| `verify-a-landing-profile.mjs` | **2026-09-30 11:25 已由主人补上回收**（`:126`） | ✅（**时间线订正**：我 10:35 曾在本区写过「A 落地装置无回收代码」—— 写入时检索确无命中、为真；该句随后已随交流区清理删除，11:25 该件补上回收 ⇒ 现行状态＝有回收） |
+
+### 5 · 收尾
+
+- `git status`（提交前）：**只有** ` M harness/scripts/run-34t-probe.mjs`（别家的 `run-34-compaction.mjs` 改动已由主人自行提交，不在我这里）。
+- 本块**结项后**不会再有 `larry-34t-*` 堆积；本目录（`_claude-evidence/34t-fix/`）只留两轮小件（≈0.2 MB），B 轮那份 340.6 MB 已删。
 
 ---
 

@@ -8,7 +8,8 @@
  * 姿势自证（本脚本模拟的真实链路）
  *   - 执行器：`harness/node_modules/@deepseek-ai/dsh/lib/bin.js`（`dsh 0.1.5-rc.2`）
  *   - 链路：**dsh SDK 通道**（`dsh --profile sdk`，stdio 行分帧 JSON-RPC）
- *   - home：**临时 home 副本**（`cp -r .dsh-home/profiles/sdk` 到 `mkdtemp`；⛔ 不就地改源 profile）
+ *   - home：**临时 home 副本**（`cp -r .dsh-home/profiles/sdk` 到 `mkdtemp`；⛔ 不就地改源 profile；
+ *     跑完**默认回收**（落 `homeRemoved`／失败落 `homeRemoveError`），要事后翻查就 `S34_KEEP_HOME=1` ⇒ 落 `homeKeptBecause`）
  *   - 凭据层：**启动环境**（从 `~/.dsh/.credentials.yaml` 读入内存 ⇒ 注入子进程 env；
  *     ⛔ 本脚本不打印值、不落盘值、不写进任何受版本控制的文件）
  *   - 进程内探针：`@larryagent/plugin-34t-probe`（**本件自写**，实体复制进 profile 自身层
@@ -287,6 +288,19 @@ async function runSession({ dir, label, prompts, disableCompact, probeCfg = [], 
     return { reasonKind: r.kind ?? null, errorCode: r.error?.code ?? null, errorStatus: r.error?.status ?? null, errorMessage: r.error?.message ?? null, turn: d.turn ?? null, usage: d.usage ?? null }
   })
   report.compactionIds = compactionEvents.map((x) => ({ type: x.type, compactionId: x.params?.event?.data?.compactionId ?? null, sourceCommandId: x.params?.event?.data?.sourceCommandId ?? null, shadowedRange: x.params?.event?.data?.shadowedRange ?? null, shadowedSeqs: x.params?.event?.data?.shadowedSeqs ?? null, shadowedTokenCount: x.params?.event?.data?.shadowedTokenCount ?? null, error: x.params?.event?.data?.error ?? null }))
+  report.home = home // 与主块同形；本装置 `:246` 建 report 时已记过一次（同值），此处照抄正解，便于两装置逐行对照
+  // ⚠️ 临时 home 必须清：一次 `cpSync` 源 profile = **≈341 MB ／ ≈4.35 万文件**（实测），
+  //    跑几十臂就会堆出 GB 级垃圾（2026-09-30 实测累积 21 份 ≈7.2 GB，老大手工清过）。
+  //    `home` 由本函数 `makeHome()` 造出、**只在本作用域可达** ⇒ 必须在这里删；
+  //    证据已全部落 `dir`，home 本身只是可再生的拷贝 ⇒ 默认删；要事后翻查就 `S34_KEEP_HOME=1`。
+  //    回收失败**不得**把整轮判红 ⇒ 只落布尔与原因（与主块 run-34-compaction.mjs 同形）。
+  const keepHome = (process.env.S34_KEEP_HOME ?? '0') === '1'
+  if (!keepHome) {
+    try { rmSync(home, { recursive: true, force: true }); report.homeRemoved = true } catch (e) { report.homeRemoved = false; report.homeRemoveError = String(e?.message ?? e) }
+  } else {
+    report.homeRemoved = false
+    report.homeKeptBecause = 'S34_KEEP_HOME=1'
+  }
   saveJson(dir, `${label}.report.json`, report)
   return { report, probeRows: readJsonl(marker), driverRows: readJsonl(driverMarker), home }
 }
@@ -515,7 +529,8 @@ async function armT2(dir, baseline) {
       turnEnds: report.turnEndSummary.map((x) => x.reasonKind),
       dir: sub,
     }
-    rmSync(join(sub, 'home'), { recursive: true, force: true })
+    // ⛔ 这里曾写 `rmSync(join(sub,'home'))` —— `sub` 是**证据子目录**，其下没有 `home`，
+    //    该调用恒 no-op（`force:true` 连报错都没有）⇒ 真正的回收已移入 `runSession()`（home 的唯一持有者）。
   }
   const lo = out['t2-r002']
   const hi = out['t2-r05']
