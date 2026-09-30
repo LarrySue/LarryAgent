@@ -14,6 +14,9 @@
  *   ⛔ 不采信 `--dump-config` 单独作判（只组树、不激活插件）—— 仅作 OBS。
  *
  * 用法：node harness/scripts/verify-a-landing-profile.mjs
+ *   ⚠️ 默认**跑完即清**每条臂的临时 home（`S34A_KEEP_HOME=1` 可保留事后翻查）。
+ *      理由：一次 `cp -r` 源 profile 可达 157MB / 1.9 万文件，多臂累积会堆出 GB 级垃圾；
+ *      home 只是可再生拷贝，证据（report / probe.jsonl / findings）已全落 `.s34a-evidence/`。
  * 退出码：0 通过 / 1 判据失败 / 2 前置缺失
  */
 import { spawnSync } from 'node:child_process'
@@ -113,6 +116,15 @@ async function runSession({ label, stripDisable = false }) {
   }
   const probeRows = readJsonl(marker)
   report.compactionEvents = compactionTypes(probeRows)
+  // ⚠️ 临时 home 必须清：一次 `cp -r` 源 profile = 157MB / 1.9 万文件，多臂累积会堆出 GB 级垃圾
+  //    （同 `run-34-compaction.mjs:236-242` 的教训）。home 只是可再生拷贝，证据已全落 DIR。
+  //    要事后翻查就 `S34A_KEEP_HOME=1`。
+  const keepHome = (process.env.S34A_KEEP_HOME ?? '0') === '1'
+  if (keepHome) {
+    report.homeKeptBecause = 'S34A_KEEP_HOME=1'
+  } else {
+    try { rmSync(home, { recursive: true, force: true }); report.homeRemoved = true } catch (e) { report.homeRemoved = false; report.homeRemoveError = String(e?.message ?? e) }
+  }
   writeFileSync(join(DIR, `${label}.report.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   return { report, probeRows, home }
 }
