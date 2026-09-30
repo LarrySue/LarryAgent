@@ -381,7 +381,9 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 **A. 官方 demo（源码树）**
 
-1. 建工作树：`git -C ref/dsh-bare worktree add --detach D:/Code/dsh-src dsh-v0.1.2-rc.1`
+> ⚠️ **本段依赖的 `D:\Code\dsh-src` 工作树已于 2026-09-30 删除**（见 §8.6）⇒ **第 1 步"建工作树"本身即整体 checkout，⛔ 在 Windows 上会卡死**。本段现存价值 = **记录官方 demo 的完整跑法**（`build:lib:host` 必要性、`--ignore-scripts`、`DSH_TOOLS_MODE=ptc` 等）—— 真要跑，须先按 §8.6「重建方式」建树，**并自行承担卡死风险**；日常查源码走裸仓只读即可。
+
+1. 建工作树：`git -C ref/dsh-bare worktree add --detach D:/Code/dsh-src dsh-v0.1.2-rc.1`（⚠️ 见上方警示）
 2. `cd D:\Code\dsh-src && pnpm install --ignore-scripts`（约 56s / 1001 包；`--ignore-scripts` 跳过 lefthook，**必须**）
 3. `pnpm run build:lib:host`（**必须**，否则 `typert-loader` 找不到 `lib/typert.host.js`）
 4. `$env:DSH_HOME="D:\Code\dsh-src\.dsh-home-demo"; $env:DEEPSEEK_API_KEY="<key>"; $env:DSH_TOOLS_MODE="ptc"; node scripts/demo-ptc.mjs "Reply with exactly: hello from dsh"` → 期望 stdout `hello from dsh`、exit 0，`.dsh-home-demo/sessions/` 生成 `session.jsonl`
@@ -418,15 +420,20 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
 
 > **口径**：**模块级 HMR 开关可开、且开启不影响现有 boot**；但"同进程改代码即热载"的动态观察需**长驻 profile**（web/tui 类有交互/服务生命周期），headless one-shot 跑完即退、没有观察窗口 → 该动态验证留待 web 连通一并做，**不构成阻塞**。
 
-### 8.6 源码工作树生命周期
+### 8.6 源码查阅通道（**工作树已于 2026-09-30 删除**）
 
-- 工作树挂载于 `D:\Code\dsh-src`（**仓库外**，未含于 LarryAgent git）；`ref/dsh-bare` 全程只读（`git show` / `worktree add`，未写任何 refs/config）。
-- 保留供后续复用（HMR 动态验证 / web 连通）；一句话清理：
+- ⚠️ **`D:\Code\dsh-src` 工作树已删**（老大 2026-09-30 裁定）——原为 `ref/dsh-bare` 的 worktree、检出 `dsh-v0.1.2-rc.1`，**用途仅"追进 DSH 内部行为"**。⇒ **§8.3 A 段的源码树复跑步骤（建工作树 + `pnpm install` + demo）自此不再可用**；如需重建见下方"重建方式"。
+- **查源码的默认通道 = 裸仓只读，不需要工作区**（`ref/dsh-bare` 全程只读、从未写 refs/config）：
 
+  ```bash
+  git -C ref/dsh-bare ls-tree -d --name-only <tag> packages/     # 列包
+  git -C ref/dsh-bare show <tag>:<路径>                          # 读文件
+  git -C ref/dsh-bare grep -i "<词>" <tag> -- <路径>              # 跨版本搜索
   ```
-  git -C ref/dsh-bare worktree remove D:/Code/dsh-src
-  ```
 
+- **确需实体文件时只做「按需局部检出」**：`git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/<包>` —— 只写出该包。
+- ⛔ **不要在 Windows 上做整体 checkout**（9,080 文件 × 实时防护逐文件扫描 ⇒ 实测卡死 5.5 小时；本地已有两次踩坑记录）⇒ 这也是**删除 `dsh-src` 的根本理由**：工作树本身即"整体检出物"，重跑只能整体 checkout。
+- **重建方式**（确需时）：`git -C ref/dsh-bare worktree add --detach D:/Code/dsh-src <tag>`，用完 `git -C ref/dsh-bare worktree remove D:/Code/dsh-src` ＋ `worktree prune` 清注册。
 - `dsh plugin` 仅写 `$DSH_HOME/profiles/<name>`（隔离 DSH_HOME 内），**不触碰用户级全局 profile / `~/.dsh`**。
 
 ---
