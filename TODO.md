@@ -198,8 +198,8 @@
 - [x] ✅ **`webhook/` 包核实（已结，2026-09-30）** ⇒ **不是「两源冲突」，是我方层级读错**：`packages/webhook/` 是**包组目录**（其 `README.zh.md` frontmatter `kind: "package-group"`；**无 `package.json`**）⇒ **「config-catalog 无条目」指的是目录层，本就该无条目**。两子包**均为真包、且都有正式 catalog 条目**：`@deepseek-ai/dsh-webhook`（fire-and-forget 规则运行时，catalog 有清单行，`docs/config-catalog.md`）／`@deepseek-ai/dsh-webhook-github`（GitHub 签名适配器，catalog **有完整配置节**）。⚠️ 与 `dsh-migration.md:136`「嵌套子包不在顶层」**同属一类坑的第二次发作**（拿「目录」与「包」两个层级对撞）。取证通道 = **裸仓只读**（`ls-tree` / `show` / `grep <tag>`，**不需工作区**）。
 - [ ] **能力树套用后的三项转出**（2026-09-17 套用能力树改动提案稿时转出，见 `docs/product-positioning.md` §2.1）
   - [ ] **`workspace` 运行时行为实测**（2.3.3 的 ⚪）：membership 过滤 + `attachSession` 流程 —— 只读了类型与规格、未跑；跑完转 🟢 / 🟡 / 🔴 之一（**未跑前不得升格为 🟢**）
-  - [ ] **⛔ 须关闭清单是否单列一张**（**待老大定**）：名义挂 `docs/dsh/dsh-migration.md` §3.6；口径段已按「建议单列」写，若否须改口径
-  - [ ] **§2.2 顶层总览表是否加列「对手侧最厚 / 最薄」**（**待老大定**）：形态选择，可后补（不影响已落内容）
+  - [x] ✅ **⛔ 须关闭清单是否单列一张 —— 老大 2026-09-30 裁「按现状关闭」** ⇒ **清单已有**（`docs/dsh/dsh-migration.md` **§3.6**〈迁移必关清单（Marvis 四点，采纳）〉**6 行**：Self-modification ／ `!!js` 配置即代码 ／ Agent 外链面 ／ Autonomy 面 ／ telemetry 面 ／ `session-log-deepseek`），**不再单列、不再另建**。⚠️ **顺带订正一处文档自相矛盾**：§3.6 表后原写「迁移必关清单：**当前无条目**」—— 那是把「**整张清单**」与「**`web_fetch` 单项**（已随 §4.1 挂起）」混为一谈；已改为指向 §3.6 那张表的指针 ＋ 留痕。
+  - [x] ✅ **§2.2 顶层总览表是否加列「对手侧最厚 / 最薄」—— 老大 2026-09-30 裁「没必要加」** ⇒ **不加**（该表定位是**顶层速览**，厚薄判断已由 §3.6 31 子项承接表逐行给出，加列属重复表达）。
 
 ### 延后（低优先 · 待触发）
 
