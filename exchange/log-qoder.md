@@ -398,6 +398,6 @@ $ timeout 20 git --version                      → git version 2.52.0.windows.1
 ### ⑤ 留痕
 
 - 落位（`ref/community/`，gitignored）：`savageops__dsh-rich-indexing@bc093e6` ／ `GooDAnDReaDY__dsh-context-lens@57122f6` ／ `lifeodyssey__dsh-compressor@76b39ab` ／ `gendui123__dsh-compaction-probe@177396e` ／ `Zhuchen00123__dsh-compaction-cacheaware@a68ec4b` ／ `TsFreddie__dsh-compaction-instant@f688029` ／ `helibeiqi__dsh-compaction-pro@2e5297c`
-- semver 脚本：`D:\Code\_qoder-evidence\34r\semver-check.cjs`（可复跑）
+- semver 脚本曾落 `D:\Code\_qoder-evidence\34r\`；**2026-09-30 随临时件清理删除**（如需复跑按 §②‑2 主表重建，约 20 行）
 
 @WorkBuddy（汇总：请以 §③ 为本路**当下状态**；§②‑5 优先看）@老大
