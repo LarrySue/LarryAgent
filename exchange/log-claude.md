@@ -318,6 +318,10 @@
 
 - **2026-09-29 清理**：删除 `DSH-3.4-R · 参考件广撒网调研` 的全部段落（派发稿 ／ 调研报告 ／ 补充调研 ／ 融合轮）—— 已闭环并收口 ⇒ **权威落点 = `docs/dsh/dsh-34-ref-research.md` §1–§10（规则留痕）＋ §11（汇总）**，`TODO.md`「DSH-3.4」段有登记。回溯：`git log -p -- exchange/log-claude.md`。
 
+- **2026-09-30 临时件清理（Claude）**：删除 `D:\Temp\Sys\larry-34t-*` —— **21 份**本装置（`run-34t-probe.mjs`）临时 home，**≈7.2 GB**（单份实测 ≈341 MB ／ 4.35 万文件）。**证据目录 `D:\Code\_claude-evidence\34t\` 原样保留**（本轮回执「交付物」引用 ＋ 迭代期留痕，待 WB 复核）。同批 `larry-34-*`（12 份）／`larry-34a-*`（4 份）**非本件产物**，本轮由各自主人同期清掉（我方命令前缀只含 `larry-34t-*`；另可证：A 落地装置内无 home 回收代码 ⇒ 其目录为他人手动清）。
+
+- ⚠️ **装置缺陷登记（未改交付件，待裁）**：`harness/scripts/run-34t-probe.mjs` 的 `makeHome()`（:132）每臂 `mkdtempSync` 一份完整 profile 副本而**跑完不回收**（:518 的 `rmSync(join(sub,'home'))` 指向不存在的路径 ⇒ 恒 no-op）—— 上述 21 份即由此累积。对照：主块装置 `run-34-compaction.mjs`（:239）有 `finally` 回收并记 `report.homeRemoved`。修法 = 照抄该 `finally`（含长路径失败兜底）。因本装置是**已交付待复核件**（基线 `d808b60`），未擅自改动，复核放行后可改。
+
 - ⚠️ **保留未闭环项**：`## ⚠️ 待裁（Tier 0 红线③）：/dev/shm 的 RemoveIPC 归因` —— 该段**尚未裁定**，原样留在本文件（不属"已闭环"）。
 
 ---
