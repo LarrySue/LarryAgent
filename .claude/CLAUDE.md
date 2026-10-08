@@ -22,9 +22,10 @@
 
 ### 行为准则
 - **以下区域可自由阅读但一律不得做任何改动，发现错误、矛盾、冲突、缺失等严重问题而强烈建议改动时提交人类操作**：
-  - `.claude/CLAUDE.md` — Claude约束
-  - `.trae/TRAE.md` — Trae约束
-  - `.workbuddy` — WorkBuddy 约束与记忆区
+  - `.claude/`文件夹 — Claude私有文件
+  - `.trae/`文件夹 — Trae私有文件
+  - `.qoder/`文件夹 - Qoder私有文件
+  - `.workbuddy` — WorkBuddy私有文件
   - `HUMAN.md`与`HUMAN_NOTE.md` - 人类治理区
   - `docs` - 文档区
   - `archive` - 归档区
