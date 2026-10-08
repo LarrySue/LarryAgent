@@ -6,10 +6,10 @@
 > - 加载方式：软性机制——AI 任务相关时主动 Read 本文件，不自动注入。
 > - 检索归档：需要时 Grep `archive/roadmap-history.md`；排查 BUG / 做改动前先扫归档。
 
-## DSH 迁移（A-framework · 已定稿 · DSH-1/DSH-2 已归档；DSH-3 进行中 —— 3.0～3.2.1 ／ 3.3 ／ 3.4 与 3.7 全族已归档）
+## DSH 迁移（A-framework · 已定稿 · DSH-1/DSH-2 已归档；DSH-3 进行中 —— 3.0～3.2.1 ／ 3.3 ／ 3.4 ／ 3.5 与 3.7 全族已归档）
 
 > **分区约定**：**本区只放待办**。判定依据、行事规则、31 子项承接总表、风险清单、环境规格等一律留在 `docs` 相关文档内，本区不重复结论。
-> - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P4 主线无关；**完成一个即归档一个**——**DSH-1 / DSH-2 均已完成并冷存于 `archive/roadmap-history.md`**（**DSH-3 的 3.0～3.2.1 ／ 3.7 全族已于 2026-09-22 冷存，3.3 于 2026-09-30、3.4 于 2026-10-01 相继全段归档**），本区自 **DSH-3** 起。
+> - **编号**：DSH 线用独立 `DSH-N` 序列，与 P0–P4 主线无关；**完成一个即归档一个**——**DSH-1 / DSH-2 均已完成并冷存于 `archive/roadmap-history.md`**（**DSH-3 的 3.0～3.2.1 ／ 3.7 全族已于 2026-09-22 冷存，3.3 于 2026-09-30、3.4 于 2026-10-01、3.5 于 2026-10-08 相继全段归档**），本区自 **DSH-3** 起。
 
 ### DSH-2 · 代码形态 + 环境准备 ✅（2026-09-08 → 2026-09-11 · **已整体归档**）
 
@@ -29,29 +29,25 @@
 #### DSH-3.0 ～ DSH-3.2.1 · ✅ **已归档（2026-09-22）**
 
 > 这四块的**完成态快照**（逐条判据 ／ WB 复验结论 ／ 未闭合项处置 ／ 证据包路径）已移入 `archive/roadmap-history.md` 的「DSH-3.0」「DSH-3.1」「DSH-3.2」「DSH-3.2.1」四段 —— **排查 BUG ／ 复验 ／ 做改动前先扫那里**。
-> 📌 本区**在飞内容自 `DSH-3.5` 起**（下方）。
+> 📌 本区**在飞内容自 `DSH-3.6` 起**（下方）。
 
 #### DSH-3.3 · S1 interaction 审批接入（→ 2.7.1） ✅ **全段已归档（2026-09-30）**
 
 > `3.3-a`（本地策略答者）／ `3.3-b`（真出站往返，7 臂 66/66）**两块均已回报并复验** ⇒ 完成态快照（机制接入三项 ／ 7 臂明细 ／ **3.3-b 复核订正 2 处** ／ 机制增量 3 条 ／ 装置代价 ／ 用例覆盖 5 条对照判定 ／ 观测点）已移入 `archive/roadmap-history.md` 的「DSH-3.3」段 —— **排查 BUG ／ 复验 ／ 做改动前先扫那里**。
 > ⚠️ **本段未闭合的下游尾巴 0 条** —— 原第三块（旧称 `3.3-c`）已**正名为 `DSH-3.8 · 端到端审批闭环`（终验收）**、移入下方「待派发」段（依 A 段协议，属 3.8 下游）。
-> 📌 本区**在飞内容自 `DSH-3.5` 起**（下方）。⚠️ 与 3.3 相邻的**判据口径**（如「验行为不验 UI」）已随快照入档。
+> 📌 本区**在飞内容自 `DSH-3.6` 起**（下方）。⚠️ 与 3.3 相邻的**判据口径**（如「验行为不验 UI」）已随快照入档。
 
 #### DSH-3.4 · S2 compaction 接入（→ 2.9.2） ✅ **全段已归档（2026-10-01）**
 
 > `DSH-3.4` 主体（J1–J8）＋ 独立测试件 `DSH-3.4-T`（T1–T6）**均已回报并复验成立** ⇒ 完成态快照（接入判据 ／ 量级阶梯与预算 ／ A 裁定与落地状态 ／ 装置缺陷修复 ＋ 复验读数）已移入 `archive/roadmap-history.md` 的「DSH-3.4」段 —— **排查 BUG ／ 复验 ／ 做改动前先扫那里**。
 > ⚠️ **本段未闭合的下游尾巴 0 条** —— **判据权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.4 · S2 判据口径四条〉＋〈DSH-3.4 · S2 判据口径增补两条〉**（2026-10-01 由本段归位；后节即原「⑤ 手动／自动可分 `sourceCommandId`」／「⑥ `invariants` 挂载」两条）；**未决项已转出** ⇒ 「待核」段（§11.9 余项）＋「待派发」段（`S381_KEEP_HOME` 缺省口径）。
-> 📌 本区**在飞内容自 `DSH-3.5` 起**（下方）。
+> 📌 本区**在飞内容自 `DSH-3.6` 起**（下方）。
 
-#### DSH-3.5 · S3 sandbox 三档接入（→ 2.7.1 Linux 侧）
+#### DSH-3.5 · S3 sandbox 三档接入（→ 2.7.1 Linux 侧） ✅ **全段已归档（2026-10-08）**
 
-- [x] ✅ **三档（read-only / workspace-write / danger）各自拒绝与提权流程生效 + fail-closed 成立 —— 已回报 ＋ WB 复验成立（2026-10-08）**。Trae 在 **CVM（landlock ABI 4）** 跑真 DSH（`0.1.5-rc.2`）⇒ **J1–J7 全判 PASS**：三档拒绝边界**互不相同**（含 danger 放行臂）／提权**两层可观测**（tool result hint ＋ session `approval/asked→decided(unavailable)`）／**fail-closed 构造成功**（非降级路径）／J7 负向**变红且归因明确**。**WB 复验方式 = 回源取证 ＋ 上机只读核**：物证 sha 逐位一致 ／ WB 自扫 Tier0 **0 命中** ／ 三条 toolresult ＋ session 帧引文**逐字属实** ／ **上机复现 4 条无输出支撑的自证**（硬链接 ×6 同 inode `814244` nlink=6 ／ `NO_BWRAP` ／ `apparmor=1` ／ J7 `ValidationError` 逐字）。**5 条表述 ／ 证据完整性缺陷**（不改结论：J6 出处记错包 ／ 未闭合项① 表述与自身证据打架 ／ 5 个前置脚本未回输出 ／ 一处硬编码字面量 ／ attempt1 summary 与 fix 版并存）⇒ 全记 **`docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 · S3 sandbox：判定轮复验〉**（权威落点）。⚠️ 判定**只能写在 CVM**，⛔ 不得外推；「产品可接受」不在靶子内。派发稿 ／ 回报 = `exchange/log-trae.md`「DSH-3.5 判定轮」
-- [x] ✅ **前置核查：目标机 `bwrap` 是否存在 —— ⭐ 已核：不存在（WB 2026-09-23 dry-run）** ⇒ DSH **永远只走 landlock rung**（与预案一致）。⚠️ 且**“装上 bwrap”这条路实际堵死**：`apparmor_restrict_unprivileged_userns=1` ⇒ `unshare --mount/--pid` 全 FAIL（bwrap 依赖 mount ns + userns 映射）。**回填 → `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉**
-- [x] ✅ **加判据：DSH 的 sandbox ruleset 在 CVM 上建立成功 + 单独判其失败形态 —— 已由判定轮落实（2026-10-08）**：**① 建立成功** = J1（`partial enforcement (older Landlock ABI)` 行 ＋ denial 形态，非 `SANDBOX_UNAVAILABLE`）／session `sandbox/mode` 帧落盘；**② 失败形态 = fail-closed 已在真 DSH 上复核成立** = J6（`breakLauncher` 构造 ⇒ `Error: sandbox mode "workspace-write" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined…` ＋ fs 探针 `ABSENT`＝**不 exec** ✓）。⚠️ 该形态此前由源码**预先钉死**（`main.c:23-28`：`exit 125` 且不 exec；README：招 `SANDBOX_UNAVAILABLE`）⇒ 本项为**上机复核**、非新发现。⚠️ fail-closed 系**装置构造**所致，⛔ 不得读成「CVM 上天然 fail-closed」。证据与复验见 **§3.6〈DSH-3.5 · S3 sandbox：判定轮复验〉**
-- [x] ✅ **器材已就绪（重建 → WB 复验通过 · 2026-10-08）**：原件 `D:\Temp\Sys\claude-wsl-probe\landlock_probe.py` **已确认丢失**（WB 五处核查全空：Windows Temp ／ WSL `~/claude-probe` ／ 回收站 ／ git 全历史 ／ CVM 侧；正文从未入库 ⇒ 只能**重建**）。**落点 = `harness/scripts/cvm-probes/landlock_probe.py`**（受 git 跟踪；⛔ 不再放 `D:\Temp\` —— 该目录被 `docs/test-env.md:280` 标「可整目录删」，正是丢失的原因）。规格：ABI 自适应 + `--fs-mask` 负向开关 + `VERDICT=` 机读行。**WB 复验（2026-10-08）全绿**：P1–P8 逐条核 —— sha256 与交付声明逐字一致（`226603df…`）；**WB 亲跑 CVM** 正证 `PASS`/exit 0 ＋ 负向对照 `MASK_REJECTED`/exit 3，归一化后与交付读数**逐行相同**；独立参数 `--fs-mask 0x8000` 复现「ABI 4 拒 bit15」。⚠️ **WSL 未由 WB 复跑**（本机 `wsl.exe` 黑名单硬拦）⇒ 按派发稿「如实报未跑」，自适应由 CVM 单场地 P5 读数验证。过程修掉一个掩码表错（`IOCTL_DEV` ABI 4→5，逐位内核验收机制为此而设）。**派发 ／ 回报 = `exchange/log-claude.md`「DSH-3.5 器材重建」段**；⭐ **规格 ＋ 验收态的权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 · S3 sandbox 器材：`landlock_probe.py` 登记〉**（2026-10-08 落；活日志会被清 ⇒ 以文档区为准）。
-- [x] ✅ **执行姿势：先 dry-run 再判定 —— 已完成（WB 2026-09-23，只读／零装包／零 Key）**：ABI=**4**（landlock **正证通过**：设规则后读 `/etc/hostname` 被 `EACCES` —— ⚠️ **该掩码系探针自设的更严掩码；DSH 的 landlock profile 读权限是全开的（`readOnly:['/']`）⇒ 此正证只证「内核强制」，不得读成「DSH 沙箱挡读敏感文件」**，见 `docs/dsh/dsh-migration.md` §3.6② 姿势自证）／`bwrap` **不存在**／路径映射与 cgroup v2 齐备／**ABI 4 ⇒ `partial`**（差 `IOCTL_DEV` 一位）。⚠️ 原定位是"替代 WSL 预演"的姿势（CVM 10-09 到期）；**CVM 期限已确认非硬约束**（老大 2026-09-23：续费成本可忽略），但 dry-run 本身仍为必要前置
-- ⚠️ **ABI 边界（2026-09-23 精确化）**：CVM = **4** / WSL = **7** ⇒ **判定只能写在 CVM 上，不得互搬**。⚠️ 原表述「ABI 5+ 掩码喂 ABI 4 ⇒ `create_ruleset` 直接 `EINVAL`」**限于“人工喂高位掩码”**；**DSH 自身按协商 ABI 裁剪掩码（`main.c:184-189`）不会 EINVAL** ⇒ 勿读成“DSH 在 ABI 4 上会失败”
-- [x] ✅ **已裁（老大 2026-09-23）：接受降档（选项 ①）** —— `bwrap` 不可得 ⇒ CVM 上沙箱永远走 landlock rung；**不动主机 AppArmor**（选项 ② 不采纳）。⚠️ 裁定附**两处归因修正**（WB 读源码所得）：① **bwrap profile 同样不管网络**（`bwrapProfileArgs()` 无 `--unshare-net`，`sandbox-local/src/profiles.ts:17`）；② **读写权限两条 rung 等价**（bwrap `--ro-bind / /` ≡ landlock `readOnly:['/']` ＋ 写白名单）。⇒ 降档净损失仅「私有 PID ns ＋ `--die-with-parent` ＋ workspace-write 的临时 `/tmp`」三条，**与防误写／防外泄均无关**；选项 ② 代价是**主机级**（影响全机进程）⇒ 收益不抵。**不新造缺口**（「防外联另做」原样有效，`production-env.md:165-166`）。**完整回填 → `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 前置核查实测回填〉④**
+> 判定轮（**真 DSH on CVM**）**已回报并 WB 复验成立**（J1–J7 全判 PASS，含 fail-closed 构造成功）⇒ 完成态快照（CVM 前置核查实测回填 ／ 器材登记 ／ 判定轮复验 ＋ 已知限制）已移入 `archive/roadmap-history.md` 的「DSH-3.5」段 —— **排查 BUG ／ 复验 ／ 做改动前先扫那里**。
+> ⚠️ **本段未闭合的下游尾巴 0 条** —— **判据 ／ 器材规格 ／ 复验结论的权威落点 = `docs/dsh/dsh-migration.md` §3.6**〈DSH-3.5 · S3 sandbox：CVM 前置核查实测回填〉／〈DSH-3.5 · S3 sandbox 器材：`landlock_probe.py` 登记〉／〈DSH-3.5 · S3 sandbox：判定轮复验〉（本段不重复结论）。
+> 📌 本区**在飞内容自 `DSH-3.6` 起**（下方）。
 
 #### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
 

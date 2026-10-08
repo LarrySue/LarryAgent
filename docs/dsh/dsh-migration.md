@@ -1124,7 +1124,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 ##### DSH-3.5 · S3 sandbox 器材：`landlock_probe.py` 登记（WB 2026-10-08）
 
-> **本节定位**：登记 3.5 判定轮所用**独立通道器材**的规格 ＋ 验收态（判据/既定前提 ⇒ 落定案区）。⚠️ 本件**只证「器材可用」**，⛔ **不等于「3.5 判据成立」** —— 后者须在**真 DSH** 上跑（工位归 Trae，见 `TODO.md`「DSH-3.5」段）。
+> **本节定位**：登记 3.5 判定轮所用**独立通道器材**的规格 ＋ 验收态（判据/既定前提 ⇒ 落定案区）。⚠️ 本件**只证「器材可用」**，⛔ **不等于「3.5 判据成立」** —— 后者已在**真 DSH** 上跑完并复验成立（见紧随其后的〈DSH-3.5 · S3 sandbox：判定轮复验〉）；完成态快照 = `archive/roadmap-history.md`「DSH-3.5」段。
 
 **① 落点与身份**
 - **路径**：`harness/scripts/cvm-probes/landlock_probe.py`（**受 git 跟踪**；与 `cvm-landlock-verify.mjs` 同目录）。
@@ -1154,7 +1154,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 ##### DSH-3.5 · S3 sandbox：判定轮复验（WB 2026-10-08）
 
-> **本节定位**：登记 3.5 **判定轮**（真 DSH on CVM）的**复验结论 ＋ 缺陷留痕**（判据 ／ 既定前提 ⇒ 落定案区）。与〈器材登记〉**互为交叉验证的反面** —— 器材件只证「内核确实强制」，本节证「**DSH 判据在真 DSH 上成立**」。执行面（派发稿 ／ 回报正文）＝ `exchange/log-trae.md`「DSH-3.5 判定轮」（活日志，会被清 ⇒ **以本节为准**）。
+> **本节定位**：登记 3.5 **判定轮**（真 DSH on CVM）的**复验结论 ＋ 缺陷留痕**（判据 ／ 既定前提 ⇒ 落定案区）。与〈器材登记〉**互为交叉验证的反面** —— 器材件只证「内核确实强制」，本节证「**DSH 判据在真 DSH 上成立**」。执行面（派发稿 ／ 回报正文）原在 `exchange/log-trae.md`「DSH-3.5 判定轮」，**2026-10-08 按活日志规矩已清** ⇒ **以本节为准**（回溯：`git log -p -- exchange/log-trae.md`）。
 
 **① 判定：成立** —— J1–J7 全判 PASS **站得住**，无降级判定，无结论需推翻。⚠️ 下列④为**表述 ／ 证据完整性**缺陷，**均不动结论**。
 
@@ -1181,6 +1181,11 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - 判定**只能写在 CVM**（landlock **ABI 4** ／ rung = landlock ／ enforcement = **partial** ／ bwrap 缺席）⇒ **不得搬到 WSL（ABI 7）或其他宿主**（见〈ABI 边界〉）。
 - 本判定是「**机制成立**」；**「产品可接受」不在本块靶子内**（与 3.4 同一口径）。
 - J6 的 fail-closed 形态为**装置构造**（mv 掉 launcher）所致，⛔ **不得读成「CVM 上天然会 fail-closed」**。
+
+**⑥ 已知限制与口径（承自回报 · 2026-10-08 归位；⛔ 均不影响①判定）**
+- **`SANDBOX_UNAVAILABLE` 的结构化 `code` 不落 session 日志**：fail-closed 臂全 29 帧只有 `isError:true` ＋ message 文本，**无 `code` 字段**（seam 源码注释称 HarnessError 会带 code，但 session-log 序列化层未持久化）⇒ ⛔ **「按 code 区分 `SANDBOX_UNAVAILABLE` 与其他 isError」在会话日志通道不可用**；替代 = message 逐字 ＋ 不 exec ＋ addon `exit 125` 对照。（runtime API 通道是否带 code **未测**，⛔ 不臆断。）
+- **J2 的拒绝读数形态 = `Permission denied`（非裸 `EPERM`）**：判据文本写 `EPERM`，用户态实得 bash stderr `Permission denied`（`EPERM` 的 strerror 渲染；landlock 方言 `DENIAL_SIGNATURES=["permission denied"]` 匹配的正是后者）⇒ **后续同类判据口径一律写「denial 方言命中」**，⛔ 别再写裸 `EPERM`（它在用户态不可见）。
+- **装置缺陷（一次性 · 无下游）**：`run-35-sandbox.mjs` **臂间未清场** `~/larry35-sbox` ⇒ danger 臂写的 `inside.txt` **残留**到 esc 臂（`insideTxt=PRESENT` 是残留假象）。判据只看各臂**专属**文件（`denied-<mode>.txt` ／ `esc-<mode>.txt` ／ `inside-fc.txt`）故未受影响。该装置随 CVM 到期废弃；**如复用须臂间清场或每臂独立 WS**。
 
 #### DSH-4：差异化能力迁移
 
