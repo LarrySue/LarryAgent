@@ -277,7 +277,7 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 | WSL `~/wsl-check.sh` + `~/wsl-check.txt` | 环境自检一键脚本 / 输出（2026-09-09 WB 生成） | **保留**；复跑自检直接执行脚本并把输出落 `~/wsl-check.txt` |
 | WSL `~/sqlite-check` | 09-09 并发探针遗留 | 非 WB 造 |
 | WSL `~/claude-probe/` | 2026-09-12 Claude 探测产物（链接 / 稀疏文件 / 16 MB 镜像 / venv / 日志，约 50 MB） | **可整目录删**，未清 |
-| Windows `D:\Temp\Sys\claude-wsl-probe\` | Claude 侧 `landlock_probe.py` 等 | 同上 |
+| Windows `D:\Temp\Sys\claude-wsl-probe\` | ⚠️ **已成空目录** —— 原有 Claude 侧 `landlock_probe.py` 等**已丢失**（正文从未入库 ⇒ 不可恢复；WB 2026-10-08 五处核查确认）。⛔ **不得再作器材落点** —— DSH-3.5 的 landlock 器材已改落 `harness/scripts/cvm-probes/landlock_probe.py`（受 git 跟踪） | **可整目录删，未清** |
 | WSL `~/trae-probe/` | 2026-09-12 Trae 探测产物（`README-trae-probe.txt` 说明牌 + `zh.txt`、`中文文件名.txt` 两个 UTF-8 样本） | **保留**；说明牌已写明"非 Trae 资产勿依赖此目录" |
 | Trae 已清项 | `/mnt/d/Code/_wsl-probe/`、仓库根 `img.bin`、`/root/img.bin`、`/mnt/trae-loop/`、探测进程（`http.server` / `sleep 600`）、apt 装的 `tree`（已 purge） | 均经自查确认不存在；`/etc/wsl.conf` 与既有他人文件**未动** |
 | ⚠️ 过程瑕疵（留痕） | `inotify-ext4.log` 长到 31 MB —— inotifywatch 监视了**含自身输出的目录** → **自激循环** | 结论不推翻（自激反向强化了对照），**复跑须避开自监视** |
