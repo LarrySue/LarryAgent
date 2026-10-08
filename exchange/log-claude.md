@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | 🚀 **已派（2026-10-08）· 待回报** —— 原件已丢失（五处核查全空）⇒ **重建**；落点改到 `harness/scripts/cvm-probes/`（受 git 跟踪） | 2026-10-08 |
+| **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | ✅ **已交付（2026-10-08）· 待 WB 复验** —— 器材入 git（`harness/scripts/cvm-probes/landlock_probe.py`）；两场地实跑 **PASS / exit 0**（CVM 目标场地 ＋ WSL 回归）；⚠️ 过程抓到并修掉一个**掩码表错**（见回报〈自曝①〉） | 2026-10-08 |
 
 ---
 
@@ -93,5 +93,48 @@
 - ⛔ **不改 `docs/`**（定案区，WB 处置）；**不改 `TODO.md`**（WB 处置）。
 - ⛔ **别把产物放回 `D:\Temp\…`** —— 那个目录被 `docs/test-env.md:280` 标注「**可整目录删，未清**」，**v1 就是这样没的**；重做还放那儿 = 再丢一次。**只落 `harness/scripts/cvm-probes/`**。
 - ⛔ 若发现还需别的器材，**报告出来、不扩大范围**。
+
+---
+
+## 📤 DSH-3.5 器材重建：交付回报（2026-10-08 · Claude）
+
+**结论先行**：器材已**重建**并入 git（P6 ✓）：`harness/scripts/cvm-probes/landlock_probe.py`（纯 `python3` ＋ `ctypes`，**零 DSH 依赖**，sha256 `226603df9b76f109ac6d9aab6dd618a4d393985b0d9c3848b577433c657fbbf5`）。**两场地实跑**：**CVM（ABI 4 · 目标场地）`VERDICT=PASS` / exit 0**；**WSL（ABI 7 · 回归）`VERDICT=PASS` / exit 0** ⇒ **本块靶子「器材可用」成立**。⛔ **未做 3.5 判定**（工位归 Trae）；本回报里任何 `PASS` 都只指**器材自证**。
+
+⚠️ 过程中**抓到并修掉一个真缺陷**：初稿把 `IOCTL_DEV` 记为 ABI 4 ⇒ 器材在 CVM 上「自适应」声明出 `0xffff` ⇒ 内核 `EINVAL` ⇒ **目标场地直接 FAIL**。已订正为 **ABI 5**，并把默认路径改成「查表**声明** → 内核**逐位验收** → 用**交集**」（裁剪时**响亮**打印）。原始现场全留：`D:\Code\_claude-evidence\35probe\`（含 `cvm/pre-fix-mask-table-bug/` 三轮 FAIL 现场 + 二分原文 + 内核 UAPI 头原文）。
+
+### P1–P8 逐条证据（命令 ＋ 观测原文）
+
+| # | 命令（两场地同，仅前缀不同：`ssh …'cd ~/ll-probe && …'` ／ `wsl.exe -d Ubuntu-24.04 -- bash -c 'cd ~/ll-probe && …'`） | 观测原文（摘） | 落点 |
+|---|---|---|---|
+| **P1** | `python3 landlock_probe.py` | CVM：`ABI_PROBE_CALL=landlock_create_ruleset(NULL, 0, LANDLOCK_CREATE_RULESET_VERSION) rc=4 errno=0(0)` ＋ `ABI=4`；WSL：`rc=7` ＋ `ABI=7` | `cvm/r1-default.raw.txt:3-4`、`wsl/r1-default.raw.txt:3-4` |
+| **P2** | 同上 | CVM：`PRE_READ[/etc/hostname]=ok`（沙箱前本可读）→ `SANDBOX_BUILD=ok` → `ARM=C … path=/etc/hostname … errno=13(EACCES) MATCH=yes`（`/etc/os-release` 同）＋ `ARM=D … read_granted … rc=0 MATCH=yes`（**不是全拒**）；WSL 同形 | `cvm/r1:31,39,43-45`、`wsl/r1` 同 |
+| **P3** | ①`… --fs-mask 0x40000000` ②`… --fs-mask 0xffff` | ①两场地：`NEGCONTROL_MASK=0x40000000 rc=-1 errno=22(EINVAL)` → `VERDICT=MASK_REJECTED`／**exit 3**；②**同参数相反**：CVM `0xffff`→`MASK_REJECTED`(exit 3)、WSL `0xffff`→`PASS`(exit 0) | `cvm/r3`、`cvm/r4`、`wsl/r2`、`wsl/r3` |
+| **P4** | 全部轮次 | 每轮末两行：`VERDICT=…` ＋ `VERDICT_REASON=…`；退出码与之一一对应（PASS→0 ／ FAIL→1 ／ MASK_REJECTED→3 ／ ERROR→4，约定写在工件头部表里） | 各 `.raw.txt` 末两行 |
+| **P5** | 同上 | `FS_MASK_DECLARED=0x7fff (按 ABI=4 自适应)` ／ WSL `0xffff (按 ABI=7 自适应)` ＋ `FS_MASK_BITS=…`（逐位名）＋ **`FS_BIT_ACCEPT[bit= 0…15 …]=yes/no`** 16 行 ＋ `FS_MASK_KERNEL_ACCEPTED=0x…` ＋ `FS_MASK_CLAMPED=false` | `cvm/r1:5-28`、`wsl/r1:5-28` |
+| **P6** | `git ls-files harness/scripts/cvm-probes/landlock_probe.py` | 入 git（与 `cvm-landlock-verify.mjs` 同目录）；⛔ 未落 `D:\Temp\…` | 本仓 |
+| **P7** | 读工件头注释 | provenance 段写明：v1 **已丢失**（五处核查全空 ／ 正文从未入过库）／本件为**重写**非恢复／**v1 历史读数不用于逐字比对** | 工件 `:1-20` |
+| **P8** | 两场地各 1 次默认跑（共 7 轮） | CVM `CHILD_ARMS_MATCH=5/5` ＋ `CLEANUP_REMOVED=true` ＋ `VERDICT=PASS`；WSL 同 ⇒ **两场地都真跑到了**（无一栏「未跑」） | 见上表 |
+
+**通道四元组**（`P8` 要求）：宿主 shell = **MSYS bash（Windows 11 宿主）**；python = **3.12.3**（两场地一致）；探测到的 ABI = **CVM 4 ／ WSL 7**；场地内核 = `6.8.0-124-generic` ／ `6.18.33.2-microsoft-standard-WSL2`。
+
+### 未闭合项（单列 · 都**未观测**，⛔ 别读成已证）
+
+1. **E 臂（网络）只是观测**，不参与 PASS/FAIL：两场地 `connect_ex=0` 且 `PRE_RESTRICT_connect_ex=0`（同值）⇒ 只说明「本次联网成功且沙箱**未改变**它」；`handled_access_net` **本件不探**（网络位是另一个字段，不在 FS 掩码里）。
+2. **ABI ≥ 6 是否另有新增 FS 位**：本件未观测（表声明到 bit15，逐位只探 bit0..15）⇒ 不声明、不臆测。
+3. **ABI 5／6 的新增能力（网络位 ／ scope）本件不覆盖** —— 按派发稿「不扩大范围」未做；若 3.5 判定需要，**另报**。
+4. **WSL 的 `LSM_LIST=unreadable([Errno 2] …/sys/kernel/security/lsm)`**（该内核未挂 securityfs ⇒ 读不到）；CVM 正常读到 `lockdown,capability,landlock,yama,apparmor`。⇒ **WSL 那条「landlock 在 LSM 链里」本件未从该文件证实**（ABI=7 的 syscall 应答本身是另一条独立证据）。
+5. **CVM 上留了一份部署副本** `~/ll-probe/landlock_probe.py`（sha256 与库内件一致）供判定轮直接跑；⛔ **不是判定依据**（判定以库内件 ＋ 本回执证据为准），要清随时可删。
+
+### 自曝
+
+1. **初稿掩码表错（构造性错误，已修）**：`IOCTL_DEV` 记成 ABI 4 ⇒ CVM 上 `0xffff` 被 `EINVAL`。**定位链**（没停在「成因未知」）：二分到单 bit ⇒ `0x7fff` 收／`0x8000` 拒；三处证据一致 —— ① `cvm/bisect-mask-bits.raw.txt`；② `cvm/uapi-header-landlock.raw.txt`（该内核 UAPI 头 `#define` **只到 `1ULL<<14`**，注「网络位 **since ABI 4**」）；③ 仓内 `docs/dsh/dsh-migration.md:1053`。**修法不只是改数字**：新增「逐位内核验收」＋ 响亮裁剪（`FS_MASK_CLAMPED=true DROPPED_BITS=…`）。
+   - **可领走的教训**：「**版本号 → 能力位**」是**声明**，只有内核**逐位回答**才是读数；凡「按版本号推能力」的工件都该允许内核反驳。这类错**靠人眼审不出来**（我初稿自己写、自己都没看出来）。
+2. **`--fs-mask` 的语义边界**：显式掩码**不裁剪**（喂什么测什么）⇒ `cvm/r2`（`--fs-mask 0x2`）的 `PASS` **不是**「拒读正证」—— 该轮 C 臂被标 `ok(unhandled)` 且 `MATCH=skip`（原文可见）。⛔ 别把 R2 读成「掩码够用」。
+3. **假绿坑（照 §5 写进诚实边界）**：本件正证用的是**探针自设掩码**（只授权 scratch ⇒ 其余读/写全拒）**≠** DSH 的 profile 掩码（`readOnly:['/']` ＋ 写白名单 ⇒ **读权限全开**）⇒ 本件正证**只证「内核确实强制」**，⛔ **不得读成「DSH 会挡住读敏感文件」**（CVM 非独占、他方产物在库）。
+4. **scratch 回收依赖「父进程未受限」**：landlock 的 `REMOVE_*` 按**父目录**判 ⇒ 受限子进程删不掉 scratch 目录本身。本件用 `fork` ＋ 父进程回收 ⇒ 两场地跑完 `ls -d /tmp/llprobe-* \| wc -l` = **0**。**该坑已写进工件头注释**（防后来者改成「子进程自回收」后留垃圾）。
+5. **第一轮 FAIL 的原文已保留**（`cvm/pre-fix-mask-table-bug/`），⛔ 不是噪声、别删：它是「表错 → 目标场地红」的现场，也是本件逐位验收机制**存在理由**的实证。
+6. 本块**未使用任何临时 Key、未落任何凭据**（不需要）✓。
+
+**通用纪律 6 条自查**：通道已注明 ✓（CVM 前台 ssh ／ WSL `wsl.exe`）；「没有」附检索式 ✓（残留：`ls -d /tmp/llprobe-* | wc -l` ⇒ 0，两场地；git：`git ls-files` 见 P6）；自曝优于好看 ✓（上 6 条）；未观测不写成已证 ✓（未闭合项 1–5）；应红应绿读源码/读数 ✓（FAIL 未靠猜，二分到单 bit）；收尾核 `git status` ✓（提交见本轮 commit）。
 
 ---
