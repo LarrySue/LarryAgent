@@ -9,6 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
+| **`DSH-3.7.4·J6` 独立重放** | Claude | **本机 Windows**（同 J6 原地） | 🔵 **已派发 · 进行中** —— 复核 J6 结论「read-only 臂里 `EPERM` 与 marker 都在 ⇒ **无假红**」在**独立重放**下**跨环境可复现**（判据 R1–R5 见下）；⚠️ **不追** R3「`node.exe` 也起不来」那层成因（已延后、工位归 Trae） | 2026-10-08 |
 | **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | ✅ **已复验通过（WB 2026-10-08）· 本块闭环** —— 器材入 git；**WB 亲跑 CVM** 正证 `PASS`/0 ＋ 负向 `MASK_REJECTED`/3、归一化后与交付读数逐行相同 ⇒ 器材可用成立（P1–P8 全绿）；⚠️ WSL 未由 WB 复跑（本机 `wsl.exe` 黑名单硬拦，派发稿已预设「如实报未跑」） | 2026-10-08 |
 
 ---
@@ -136,5 +137,79 @@
 6. 本块**未使用任何临时 Key、未落任何凭据**（不需要）✓。
 
 **通用纪律 6 条自查**：通道已注明 ✓（CVM 前台 ssh ／ WSL `wsl.exe`）；「没有」附检索式 ✓（残留：`ls -d /tmp/llprobe-* | wc -l` ⇒ 0，两场地；git：`git ls-files` 见 P6）；自曝优于好看 ✓（上 6 条）；未观测不写成已证 ✓（未闭合项 1–5）；应红应绿读源码/读数 ✓（FAIL 未靠猜，二分到单 bit）；收尾核 `git status` ✓（提交见本轮 commit）。
+
+---
+
+## 🔁 `DSH-3.7.4·J6` 独立重放（2026-10-08 派发）
+
+**背景**：`DSH-3.7.4·J6` 的结论是「**read-only 臂里 `EPERM` 与 marker 都在 ⇒ 无假红**」。⚠️ 该结论此前的复核**只做了「原始帧解码」**（WB 解 `tool/result` 原始帧），**未重跑 DSH 会话** ⇒ **重复性维度仍是空白**。本块做**独立重放**：在**本机 Windows**（同 J6 原地）**从零重跑**该会话，判其**跨环境可复现**。
+
+⚠️ **本块边界（⛔ 先钉）**：**只做重放本身** —— ⛔ **不追**「连 `node.exe` 也起不来」那层成因（R3 那半层，**已延后、工位归 Trae**，见 `TODO.md`「延后（低优先 · 待触发）」段）。
+
+### 0 · 目标
+
+用 **J6 装置的范式**在**本机 Windows** 上重跑两臂（唯一变量 = `DSH_PERMISSION_MODE`），复核：
+**read-only 臂下 `tool/result` 里 `EPERM` 与 `[sandbox: … under read-only mode]` marker 是否**同时**出现** —— 若在，则**该臂不是假红**（即：失败**伴随**沙箱 marker，而非「被别的机制顶掉、看起来像沙箱拦的」）。
+
+### 1 · 判据（逐条可复跑）
+
+| # | 判据 | 取什么证据 |
+|---|---|---|
+| **R1** | **两臂都真跑出会话** | 每臂自报 `[dsh-prompt] session=session-…` ＋ `events>0`（⛔ 归属**只认自报 session id**，不按 mtime 分组） |
+| **R2** | **A 臂（`workspace-write`）拒绝成立** | 该臂 `tool/result` 含 `EPERM` **且**含 marker `[sandbox: file access denied under workspace-write mode]` |
+| **R3** | ⭐ **B 臂（`read-only`）无假红** | 该臂 `tool/result` **同时**含 `EPERM` **且**含 marker `[sandbox: file access denied under read-only mode]` ⇒ **marker 在** ⇒ 不是「被别的机制顶掉」 |
+| **R4** | **越界文件两臂均未创建** | `<SBOX>/outside/denied.txt` 两臂跑完**仍不存在**（`EPERM` 是**真拦**、不是写完了才报错） |
+| **R5** | **参考项（非判据）** | B 臂是否**复现** `CannotCreateTypeConstrainedLanguage`（J6 观测到 ×2）—— ⚠️ **这是现象、不是判据**；**复现与否都不改「无假红」结论**（`EPERM` ＋ marker 已在） |
+
+### 2 · 判据前置（动手前**实测**、⛔ 勿照抄）
+
+- **场地**：**本机 Windows**（同 J6 原地）。
+- **J6 原件（只读参考、⛔ 勿覆盖）**：`D:\Code\_trae-evidence\374\j6\`（装置 ＋ 解码器 ＋ 原始证据全在）。
+- **工程 home 只读依赖**：**`.dsh-home/profiles/sdk/`**（**仓根**，非 `harness/.dsh-home`！装置 `cpSync` 它到**临时 home**；⚠️ 其中 `node_modules/@larryagent/plugin-sandbox-dialect` 须在 —— WB 2026-10-08 实测在）。
+- **prompt 驱动**：`harness/scripts/dsh-prompt.mjs`（**只认 `DSH_HOME`**；⚠️ **无模式开关** —— 模式由 `DSH_PERMISSION_MODE` 经 profile 自身读取，`dsh-base/cordis.patch.yml:211`）。
+- **多帧 zstd**：会话文件 `session.v3.jsonl.zstd` 是**多 frame 串联** ⇒ 用 J6 的 `dump-toolresult.mjs`（按 magic `28 B5 2F FD` 切分逐帧解），**或**仓内现成 `harness/tests/s0-session-log.ts`（`node` 自带 `zstdDecompressSync`，WB 实测可用）。
+- **⚠️ Key（本机无 `.dsh-home/.credentials.yaml`）**：真会话需要 key ⇒ 从 `backend/config.yaml` 的 `models.deepseek.api_key`（`:16`，WB 实测**非空**）读入 **`DEEPSEEK_API_KEY` env 一次性注入**（装置只透传 env）；⛔ **不打印、不落盘、不写进回报**。⚠️ **若本机无可用 key**（env 空 ／ 该值为空 ／ 已失效 ⇒ 会话报 `AUTH` ／ `MISSING_CREDENTIAL`），**如实报「无可用 key、无法跑真会话」**，⛔ **别伪造绿灯** —— 本块**顺延等 key**。
+- **⚠️ 装置 `OUT` 常量指向原件目录** —— 重放**必须先把 `OUT` 改到新目录**，⛔ **不得覆盖 `_trae-evidence/374/j6/dsh/`**。
+
+### 3 · 交付物
+
+- **重放装置**：复制 `run-j6-dsh.mjs` 并把 `OUT` 改指新目录（`D:\Code\_claude-evidence\374j6-replay\`），两臂与 prompt **保留原样**。
+- **原始输出**：两臂 `stdout`／`stderr` ＋ 解码后的 `tool/result` **原文**（⛔ 禁手工整理／意译），附**通道四元组**（宿主 shell ／ node 版本 ／ 场地 ／ 越界目标路径）。
+- **比对表**：重放读数 **vs** J6 原文（`...\374\j6\dsh\J6-toolresult.raw.txt`）**逐词命中**比对（同 `dump-toolresult.mjs` 的 7 个词）。
+
+### 4 · 参考件四要素（照抄，勿另行转述）
+
+① **路径**：
+- `D:\Code\_trae-evidence\374\j6\run-j6-dsh.mjs`（**装置本体** · 两臂 `['workspace-write','read-only']` · 唯一变量 `DSH_PERMISSION_MODE` · 临时 home = `cpSync` 复制 `.dsh-home/profiles/sdk` · **不跑 pnpm ／ 不碰工程 home ／ 不切 patch**；工作区 `<SBOX_ROOT>/ws`，越界目标 `<SBOX_ROOT>/outside/denied.txt`）
+- `D:\Code\_trae-evidence\374\j6\dump-toolresult.mjs`（**多帧 zstd 解码器**）；仓内替代 = `harness/tests/s0-session-log.ts`
+- `D:\Code\_trae-evidence\374\j6\dsh\J6-toolresult.raw.txt`（**J6 两臂原文** —— 预期基线：A 臂 `EPERM` ＋ workspace-write marker；B 臂 `CannotCreateTypeConstrainedLanguage`×2 ＋ **`EPERM` 照旧** ＋ read-only marker）
+- **判据权威落点** = `archive/roadmap-history.md` 的 `##### DSH-3.7.4` ／ `##### DSH-3.7.4-T`
+
+② **怎么参考**：读码；**抄两臂结构与 prompt**（`PROMPT` 原样照抄）；复现后**逐字段与 J6 原文比对**。
+
+③ **参考程度**：可 fork 思路 ／ 可照抄 prompt 与臂结构。
+
+④ **不可参考**：⛔ 装置结论**取自 `917f45d` 版树**（基线 `917f45d` ／ `d808b60`）⇒ **不得当"当前版本"外推**（本次重放**如实记当前树**，与基线**并列留痕、不合并**）；⛔ 别把本块扩成 R3 成因追查。
+
+### 5 · 场地器材
+
+| 场地 | 通道 | 用途 |
+|---|---|---|
+| **本机 Windows** | Bash ／ node（装置内用 `process.execPath`） | **重放场地**（J6 原地） |
+| CVM ／ WSL | —— | ⛔ **不参与**（本块是 Windows 方言件重放） |
+
+### 6 · 回报格式
+
+**结论先行** → 逐条 **R1–R5** 证据（**命令 ＋ 观测原文**）→ **与 J6 原文的比对表** → **未闭合项单列** → **自曝**。
+⛔「成因未知」是可接受结论，别为叙事完整编一个。⚠️ 按本区**通用纪律 6 条**（通道须注明 ／ 「没有」须附检索式 ／ 自曝优于好看 ／ 未观测不得写成已证 ／ 应红应绿逐件读源码 ／ 收尾必核 `git status`）。
+
+### 7 · 禁区
+
+- ⛔ **不改工程 home `.dsh-home`**（用**临时 home**）。
+- ⛔ **不切 patch**、⛔ **不跑 pnpm**、⛔ **不动 `_trae-evidence/374/j6/` 原件**（只读参考；`OUT` 必须改指新目录）。
+- ⛔ **key 零落盘、零打印**（回报里不得出现 key 或其片段）。
+- ⛔ **不追 R3「`node.exe` 也起不来」那层成因**（已延后、工位归 Trae）。
+- ⛔ **不改 `docs/`**（定案区，WB 处置）；**不改 `TODO.md`**（WB 处置）；**不改判据**（判据落点 = 归档区 `##### DSH-3.7.4` ＋ 本稿 §1）。
+- ⛔ **不做 3.5 判定**（工位归 Trae）；⛔ 若发现还需别的器材，**报告出来、不扩大范围**。
 
 ---
