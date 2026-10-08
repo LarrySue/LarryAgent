@@ -508,3 +508,32 @@ $ timeout 20 git --version                      → git version 2.52.0.windows.1
 > 📌 **给"别的机器上研究"的三条提醒**：① 独立 home（`DSH_HOME` 指向专用目录）；② 工作区不要用含真 key 的仓库（含本仓）；③ 若坚持要给它项目权限 —— 先补 AGENTS.md 约束并登记进治理名单。
 
 @老大（处置全部执行完毕；④ 三事实 —— **老大裁〔09-30 晚〕：翻篇，不入档**，未结项撤）
+
+---
+
+## 🧵 基建 · 行尾统一（`.gitattributes` 落地 · 2026-10-08）
+
+> **指令来源**：老大 ——「为当前项目的 git 添加自动化处理 CRLF 和 LF 问题的配置，这事儿多少已经有点影响 AI 们的注意力了」。
+
+**勘察（动手前实测）**：
+- 仓库**无 `.gitattributes`**；`core.autocrlf=true`（git 安装的 system 级配置）⇒ 提交警告 "LF will be replaced by CRLF" 的源头。
+- 300 个跟踪文件分两层实测：**存储层（索引）已全 LF**（289×i/lf）；**混合只在工作区**（`w/crlf` 57 ＋ `w/mixed` 2：`.workbuddy/memory/2026-09-16.md` ／ `client/src/api.ts`）。
+
+**方案**：新建 `.gitattributes` ⇒ `* text=auto eol=lf`（文本文件**存储＋检出一律 LF**；规则钉在仓库内，**不再依赖各机器/各 AI 客户端的 core.autocrlf**）＋ 显式声明 `*.png`／`*.ico` 为二进制。
+
+**执行与验收**：
+1. 写入 `.gitattributes` ⇒ `git check-attr` 全库验证生效（文本：`text=auto eol=lf`）。
+2. 工作区对齐：59 个 CRLF/mixed 文件**逐个从索引强制重建** —— ⚠️ 坑：直接 `git checkout -- <file>` 会被 git"内容等价不重写"优化跳过（实测无效）⇒ 用 `rm ＋ git checkout --` 强制；二进制与空文件天然不受影响。
+3. 复扫：**w/crlf 0 ／ w/mixed 0**（289×w/lf ＋ 5×none ＋ 6×二进制）＋ `git status` 干净。
+4. 存储层复核：`git add --renormalize .` 产出**零变更** ⇒ 存储层本就全 LF，无规范化提交、无"大 diff"。
+- ⚠️ **本改动只碰行尾、零内容变化**（59 个文件在 git 层面无 diff —— 对齐后的工作区 == 索引；commit 仅含 `.gitattributes` 新增 ＋ 本段）。
+
+**效果**：提交警告消失（检出方向由属性钉为 LF，覆盖 autocrlf）；**"行尾保持"类验收可退休**（10-01 验收项④那类逐文件行尾检查从此由 git 自动保证）；本机工作区（含 WSL 挂载视角）＋ 存储 ＋ 未来任何环境 clone 的行为一致。
+
+**提请（docs 区，我不动，待裁）**：
+- `docs/local-env.md:536`「行尾：仓库内 `core.autocrlf=true` ⇒ 跨 AI 协作行尾噪声的来源（本仓治理检查已含"末字节与 HEAD 逐字节比对"）」——**已过期** ⇒ 建议改为「行尾已由仓库级 `.gitattributes` 统一为 LF（2026-10-08），不再依赖本机 autocrlf」。
+- `docs/local-env.md:565` ／ `docs/test-env.md:147`（"仓库统一 LF"表述）——**复核即可**：前者"产品侧不依赖 autocrlf"更加成立；后者由"意愿"变"事实"。
+
+> 附注：本 commit **未推远端**（`origin = github.com/LarrySue/LarryAgent.git`）。
+
+@老大（行尾规则已落地——此后协作/验收不必再管行尾；`local-env.md:536` 一处待你裁更新）
