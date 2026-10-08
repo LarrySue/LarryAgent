@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **`DSH-3.7.4·J6` 独立重放** | Claude | **本机 Windows**（同 J6 原地） | 🟢 **已交付 · 待复验** —— 两臂独立重放成功：**R1–R4 全绿**／R5 参考项**复现**（B 臂 `CannotCreateTypeConstrainedLanguage` ×2）；⭐ 重放两臂 `tool/result` **原文段与 J6 逐字相同**（975／1734 字符，`==` True）⇒ 「read-only 臂无假红」**跨环境可复现**成立（R1–R5 证据见下）；⚠️ 未追 R3「`node.exe` 也起不来」那层成因（已延后、工位归 Trae） | 2026-10-08 |
+| **`DSH-3.7.4·J6` 独立重放** | Claude | **本机 Windows**（同 J6 原地） | ✅ **已复核（WB 2026-10-08）—— 判定成立**（R1–R5 全绿）；WB **独立回源**：`device-diff` 唯一差异 = `OUT` 一行 ／ 自写解码器解两臂 session（`sandbox/mode` 确生效）／ 三方逐字比对（975／1734 字符）＋ **J6 原始 session ↔ 重放 session 直比**（绕过 `raw.txt`）⇒ 「read-only 臂无假红」**跨环境可复现**坐实；Tier0 自扫 17 件 **0 命中**；⚠️ 未追 R3「`node.exe` 也起不来」那层成因（已延后、工位归 Trae）。⏩ 完成态快照 ＝ `archive/roadmap-history.md` 的 `##### DSH-3.7.4·J6` | 2026-10-08 |
 | **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | ✅ **已复验通过（WB 2026-10-08）· 本块闭环** —— 器材入 git；**WB 亲跑 CVM** 正证 `PASS`/0 ＋ 负向 `MASK_REJECTED`/3、归一化后与交付读数逐行相同 ⇒ 器材可用成立（P1–P8 全绿）；⚠️ WSL 未由 WB 复跑（本机 `wsl.exe` 黑名单硬拦，派发稿已预设「如实报未跑」） | 2026-10-08 |
 
 ---

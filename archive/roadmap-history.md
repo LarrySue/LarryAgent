@@ -904,8 +904,26 @@ harness/package.json                         # 加 test:isolated 脚本
   | 5 | `no-session-dir` 的 **POSIX 分支**未复验 | ✅ **已回报并复核（2026-09-21）** —— 三问**全成立**：① `chmod 0o500` 在 Linux **非 root** 下真拦（`EACCES`／`errno -13`；ext4 与 tmpfs **两通道逐字段一致**，另含 `0o700` 正对照）；② 身份 `uid=1000` **非 root**（**另加 root 对照**把因果坐实：`mode@0o500` 三通道同为 `0o500`、唯一差异是 root 绕 DAC 后写成功）；③ 装置层 `no-session-dir` **真红**（两轮复现，判据字段逐字段一致）。**WB 复核＝独立取物证（非读其结论）**：CVM 现场核**装置三件 sha 逐位一致**、交付件**本机／CVM 双侧 sha 一致**、残留全清、**Windows 侧回归由 WB 现场独立复跑**（三方逐字段比对：70 个业务字段**仅 3 处差异，全为预期**：2 处 base64 内含临时目录名 ＋ 1 处即其自曝的措辞改动）。⚠️ **三处订正（均属表述／计数，非内容不实）**：① 证据件数 **13 → 11**（CVM 与本机双侧皆 11，**未漏回传**，纯计数错）；② 交付件在 **CVM 侧的文件名是 `s0-e2e-destructive-actions-posix.mjs`**（报告写 `.mjs`；CVM 的 `.mjs` 仍是 WB 落位旧版 `9b5e1668…`）—— 附带**正面**结论：**未覆盖落位参考件**（守住了"参考件只读"）；③ 交办项**落点应为 `docs/production-env.md`**（非 `test-env.md`，后者是 WSL 专题），且其「RemoveIPC」**归因未被复现**（WB 实测 `RemoveIPC=no` ＋ 探针跨会话存活 ⇒ 见 `docs/production-env.md` §6 第 9 条，两通道分歧并列留痕）。**验收基准限制（沿用）**：结论**取自 `917f45d` 版树** ⇒ ⛔ 不得当"当前版本"外推；WB 补证：本机新版 `:311` 的 POSIX 分支与该行**行为等价**（仍未在新版树上实跑）。**派发稿／回报 = `exchange/log-claude.md`**（本块已闭环，可按交流区规矩清理）。
   | 6 | `docs/` 承接未回填 | ✅ **已落** ⇒ `docs/local-env.md`：新增 **§12**（12.1–12.8；**12.7 = `TEMP`／`Sys` 语义**，2026-09-20 追加）＋ 就地订正 §8.7 第 4 条（"未实施" → 已实施）＋ 就地作废 §10.2 末条 |
   | 7 | `④_bytesAtKill` 正常区间未定 | ⛔ **关闭（降级）** ⇒ 它**本就不是断言项**（装置只取 `exit=0`）；3 采样 308／649／652 差到 2× ⇒ 降为"仅参考"。真判据化应换**离散判据**（kill 后进程必须消失），不标定字节区间 |
-  | 8 | J6 未由 Claude 独立重放 | ⏸ **延后** ⇒ 见「延后（低优先 · 待触发）」段（执行人 **Claude**） |
+  | 8 | J6 未由 Claude 独立重放 | ✅ **已回报并复验（Claude 2026-10-08 交付 ／ WB 同日逐条回源复核）⇒ 判定成立、R1–R5 全绿** ⇒ 见本段之后〈DSH-3.7.4·J6 · 独立重放〉 |
   | 9 | **Claude 本轮新暴露**（不在 Trae §9 五条内，WB 补登）：`s0-e2e.test.ts` 读 `icacls` 时硬编码 `{ encoding: 'utf8' }` ⇒ **中文 Windows 下该行原文必然乱码入盘** | ✅ **已办（ⓑ，`b82ba4f`）** —— 按 ⓑ 只加注释（写明「中文 Windows 必乱码、⛔ 禁据此行判 ACL」）。原判不变：⛔ **不承载判据**（判据是 `exit=0` ＋ 其后断言，两侧全绿）；但会**干扰日后按该行读"ACL 是否真设上"的人**。归属 **Trae**（装置代码）；ⓐ（ACP 936 解码）**未采纳**，取 ⓑ。⚠️ 与 #5 同一处代码（`no-session-dir` 变体）⇒ **已落地**（`b82ba4f`）|
+
+##### DSH-3.7.4·J6 · 独立重放（Claude 2026-10-08 交付 ／ WB 同日逐条回源复核）✅ **成立 —— R1–R5 全绿；「逐字相同」另经 WB 一条更强路径独立证实**
+
+> **本节定位**：收口 3.7.4 未闭合 **#8** 的下游尾巴（J6 结论的**重复性维度**）。⚠️ J6 的**判据与边界仍以 `##### DSH-3.7.4` 段为权威落点**，本节只登记**重放实况 ＋ WB 复验结论**，⛔ 不复述判据。
+- 📮 **派发稿 ＋ 回报**原载交流区 `exchange/log-claude.md`（**活日志，按交流区规矩会清**；回溯 `git log -p -- exchange/log-claude.md`）。**判定与结论以本节为准**。
+- 🗂 **证据登记（仓外）**：Claude `D:\Code\_claude-evidence\374j6-replay\`（**17 件**）；J6 基线（只读参考、未动）`D:\Code\_trae-evidence\374\j6\`。
+- **要回答的一件事**：J6 结论「read-only 臂里 `EPERM` 与 marker 都在 ⇒ **无假红**」在**独立重放**（从零重跑 DSH 会话）下**跨环境可复现**吗 —— 本块之前只做过「原始帧解码复核」，**未重跑会话**（重复性维度空白）。
+- **装置与唯一变量**：`run-j6-dsh.mjs` 复制自 J6 原件、**恰好改 1 行**（`OUT` → 新证据目录，`diff -u` 全文在案）⇒ 唯一变量仍 = **`DSH_PERMISSION_MODE`**；臂名与 `PROMPT` **原样**。重放解析出的 `tool/call.arguments` = 派发稿指定命令**原样**。
+- ✅ **R1–R5 全绿**：**R1** 两臂均真跑出会话（各 `[dsh-prompt] session=… events=18`，归属**只认自报 id**）；**R2** A 臂（`workspace-write`）`EPERM` ＋ workspace-write marker；**R3** ⭐ B 臂（`read-only`）`EPERM` ＋ **read-only marker 同时在** ⇒ 非假红；**R4** 越界文件 `<SBOX>/outside/denied.txt` 两臂**均未创建**；**R5**（参考项）B 臂 `CannotCreateTypeConstrainedLanguage` ×2、A 臂 0（与 J6 同）。
+- ⭐ **WB 复验方式（回源取证，不采信交付声明）**：
+  - **物证**：17 件在位；`device-diff` 唯一差异 = `OUT` 一行；`dump-toolresult.mjs` 副本与原件 **sha256 逐字相同**；J6 原件 **0 改动**（自跑检索式）。
+  - **独立解码**：WB 自写 `splitFrames`（按 magic 切多帧 zstd）解两臂 session ⇒ 各 **9 frame ／ 22 事件 ／ `tool/result` ×1**；`sandbox/mode` = `workspace-write` ／ `read-only`（唯一变量确生效）、`permission/preset` 同、`approval/policy` = `ask`。
+  - **三方逐字比对**（去 BOM ／ 去 CR）：重放 session 段 ≡ 重放 `raw.txt` 段 ≡ **J6 `raw.txt` 段**（两臂均 `True`）；A **25 行／975 字符**、B **39 行／1734 字符**，**三方一致**；全文件 87／87 行仅 2 行不同（即两处 `=====` 路径头）。
+  - ⭐ **更强一条（WB 增量）**：**J6 原始 session 日志仍在**（`_trae-evidence/374/j6/dsh/sessionlog-*`）⇒ WB **绕过 `raw.txt` 中间层**，直接比对 **J6 session ↔ 重放 session** 的 `tool/result` 段 ⇒ **逐字相同**（两臂 `True`）。⇒ 「跨环境可复现」由"对**中间产物**相同"升级为"对**原始产物**相同"。
+  - **Tier0**：WB 自扫 17 件，`sk-` ／ `Bearer` ／ `key|password|secret|token=` 形态 **0 命中**（脱敏脚本、不回显值）；装置确认为「只透传 `DEEPSEEK_API_KEY` env、不读不打印不落盘」。
+  - **副作用**：工程 home 跑后窗口内 **0 写**；`harness/scripts/dsh-prompt.mjs` mtime 未变（2026-09-10）；越界文件 **0**。
+- ⚠️ **未闭合（沿用，均不动作）**：① **R5 成因**（`CannotCreateTypeConstrainedLanguage` 为何只在 read-only 臂）属「`node.exe` 也起不来」那层 ⇒ **已延后、工位归 Trae**（即本条未闭合 **#3**）；② 可复现强度 = **n=1 次独立重放 ＋ J6 原轮共 2 次观测** ⇒ ⛔ 别读成统计稳定；③ 耗时 5s／6s（J6 为 6s／6s）**只记墙钟、不作判据**。
+- ⚠️ **结论边界**：本轮**只证"可复现"**，⛔ **不判 J6 结论本身当否**；结论**取自当前树**，与 J6 基线（`917f45d` 版树）**并列留痕、不合并**。⚠️ 「唯一变量」是**装置层面**的断言（口径同校、未逐字节校 09-20 的 profile 状态）⇒ 但**产物层已由 session↔session 逐字相同坐实**，不受此影响。
 
 ##### DSH-3.7.4-T · 独立测试件（`s0-e2e` 装置修复的第三方验证） ✅ **已回报并复验（Claude 2026-09-20 交付 ／ WB 同日复核：`T-1` 独立复跑逐条一致 ＋ `T-2` 三方字段比对一致）**
 - 📮 **派发稿**原载交流区 `exchange/log-claude.md`（**已随交流区清理**；回溯 `git show 5a1763d:exchange/log-claude.md`）。**判据与边界的权威落点 = 本文件**。
