@@ -533,7 +533,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 
 - **Python 多入口并存**：持久 User `PATH` 含 `…\Programs\Python\Python311\`。`python` → **3.11.9**，`py -3` → **3.14.3**。⇒ 脚本一律显式 `py -3.x` 或绝对路径，**勿依赖裸 `python`**。
 - **`git` 全局硬编码代理**：`http.proxy` = `https.proxy` = `socks5://127.0.0.1:7890`（用户梯子）。⇒ **梯子关时，`git fetch/pull/push` 与依赖 git 的插件安装会一起失败**；需临时 `git -c http.proxy= -c https.proxy=`（本机直连 GitHub 会被 reset；见决策稿 §3.4「DSH-2.6 收口复核」）。
-- **行尾**：仓库内 `core.autocrlf=true`，全局未设 ⇒ 跨 AI 协作行尾噪声的来源（本仓治理检查已含"末字节与 HEAD 逐字节比对"）。
+- **行尾**：**已统一为 LF（2026-10-08，`ba5d6ed`）** —— 仓库级 `.gitattributes`（`* text=auto eol=lf`）钉定"存储 ＋ 工作区均 LF"、覆盖本机 `core.autocrlf` 差异 ⇒ 原"仓库内 `core.autocrlf=true`、全局未设 ⇒ 跨 AI 协作行尾噪声"之患已消除；"末字节与 HEAD 逐字节比对"类检查不再必需。
 - **控制台编码**：中文 Windows 默认 GBK/CP936，且 User 层未设 `PYTHONUTF8` —— 与 §4.1「编码层」同源，是 ① 层缺口的环境底色。
 - ⭐ **工具输出的语言与编码（判"证据原文"用，2026-09-17 实测）**：中文 Windows 上 `taskkill` 的成功输出**恒为 GBK 中文**（原始字节 `b3c9b9a6…` ＝ `成功: 已终止 PID 为 <pid> 的进程。`），`tasklist` 无匹配 ＝ `信息: 没有运行的任务匹配指定标准。`；`GetACP` ／ `GetConsoleOutputCP` ＝ **936**、`GetUserDefaultUILanguage` ＝ **0x804**（zh-CN）。⇒ **node 的 `spawnSync(cmd, …, {encoding:'utf8'})` 读这些输出必得替换字符乱码**（实测：`����: �޷���ֹ …`），**绝不会**得到英文（**前提：该进程确实按 ACP 输出、且未经本地化**）。⇒ 凡把这类输出当「证据原文」存盘 ／ 引用：① 须按 **ACP（936）** 解码。
   - ⛔ **原 ②「出现英文 ⇒ 不是本机该进程的原始产物」已作废（2026-09-20 实测推翻）**：同一台机器、同一条路径**能**产出英文 —— `icacls` 92 次采样中 **2 次英文**；PS 5.1 在**带 DSH 编码前导码**的形态下 **11/12 出英文**（而系统/用户 UI 语言实测确是 zh-CN）。⇒ **语言 ／ 编码不得作"证据是否被后处理"的判据**（该条曾误伤 Trae 的 3.7.4 证据）。完整实测与替代纪律见 **§12.6**。
