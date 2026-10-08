@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **`DSH-3.7.4·J6` 独立重放** | Claude | **本机 Windows**（同 J6 原地） | 🔵 **已派发 · 进行中** —— 复核 J6 结论「read-only 臂里 `EPERM` 与 marker 都在 ⇒ **无假红**」在**独立重放**下**跨环境可复现**（判据 R1–R5 见下）；⚠️ **不追** R3「`node.exe` 也起不来」那层成因（已延后、工位归 Trae） | 2026-10-08 |
+| **`DSH-3.7.4·J6` 独立重放** | Claude | **本机 Windows**（同 J6 原地） | 🟢 **已交付 · 待复验** —— 两臂独立重放成功：**R1–R4 全绿**／R5 参考项**复现**（B 臂 `CannotCreateTypeConstrainedLanguage` ×2）；⭐ 重放两臂 `tool/result` **原文段与 J6 逐字相同**（975／1734 字符，`==` True）⇒ 「read-only 臂无假红」**跨环境可复现**成立（R1–R5 证据见下）；⚠️ 未追 R3「`node.exe` 也起不来」那层成因（已延后、工位归 Trae） | 2026-10-08 |
 | **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | ✅ **已复验通过（WB 2026-10-08）· 本块闭环** —— 器材入 git；**WB 亲跑 CVM** 正证 `PASS`/0 ＋ 负向 `MASK_REJECTED`/3、归一化后与交付读数逐行相同 ⇒ 器材可用成立（P1–P8 全绿）；⚠️ WSL 未由 WB 复跑（本机 `wsl.exe` 黑名单硬拦，派发稿已预设「如实报未跑」） | 2026-10-08 |
 
 ---
@@ -211,5 +211,86 @@
 - ⛔ **不追 R3「`node.exe` 也起不来」那层成因**（已延后、工位归 Trae）。
 - ⛔ **不改 `docs/`**（定案区，WB 处置）；**不改 `TODO.md`**（WB 处置）；**不改判据**（判据落点 = 归档区 `##### DSH-3.7.4` ＋ 本稿 §1）。
 - ⛔ **不做 3.5 判定**（工位归 Trae）；⛔ 若发现还需别的器材，**报告出来、不扩大范围**。
+
+---
+
+## 📤 `DSH-3.7.4·J6` 独立重放：交付回报（2026-10-08 · Claude）
+
+**结论先行**：**两臂独立重放成功，R1–R4 全绿，R5 参考项复现**。**最强的一条**：重放两臂的 `tool/result` **原文段与 J6 逐字相同**（A 臂 25 行／975 字符、B 臂 39 行／1734 字符，同臂 `==` 为 `True`），**不只是 7 词命中一致**（14/14 格）。⇒ J6 结论「**read-only 臂里 `EPERM` 与 marker 都在 ⇒ 无假红**」**跨环境可复现**成立。
+
+⛔ 本块**只做重放**：未追 R3「`node.exe` 也起不来」那层成因（已延后、工位归 Trae）；⛔ 本块**不判** J6 结论本身当否（判定轮工位）。
+
+**通道四元组**（§3 要求）：宿主 shell = **MSYS bash（Windows 11）**；node = **v24.14.1**（`D:\App\node\node.exe`，与 J6 那次**同路径同版本**，两侧 `J6-dsh-summary.json` 均有记）；场地 = **本机 Windows**（同 J6 原地；沙箱根 `D:\Code\larry-sbox-374`）；越界目标路径 = **`D:\Code\larry-sbox-374\outside\denied.txt`**。
+
+**装置与「唯一变量」**：`run-j6-dsh.mjs` 复制自 J6 原件，**恰好改 1 行**（`OUT` → `D:\Code\_claude-evidence\374j6-replay`；CRLF=74 保留、`node --check` 通过），diff 全文存 `device-diff-vs-original.txt`；**臂名与 `PROMPT` 原样**。唯一变量仍 = **`DSH_PERMISSION_MODE`**。
+
+### R1–R5 逐条证据（命令 ＋ 观测原文）
+
+| # | 命令 | 观测原文 | 落点 |
+|---|---|---|---|
+| **R1** | `node "D:\Code\_claude-evidence\374j6-replay\run-j6-dsh.mjs"`（前台） | `--- workspace-write: exit=0 5s session=session-2d06fe08784e4bf695e9d49a744c81fd` ／ `--- read-only: exit=0 6s session=session-1de36a1cccd741c28d5f52260afaccf7`；两臂 stderr **全文各 1 行**：`[dsh-prompt] session=session-2d06fe08… events=18 notifications=20` ／ `[dsh-prompt] session=session-1de36a1c… events=18 notifications=20` ⇒ **`events=18 > 0`** | `run-console.txt:1-2`、`<mode>.stderr.txt` |
+| **R1·归属** | `find <home>/sessions -type f` | 每臂**恰好 1 个** `session.v3.jsonl.zstd`，目录名 = **自报 session id**（`…\--D-Code-larry-sbox-374-ws--\session-2d06fe08…` ／ `…\session-1de36a1c…`）⇒ 归属**只认自报 id**、⛔ 未按 mtime 分组（两臂各自独立临时 home，无混淆源） | `sessionlog-*/` |
+| **R2** | `node dump-toolresult.mjs <A 臂会话目录>` | `Error: EPERM: operation not permitted, open 'D:\Code\larry-sbox-374\outside\denied.txt'`（`errno: -4048`／`code: 'EPERM'`／`syscall: 'open'`）**＋** `[sandbox: file access denied under workspace-write mode]` **＋** escalation 行 **＋** `[exit code: 1]` | `J6-replay-toolresult.raw.txt` A 段 |
+| **R3** ⭐ | 同上（B 臂） | `CannotCreateTypeConstrainedLanguage` **×2**（真值＋行内 `FullyQualifiedErrorId`）→ 其后 `Error: EPERM: operation not permitted, open '…\outside\denied.txt'` **＋** `[sandbox: file access denied under read-only mode]` **＋** escalation 行 **＋** `[exit code: 1]` ⇒ **`EPERM` 与 read-only marker 同时在** ⇒ **不是被别的机制顶掉**（无假红） | 同上 B 段 |
+| **R4** | `ls -l /d/Code/larry-sbox-374/outside/denied.txt` ／ 检索式 `find /d/Code/larry-sbox-374 -name 'denied.txt' \| wc -l` | `ls: cannot access …: No such file or directory`；检索式 ⇒ **0**；`ls -la outside/` ⇒ `total 0`（空目录）⇒ **两臂均未创建**（`EPERM` 是**真拦**，⛔ 不是写完了才报错） | 观测于跑后即时；见本节末检索式 |
+| **R5**（参考项·非判据） | 同上 | B 臂 `CannotCreateTypeConstrainedLanguage => true`（原文 **×2**）、A 臂 `=> false` ⇒ **与 J6 同**（复现）；⚠️ **复现与否都不改结论**（`EPERM` ＋ marker 已在） | 比对表 §3 |
+
+### 与 J6 原文的比对表（§3 · 逐词命中）
+
+| 词 | A 臂·J6 | A 臂·重放 | B 臂·J6 | B 臂·重放 |
+|---|---|---|---|---|
+| `EPERM` | true | true | true | true |
+| `operation not permitted` | true | true | true | true |
+| `拒绝访问` | false | false | false | false |
+| `Access is denied` | false | false | false | false |
+| `sandbox: file access denied` | true | true | true | true |
+| `CannotCreateTypeConstrainedLanguage` | false | false | **true** | **true** |
+| `exit code` | true | true | true | true |
+
+**14/14 格相同**。⚠️ 两侧命中**均由 `tool/result` 原文段重新计算**（脚本 `compare-vs-j6.py`，⛔ **不采信任何一侧的自报命中行**）。
+
+**比「词命中」更强的一条**：`tool/result` **原文段逐字相同** —— A 臂 25 行／975 字符、B 臂 39 行／1734 字符，`base['A'] == repl['A']` 与 `base['B'] == repl['B']` 均为 `True`（`compare-vs-j6.py` 退出码 **0**）。全文件行级：87 行 vs 87 行，**仅 2 行不同** —— 就是两处 `===== <会话目录>` 头（装置落点不同所必然）。
+
+**marker 行逐条对照**（原文）：A 臂 `[sandbox: file access denied under workspace-write mode]` ／ B 臂 `[sandbox: file access denied under read-only mode]` ／ 两臂同款 escalation 行 —— **J6 与重放逐字相同**（`compare-vs-j6.out.txt` §4）。
+
+### 交付物清单（§3）· `D:\Code\_claude-evidence\374j6-replay\`
+
+| 文件 | 内容 |
+|---|---|
+| `run-j6-dsh.mjs` | 重放装置（＝原件 + 1 行 `OUT`） |
+| `device-diff-vs-original.txt` | 与 J6 原件的 `diff -u` 全文（**唯一差异 = `OUT` 一行**） |
+| `dump-toolresult.mjs` | J6 原件解码器（**未改**） |
+| `run-console.txt` | 装置控制台原文（两臂 exit／耗时／自报 session） |
+| `<mode>.stdout.txt`／`<mode>.stderr.txt` | 两臂原始 stdout／stderr |
+| `J6-dsh-summary.json` | 装置自产 summary（含 node 版本 ／ execPath） |
+| `J6-replay-toolresult.raw.txt` | **解码后的 `tool/result` 原文**（⛔ 未整理未意译） |
+| `sessionlog-<mode>/<session-id>/session.v3.jsonl.zstd` | 两臂会话日志（**照 J6 形状**；sha256 见下） |
+| `compare-vs-j6.py` ／ `compare-vs-j6.out.txt` | 比对器 ＋ 其输出（**R1–R5 与比对表的可复跑证据**） |
+| `J6-replay-vs-baseline.diff.txt` ／ `.stdout.diff.txt` | 全文件行级 diff ／ 答复体 diff |
+
+会话日志 sha256：A `f8eb226bea7bb225ab8c5ea52175e4dbcb96a4fac6e53c83a6ec31360e397f08`；B `8d8cd17bd696015c1c077a419d6d1538403df4fb99481eb88d7449dbc62832c1`。
+
+### 未闭合项（单列 · 都**未观测**，⛔ 别读成已证）
+
+1. **R5 的成因未追**（`CannotCreateTypeConstrainedLanguage` 为何只在 read-only 臂出现）—— 属「`node.exe` 也起不来」那层，**本块明令不追**（工位归 Trae）。
+2. **可复现强度 = n=1 次独立重放**（＋ J6 原轮共 2 次观测）⇒ ⛔ **别读成统计意义上的稳定**；本块未做多轮重复。
+3. **「唯一变量 = `DSH_PERMISSION_MODE`」是装置层面的断言**，不是「环境逐字节冻结」：源 profile 只按**同一路径**（`D:\Code\LarryAgent\.dsh-home\profiles\sdk`）核对，**未逐字节校 09-20 当时状态**（J6 那轮的 `home-*` 已被回收，`_trae-evidence/374/j6/dsh/home-*` 不存在）。
+4. 两臂耗时 5s／6s（J6 为 6s／6s）⇒ **只记墙钟、不作判据**（模型回合／网络抖动）。
+5. 本块**不判** J6 结论本身当否 —— 只证其**可复现**。
+
+### 自曝
+
+1. **第一次比对被 MSYS 的 CR 剥离骗过**：我用 `diff <(grep -v '^=====' 基线) <(…重放)` ⇒ 输出只剩「首行 BOM 差」一行，**看着像"几乎全同"却拿不到真正差异面**（grep 把 CR 静默吃掉，行尾差被抹平）。改成 python 按行去 CR ＋ 分段比对后才钉死：**85/87 行逐行相同 ＋ 2 行路径头差**。
+   - **可领走的教训**：跨 CRLF／LF 的文本比对，⛔ 别用 shell 管道的 `diff`／`grep`（行尾会被静默归一），要显式去 CR 后比。
+2. **`--- 词命中 ---` 段不能当语料**：那 7 行**本身含被搜的词**（`拒绝访问 => false` 含「拒绝访问」）⇒ 拿全文件搜会把 `拒绝访问`／`Access is denied` 误判成 `true`（我第一版比对表就被它污染了，`14/14` 是假的）。本回收敛为**只取 `tool/result` 原文段 ＋ 两侧由原文重算**。
+3. ⚠️ **模型答复体（stdout）≠ 工具原文**：两轮答复**措辞不同**（LLM 非确定性，预期内，非判据）；更要紧的是 —— **J6 那轮答复把栈帧偏移写成 `451:10`，而工具原文是 `451:20`**（重放答复在同位置写的是 `451:20`）。⇒ **若拿答复体当证据，会得出「不可复现」的错误结论**；证据层**只能是会话日志里解码出的 `tool/result`**。差异全文存 `J6-replay-vs-baseline.stdout.diff.txt`。
+4. **体积数转抄未复测**：我此前沿用 3.4-T 那轮的「≈340 MB／份」，本轮 `du -sh` 实测**各 192 MB** ⇒ 已按实测订正；两份均在取证后回收（检索式 `find . -maxdepth 1 -name 'home-*' | wc -l` ⇒ **0**）。
+5. **采集通道的字节封装与 J6 不同**（J6 基线文件带 UTF-8 BOM ＋ 全 CRLF；本回收获为 LF／CRLF 混排）⇒ 这是**采集通道**差异（谁写的文件／经没经编辑器或 PowerShell 重定向），⛔ **不是读数差异**；故比对一律**去 BOM、去 CR 后按行比**。
+6. **本块未使用临时 Key**：key 从 `backend/config.yaml` 读入 **`DEEPSEEK_API_KEY` env 一次性透传**，**未打印、未落盘、未入本回报**（长度亦不记）；未写 `.credentials.yaml` ✓。
+
+**禁区自查（逐条）**：⛔ 未改工程 home（临时 home，跑完回收）✓；⛔ 未切 patch、未跑 pnpm ✓；⛔ 未动 `_trae-evidence/374/j6/` 原件 —— 检索式 `find /d/Code/_trae-evidence/374/j6 -newermt "2026-10-08 00:00" | wc -l` ⇒ **0**（只读用过 `run-j6-dsh.mjs`／`dump-toolresult.mjs`／`J6-toolresult.raw.txt`／`J6-dsh-summary.json`／两份 stdout）；⛔ key 零落盘零打印 ✓；⛔ 未追 R3 成因 ✓；⛔ 未改 `docs/`、`TODO.md`、判据 ✓；⛔ 未做 3.5 判定 ✓、未扩大范围 ✓。
+**「没有」检索式汇总**：J6 原件被改动文件 = **0**；`home-*` 残留 = **0**；工程 home 在跑后窗口内被写文件 = **0**（`find /d/Code/LarryAgent/.dsh-home -newermt "2026-10-08 16:20" | wc -l`）；沙箱根 `denied.txt` = **0**。
+
+**通用纪律 6 条自查**：通道已注明 ✓（MSYS bash／node v24.14.1／本机 Windows／目标路径，见上「通道四元组」）；「没有」附检索式 ✓（上段汇总）；自曝优于好看 ✓（6 条，含**我自己第一版比对表被污染**这条）；未观测不写成已证 ✓（未闭合项 1–5）；应红应绿逐件读原文 ✓（判据全部落在 `tool/result` 原文，非自报行、非答复体）；收尾核 `git status` ✓（本轮提交见 commit）。
 
 ---
