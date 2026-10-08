@@ -1152,6 +1152,36 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - ⚠️ **假绿坑（必读）**：探针**自设掩码**（只授权 scratch ⇒ 其余读/写全拒）**≠** DSH 的 profile 掩码（`readOnly:['/']` ＋ 写白名单 ⇒ **读权限全开**）⇒ 正证**只证「内核确实强制」**，⛔ **不得读成「DSH 会挡住读敏感文件」**（CVM 非独占、他方产物在库）。
 - ⚠️ **`--fs-mask` 语义边界**：显式掩码**不裁剪**（喂什么测什么）⇒ 用窄掩码跑出的 `PASS` **不是**「拒读正证」。
 
+##### DSH-3.5 · S3 sandbox：判定轮复验（WB 2026-10-08）
+
+> **本节定位**：登记 3.5 **判定轮**（真 DSH on CVM）的**复验结论 ＋ 缺陷留痕**（判据 ／ 既定前提 ⇒ 落定案区）。与〈器材登记〉**互为交叉验证的反面** —— 器材件只证「内核确实强制」，本节证「**DSH 判据在真 DSH 上成立**」。执行面（派发稿 ／ 回报正文）＝ `exchange/log-trae.md`「DSH-3.5 判定轮」（活日志，会被清 ⇒ **以本节为准**）。
+
+**① 判定：成立** —— J1–J7 全判 PASS **站得住**，无降级判定，无结论需推翻。⚠️ 下列④为**表述 ／ 证据完整性**缺陷，**均不动结论**。
+
+**② 复验方式（不采信回报正文，一律回源取证）**
+- **物证**：`D:\Code\_trae-evidence\35\` —— 解压树 37 件 ＋ `local-scripts` 11 件 ＋ `tar.gz` **sha256 = `b2e5d818…4b409`**（与报告自报**逐位一致**）。
+- **Tier0 凭据扫描**：WB **自写脚本独立扫**（默认脱敏、不回显值）⇒ `sk-` ／ `Bearer` ／ `key|password|secret|token=` 模式**全树 0 命中**（不采信执行方自扫声明）。
+- **逐条回源**：J1–J4 读三臂 toolresult 原文 ＋ `dump-mode-frames.output.txt`；J5 读 toolresult hint ＋ session `approval/*` 帧；J6 读 `summary-j6fix.json` ＋ 各件原文；J7 读 `bogus-mode.stderr.txt` —— **引文逐字属实**。
+- **上机只读核 4 条**（趁 CVM 10-09 到期前，前台 ssh 只读）：见下③。
+
+**③ 4 条「包内无输出支撑」的自证，WB 上机复现（原本只回脚本、未回输出）**
+- ⭐ **「硬链接 ×6」属实**：`stat` 两路径（工程 home profile 层 ／ 落点树 `.pnpm`）**同 inode `814244`、`nlink=6`** ⇒ J6 构造方式（mv 临时 home 内 profile 层而非落点树）的**根因成立**。
+- **`NO_BWRAP`** ✓（与 2026-09-23 dry-run 一致）。
+- **`kernel.apparmor_restrict_unprivileged_userns = 1`** ✓（禁区未动）。
+- ⭐ **J7 归因逐字复现**：裸 runtime 跑 `bogus-mode-35` ⇒ `ValidationError: … $.mode expected "read-only"|"workspace-write"|"danger-full-access" but got "bogus-mode-35"`，**栈帧指向 `dsh-app-boot` → `dsh-sandbox-policy` 的 zod 校验** ⇒「归因明确」成立。
+
+**④ 增量缺陷 5 条（均不改结论；前 3 条为执行方应订正项）**
+1. ⚠️ **J6 引文出处记错包**：报告写「＝ `dsh-sandbox-local/README.md:57` 逐字」，实测该整句**由 `@deepseek-ai/dsh-sandbox/lib/index.js:185` 生成**、README 在 **`dsh-sandbox/README.md:135`**；`dsh-sandbox-local/README.md:57` **只有错误码名** `SANDBOX_UNAVAILABLE`。⇒ **文本真实、出处不精确**。
+2. ⚠️ **未闭合项① 的表述与它自己引用的证据打架**：报告称「全 29 帧 grep `/SANDBOX/i` **无 tool/result 命中**」，而其引用的 `grep-sandbox-code.output.txt` 里**有 2 处** tool/result 命中（seq15 ／ seq22，因文本含 "sandbox"）。**正确说法** = 「无 tool/result **携带 `code` 字段**」（该结论 WB **独立复核为真**）。
+3. ⚠️ **5 个前置 ／ 诊断脚本只回脚本、未回输出**（`preflight` ／ `probe-env`×2 ／ `diag-j6`×2）⇒ 依赖它们的条目在包内**无直接支撑**。⚠️ **CVM 10-09 到期后他人无法补** ⇒ 本轮已由 WB 上机补核（见③），但**流程上应回传输出件**。
+4. `run-35-sandbox.mjs:104` 的 `packageDirStillResolvable: true` 是**硬编码字面量**、非测量 ⇒ **无判据价值**（不影响结论，标出防被当读数引用）。
+5. 证据包内 `summary.json` ／ `summary-fullrun.json` 为 **J6 attempt1 版**（`insideFcTxt=PRESENT(FAILCLOSED)`，即**构造失败态**），与交付用 fix 版（`summary-j6fix.json`）**并存** ⇒ 后读者易误判（执行方未踩，但建议在包内加 README 标明哪份是交付版）。
+
+**⑤ 结论边界（⛔ 防外推）**
+- 判定**只能写在 CVM**（landlock **ABI 4** ／ rung = landlock ／ enforcement = **partial** ／ bwrap 缺席）⇒ **不得搬到 WSL（ABI 7）或其他宿主**（见〈ABI 边界〉）。
+- 本判定是「**机制成立**」；**「产品可接受」不在本块靶子内**（与 3.4 同一口径）。
+- J6 的 fail-closed 形态为**装置构造**（mv 掉 launcher）所致，⛔ **不得读成「CVM 上天然会 fail-closed」**。
+
 #### DSH-4：差异化能力迁移
 
 > **任务清单与进度见 `TODO.md`「DSH-4」**；本节只放**排序原则、实现路径判定与验收基准**。
