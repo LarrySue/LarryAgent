@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | ✅ **已交付（2026-10-08）· 待 WB 复验** —— 器材入 git（`harness/scripts/cvm-probes/landlock_probe.py`）；两场地实跑 **PASS / exit 0**（CVM 目标场地 ＋ WSL 回归）；⚠️ 过程抓到并修掉一个**掩码表错**（见回报〈自曝①〉） | 2026-10-08 |
+| **DSH-3.5 器材重建**（`landlock_probe.py`） | Claude | **CVM（ABI 4）＋ WSL（ABI 7）** | ✅ **已复验通过（WB 2026-10-08）· 本块闭环** —— 器材入 git；**WB 亲跑 CVM** 正证 `PASS`/0 ＋ 负向 `MASK_REJECTED`/3、归一化后与交付读数逐行相同 ⇒ 器材可用成立（P1–P8 全绿）；⚠️ WSL 未由 WB 复跑（本机 `wsl.exe` 黑名单硬拦，派发稿已预设「如实报未跑」） | 2026-10-08 |
 
 ---
 
