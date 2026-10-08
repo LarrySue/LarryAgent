@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.5 判定轮** | Trae | **CVM（landlock ABI 4）** | 🔵 **已派发 · 进行中** —— 真 DSH 复核 sandbox **三档**（read-only ／ workspace-write ／ danger-full-access）拒绝与提权 ＋ **fail-closed**（判据 J1–J7 见下）；器材（独立通道）已就绪 = `harness/scripts/cvm-probes/landlock_probe.py` | 2026-10-08 |
+| **DSH-3.5 判定轮** | Trae | **CVM（landlock ABI 4）** | ✅ **回报已交（2026-10-08）** —— J1–J7 **全判 PASS**（三档边界互异 ＋ 提权双层可观测 ＋ fail-closed 构造成功非降级 ＋ J7 负向红）；1 观察项如实登记（`SANDBOX_UNAVAILABLE` code 字面值不落 session 日志，判定不依赖）；证据已回传 `D:\Code\_trae-evidence\35\`（CVM 10-09 到期，非唯一副本 ✓） | 2026-10-08 |
 | **DSH-3.4** | Trae | **本机（Windows）** | ✅ **已收官（老大 2026-09-30 裁 3.4 收口）** —— J1–J8 全判 **PASS**（J1 3／3 ／ J2 2／2 ／ J3 阈值双跑 15999 不压·16000 压 ／ J4 三条证据齐 ／ J5 近文原文保留 ／ J6 三态可分 ／ J7 fail-closed ／ J8 成本）；判定 = **（甲）机制成立**；**（乙）产品可接受 ⛔ 不判**（只采数）。**WB 复验成立（含独立测试件 `DSH-3.4-T` 交叉验证）** | 2026-09-29 |
 
 - **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ 完成态快照 `archive/roadmap-history.md`「DSH-3.4」段**（原写「`TODO.md`「DSH-3.4」段 ＋ §3.6」**一处两面**；其中 `TODO.md` 侧已于 2026-10-01 归档）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
@@ -116,6 +116,74 @@
 - ⛔ **不改 `docs/`**（定案区，WB 处置）；**不改 `TODO.md`**（WB 处置）；**不改判据**（判据落点 = §3.6 ＋ 本稿 §1）。
 - ⛔ **不为「凑三档」造等价方案** —— 某档若在 CVM 上跑不出预期（如 `danger-full-access` 语义不明），**如实报**、不臆测。
 - ⛔ 若发现还需别的器材，**报告出来、不扩大范围**。
+
+## 📤 DSH-3.5 判定轮回报（J1–J7 全判 · 2026-10-08）
+
+### 结论（先行）
+
+**J1–J7 全部 PASS，无降级判定**。真 DSH（`0.1.5-rc.2`）在 CVM（landlock **ABI 4**，bwrap 缺席 ⇒ rung=landlock，enforcement=**partial**）上：三档拒绝边界**互不相同**；提权流程**双层可观测**（tool result 文本 ＋ session `approval/asked→decided` 结构化帧）；**fail-closed 构造成功**（非「未构造成功」降级路径）；J7 负向对照**变红**且归因明确。1 个观察项如实登记（§ 未闭合项 ①，不影响判定）。
+
+**通道四元组**：宿主 shell = Ubuntu CVM 前台 ssh（`ubuntu@49.232.129.252`，kernel `6.8.0-124-generic`）／ node `v22.22.2` ／ dsh `0.1.5-rc.2` ／ Landlock ABI `4`。收尾自证：`apparmor_restrict_unprivileged_userns=1`（禁区未动）。
+
+### 装置（构造方式，按派发稿 §1·J6 要求写明）
+
+`run-35-sandbox.mjs`（CVM `~/harness/scripts/`；回传副本 = `D:\Code\_trae-evidence\35\harness\scripts\`）。头部姿势自证 = **临时 home ＋ SDK 通道 ＋ 真 DSH 会话**：每臂 `mkdtemp /tmp/larry35-home-` → `cpSync ~/.dsh/profiles/sdk → home/profiles/sdk` ＋ **同机 cp** `~/.dsh/.credentials.yaml → home/.credentials.yaml`（key 不打印、不进证据）→ spawn `dsh-prompt.mjs --profile sdk`，`DSH_HOME=临时home`、`cwd=~/larry35-sbox/ws`（⇒ `workspaceRoot=process.cwd()`）→ 跑完即删 home。**唯一变量 = `DSH_PERMISSION_MODE`**。7 臂：read-only ／ workspace-write ／ danger-full-access（J1–J4）＋ esc-read-only ／ esc-workspace-write（J5）＋ fail-closed（J6，`breakLauncher`）＋ bogus-mode（J7）。越界目标放 `~/larry35-sbox/outside`（⛔ 不放 /tmp——它在 workspace-write 的 landlock 白名单里）。
+
+### J1–J7 逐条证据（观测原文照抄）
+
+**J1 ruleset 建立成功 — PASS**。read-only 臂越界写被拒时，tool result（原文）：
+
+```
+[stderr]
+landlock-run: partial enforcement (older Landlock ABI)
+bash: line 1: /home/ubuntu/larry35-sbox/outside/denied-read-only.txt: Permission denied
+[sandbox: file access denied under read-only mode]
+[exit code: 1]
+```
+
+⇒ rung 套上（partial enforcement 行）且为 **denial**（非 fail-closed 臂的 `SANDBOX_UNAVAILABLE` error 形态——两形态可分，见 J6）。session 帧另有 `{"type":"sandbox/mode","seq":1,"data":{"mode":"read-only"}}` 落盘。
+
+**J2 read-only 档拒绝 — PASS**。区内 ＋ 越界**双写全拒**：区内 `bash: line 1: /home/ubuntu/larry35-sbox/ws/inside.txt: Permission denied` ＋ marker `[sandbox: file access denied under read-only mode]`（逐字命中 seam `sandboxDenialMarker`）；fs 探针双 ABSENT。⚠️ 形态注记：判据文本写错误串 `EPERM`，实测用户态读数是 bash stderr `Permission denied`（EPERM 的 strerror 渲染；landlock 方言 `DENIAL_SIGNATURES=["permission denied"]` 匹配）——裸内核 EPERM 串不经 bash 不可见，拒绝事实 ＋ marker 逐字成立（详见未闭合项 ③）。
+
+**J3 workspace-write 双锚 — PASS**。同一臂两命令：区内写 tool result 原文 = `J14-workspace-write`（写成功回读）；越界写原文 = `bash: line 1: /home/ubuntu/larry35-sbox/outside/denied-workspace-write.txt: Permission denied` ＋ `[sandbox: file access denied under workspace-write mode]`。fs：`inside.txt PRESENT` ／ `denied-workspace-write.txt ABSENT` ⇒ **非全拒、非全放**。
+
+**J4 danger-full-access 放行 — PASS（三档互异）**。**同一越界写命令**成功：tool result 原文 = `J14-danger-full-access`（写 ＋ 回读成功），fs `denied-danger-full-access.txt PRESENT` ⇒ 与 J2（拒）／J3（越界拒）互不相同。旁路自证：该臂 stderr **无** `partial enforcement` 行（与 `dsh-bash-sandbox` `if (mode === "danger-full-access") return super.run(spec)` 一致）。**结构化加证**（session 帧）：三档 `approval/policy` = `ask` ／ `ask` ／ **`never`**，`sandbox/mode` 帧逐臂落盘 ⇒ 三档在会话层亦互异。
+
+**J5 提权路径可观测 — 两半分别报，均成立**。
+- **第一半（升权提示）**：denial tool result 内 hint **逐字**＝`[sandbox: escalation available — retry this exact command once with sandbox_permissions (the narrowest wider mode that suffices) + justification; the approval prompt asks the user]`，read-only ／ workspace-write 两档 denial 均携带。
+- **第二半（按提示重试的结果与答者语义一致）**：模型带 `sandbox_permissions`＋`justification` 重试同一命令。目标档与 `WIDER_MODES` 阶梯一致（read-only→`workspace-write`=最窄放宽 ✓；workspace-write→`danger-full-access`=唯一放宽 ✓）。SDK 会话**无答者** ⇒ tool result 原文 = `Error: sandbox escalation to "workspace-write" requires approval, but no approval channel is available`（esc-read-only 臂；esc-workspace-write 臂同构、目标档 danger-full-access），目标文件 fs **ABSENT**（动作 0 次）= fail-closed 之一种。**结构化层**（session 帧原文）：
+
+```
+{"type":"approval/asked","seq":20,"data":{"toolName":"bash","reason":"escalate sandbox to workspace-write: 需要写入工作区外的测试文件来完成沙箱判定。"}}
+{"type":"approval/decided","seq":21,"data":{"outcome":"unavailable"}}
+```
+
+⇒ asked（reason=模型 justification 原文）→ decided(`unavailable`)，与 seam `approveEscalation` 的 `unavailable` 分支精确对应。两档均测；bonus：fail-closed 臂模型**自发** escalation 亦完整复现 asked→decided(unavailable) 管线。
+
+**J6 fail-closed — PASS（构造成功，写明构造方式）**。构造 = **mv 临时 home 内 profile 层 launcher**：`<临时home>/profiles/sdk/node_modules/@deepseek-ai/node-addon-system-linux-x64/bin/landlock-run → *.larry35-hidden`。⛔ 为何不是落点树 `.pnpm`：首跑 mv 落点树**无效**（命令照跑，attempt1 留痕已归档）——`landlock-run` 是**同 inode 硬链接 ×6**，工程 home profile 层 `~/.dsh/profiles/sdk/...` 与落点树是两个名字同一文件；装置 `cpSync` 后临时 home 内有 profile 层副本 ⇒ **runtime 模块解析命中 profile 层**，mv 落点树名字不影响解析。修正后 mv 临时 home 内 profile 层 ⇒ 唯一解析路径断 ⇒ chain unusable。零外溢自证：落点树 launcher sha256 前后一致（`a752bc72…`），不碰工程 home，临时 home 跑完即删。观测（tool result 原文）：
+
+```
+Error: sandbox mode "workspace-write" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) — otherwise switch the consumer to danger-full-access.
+```
+
+＝`dsh-sandbox-local/README.md:57` 的 `SANDBOX_UNAVAILABLE` 错误文本**逐字**；fs `inside-fc.txt ABSENT`（**不 exec** ✓）；**非 fail-open** ✓。addon 直跑对照：`landlock-run --rw /nonexistent …` ⇒ **exit 125** ＋ `landlock-run: cannot open rule path: /nonexistent` ＋ 子命令未跑（=`main.c:23-28` 行为）。
+
+**J7 负向对照 — PASS（变红且归因明确）**。`DSH_PERMISSION_MODE=bogus-mode-35` ⇒ SDK 通道 exit=1、无 session、stderr JSON-RPC `-32603`（下游表现）。归因（裸 runtime 前置观测，stderr 原文）：`Error: dsh: plugin tree failed to load: … failed to apply loader entry sandbox-policy (@deepseek-ai/dsh-sandbox-policy): invalid config: - $.mode expected "read-only" | "workspace-write" | "danger-full-access" but got "bogus-mode-35" (at mode)` ⇒ 字面归因到 mode 校验（ValidationError）。对照：7 正常臂全 exit=0，逐值相异 ⇒ 判据链对坏输入敏感，非恒绿。
+
+### 未闭合项（单列）
+
+① **`SANDBOX_UNAVAILABLE` 结构化 code 字面值不落 session 日志**：fail-closed 臂全 29 帧 grep `/SANDBOX/i` 无 tool/result 命中——帧 JSON 只有 `isError:true` ＋ message 文本，**无 code 字段**。seam 源码注释称「HarnessError carries the code through tool/result」，但 session-log 序列化层未持久化。**判定不受影响**（message 逐字 ＋ 不 exec ＋ addon exit 125 对照已足）；但「按 code 区分 `SANDBOX_UNAVAILABLE` 与其他 isError」在**会话日志通道不可用**。runtime API 通道是否带 code 未测（本块无该装置，不臆测）。
+② **fs 跨臂残留（装置缺陷）**：`~/larry35-sbox` 未臂间清场 ⇒ danger 臂写的 `inside.txt` 残留到 esc 臂读数（esc 臂 summary `insideTxt=PRESENT` 是残留假象）。判据只看各臂**专属**文件（`denied-<mode>.txt`／`esc-<mode>.txt`／`inside-fc.txt`）未受影响。改进点：下次臂间清场或每臂独立 WS。
+③ **J2「EPERM」读数形态差异**：判据文本的错误串 `EPERM` 在用户态不可见（bash 以 strerror 渲染为 `Permission denied`）；landlock 方言 `DENIAL_SIGNATURES` 匹配的是后者。拒绝事实 ＋ marker 逐字成立；建议判据文本后续把「EPERM」口径改为「denial 方言命中」（⛔ 本块不改判据，仅登记）。
+
+### 自曝
+
+1. **J6 首跑构造失效**：mv 落点树 `.pnpm` 的 `landlock-run` ⇒ 命令照跑（inside-fc PRESENT ＋ partial enforcement 输出）。根因 = 硬链接 ×6 ＋ runtime 解析命中 profile 层（§3.6 曾登记符号链接解析坑，本块踩了同族坑的 profile 层变体）。attempt1 留痕（`fail-closed.*.attempt1-mv-storetree.txt`）已归档，未当作 PASS 证据。
+2. **J7 归因观测假绿**：`dsh --profile sdk --help` 对 bogus／valid mode **逐值相同**（exit 0 ＋ 同 Usage）⇒ --help 不能当 mode 校验观测点；改裸 runtime stderr 才拿到 ValidationError 归因。
+3. **ABI 首测姿势错误**：flags=0 ⇒ `EFAULT(14)`（错误姿势的 errno，非 ABI 读数）不采；改 flags=`LANDLOCK_CREATE_RULESET_VERSION`(1) ⇒ ABI=4，与 WB 登记一致。
+4. **PowerShell 5.1 限制**：不支持 heredoc／`<` 重定向／嵌套引号 ⇒ 全程「本地写脚本 → scp → 远程 bash ＋ `exec 2>&1`」。
+5. **凭据纪律**：key 仅经装置内 `cpSync` 进临时 home（不打印、不进证据）；打包前 `sk-` 内容模式自扫 clean（首扫宽模式误命中装置源码里 `.credentials.yaml` **文件名字符串**，判为路径引用后收窄）；tar.gz sha256 两侧一致（`b2e5d818…4b409`）。
+6. **CVM 2026-10-09 到期 ⇒ 产出非唯一副本**：证据全套已回传 `D:\Code\_trae-evidence\35\`（tar.gz ＋ 解压树 ＋ 装置／探针／提取脚本 11 件 `local-scripts/`）。
 
 ---
 
