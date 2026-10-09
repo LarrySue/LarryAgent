@@ -1,0 +1,11 @@
+{
+  "name": "@larryagent/plugin-workspace-probe",
+  "version": "0.0.0",
+  "description": "DSH-3 runtime probe: drives J1-J5 against ctx.workspaceRegistry via runtime ctx.inject, heartbeat + watchdog branch for J6 pending observation. Zero npm dependencies (node: builtins only).",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  }
+}

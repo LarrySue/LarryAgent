@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.5 判定轮** | Trae | **CVM（landlock ABI 4）** | ✅ **回报已交 ＋ WB 复验成立（2026-10-08）** —— J1–J7 **全判 PASS**（三档边界互异 ＋ 提权双层可观测 ＋ fail-closed 构造成功非降级 ＋ J7 负向红）；1 观察项如实登记（`SANDBOX_UNAVAILABLE` code 字面值不落 session 日志，判定不依赖）；证据已回传 `D:\Code\_trae-evidence\35\`（CVM 10-09 到期，非唯一副本 ✓）。**WB 复验**：回源取证（物证 sha 逐位一致 ／ WB 自扫 Tier0 0 命中 ／ 引文逐字属实）＋ **上机只读核 4 条**（硬链接 ×6 ／ `NO_BWRAP` ／ `apparmor=1` ／ J7 归因逐字复现）；**5 条表述 ／ 证据完整性缺陷**（不改结论，前 3 条为应订正项）⇒ 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 · S3 sandbox：判定轮复验〉 | 2026-10-08 |
-| **DSH-3 · 待实测 ① · `workspace` 运行时行为实测** | Trae | **本机 Windows** | ⏳ **待派发**（派发稿 = 下方〈📤 派发稿〉） | 2026-10-09 |
+| **DSH-3 · 待实测 ① · `workspace` 运行时行为实测** | Trae | **本机 Windows** | ✅ **回报已交（2026-10-09）** —— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路含 `headerFrozen` ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud「pending 字面 ＋ 无空历史」）；承载 = 路 B 运行时 `--patch`（**未走降级路径**）；§2.3.3 建议 ⚪→🟢（⛔ 不外推隔离语义）；证据 `D:\Code\_trae-evidence\wksp\`；回报全文见下方〈📥 回报〉段 | 2026-10-09 |
 
 - **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ 完成态快照 `archive/roadmap-history.md`「DSH-3.4」段**（原写「`TODO.md`「DSH-3.4」段 ＋ §3.6」**一处两面**；其中 `TODO.md` 侧已于 2026-10-01 归档）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
@@ -81,6 +81,59 @@
 - ⛔ 不把任何凭据值落进受版本控制文件 ／ 日志 ／ 工具输出。
 - ⛔ 不 install 任何参考件；不把 `ref/` 拉进构建。
 - ⛔ 不把本稿当承接目标（活日志会被清 ⇒ 引用必成断链）。
+
+## 📥 回报 · `DSH-3 · 待实测 ① · workspace 运行时行为实测`（Trae，2026-10-09）
+
+**结论先行**：**J1–J6 全 PASS，`VERDICT=PASS`**。①「workspace 插件的数据模型行为成立」——**DSH 端到端成立**。档位建议：`docs/product-positioning.md` §2.3.3 **⚪ → 🟢**。⛔ **不外推 ②「隔离语义成立」**（不在本块靶子内，真读边界在 `sandbox` ＋ `workspace-files`）。承载 = **路 B 运行时 `--patch` 叠加**（mount patch ＋ probe patch ＋ J6 patch），**未走降级路径**（junction 链路一次通，无 import 崩）。
+
+### 装置（交付物，已入 git）
+
+- **驱动**：`harness/scripts/workspace-probe/run-wksp-probe.mjs`（381 形态：每轮临时 home `mkdtemp` ＋ `cpSync(profiles/sdk)` ＋ `rmSync(.modules.yaml)` ＋ spawn dsh［stdin 保持开放，防 `exitOnStdinEnd` 早退腰斩探针］＋ 事后读数）
+- **探针**：`harness/scripts/workspace-probe/plugin/index.js`（`@larryagent/plugin-workspace-probe`，零 npm 依赖；零静态 inject ⇒ apply 必跑［心跳帧］；`ctx.inject(['workspaceRegistry','sessions'], cb)` 运行时注入跑 J1–J5；15s 看门狗为 J6 兜底分支）；实体复制进**临时 home** 的 profile 自身层（sandbox-dialect 先例形态，**不动源 `.dsh-home`** ⛔ 禁区未踩）
+- **两轮**：positive（mount ＋ probe ⇒ J1–J5）；negative（再叠 j6 patch：disable `session-persistence-jsonl` 行 ⇒ J6）。每轮先跑 `--dump-config` 装配层自检（OBS，不作判定层）
+
+### 通道实测（w3 前置，证据 `w3-channel/`）
+
+1. **node 输出直读正常**（PowerShell 工具跑 `node -v`＝`v24.14.1`、`node -e` 输出可见）——派发稿警示「未启用 ConPTY ⇒ 原生 exe 无输出」**在本机实测不成立**（纪律 1：前提重新实测；差异已先报）
+2. dsh 版本 `0.1.5-rc.2`（`bin.js --version` 自报，与派发稿一致）
+3. mount patch 装配自检复现：`rc=0` ＋ 末尾 `# == …workspace.mount.patch.yml` 分节 ＋ `- id: workspace`
+4. 装配行盘点：`session`（:14）／`session-persistence-jsonl`（:62）／`storage-domain`（:81）三 peer 行全在且启用 ⇒ J6 靶行定为 `session-persistence-jsonl`（当前启用 ⇒ 真 disable 是真改动）
+5. 裸跑形态：2.5s 自然退出 code 0；`healProfilesModuleFallback` 在临时 home 重建共享层 **240 包**；**`storages/workspace.json` 落盘 = workspace `Service.init` 真跑了的落盘证据**
+
+### J1–J6 逐条（证据原文见 `run1/positive.probe.jsonl` 等，以下为摘录）
+
+- **J1 PASS**（membership 集合恰等）：wsA（PA）attach s1/s2、wsB（PB）attach s3 ⇒ `setA=["wksp-s2","wksp-s1"]` 集合恰={s1,s2}、不含 s3；`setB=["wksp-s3"]`。会话经 `ctx.sessions.create(id,{meta:{cwd:ws.path}})` 官方 API 构造（live session；`positive.stdout.txt` 有 6 会话 × 3 帧announce 事件旁证）
+- **J2 PASS**（realpathNormalize 唯一性）：`<PA>\`（尾分隔符）与 `<PA>\..\ws-a`（`..` 段）两种写法各 `create` ⇒ `idOrig=idA=idB="58b8f03b-7750-4deb-9749-5e5fa7653f98"`（**同一实体**）、path/title 全等
+- **J3 PASS**（attach 正路）：s4 cwd 取自 `wsA.path` ⇒ `headerCwd === wsA.path`、`headerVersion=3`、**`Object.isFrozen(header)=true`**（不可变 SessionHeader 直接证据）、attach 通过
+- **J4 PASS** 🔴（负向 fail-loud，双锚）：s5（cwd=PB）attach 到 wsA（path=PA）⇒ throw 逐字 ``cannot attach session 'wksp-s5' to workspace '<PA>': its cwd resolves to '<PB>'``，栈帧直指 `dsh-workspace/lib/index.js:122:40 WorkspaceEntity.attachSession`；双锚 = s6（cwd=PA）同轮 attach 成功 ＋ s5 未混入 wsA.sessionIds
+- **J5 PASS**（接口 11 成员逐条实调，全 ok）：`id`/`path`/`title`/`createdAt`/`updatedAt`/`sessionIds`（getter）＋ `setTitle`（复读生效）＋ `attachSession`（J1/J3/J4 实调）＋ `insertSessionBefore`（三段顺序读数：`[s6,s4,s2,s1]→[s4,s6,s2,s1]→[s4,s2,s1,s6]`）＋ `detachSession`（s6 移出）＋ `status()='ok'`
+- **J6 PASS**（强制启动依赖）：负轮 stderr 逐字（`negative.stderr.txt`）：
+  ```
+  Error: dsh: plugin tree failed to load: dsh: 2 entries did not activate
+  @deepseek-ai/dsh-session-checkpoint-policy: pending (waiting for service: sessionPersistence)
+  @deepseek-ai/dsh-workspace: pending (waiting for service: sessionPersistence)
+  ```
+  ⇒ dsh **启动期树级 fail-loud**（`assertEntriesActivated`）：exit=1、`storages/` **无** workspace.json（无空历史 bootstrap）、探针 inject 未满足（仅 heartbeat 帧、J1 未跑）。对照正轮：workspace.json 存在 ＋ J1–J5 registry 实调通过。伴生观测：session-checkpoint-policy 同因 pending（sessionPersistence 消费者不止 workspace）
+
+### 未闭合项（如实登记，不改判定）
+
+1. **跨进程恢复未测**：正轮 live session 未 end ⇒ 未走持久层 header 路径；workspace domain 为全新域（`initialized=false` ⇒ bootstrap 全新路径）。「重启后 membership 过滤仍成立」（`validateStoredState`/`rebuildEntities` 存量路径）不在本轮判据内
+2. J4 只构造 cwd≠path 一种负向（`carries no cwd`／`does not resolve`／`not a directory` 三分支未构造；判据原文即 cwd≠path 形态）
+3. J6 只摘 `sessionPersistence` 单 peer（`storageDomain` 未摘）
+4. ②「隔离语义成立」不在靶子内
+
+### 自曝
+
+1. **通道差异先报**：全程用 PowerShell 工具跑 node/dsh（派发稿要求 Bash 工具）——本机实测输出直读正常（见通道实测 1）；若复验走 Bash 通道，机读结论不变（判定载体是落盘证据文件，非终端回显）
+2. **承载细节**：派发稿「包实体已在共享层 ⇒ 无需 install/复制」在**源 home** 成立；但**临时 home** 只复制 `profiles/sdk` 后，dsh-workspace **不在 dsh 安装闭包**（`dsh@0.1.5-rc.2` 72 依赖无它 ⇒ heal 不自建）⇒ 装置在**临时 home 内**自建 junction 指向源共享层同一实体（`profiles/node_modules/@deepseek-ai/dsh-workspace`）。J4 栈帧显示运行实体最终解析自 `harness/.pnpm/@deepseek-ai+dsh-workspace@…`（junction 链最终目标），`0.1.5-rc.2` 同代
+3. **首跑 J6 FAIL 是装置判定形态错误**：首版预期「进程挂起等 15s 看门狗」，实测是启动期 fail-loud（1.5s 死）。修正驱动 J6 断言（探针/patch/环境零改动）重跑 PASS。首跑教训已写入驱动注释（`:158-160`）
+4. 凭据零接触（本块全程无凭据读写）
+
+### 证据与交付物
+
+- **证据**：`D:\Code\_trae-evidence\wksp\`——`run1/`（16 件：两轮 probe.jsonl／after／home／dumpconfig／stdout／stderr ＋ patch 层 ＋ `summary.json` ＋ `J0-preflight.json`）＋ `w3-channel/`（6 件通道实测）＋ `verdict.txt`（机读结论行 ＋ 档位建议）。两轮临时 home 保留（路径见 `*.home.json`）
+- **交付物（git）**：`harness/scripts/workspace-probe/run-wksp-probe.mjs` ＋ `harness/scripts/workspace-probe/plugin/{index.js,package.json}`
+- **机读结论行**：`J1=PASS J2=PASS J3=PASS J4=PASS J5=PASS J6=PASS`，`VERDICT=PASS`（⛔ 只判 ①数据模型行为，不外推 ②隔离语义）
 
 ## 已清理段落（按交流区规矩）
 
