@@ -1189,7 +1189,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 ##### DSH-3 · 待实测 ①：`workspace` 运行时行为 判据口径 ＋ 承载前置实测（WB 2026-10-09）
 
-> **本节定位**：§3.6〈待实测清单〉**①**（归属 **DSH-3**）的**判据权威落点**。派发稿是活日志（会被清）⇒ **判据不得只活在稿里**。对应登记：`TODO.md`「DSH-3」段〈待实测 ①〉／`HUMAN.md:48`／`docs/dsh/dsh-015-capability-mapping.md` §8 ⬛未验 **1**／`docs/product-positioning.md` §2.3.3（档位 **⚪**）。
+> **本节定位**：§3.6〈待实测清单〉**①**（归属 **DSH-3**）的**判据权威落点**。派发稿是活日志（会被清）⇒ **判据不得只活在稿里**。对应登记：`TODO.md`「DSH-3」段〈待实测 ①〉／`HUMAN.md:48`／`docs/dsh/dsh-015-capability-mapping.md` §8 ⬛未验 **1**／`docs/product-positioning.md` §2.3.3（档位 **🟡**，实测已落 2026-10-09）。
 
 **① 目标（一句话）**：判定上游 `workspace` 的**运行时行为**是否兑现「会话 ↔ workspace 分组 ＋ membership 过滤 ＋ `attachSession` 复校验」这一数据模型 ⇒ 决定 `2.3.3` 的 **⚪ → 🟢 ／ 🟡 ／ 🔴**（兑现 ⇒ 我方只写隔离语义；不兑现 ⇒ 分组底座也要自建）。
 
@@ -1242,7 +1242,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 **未闭合项（WB 确认如实，沿用 Trae 登记）**：① 跨进程恢复未测（live session 未 end、全新 workspace domain）② J4 只构造 cwd≠path 一种负向 ③ J6 只摘 `sessionPersistence` 单 peer（`storageDomain` 未摘）④ ②「隔离语义成立」不在靶子内。
 
-**档位**：`docs/product-positioning.md` §2.3.3 建议 **⚪ → 🟢**（⚠️ 待老大落）。
+**档位**：`docs/product-positioning.md` §2.3.3 **⚪ 已准出 → 🟡**（2026-10-09 落）—— 实测只证**数据模型运行时行为**成立（该子层可承接）；**「隔离语义」（读边界）上游明确不做**、属我方语义层 ⇒ 按〈对手侧状态口径〉落 **🟡（可降级）**；⛔ 非 🟢（🟢 要求我方「不写底座代码」，与本条「隔离自做」冲突）。
 
 #### DSH-4：差异化能力迁移
 
@@ -1298,9 +1298,9 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 | 子项 | 档位 | DSH 侧（承接内容与边界） | 我方剩余动作 |
 |---|---|---|---|
-| 2.3.1 会话生命周期（回收站）| 🟡 可降级 | `session-title`（durable latest-wins 标题）+ `workspace`（会话有序账户）+ `session-query`（列表 / 过滤 / 分页）+ `persistence`（durability seam，5 个 handle 方法）；**协议面另有 ACP `session/list`（keyset 分页 / 规范 cwd 过滤 / 排除活跃与后代）· `resume` · `close`** | **回收站（软删 + 恢复）、fork / lineage 与批量归档自做**——append-only 事件流语义下无对应；**上游明确不实现** ACP `load` / `delete` / `fork`（自述理由：transcript / destructive-storage / lineage 属另一类用例），**DSH-2.5 ② 已实测确认**（`-32601`，见 §2 风险表）。⚠️ **fork 并非上游完全没有**——`dsh-api-gateway` 的 HTTP 面有（§3.5 协议面对照表）。⚪ 待实测：`workspace` 运行时行为 |
+| 2.3.1 会话生命周期（回收站）| 🟡 可降级 | `session-title`（durable latest-wins 标题）+ `workspace`（会话有序账户）+ `session-query`（列表 / 过滤 / 分页）+ `persistence`（durability seam，5 个 handle 方法）；**协议面另有 ACP `session/list`（keyset 分页 / 规范 cwd 过滤 / 排除活跃与后代）· `resume` · `close`** | **回收站（软删 + 恢复）、fork / lineage 与批量归档自做**——append-only 事件流语义下无对应；**上游明确不实现** ACP `load` / `delete` / `fork`（自述理由：transcript / destructive-storage / lineage 属另一类用例），**DSH-2.5 ② 已实测确认**（`-32601`，见 §2 风险表）。⚠️ **fork 并非上游完全没有**——`dsh-api-gateway` 的 HTTP 面有（§3.5 协议面对照表）。✅ 已实测成立（2026-10-09，J1–J6）：`workspace` 运行时行为 |
 | 2.3.2 对话体验（SSE / 停止）| 🟡 可降级 | 我方**保留 Vue/Tauri** ⇒ DSH 的 React 客户端（`ui-conversation` / `slots` / `client-resources`）**不直接承接**；`continuous-client-recovery`（Host 恢复后 3 s 警告 / 15 s 中止的**持续重连**）、`pinned-scroll-delivery-before-layout` 可作设计参照 | 流式 / 中断恢复 / 常驻 banner 自实现（**设计可借鉴**） |
-| ⭐ 2.3.3 会话级作用域（沙盒）| 🟡 可降级 | **`workspace`**——会话↔目录归属：稳定 id + 规范路径 + 有序 session 账户；**membership = id 在账户内 且 session header 的 cwd 等于 workspace path**（一个 session 结构上至多属一个 workspace）+ `scope`（per-agent 可见性）+ `sandbox` / `permission-presets` | **隔离语义自做**——`workspace` 只做分组，原文 root「只是相对路径基准、**不是读边界**」。⚪ 待实测：`workspace` 运行时行为（membership 过滤 / `attachSession` 流程） |
+| ⭐ 2.3.3 会话级作用域（沙盒）| 🟡 可降级 | **`workspace`**——会话↔目录归属：稳定 id + 规范路径 + 有序 session 账户；**membership = id 在账户内 且 session header 的 cwd 等于 workspace path**（一个 session 结构上至多属一个 workspace）+ `scope`（per-agent 可见性）+ `sandbox` / `permission-presets` | **隔离语义自做**——`workspace` 只做分组，原文 root「只是相对路径基准、**不是读边界**」。✅ 已实测成立（2026-10-09，J1–J6）：`workspace` 运行时行为（membership 过滤 / `attachSession` 流程） |
 | 2.3.4 多模态输入 🗣️ | 🟡 可降级 | **`attachment`**（内容寻址 / 图片与文件分存储 / 共用有序附件列表）+ `client/file-upload`（015 新增：**非图片不限类型、不限大小、byte-for-byte 存**） | **上限 + GC + 2.4.6 升级通道自做**——上游原文「Attachments are **never deleted**」且无类型 / 大小限制 |
 | 2.3.5 主动触达 🗣️ | 🟡 可降级 | **`schedule`**（`after`/`at`/`every`，最小 5 min；严格时区纪律；**catch-up 只补最近一次、不枚举不重放**；**等 Agent idle，绝不打断当轮**；at-least-once）+ **`webhook`**（认证外部投递 → 按需建 root Session）+ `jobs` | ⭐ **触达通道自做**——`ScheduleDeliveryMode = 'session-local'`，上游原文「**no external notification channel or cold-session scheduler exists**」 |
 | 2.4.1 短期记忆 | 🟢 可承接 | `session`（append-only log 为唯一真相源，**LLM message history 是 derived、从不单独存**）+ `compaction` 取代截断 | 配置阈值 / 验收 |

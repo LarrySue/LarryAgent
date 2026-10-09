@@ -85,12 +85,12 @@
   - ✅ **WB 复核成立（2026-09-22）** ⇒ 详情原文已清理（2026-09-22；回溯走 git 史）。**独立复跑**（Bash 通道 ／ system node `v24.14.1`，同版本异通道）⇒ `PASS 18／FAIL 0／OBS 7／未验 1`、`EXIT=0` 自行结束 ⇒ ⭐ **核心增量「能自己退出」独立复现**；WB 加做两条（**Node 语义实证**：不调 `process.exit` 出 `beforeExit`、调了不出 ⇒ J3-b 基石成立 ＋ 把「骨架无 beforeExit」从推断升为实证 ／ **无 dsh 孤儿进程**）。⛔ **真 dsh 段（J4-real ／ J5-b）未复跑**（凭据最小接触）⇒ 判「物证多源交叉可采信、未独立复跑」。⚠️ **两处装置缺陷待修**：① **`J3-c` 的 `forced`／`killCalled` 恒真、无判别力**（宿主 `forceAfterMs: 0` ⇒ 源码该分支不可达；J3 的判别力实际来自 J3-a ／ J3-b ／ J3-d）；② **两处硬编码文本与环境脱钩**（`preflight.channel` 写死 `PowerShell/system`、`J2-b` detail 写死「本轮跑在有 key 的环境下」⇒ 异环境跑会**自相矛盾**）。ℹ️ 旧登记「≈330 MB ／ 4.35 万文件」**已过期**（实测源 profile `157.2 MB`；WB 已**排除**「统计对象不同」假说 —— 3.3-b 与本块 `cpSync` 源逐字相同）。
 - [x] ✅ 📤 **`DSH-3.8.2 · 3.8.1 装置缺陷修复`（2026-09-22 完成 · WB 复核成立）**（承接人 **Trae** ／ 场地 本机 Windows）。派发稿原文已清理（2026-09-22；回溯走 git 史）。**内容** = 修上述两处装置缺陷：① `J3-c` 恒真 ⇒ 修成**双向可翻转**（加反向对照：桩 `S381_STUB_IGNORE_SHUTDOWN=1` ＋ 宿主 `--forceAfterMs` ⇒ 期望 `forced`／`killCalled` ＝ `true`）；② 两处硬编码文本 ⇒ 按实测环境**条件生成**（`preflight.channel` ／ `J2-b` detail）。⛔ **本块只改装置、不重判 3.8.1 的结论**（`run7`／`run9` 为冻结物证，新跑一律落新 run 目录）。 ⇒ ✅ **已回报 · WB 复核成立（2026-09-22）**（A1／A2／A3／B1／B2 全条成立；**WB 换通道（node `v22.22.2`）独立复跑复现 A1** ⇒ 跨运行时亦成立）
 
-#### DSH-3 · 待实测 ① · `workspace` 运行时行为实测（→ 2.3.3 的 ⚪）
+#### DSH-3 · 待实测 ① · `workspace` 运行时行为实测（→ 2.3.3 的 ⚪ 已准出 → 🟡）
 
 > **归属 = DSH-3**（权威登记 = `docs/dsh/dsh-migration.md` §3.6〈待实测清单〉**①**）。**2026-10-09 由「待核（不阻塞拍板）」段移入本段** —— 原为该段「能力树套用后的三项转出」项的子条，属**归属悬空**（登记写 DSH-3、DSH-3 段却无其落点）；移入后该父项**三子条全部落地 ⇒ 随之一并关闭**。
 > **判据权威落点** = `docs/dsh/dsh-migration.md` §3.6〈**DSH-3 · 待实测 ①：`workspace` 运行时行为 判据口径 ＋ 承载前置实测**〉（WB 2026-10-09）。**本节只放待办 ＋ 场地 ＋ 派发状态，不重复判据。**
 
-- [x] ✅ **`workspace` 运行时行为实测**（2.3.3 的 ⚪）—— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路 ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud）⇒ **已回报 ＋ WB 复验成立（2026-10-09，含独立复跑）** ⇒ 档位建议 **🟢**（⛔ 不外推「隔离语义成立」）。
+- [x] ✅ **`workspace` 运行时行为实测**（2.3.3 的 ⚪ 已准出 → 🟡）—— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路 ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud）⇒ **已回报 ＋ WB 复验成立（2026-10-09，含独立复跑）** ⇒ 档位 **⚪ 已准出 → 🟡**（2026-10-09 落；⛔ 非 🟢 —— 「隔离语义」（读边界）仍属我方语义层；⛔ 亦不外推「隔离语义成立」）。
   - ✅ **承载已就绪（WB 2026-10-09 实测 ＋ 老大裁「走 B」）**：`sdk` profile 未装配 `dsh-workspace`（105 包里 0），但**包实体已在共享层**（`0.1.5-rc.2`，与 sdk profile 同代）⇒ 走**运行时 `--patch` 挂载**（**零持久改动**，⛔ 不改 profile 文件）：挂载件 = `harness/scripts/workspace-probe/workspace.mount.patch.yml`（受控源）。`--dump-config` 叠加自检已过（末尾出现 `- id: workspace`）。⚠️ 已知风险（共享层混代）＋ 降级路径见 §3.6 判据节 ③。
   - **场地**：本机 Windows（`harness/` 工程 ＋ `DSH_HOME=.dsh-home` ＋ profile `sdk` ＋ 全局 `dsh@0.1.5-rc.2`）。
   - **执行人**：**Trae**（本机 Windows 常驻；装置 / 探针侧先例 `DSH-3.0.2`）。

@@ -318,7 +318,7 @@
 - `client/connection` 的 cookie / 登出条目
 
 **⬛ 未验**
-1. `workspace` 的**运行时行为**（membership 过滤、attach 流程）——只读了类型与规格，未跑
+1. ~~`workspace` 的**运行时行为**（membership 过滤、attach 流程）——只读了类型与规格，未跑~~ ✅ **已验**（2026-10-09 · DSH-3 待实测①：J1–J6 全 PASS、可复现；证据 `D:\Code\_trae-evidence\wksp\`，判据 ／ 复验落 `dsh/dsh-migration.md` §3.6）——⚠️ 边界：只覆盖**数据模型行为**，⛔ 不含「隔离语义成立」
 2. ~~`permission-presets` 自定义 preset 表在真实 profile 里能否生效~~ ✅ **已验**（DSH-3.0.2 探针：自定义 preset 在真实 profile 生效）—— 接续为 **工具开关（`ctx.tools.restrict()`）真 agent 轮端到端未验**；⚠️ 该探针 **D 组为装置级**（假 session、无真模型轮），边界见 §3.1
 3. `token-meter` 在长会话下的稳定性与成本（52 条 llm 组欠账相关）
 4. ~~0.1.5 的 ACP 是否真的仍缺 `fork`/`load`/`delete`~~ —— **已闭合，从清单移除**：① DSH-2.5 ② 已实测（2026-09-10，`fork`/`load`/`delete` = `-32601`，对照 `session/resume` = `-32602` 排除鉴权遮挡）；② 上游 implemented 笔记 `2026-08-22-standard-acp-automation-controls`（012/015 Decision 段**逐字相同**）自认实装 `new`/`list`/`resume`/`close`/`prompt`/`cancel`/`set_config_option`，**明确不实现** `load`/`delete`/`fork`（理由：transcript / destructive-storage / lineage 属另一类用例）。⚠️ 但 `fork` 在 `dsh-api-gateway` 的 HTTP 面**存在**，不得写成「上游无 fork」
