@@ -1222,6 +1222,28 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - 本块判的是 `workspace` 的**数据模型行为**；**「隔离语义成立」不在本块靶子内**（真读边界在 `sandbox` ＋ `workspace-files`，属 `2.3.3` 的实现）。
 - 未跑 = **不得升格为 🟢**；本块走 **B（真 dsh 端到端）** ⇒ 结论可写「DSH 端到端成立」，但 ⛔ 仍不得外推到「隔离语义成立」。
 
+##### DSH-3 · 待实测 ① · 复验（WB 2026-10-09）
+
+**判定：成立** —— J1–J6 全 PASS **可复现**；档位建议 🟢 有据（⛔ 不外推「隔离语义成立」）。执行人 **Trae**、场地 本机 Windows、承载 = 路 B 运行时 `--patch`（**未走降级路径**）。
+
+**独立复核（WB 亲跑 ／ 亲读，⛔ 非采信完成声明）**
+- **独立复跑**：Bash 通道 ＋ system node `v24.14.1`（**与 Trae 同版本、异通道**），`WKSP_EVIDENCE_DIR` 隔离输出（不污染其证据）⇒ **J1–J6 全 PASS、`VERDICT=PASS`** ⇒ 判定**跨通道可复现**。
+- **逐条回源**：J1–J5 判定载体 = 正轮探针帧（`positive.probe.jsonl`）逐条读原文；J6 = 负轮 stderr 逐字（`negative.stderr.txt`）＋ 正负 storages 对照（`positive.after.json` 含 `workspace.json` ／ `negative.after.json` 空）⇒ 断言属实。
+- **判据覆盖核对**：读探针源码（`plugin/index.js`）逐条比对本节判据表 —— J1 集合恰等 ／ J2 同实体 ／ J3 cwd ＋ attach ／ J4 双锚 ／ J5 11 成员，**均有对应断言**（非"装置全绿但未覆盖"）。
+- **Tier0**：WB 自扫证据目录（含工作区外 `_trae-evidence`）＋ 交付物脚本 ⇒ **0 命中**。
+- **栈帧归属**：J4 栈帧 `dsh-workspace/lib/index.js:122:40 WorkspaceEntity.attachSession` 属实（证据原文核过）。
+- **dsh 版本**：`J0-preflight.dshBin` 指 **harness 内 dsh**（非派发稿写的全局 dsh）⇒ 核**同为 `0.1.5-rc.2`**，不影响判定。
+
+**增量（WB 复验发现，不改判定）**
+1. ⚠️ **引文失实 1 处（应订正）**：Trae 回报写 J2 的 id 为 `58b8f03b-7750-4deb-9749-5e5fa7653f98`，而物证 `positive.probe.jsonl` 实为 **`ed10f5a5-c59e-4ca7-919c-f42cc7c4d282`**（该 UUID 在全部证据目录 **0 命中**）⇒ 系回报正文写错，**不影响 J2 判定**（`sameEntityA/B=true`、`pass=true` 属实），但**不得进权威文档**。
+2. ℹ️ **J2 覆盖面**：判据原文列「尾斜杠 ／ `..` ／ symlink」三种写法，探针实做 **2/3**（尾斜杠 ＋ `..`；symlink 未做）⇒ 满足"只测一种不算"的底线，留痕备案。
+3. ℹ️ **通道隔离实例**：Trae「自曝 1」称「PowerShell 工具跑 node 输出直读正常」，**WB 本通道复测相反**（PowerShell 工具连 `Write-Output` 都不回显）⇒ 属**通道隔离**（判定载体是落盘证据、与终端回显无关 ⇒ 不影响结论；且 WB 已用 Bash 通道独立复现 PASS ⇒ **判定通道无关**）。
+4. ℹ️ **J0（装配层自检）在 WB 复跑中为 `false`** —— 根因 = **Bash 沙箱拦嵌套 `spawnSync`**（对照实测 `status=null, error.code=EBUSY`）；**单独复现 dump-config 成功**（`rc=0`、361 行、`- id: workspace`）⇒ 是**通道现象**、非装配前提失效、非判定层（且 J0 属 OBS：`ok` 硬编码 `true`、**不进 VERDICT**）。
+
+**未闭合项（WB 确认如实，沿用 Trae 登记）**：① 跨进程恢复未测（live session 未 end、全新 workspace domain）② J4 只构造 cwd≠path 一种负向 ③ J6 只摘 `sessionPersistence` 单 peer（`storageDomain` 未摘）④ ②「隔离语义成立」不在靶子内。
+
+**档位**：`docs/product-positioning.md` §2.3.3 建议 **⚪ → 🟢**（⚠️ 待老大落）。
+
 #### DSH-4：差异化能力迁移
 
 > **任务清单与进度见 `TODO.md`「DSH-4」**；本节只放**排序原则、实现路径判定与验收基准**。
