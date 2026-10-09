@@ -91,7 +91,7 @@
 > **判据权威落点** = `docs/dsh/dsh-migration.md` §3.6〈**DSH-3 · 待实测 ①：`workspace` 运行时行为 判据口径 ＋ 承载前置实测**〉（WB 2026-10-09）。**本节只放待办 ＋ 场地 ＋ 派发状态，不重复判据。**
 
 - [x] ✅ **`workspace` 运行时行为实测**（2.3.3 的 ⚪ 已准出 → 🟡）—— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路 ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud）⇒ **已回报 ＋ WB 复验成立（2026-10-09，含独立复跑）** ⇒ 档位 **⚪ 已准出 → 🟡**（2026-10-09 落；⛔ 非 🟢 —— 「隔离语义」（读边界）仍属我方语义层；⛔ 亦不外推「隔离语义成立」）。
-  - ✅ **承载已就绪（WB 2026-10-09 实测 ＋ 老大裁「走 B」）**：`sdk` profile 未装配 `dsh-workspace`（105 包里 0），但**包实体已在共享层**（`0.1.5-rc.2`，与 sdk profile 同代）⇒ 走**运行时 `--patch` 挂载**（**零持久改动**，⛔ 不改 profile 文件）：挂载件 = `harness/scripts/workspace-probe/workspace.mount.patch.yml`（受控源）。`--dump-config` 叠加自检已过（末尾出现 `- id: workspace`）。⚠️ 已知风险（共享层混代）＋ 降级路径见 §3.6 判据节 ③。
+  - ✅ **承载已就绪（WB 2026-10-09 实测 ＋ 老大裁「走 B」）**：`sdk` profile 未装配 `dsh-workspace`（105 包里 0），但**包实体已在共享层**（`0.1.5-rc.2`，与 sdk profile 同代）⇒ 走**运行时 `--patch` 挂载**（**零持久改动**，⛔ 不改 profile 文件）：挂载件 = `harness/scripts/workspace-probe/workspace.mount.patch.yml`（受控源）。`--dump-config` 叠加自检已过（末尾出现 `- id: workspace`）。⚠️ 已知风险（共享层混代）＋ 降级路径见 §3.6 判据节 ③。⚠️ **临时 home 形态须自建链接**（包实体不在 dsh 安装闭包 ⇒ `healProfilesModuleFallback` 不自建）—— 见判据节 ③ 限定行。
   - **场地**：本机 Windows（`harness/` 工程 ＋ `DSH_HOME=.dsh-home` ＋ profile `sdk` ＋ 全局 `dsh@0.1.5-rc.2`）。
   - **执行人**：**Trae**（本机 Windows 常驻；装置 / 探针侧先例 `DSH-3.0.2`）。
   - **参考件四要素**：官方件 · **裸仓只读** `ref/dsh-bare`（`git --git-dir=ref/dsh-bare show dsh-v0.1.5-rc.2:<path>`）—— `docs/subsystems/workspace.md` ／ `packages/workspace/workspace/src/types.ts` ／ `packages/api/session-controller/src/index.ts` ／ 上游用例 `packages/api/session-controller/tests/session-open-workspace-path.host.spec.ts`（细目见 §3.6 判据节／派发稿）。

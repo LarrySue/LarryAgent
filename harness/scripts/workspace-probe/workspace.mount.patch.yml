@@ -12,6 +12,10 @@
 #   1. **包实体已在共享层** .dsh-home/profiles/node_modules/@deepseek-ai/dsh-workspace
 #      （version 0.1.5-rc.2，lib/ 齐全，与 sdk profile 同代）
 #      ⇒ **无需 install、无需复制实体**；缺的只是**装配登记**。
+#      ⚠️ 限定：上句只在**源 DSH_HOME** 成立 —— dsh-workspace **不在 dsh@0.1.5-rc.2 安装闭包**
+#         （deps 72、无 workspace 类包）⇒ 跑**临时 home**（mkdtemp + 只 cpSync(profiles/sdk)）时
+#         healProfilesModuleFallback 不自建 ⇒ 装置须在临时 home 内**自建目录链接**指向源共享层
+#         同一实体（见 run-wksp-probe.mjs:78 symlinkSync(..., 'junction')）。⛔ 不动源 .dsh-home。
 #   2. **装配层自检**：叠加本件后 `--dump-config`（rc=0）末尾出现
 #        `# == <本件路径>` 分节 ＋ `- id: workspace` / `name: '@deepseek-ai/dsh-workspace'`。
 #   3. **运行期解析自检**（createRequire 自 .dsh-home/profiles/sdk/）：
