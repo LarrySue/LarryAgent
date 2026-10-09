@@ -576,3 +576,17 @@ $ timeout 20 git --version                      → git version 2.52.0.windows.1
 **WB 区**（`.workbuddy/`，含其 10-08 日报中的相关表述）**未动** —— 按嘱留给 WB／老大自行同步。
 
 @老大（6 处已改；archive ／ 日志 ／ WB 区未动）
+
+---
+
+## 🔎 核对 · 「任务拆分原则」落点（2026-10-09）
+
+> **任务**：老大问 ——「对于 TODO 里的任务，比较大的要分阶段、还大就分子阶段、可以一直往下分」的原则落在哪。
+
+**结论**：项目文档（`docs` ／ `TODO` ／ `README` ／ `HUMAN` ／ `archive`）**无成文**（全库关键词 ＋ git pickaxe 全史 ＋ HUMAN.md 全史 ＋ WB 全史记忆均已扫，含已删的 `dsh-3-plan.md`）；**实落点 = WB 用户级 skill** ⇒ `~/.workbuddy/skills/dispatch-ai-task/SKILL.md`「拆块与编号」：「**独立判据 ＋ 独立场地 ⇒ 可拆；拆完继续往后加子编号**（`3.7`→`3.7.1`/`3.7.2`；`3.2`→`3.2.1`）」＋「不争同一资源」补充；起源 = 2026-09-17 实战沉淀（WB 当日记忆 `:404`）。
+
+**老大处置（2026-10-09）**：已让 WB 侧进一步固化该 skill ＋ **MEMORY 内加指针** ⇒「**skill ＋ MEMORY 指针**」＝**成熟沉淀路径**（三例：`verify-ai-delivery` ／ `doc-governance-recheck` ／ `dispatch-ai-task`），**不再落项目文档**。
+
+> 📌 **方法教训（供后续检索）**：查「某原则 ／ 方法论落在哪」且文档区找不到时 —— **先查 `~/.workbuddy/skills/`**（用户级、不在 git 内，全库 grep 天然搜不到）。
+
+@老大（结论已留痕；检索方法已入记忆）
