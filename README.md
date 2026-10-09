@@ -142,7 +142,7 @@ npm run test:unit    # Vitest 单元测试
 
 | 配置项 | 说明 |
 |---|---|
-| `models.<name>.api_key` | LLM 提供商 key。`<name>` 可任意新增，`config.py` 自动解析，无需改代码 |
+| `models.<name>.api_key` | LLM 提供商段 key。**新增 provider 段零代码**（`config.py` 自动解析）；**新增具体模型需在 `backend/models/llm.py` 的 `_MODEL_PROVIDER_MAP` 登记一行映射** |
 | `server.api_key` | **放开局域网 / 上云前必须设置**，否则等于无鉴权暴露 shell 工具 |
 | `vector_store.enabled` | 长期记忆开关；关闭时不做向量检索 |
 | `embedding.provider` | `local`（本地 bge-small-zh）或 `openai`（云端） |

@@ -248,7 +248,7 @@
 
 **对手侧（DSH 0.1.5）**：🟢 `llm` seam + providers（`llm-deepseek` / `llm-pi-ai` 等）+ `llm-retry` ｜ 配置。⚠️ `llm` 组 52 条欠账 ⇒ 承接但在演化
 
-`config.yaml` 的 `models.<name>` 任意新增，`config.py` 自动解析，**加模型零代码**。当前为手动指定，无自动路由。
+`config.yaml` 的 `models.<name>`：**新增 provider 段零代码**（`config.py` 自动解析）；**新增具体模型需登记一行映射**（`backend/models/llm.py::_MODEL_PROVIDER_MAP`）。当前为手动指定，无自动路由。
 
 #### 2.5.2 工具挂载 ✅
 
@@ -268,7 +268,7 @@
 
 **对手侧（DSH 0.1.5）**：🟢 `mcp-client` + `extensions`（版本化 Cordis 包）+ `self-modification/` ｜ 配置。⚠️ MCP 只消费 tools（上游原文：resources / prompts 无 DSH 消费方）
 
-- 加模型 → config 加段（2.5.1）
+- 加模型 → **provider** config 加段 ＋ **模型名登记一行映射**（2.5.1）
 - 加工具 → 写类 + 登记（2.5.2）；第三方挂载契约已留接口
 - 加角色 → config `roles` 段 + 重启，`GET /api/roles` 下发，**前端零改动**（2026-09-03 改造验证）
 

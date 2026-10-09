@@ -67,7 +67,7 @@
 **D. 规则口径类（提请定夺，非错误）**：`docs/product-positioning.md:265/351/410/444` 指向 `exchange/` 下讨论稿（web-search-design ／ deployment-architecture ／ discussion-time-context）——`docs/README.md` 规则「只引用稳定落点」对"讨论稿"**无明文**；另 `ai-governance.md:255`（"开发前先读 log-trae ／ log_design"）属**行动指南例外**，合规。
 
 ### ④ 旧发现复核（`HUMAN.md`「Qoder观察到的问题」4 条 · 状态提醒）
-- **#1「加模型零代码」不符 —— 未处置**：`README.md:145` 表述仍在（「可任意新增 … 无需改代码」）；抽查 `backend/models/llm.py:56` `_MODEL_PROVIDER_MAP` 仍为硬编码表、`:73` 抛错文案仍是 "Add it to …" ⇒ 现状与旧判**一致，提醒处置**（口径建议同旧：「加 provider 段零代码，加模型需登记一行映射」）。
+- ✅ **#1「加模型零代码」不符 —— 已处置（2026-10-09）**：口径已修 **3 处**（`README.md:145` ／ `docs/product-positioning.md:251` ／ `:271`）⇒ 统一为「**新增 provider 段零代码**；**新增具体模型需登记一行映射**（`backend/models/llm.py::_MODEL_PROVIDER_MAP`）」；代码侧不动（映射表＝既有设计，非缺陷）。详见下方〈办理 · 观察 #1〉段。
 - **#3（`server.host/port` 死配置）**：抽查 `uvicorn.run` 零命中 ／ `server.host|port` 零命中 ⇒ **与旧判一致（未变）**。
 - **#4（`auth.py` 非恒定时间比较）**：`compare_digest` 零命中 ⇒ **未见按建议修改**。
 - **#2（`config.example` 漂移）**：本轮**未逐条重验**（如需可下轮补）。
@@ -81,6 +81,21 @@
 - 只读；未改任何被查文件（本文件除外）。未复核 `backend/` 与文档的**全面**一致性（仅按 HUMAN.md 旧发现抽查 3 条）；反引号路径未做存在性扫描（见 ②边界）。下轮可考虑：反引号路径全量扫描 ／ `config.example` 漂移复核。
 
 @老大（②③④内所有建议**均未动手**，等你裁）。
+
+---
+
+## 🔧 办理 · 观察 #1 口径修正 ＋ 0.3 阈值追查（2026-10-09）
+
+**A · 观察 #1「加模型零代码」口径 —— 已修 3 处**：`README.md:145` ／ `docs/product-positioning.md:251`（2.5.1）／`:271`（2.5.3 清单行）⇒ 统一为「**新增 provider 段零代码**（`config.py` 自动解析）；**新增具体模型需登记一行映射**（`backend/models/llm.py::_MODEL_PROVIDER_MAP`）」。代码侧不动（映射表＝既有设计）。
+
+**B · 「召回阈值 0.3」追查（HUMAN.md 持续观察项「找不到了」）—— 链条完整定位**：
+- **源头 ＝ `a0399a0`（P1 闭环提交）**：`engine.py::get_long_term_memory` 阈值 **0.5 → 0.3**；原因（当时 TODO 原文）＝「**短查询 vs 结构化摘要相似度仅约 0.36**」（0.5 会全漏）；原始记录 ＝ 该提交的 TODO「记忆系统调优」段（含「当前基线 0.3…top_k=5」）。
+- **文档断点 ＝ `8575288`（P3.1 时代 TODO 整理）**：该条目被压成模糊版（「长期 — 持续调整」）⇒ **数字自此从文档消失**（仅存 git 历史）。
+- **代码现状**：`backend/memory/engine.py:44` **现值仍 = 0.3**（自 P1 未变）⇒ 「找不到了」的真相 ＝ **记录丢了、基线还活着**。
+- **WB 日志**：**无此记录**（WB 于 08-11 加入，晚于该事件）——已查证。
+- **⭐ 附发现（`8575288` 同批处置区）**：① **「`vector_store.search()` 去掉 `score_threshold` 默认值」条目无承接地消失**（同批其他条目均标「已归入 P3…」，唯它没有）⇒ 现状复核：两处默认仍不一致（engine 传 0.3 ／ `vector_store.py:107` 默认 0.5），但**生产路径唯一调用方 ＝ engine（传参覆盖）** ⇒ **实际无影响**（死默认）；② 「`_resolve_provider_key` → 显式映射」当时标「已归入 P3.0 前置修补」⇒ ✅ **已完成**（即今日 `_MODEL_PROVIDER_MAP`）。
+
+@老大（A 已改并随批提交；B 如上——HUMAN.md 观察项要不要补注「现值 0.3 ／ 源头 `a0399a0`」由你定）
 
 ---
 
