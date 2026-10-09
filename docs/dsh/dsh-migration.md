@@ -1074,7 +1074,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - ⚠️ **裸跑 `node` / `dsh` 不可信**（非登录 shell 的 PATH 不含）⇒ 绝对路径 `~/node/bin/node`（v22.22.2）／ `~/harness/node_modules/.bin/dsh`。与 `test-env.md §6.2` 同族，**CVM 侧亦成立**。
 - `~/harness` 树**无 `.git`**（非受管副本，手工同步）。
 - 场地**非独占**：`~/claude-tp-evidence` ／ `~/qoder-evidence` ／ `~/claude-305` ／ `~/.dsh-015` 等**他方 AI 产物在库**；`~/harness/scripts/sandbox-probe/` 存 6 件**前人探针** —— ⚠️ 其中 `sandbox-denial-probe.mjs` 头注释自述「**本机 Windows**」、用 `USERPROFILE` ／ `C:\Windows\…` ⇒ **是 Windows 探针被搬到 Linux 机的**，勿当 CVM 器材直接跑。
-- ⚠️ **CVM 产出不得是唯一副本**（机器**已续费 · 2026-10-08 · 一年 200 元 ⇒ 到期 2027-10-09 21:08:53**；原时限 2026-10-09）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
+- ⚠️ **CVM 产出不得是唯一副本**（机器**已续费 · 一年 200 元 ⇒ 到期 2027-10-09 21:08:53**〔2026-10-09 更新〕；原时限 2026-10-09）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
 - ⚠️ **启动 / 装载类观测的「假绿三连」**（2026-09-16 实测，逐条都有反例 —— 判「环境可用 / profile 可用」前必读）：
   - ① **`dsh --profile <p>` 在 profile 不存在时同样 `exit 0` ＋ 双流全空** —— dsh 会自动把 home 建成**空壳 profile**（`dependencies: {}`），CLI 再从**自身安装树**解析 bundles ⇒ **`exit 0` 永远不能单独当判据**（与 `--help` / `--dump-config` 同类，只是这次骗过的是 boot 探针本身）。
   - ② **boot / 启动探针必须保 stdin 打开** —— sdk app 是 stdio 服务，`stdio:'ignore'`（或 stdin 关闭）会得到「`exit 0` ＋ 双流全空」的假绿（实测栽过一次）。
