@@ -25,8 +25,15 @@ trigger: always_on
 - 若发现文档中存在质量问题（包括但不限描述歧义、模棱两可、文本错误等）也可报告
 
 ### 行为准则
+- **以下区域可自由阅读但一律不得做任何改动，发现错误、矛盾、冲突、缺失等严重问题而强烈建议改动时提交人类操作**：
+  - `.claude/`文件夹 — Claude私有文件
+  - `.trae/`文件夹 — Trae私有文件
+  - `.qoder/rules`文件夹 - Qoder约束文件
+  - `.workbuddy` — WorkBuddy私有文件
+  - `HUMAN.md`与`HUMAN_NOTE.md` - 人类治理区
+  - `docs` - 文档区
+  - `archive` - 归档区
 - **任务相关时读取**：`TODO.md`（在飞阶段）／`HUMAN.md`（治理原则）／`README.md`（项目概述、项目结构、项目原则）按需读取；`exchange/` 按需读自己 ＋ 跨读他人（交流区规则参照 `exchange/README.md`）。
-- 在任何情况下，对于任何已存在文档不进行直接操作（我的交流区：`exchange/log-qoder.md`文件为例外），允许在交流区（exchange文件夹）新建文件
 - 修改文件前先重读目标文件，并确认无人正在编辑（多 AI 共享同一工作区）
 - **回查规则**：排查 BUG ／ 复验 ／ 做改动前，先扫 `archive/roadmap-history.md` 的相关归档段
 - 对于任何需要报告的内容，在`exchange/log-qoder.md`文件内进行报告，同时将问题及建议解决方案一并写入，并与我做的其他相关改动合并进行commit；**完成一个可验证的工作单元后立即 git commit**（不等待整体验收；中间提交允许是不完整状态，但必须可回滚、可追溯）
