@@ -461,7 +461,7 @@ records:
 | 环境 | 路径 | 现状 | 要填吗 |
 |---|---|---|---|
 | **CVM · 裸跑（默认 home）** | `/home/ubuntu/.dsh/.credentials.yaml` | ✅ **已填**（600 / 223 B，2026-09-14）：`refs.DEEPSEEK_API_KEY` 就位（`sk-` 起 / 35 字符），`records:` 原段完好 | ✅ 落位完成；✅ **真生效已验成（2026-09-16）** —— `dsh-prompt.mjs` 裸跑、**不注入** env key，得 `turn/end.kind=completed` ＋ 非空回复（D1 证成；3.0.5 独立复现）｜ ⚠️ 但**不能用 real-api 验**（见下条订正），须用 `dsh-prompt.mjs` 裸跑 |
-| **CVM · 显式 `DSH_HOME=~/larry-dsh-home`** | `/home/ubuntu/larry-dsh-home/.credentials.yaml` | ⚠️ **不存在**（09-10 建的该 home，profiles / sessions / storages 齐全，**独无凭据**） | ⚠️ **本机 `harness/scripts/cvm-probes/*.sh` 钉死此路径** ⇒ 照抄 = "无 key 假绿" |
+| **CVM · 显式 `DSH_HOME=~/larry-dsh-home`** | `/home/ubuntu/larry-dsh-home/.credentials.yaml` | ⚠️ **不存在**（09-10 建的该 home，profiles / sessions / storages 齐全，**独无凭据**）〔⚠️ **2026-09-22 后**：该 home 已整删——本行为当时状态留痕〕 | ⚠️ 旧版 `harness/scripts/cvm-probes/*.sh` **曾**钉死此路径 ⇒ 照抄**旧版** = "无 key 假绿" |
 | 本机 · client 启动的 DSH | `D:\Code\LarryAgent\.dsh-home\.credentials.yaml` | **不存在** ⇒ 现走"启动环境"层（client 注入 env） | 可选 |
 | 本机 · 手工跑 `dsh` | `C:\Users\SuLarry\.dsh\.credentials.yaml` | 存在，**仅 `records:`** | 可选 |
 | WSL | `~/.dsh/.credentials.yaml` | **DSH-3 不参与**（老大 2026-09-14 拍定；见 §12.7 附三） | 暂不填 |
@@ -480,7 +480,7 @@ records:
 ### 12.6 与 Tier0 红线 ① 的关系
 
 - 该文件**只存凭据**，且**产品绝不把文件路径交给 agent**；但**同 UID 的工具进程照样可读**（官方原话"这是审慎，不是边界"）
-- ⇒ **值不得写进任何受版本控制的文件（测试用Key不受此限制）**；两处 dsh home 与 CVM 的 `~/.dsh` 均在 git 跟踪范围之外
+- ⇒ **值不得写进任何受版本控制的文件（测试用Key不受此限制——完整口径见 `docs/ai-governance.md` §2 第 1 条）**；两处 dsh home 与 CVM 的 `~/.dsh` 均在 git 跟踪范围之外
 
 ### 12.7 两条轨并存期：本机 Key 落在两处（2026-09-14 补）
 
@@ -512,9 +512,9 @@ records:
 
 | 谁启动 DSH | `DSH_HOME` 来源 | 凭据实际落点 |
 |---|---|---|
-| **本机 `harness/scripts/cvm-probes/*.sh`**（探针脚本） | ✅ **2026-09-14 已改**：`export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"`（5 个硬钉；`cvm-step0.sh` 的 `MODE` 默认值由 `explicit` 翻为 `default`） | `/home/ubuntu/.dsh/.credentials.yaml`（✅ 已填 223 B / 600） |
+| **本机 `harness/scripts/cvm-probes/*.sh`**（探针脚本） | ✅ **2026-09-14 已改**：`export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"`（5 个硬钉；`cvm-step0.sh` 的 `MODE` 默认值由 `explicit` 翻为 `default`；⚠️ **2026-09-22 后 `explicit` 分支已整体退役**〔`ba3e42e`〕） | `/home/ubuntu/.dsh/.credentials.yaml`（✅ 已填 223 B / 600） |
 | **裸跑 `dsh`（默认）** | 未设 ⇒ 回落 `~/.dsh` | 同上（**两条路已合一**） |
-| **`~/larry-dsh-home`（旧）** | 仅当显式传 `DSH_HOME=` | **无凭据** ⇒ 降级为**负向对照器材**，**不是**运行 home |
+| **`~/larry-dsh-home`（旧）** | 仅当显式传 `DSH_HOME=` | **无凭据** ⇒ 曾降级为**负向对照器材**（**不是**运行 home）；⚠️ **2026-09-22 已整删（器材本体不复存在）**——本行为当时定位留痕 |
 
 （改前形态留痕：5 个脚本硬钉 `$HOME/larry-dsh-home`、`cvm-step0.sh` 默认 `explicit` ⇒ **照抄 = 无 key 假绿**。⚠️ 写 `${DSH_HOME:-…}` 而非字面 `unset` 是**必须的**：脚本内 `$DSH_HOME/profiles/…` 参与路径拼接且带 `set -u`，真 unset 会硬报错。）
 
@@ -531,6 +531,7 @@ records:
 | `~/.dsh/profiles/larry` | api-gateway, host-webserver | 7 |
 | `~/larry-dsh-home/profiles/sdk` | base, sdk-app, storage-sqlite, plugin-storage-probe | 101 |
 
+（⚠️ **2026-09-22 后形态**：上表 `~/larry-dsh-home` 与 `profiles/larry` 均已退役删除——本处为当时形态留痕）
 ⇒ **凭据落在 `~/.dsh`、可运行的 profile 落在 `~/larry-dsh-home`** —— 两者被劈开。DSH-3.0 的 D 组（凭据层验真）因此崩在**启动期**（`-32603 cannot create effect on inactive context`），**与凭据无关**。
 
 ⇒ 纪律「CVM 以 `~/.dsh` 为准」**结论不变**（其理由本就含"裸跑默认"一条，与依赖无关），但**必须先把 `sdk` profile 装进 `~/.dsh`** 才真正可用（装法见 `archive/roadmap-history.md`「DSH-3.0」段；⚠️ 按**基线 015** 装，且须 **CLI 与 profile 同代** —— 2026-09-15 本机实测的跨版本混合污点即由此而来）。

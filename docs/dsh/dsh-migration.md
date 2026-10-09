@@ -793,7 +793,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 - 三态**同一脚本**跑；判据 = **三态表现互不相同**
 - ⚠️ 每态须显式记 **(DSH_HOME, profile, 凭据来源层)** 三元组 —— 否则"无 key 态"与"真 key 态"可能测的是同一件事
-- ⚠️ **已定位的陷阱**：`harness/scripts/cvm-probes/*.sh` 全部钉 `DSH_HOME=$HOME/larry-dsh-home`，而 CVM 凭据只在 `~/.dsh/` ⇒ **照抄这些脚本 = 无 key 假绿，且判据看起来全绿**
+- ⚠️ **已定位的陷阱**（⚠️ **2026-09-22 后形态**：脚本已于 2026-09-14 参数化 `${DSH_HOME:-$HOME/.dsh}`〔`b4b61ed`〕、`explicit` 分支 2026-09-22 退役〔`ba3e42e`〕——本句为旧版脚本留痕，勿照抄）：`harness/scripts/cvm-probes/*.sh` 全部钉 `DSH_HOME=$HOME/larry-dsh-home`，而 CVM 凭据只在 `~/.dsh/` ⇒ **照抄这些脚本 = 无 key 假绿，且判据看起来全绿**
 
 ##### 采数口径（3.0 顺手采数 与 3.9 回传核对表共用）
 
@@ -1070,7 +1070,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 **⑤ 顺手采得的其余场地事实（与 3.9 采数口径共用）**
 - **cgroup v2 齐备**：`memory.current` ／ `.peak` ／ `.events` ／ `.pressure` 均 readable；当前 `oom 0 ／ oom_kill 0`。
-- 路径映射：`~/larry-dsh-home`（**无凭据**）／ `~/.dsh`（**有凭据**，键 `version` ／ `records` ／ `refs`）／ `~/larry-data/larry.db` = **57,344 B，mtime 2026-09-16 18:47**（3.9 待回传的唯一副本）。
+- 路径映射（⚠️ **2026-09-22 后**：`~/larry-dsh-home` 已整删——本行为当时场地留痕）：`~/larry-dsh-home`（**无凭据**）／ `~/.dsh`（**有凭据**，键 `version` ／ `records` ／ `refs`）／ `~/larry-data/larry.db` = **57,344 B，mtime 2026-09-16 18:47**（3.9 待回传的唯一副本）。
 - ⚠️ **裸跑 `node` / `dsh` 不可信**（非登录 shell 的 PATH 不含）⇒ 绝对路径 `~/node/bin/node`（v22.22.2）／ `~/harness/node_modules/.bin/dsh`。与 `test-env.md §6.2` 同族，**CVM 侧亦成立**。
 - `~/harness` 树**无 `.git`**（非受管副本，手工同步）。
 - 场地**非独占**：`~/claude-tp-evidence` ／ `~/qoder-evidence` ／ `~/claude-305` ／ `~/.dsh-015` 等**他方 AI 产物在库**；`~/harness/scripts/sandbox-probe/` 存 6 件**前人探针** —— ⚠️ 其中 `sandbox-denial-probe.mjs` 头注释自述「**本机 Windows**」、用 `USERPROFILE` ／ `C:\Windows\…` ⇒ **是 Windows 探针被搬到 Linux 机的**，勿当 CVM 器材直接跑。
