@@ -1,0 +1,36 @@
+# DSH-3 · 待实测 ① · 承载挂载件（受控源 · WB 2026-10-09）
+#
+# 用途：把上游 @deepseek-ai/dsh-workspace 挂进 sdk profile 的装配，使 2.3.3 的
+#       「会话 ↔ workspace 分组 ＋ membership 过滤 ＋ attachSession 复校验」
+#       可在**真 dsh** 里被跑成判据（而不是只读类型 / 规格）。
+#
+# 用法（运行时叠加 ⇒ **零持久改动**）：
+#   DSH_HOME=<仓库根>/.dsh-home dsh --profile sdk \
+#     --patch harness/scripts/workspace-probe/workspace.mount.patch.yml <app 参数>
+#
+# 依据（WB 2026-10-09 实测，三条）：
+#   1. **包实体已在共享层** .dsh-home/profiles/node_modules/@deepseek-ai/dsh-workspace
+#      （version 0.1.5-rc.2，lib/ 齐全，与 sdk profile 同代）
+#      ⇒ **无需 install、无需复制实体**；缺的只是**装配登记**。
+#   2. **装配层自检**：叠加本件后 `--dump-config`（rc=0）末尾出现
+#        `# == <本件路径>` 分节 ＋ `- id: workspace` / `name: '@deepseek-ai/dsh-workspace'`。
+#   3. **运行期解析自检**（createRequire 自 .dsh-home/profiles/sdk/）：
+#        dsh-workspace / cordis / dsh-storage-domain / dsh-session-persistence-jsonl / zod
+#        全部解析 OK（workspace 与 cordis 经共享层落到全局 dsh 安装 0.1.5-rc.2）。
+#
+# ⚠️ 降级路径（若实跑 import 崩，照 DSH-3.7.2 订正法）：
+#   把 lib 实体复制进 **该 profile 自身层**
+#     .dsh-home/profiles/sdk/node_modules/@deepseek-ai/dsh-workspace/
+#   （勿 link。）共享层混代是本项目已踩过的坑 —— 详见
+#   harness/scripts/sandbox-probe/sandbox-dialect.mount.patch.yml 头注
+#   （该处实测共享层把 dsh-sandbox-local 解析到旧代 0.0.1-rc.1 ⇒ import 崩）。
+#
+# ⚠️ 生效自检：官方行**不会消失**；本件是**追加**一行（form B：insert）。
+#    ⛔ 别拿"行消失"当判据（会误判成未生效）。
+# ⚠️ profile 的 patchReload=startup ⇒ 改装配须重启进程，热重载不生效。
+# ⚠️ 本件只解决**装配层**；插件是否真的实例化（inject: storageDomain/sessionPersistence
+#    是否满足）＝ 判据 J1–J6 的靶子，⛔ 不得由 --dump-config 外推。
+
+- insert:
+    - id: workspace
+      name: '@deepseek-ai/dsh-workspace'

@@ -1187,6 +1187,41 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - **J2 的拒绝读数形态 = `Permission denied`（非裸 `EPERM`）**：判据文本写 `EPERM`，用户态实得 bash stderr `Permission denied`（`EPERM` 的 strerror 渲染；landlock 方言 `DENIAL_SIGNATURES=["permission denied"]` 匹配的正是后者）⇒ **后续同类判据口径一律写「denial 方言命中」**，⛔ 别再写裸 `EPERM`（它在用户态不可见）。
 - **装置缺陷（一次性 · 无下游）**：`run-35-sandbox.mjs` **臂间未清场** `~/larry35-sbox` ⇒ danger 臂写的 `inside.txt` **残留**到 esc 臂（`insideTxt=PRESENT` 是残留假象）。判据只看各臂**专属**文件（`denied-<mode>.txt` ／ `esc-<mode>.txt` ／ `inside-fc.txt`）故未受影响。该装置随 CVM 到期废弃；**如复用须臂间清场或每臂独立 WS**。
 
+##### DSH-3 · 待实测 ①：`workspace` 运行时行为 判据口径 ＋ 承载前置实测（WB 2026-10-09）
+
+> **本节定位**：§3.6〈待实测清单〉**①**（归属 **DSH-3**）的**判据权威落点**。派发稿是活日志（会被清）⇒ **判据不得只活在稿里**。对应登记：`TODO.md`「DSH-3」段〈待实测 ①〉／`HUMAN.md:48`／`docs/dsh/dsh-015-capability-mapping.md` §8 ⬛未验 **1**／`docs/product-positioning.md` §2.3.3（档位 **⚪**）。
+
+**① 目标（一句话）**：判定上游 `workspace` 的**运行时行为**是否兑现「会话 ↔ workspace 分组 ＋ membership 过滤 ＋ `attachSession` 复校验」这一数据模型 ⇒ 决定 `2.3.3` 的 **⚪ → 🟢 ／ 🟡 ／ 🔴**（兑现 ⇒ 我方只写隔离语义；不兑现 ⇒ 分组底座也要自建）。
+
+**② 判据（先过四问，再落表）**
+- **作用层（唯一判定载体）** = **运行时来自 `ctx.workspaceRegistry` 的实际读数**（`listWorkspaces()` ／ `Workspace.sessionIds` ／ `attachSession` 的返回与抛错）。⛔ **不算的层**（写明理由）：读 `docs/subsystems/workspace.md` 规格、读 `workspace/src/types.ts` 类型、`--dump-config` —— 三者都是**装配层 / 文本层**，天然为真、会假绿（同源：本稿〈配置预览 ≠ 运行时〉）。
+- **计量口径（唯一主口径）**：membership 用**集合相等**（按 `SessionId` 逐项比对）；⛔「条数够 ／ 文件在 ／ 无报错」均不算。
+- **结果态可区分**：`attachSession` 的**静默接受（fail-open）** 与 **实际拒绝** 必须可分 ⇒ 强制**负向对照**；不做则「没校验」与「没触发」同形。
+- **断言视图**：在**消费面**（`sessionIds` ／ `listWorkspaces()` 返回值）断言，⛔ 不在内部 Map ／ 落盘文件上断言。
+
+| # | 判据 | 取证 | 缺此即未闭合 |
+|---|---|---|---|
+| J1 | **membership 过滤**：建 wsA(`path=PA`) ／ wsB(`path=PB`)；PA 下建 s1 ／ s2、PB 下建 s3 ⇒ `wsA.sessionIds` **集合恰 = {s1,s2}**、**不含 s3**；`wsB.sessionIds` 恰 = {s3} | 逐 ws 打印 `sessionIds` 原文 ＋ 各 session header 的规范 cwd | 只报"条数"不算 |
+| J2 | **cwd 规范化唯一性**（`realpathNormalize`）：同一目录的不同写法（尾斜杠 ／ `..` ／ symlink）解析到**同一** workspace | 两种写法各 create 后比对解析出的 `path` ／ `title` ／ `id` | 只测一种写法不算 |
+| J3 | **attachSession 正路**：新建会话时 cwd 取自选定 workspace 的 `path` ⇒ 落进不可变 `SessionHeader.cwd` 且 attach 通过 | 读 `SessionHeader.cwd` 原文 ＋ attach 返回 | — |
+| J4 | **🔴 负向对照（判别力所在）**：构造 cwd ≠ workspace.path（或篡改 header cwd）⇒ attach **拒绝 ／ fail-loud**（有可观测错误），**非**静默接受。**双锚**：同时断言"正常会话仍能 attach"（环境没坏） | 触发命令原文 ＋ 完整错误对象（code ／ message ／ 栈帧） | 无则 J3 无判别力 |
+| J5 | **接口成员逐条可达性**：`Workspace` 接口**全部成员**（`setTitle` ／ `insertSessionBefore` ／ `detachSession` ／ `status` …）逐条实调，逐条标「可调 ／ 不可调 ／ 语义与文档不符」 | 每条给调用与返回 | §8 只"读类型"，本条要"跑" |
+| J6 | **强制启动依赖行为**：文档称 `storageDomain` ／ `sessionPersistence` 为**强制启动依赖**（缺失 ⇒ 插件 pending，**不**当空历史）⇒ 摘掉一个 peer 实测该 pending 行为 | 摘除前后对照读数 | 只测正路不算 |
+
+**③ 承载（WB 2026-10-09 装配面实测 ⇒ 老大裁「走 B」⇒ 已落地 · 零持久改动）**
+- ⭐ **现状**：`workspace` **未进** `sdk` profile 装配 —— `dsh --profile sdk --dump-config`（361 行、`rc=0`）里 `workspace` 只以 `workspace-write` / `workspaceRoot`（权限 / 沙盒字段）出现，**无 `ctx.workspaceRegistry` 插件**；`profiles/sdk/node_modules/@deepseek-ai/` 的 **105 包里 0 个 `dsh-workspace`**。服务提供者 = `@deepseek-ai/dsh-workspace`（`0.1.5-rc.2`，public），上游自述 *「an optional host-side capability, not part of the agent-loop spine, and invisible to models」*；装配归属只在 `bundle/web-app` ＋ `api/remotes` ＋ `client/*` ＋ `webhook`，**不进 `dsh-base` / `dsh-sdk-app`**。
+- ✅ **承载解法 = 运行时 `--patch` 挂载（⛔ 不改任何持久文件）**。挂载件 = **`harness/scripts/workspace-probe/workspace.mount.patch.yml`**（受控源，照 3.7.2 形态）。**包实体已在共享层**（`.dsh-home/profiles/node_modules/@deepseek-ai/dsh-workspace`，`0.1.5-rc.2`，与 sdk profile **同代**）⇒ **无需 install、无需复制实体**，缺的只是装配登记。
+  - 用法：`DSH_HOME=<仓库根>/.dsh-home dsh --profile sdk --patch harness/scripts/workspace-probe/workspace.mount.patch.yml <app 参数>`
+  - **装配层自检（WB 已跑）**：叠加后 `--dump-config` 末尾出现 `# == <本件路径>` 分节 ＋ `- id: workspace`（`rc=0`）。
+  - **运行期解析自检（WB 已跑）**：`createRequire` 自 `profiles/sdk/` 解析 `dsh-workspace` / `cordis` / `dsh-storage-domain` / `dsh-session-persistence-jsonl` / `zod` **全部 OK**。
+- ⚠️ **已知风险 ＋ 降级路径**：**共享层混代**是本项目踩过的坑（`sandbox-dialect.mount.patch.yml` 头注：共享层把 `dsh-sandbox-local` 解析到旧代 `0.0.1-rc.1` ⇒ import 崩）。本件实测**同代**；若实跑 import 崩 ⇒ **降级** = 把 `lib` 实体复制进 **profile 自身层** `profiles/sdk/node_modules/@deepseek-ai/dsh-workspace/`（勿 link／勿只靠共享层）。
+- ⚠️ 上述两条自检**只证装配层 ＋ 解析层**；**「插件是否真的实例化」**（`static inject = ["storageDomain", "sessionPersistence"]` 是否满足）**＝ 判据 J1–J6 的靶子**，⛔ 不得由 `--dump-config` 外推（同源：本稿〈配置预览 ≠ 运行时〉）。
+- ⛔ 原「**路 A**（装置级）」**不再需要**（B 已落地且零持久改动）；若 B 运行期失败、降级亦不成 ⇒ **停手回报**，⛔ 不自行造等价物。
+
+**④ 诚实边界**
+- 本块判的是 `workspace` 的**数据模型行为**；**「隔离语义成立」不在本块靶子内**（真读边界在 `sandbox` ＋ `workspace-files`，属 `2.3.3` 的实现）。
+- 未跑 = **不得升格为 🟢**；本块走 **B（真 dsh 端到端）** ⇒ 结论可写「DSH 端到端成立」，但 ⛔ 仍不得外推到「隔离语义成立」。
+
 #### DSH-4：差异化能力迁移
 
 > **任务清单与进度见 `TODO.md`「DSH-4」**；本节只放**排序原则、实现路径判定与验收基准**。
@@ -1285,7 +1320,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 | # | 待实测项 | 影响的总表行 | 为什么值得测 | 归属 |
 |---|---|---|---|---|
-| ① | `workspace` **运行时行为**（membership 过滤、`attachSession` 流程）| 2.3.3 | 该行「可降级」**收益的大小**取决于它：兑现 ⇒ 我方只写隔离语义；不兑现 ⇒ 分组底座也要自建 | DSH-3 |
+| ① | `workspace` **运行时行为**（membership 过滤、`attachSession` 流程）| 2.3.3 | 该行「可降级」**收益的大小**取决于它：兑现 ⇒ 我方只写隔离语义；不兑现 ⇒ 分组底座也要自建 | DSH-3 ｜ ✅ **判据已落** = 本稿〈DSH-3 · 待实测 ①：`workspace` 运行时行为 判据口径 ＋ 承载前置实测〉（WB 2026-10-09）；✅ **承载已就绪（老大 2026-10-09 裁「走 B」）**：该节 ③ 实测 ⇒ `sdk` profile 未装配 `dsh-workspace`（实体已在共享层、同代）⇒ 走**运行时 `--patch` 挂载**（挂载件受控源 = `harness/scripts/workspace-probe/workspace.mount.patch.yml`，零持久改动） |
 | ② | `ctx.tools.restrict()` **真 agent 轮** deny 后模型侧行为 | 2.7.2 | 2.7.2 覆盖面的**另一半**（preset 只覆盖两个 knob）；上游无文档，只有实证 | DSH-4 验收 |
 | ③ | `token-meter` **长会话**稳定性与成本 | 2.7.4 / 2.8.3 | 承接的**可靠性**；与 `llm` 组 52 条欠账相关 | DSH-4 验收 |
 | ④ | `settings/*/redact.ts` 是否**真** fail-open（构造用例复现）| 2.7.3 / §5.1 | 决定**风险条力度**：源码标记为真，但「当前确实 fail-open」我方未复现 | DSH-3 |
