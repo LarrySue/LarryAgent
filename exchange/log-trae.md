@@ -9,9 +9,8 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.5 判定轮** | Trae | **CVM（landlock ABI 4）** | ✅ **回报已交 ＋ WB 复验成立（2026-10-08）** —— J1–J7 **全判 PASS**（三档边界互异 ＋ 提权双层可观测 ＋ fail-closed 构造成功非降级 ＋ J7 负向红）；1 观察项如实登记（`SANDBOX_UNAVAILABLE` code 字面值不落 session 日志，判定不依赖）；证据已回传 `D:\Code\_trae-evidence\35\`（CVM 10-09 到期，非唯一副本 ✓）。**WB 复验**：回源取证（物证 sha 逐位一致 ／ WB 自扫 Tier0 0 命中 ／ 引文逐字属实）＋ **上机只读核 4 条**（硬链接 ×6 ／ `NO_BWRAP` ／ `apparmor=1` ／ J7 归因逐字复现）；**5 条表述 ／ 证据完整性缺陷**（不改结论，前 3 条为应订正项）⇒ 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 · S3 sandbox：判定轮复验〉 | 2026-10-08 |
-| **DSH-3 · 待实测 ① · `workspace` 运行时行为实测** | Trae | **本机 Windows** | ✅ **回报已交 ＋ WB 复验成立（2026-10-09，含独立复跑）** —— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路含 `headerFrozen` ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud「pending 字面 ＋ 无空历史」）；承载 = 路 B 运行时 `--patch`（**未走降级路径**）；§2.3.3 **⚪ 已准出 → 🟡**（WB 按〈对手侧状态口径〉订正：隔离语义仍属我方 ⇒ 非 🟢；⛔ 不外推隔离语义）；证据 `D:\Code\_trae-evidence\wksp\` | 2026-10-09 |
 | **后端一致性 · 两处修复** | Trae | **本机 Windows** | ✅ **已复验成立（WB 2026-10-13）** —— R1：幽灵 `error` 分支 ＋ docstring 行已删，**docstring 事件列表 ≡ `yield` 集合、各 4 项**（`delta`/`done`/`tool_call`/`tool_result`），SSE 层 `_format_sse` 无 error 特判；R2：404 改走 `ResourceNotFoundError`，**代码层面 `HTTPException` 清零**（仅余 `exceptions.py:11` 自述文字）。WB **回源复核**（非采信其输出）：读改动后代码本体 ＋ 独立跑检索 ＋ 改前/改后对照 ＋ 核改动范围（仅两文件、无越界）；Tier0 本轮交付 **0 命中**。**一次性小修、闭环即消**（⛔ 未落 `TODO.md` ／ `docs/`） | 2026-10-13 |
+| **迁移失败静默吞 · fail-loud 修复** | Trae | **本机 Windows** | ⏳ **待派发（2026-10-13）** —— R1 增量迁移失败即 raise（负向 query_only 场地 ＋ 正向锚双锚，WB 已实测有判别力）／ R2 `tool_call_id` 进 `CREATE_MESSAGES`（迁移条目保留给老库）；来源 = Qoder 核证转办 · WB 回源复核**成立**（文献级）；判据 ／ 取证见下方〈📤 派发稿 · 迁移失败静默吞修复〉 | 2026-10-13 |
 
 - **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ 完成态快照 `archive/roadmap-history.md`「DSH-3.4」段**（原写「`TODO.md`「DSH-3.4」段 ＋ §3.6」**一处两面**；其中 `TODO.md` 侧已于 2026-10-01 归档）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
@@ -59,6 +58,87 @@
 ### 五、记忆补录（repo 外，不入 git）
 
 `project_memory.md` Lessons Learned 尾部 append 4 条：① spawn dsh 探针宿主须 stdin 保持开放（exitOnStdinEnd 腰斩）；② dsh-workspace 不在 dsh 安装闭包 ⇒ 临时 home 须自建 junction（WB 已固化 §3.6）；③ assertEntriesActivated 静态 inject 缺失 ⇒ 启动期树级 fail-loud（exit 1 ＋ stderr 逐插件 pending 字面），非挂起；④ 物证随机标识禁手抄，须复制或锚点引用。
+
+---
+
+## 📤 派发稿 · 迁移失败静默吞修复（fail-loud）（WB ／ 2026-10-13）
+
+> **派发方** = WB ／ **执行人** = **Trae** ／ **场地** = **本机 Windows** ／ **派发日** = 2026-10-13
+> **来源** = Qoder 核证转办 · 后端第三处（2026-10-13；其核证段已按交流区规矩转出清理，回溯 `git log -p -- exchange/log-workbuddy.md`）→ WB **回源逐条复核：判定成立**（⚠️ **文献级**——全部为代码复核，未做运行时验证；逐条见下）。
+> **口径**：**一次性小修，修毕即闭环、无长期落点**（沿用老大 2026-10-13 对同类事项的裁定 ⇒ ⛔ 不进 `TODO.md` ／ 不进 `docs/`）。
+
+**0 · 目标**
+
+修掉 `db/migrations.py` 增量迁移的**静默吞失败**：失败不再只留一行 warning，而是 **fail-loud**（抛异常 ⇒ lifespan 启动失败 ⇒ uvicorn 起不来，「带病启动不如起不来」）；并顺带消除「新库 `messages.tool_call_id` 只能靠 ALTER 出现」这一唯一脆弱点。
+⚠️ **两层问题一次派发**：① 吞失败（R1）② 新库脆弱点（R2）——同文件族、同一套回归验证，合并理由见 4·参考件尾注。
+
+**1 · 判据**
+
+**R1 — 增量迁移失败必须 raise（fail-loud）**
+- **事实**（WB 已回源核，文献级）：`migrations.py:57-61`——`for table, column, definition in _INCREMENTAL_ALTERS` 内 `try: await _ensure_column(...)` ／ `except Exception as e: logger.warning("Migration failed for %s.%s: %s", ...)`：**不 raise、不 rollback、不标记**；`:63` `await db.commit()` 在循环外**无条件执行** ⇒ 部分失败也照常提交并正常返回，唯一调用方（`database.py:52`）认为迁移成功。且 except 只在**真出事**时触发（`_ensure_column:39-44` 先用 `PRAGMA table_info` 判列存在，已存在走 no-op 不抛）⇒ 恰在最不该吞的条件下吞。
+- **动作**：任一条增量迁移失败时，`run_migrations` **必须抛出**（形态自选：首败即 raise，或收集 failures 循环后非空 raise——后者优先，可一条异常带全部失败明细；异常信息须含失败的 `表.列`，可沿用现有 warning 文案）。
+- **取证（负向 ＋ 正向双锚；两种负向场地 WB 均已实测可用、有判别力）**：
+  - **负向 A（query_only 场地，推荐）**：临时库预建**四表老形态 ＋ 两索引**（`messages` 无 `tool_call_id` ／ `conversations` 无 `deleted_at` ／ `tools` 无 `group_name`；⚠️ **索引也必须预建**，否则 `CREATE INDEX` 会在 try 块外真写、把失败点挪到建表阶段）→ 重连后 `PRAGMA query_only=ON` → `await run_migrations(db)` **必须抛异常**。WB 2026-10-13 实测：当前代码在此场地**只记 warning、不抛**（`raised=None, warning_logged=True`）⇒ 判据有判别力。
+  - **负向 B（备用 · 语句 double）**：包装连接，仅对 `ALTER` 开头的语句抛 `sqlite3.OperationalError`，断言 `run_migrations` 抛。
+  - **正向锚（同批必须绿）**：同一老形态库**不加 query_only** 跑 `run_migrations` ⇒ 正常返回不抛，且 `PRAGMA table_info` 三列全部就位（`messages.tool_call_id` ／ `conversations.deleted_at` ／ `tools.group_name`；WB 实测已补齐）。
+  - ⚠️ **双锚理由**：只断言负向时，「环境没起来」与「破坏生效」不可区分（假通过）。
+- **缺此即未闭合**：失败仍被吞（warning/error 后继续）；只加日志不加 raise；负向测试无正向锚。
+
+**R2 — `tool_call_id` 进 `CREATE_MESSAGES`（新库不再依赖 ALTER）**
+- **事实**：`schema.py:24-34` 的 `CREATE_MESSAGES` **无** `tool_call_id`；新库该列只能靠 `migrations.py:28` 的 ALTER 出现；而 `conversations.py:76-78`（INSERT 显式列名）＋ `:110` ／ `:116` ／ `:290`（三处 SELECT）**直接依赖**该列 ⇒ 该 ALTER 一旦失败，**每条消息写入与历史读取全炸**（500）——症状响亮但与根因分离（根因只是启动时一行 warning）。
+- **动作**：`CREATE_MESSAGES` 增加 `tool_call_id TEXT DEFAULT NULL`（定义与 ALTER 条目逐字一致）；⛔ **不得**因此删除 `_INCREMENTAL_ALTERS` 里的 `messages.tool_call_id` 条目（老库仍靠它升级）。
+- **取证**：`grep -n "tool_call_id" backend/db/schema.py` 有命中；老形态库（预建无该列的 messages）跑迁移后 `PRAGMA table_info(messages)` 含该列。
+- **缺此即未闭合**：加了 CREATE 却删了迁移条目（老库升不上来）；或两处定义不一致。
+
+**R3 — 无回归（基线对照，⛔ 不是「全绿」）**
+- **事实**：WB 2026-10-13 实测基线 = `2 failed, 160 passed, 3 skipped`（137.82s）。两条既有失败与本案无关：`test_windows_dir`（中文 Windows 下 `dir` 输出中文卷标，断言却写死英文 "Volume"——语言形态判据缺陷）；`test_chromadb_degradation`（`patch("memory.archiver.create_memory")` AttributeError——mock 目标已不存在，测试代码腐坏）。⛔ **不在本块修**（知悉项）。
+- **动作 ／ 取证**：修后跑同一命令，结果须 = **同样 2 条 failed（同 test ID）／ 160 passed ／ 3 skipped**；出现**新**失败即未闭合。
+
+**R4 — 无越界**
+- `git status --porcelain` 改动仅限：`backend/db/migrations.py`、`backend/db/schema.py`、新增测试文件（如 `backend/tests/test_migrations.py`）。⛔ 不碰其他文件。
+
+**R5 — `schema.py:8` 文档漂移（一行，顺带）**
+- **事实**：`schema.py:8` 称 tools 表「已注册的工具列表（**启动时同步**）」——WB 实测**无任何实现**：全 backend 无一条 SQL 读写 `tools` 表（检索式 `INSERT INTO tools|FROM tools |UPDATE tools |DELETE FROM tools|INTO tools` ＋ 动态 SQL 扫描 `executescript|\.format\(|execute\(f"` 均零命中；`tools/registry.py` 纯内存注册表，不碰 DB）。
+- **动作**：该行 docstring 不再宣称不存在的启动同步行为（措辞自定，须与实际一致）。
+- **缺此即未闭合**：docstring 仍留「启动时同步」。
+
+⛔ **不算达标**：自述型（"已修好"）／ 只改不附取证原文 ／ 负向无正向锚 ／ 把 except 换成 `logger.error` 后继续跑（仍吞）／ 引入迁移框架或版本表（属另一个决策，⛔ 不在本块）。
+
+**2 · 判据前置**：无。两文件现役（Tauri 生产从 `backend/` 启动）。测试跑 pytest 即自动隔离（`conftest.py` 会话级临时 yaml ＋ autouse 断言 fixture）⇒ ⛔ 不得绕过 conftest 直连 `backend/data/larry.db`；⛔ 不加 `--real-api`。
+
+**3 · 交付物**
+- 两文件改动（＋ R5 同文件一行）＋ 失败路径测试（R1 负向 ／ 正向双锚**同批**）。
+- 机读结论行：`R1=PASS|FAIL` `R2=PASS|FAIL` `R3=PASS|FAIL` `R4=PASS|FAIL` `R5=PASS|FAIL`。
+- 每条取证的**命令原文 ＋ 输出原文**（⛔ 不得意译；行号 ／ 标识须复制，不得手抄）。
+- 回报里说明 **commit 语义选择**（「无失败才 commit」还是「部分提交后 raise」）及理由——两者都正确，但须自报。
+
+**4 · 参考件四要素**：无外部件。
+- ① **路径**：`backend/db/migrations.py`（全文 64 行，先读）／ `backend/db/schema.py` ／ `backend/db/database.py:31-54`（单例与唯一调用点）／ `backend/main.py:42-44`（lifespan 调 `get_db()` ⇒ raise 即 uvicorn 起不来，这是「不需要额外装置」的根据）／ `backend/tests/conftest.py`（写测试前必读，隔离机制）。
+- ② **怎么参考**：读码即可，无需外部文档。
+- ③ **参考程度**：只借既有形状（模块结构 ／ 测试隔离约定）。
+- ④ **不可参考**：无。
+- **合并理由**（R1+R2+R5 同属迁移机制、同两个文件、同一套回归验证；不涉依赖树）。
+
+**5 · 场地器材**
+- 通道：**本机 Windows**（仓库根 `D:/Code/LarryAgent`）。
+- 测试命令（README:161 现式）：`cd backend && PYTHONPATH=. python -m pytest tests/ -q`——**全套约 138 秒**，Bash 工具默认 120s 超时会把它杀掉（无输出）⇒ 显式加 timeout 或先跑子集（如 `tests/test_migrations.py tests/test_conversations.py`）。
+- 语法自检：`python -m py_compile <file>`。
+- ⚠️ **已知假绿坑**：判「0 命中 ／ 不存在」前先跑一个**必中的对照组**证明检索通道有效（否则「检索失效」与「确无残留」同形）。
+- ⛔ 不动 `backend/config.yaml`（含凭据）。
+
+**6 · 回报格式**
+- **结论先行**：五条 `PASS|FAIL` ＋ 一句依据。
+- 逐条给**命令原文 ＋ 输出原文**（⛔ 不得意译）。
+- **未闭合项单列**；**自曝**：跑歪 ／ 判据要订正 ／ 发现矛盾**直接写**（「成因未知」可接受，别为叙事完整编一个）。
+
+**7 · 禁区**
+- ⛔ 只动上述三文件；不顺手重构迁移机制、不引框架 ／ 版本表。
+- ⛔ 不删 `_INCREMENTAL_ALTERS` 任何条目（老库路径）。
+- ⛔ 不把失败语义改成「启动时打 error 后继续跑」（与 `migrations.py:6` 自述「不追踪版本号」冲突，且违背「带病启动不如起不来」；老大未选此路）。
+- ⛔ 不动 `config.yaml`；凭据不落任何受版本控制文件 ／ 日志 ／ 工具输出。
+- **知悉项（⛔ 不改，仅备案）**：① `_ensure_column:39` f-string 拼表名进 PRAGMA——唯一调用点是 `run_migrations`、入参全模块内常量，**无注入风险**；② 上述两条既有测试失败（R3 已列）⛔ 不在本块修；③ 若发现**第三处**同类问题 ⇒ **先报不擅改**。
+
+**8 · 回报后**：WB 复验（回源核改动 ＋ 独立复跑负向 ／ 正向场地 ＋ pytest 基线对照）。
 
 ---
 

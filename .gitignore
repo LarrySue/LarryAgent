@@ -6,6 +6,9 @@ dist/
 build/
 .eggs/
 
+# Python install manager 更新缓存（跑 python 即落，可随时重建）
+/Python/
+
 # 环境变量
 .env
 *.env.local
