@@ -93,20 +93,6 @@ J6 重放回报里我写「J6 那轮 `home-*` 已回收 ⇒ 无法回核」。WB
 | **新增** | `evidence-capability-enumerate-artifacts` | F4：判「不可回核」前先枚举原件目录的**全部**产物 |
 | **新增** | `external-claims-context-and-ownership` | F7 订正：判外部区域"表述有问题"前，先读回上下文 ＋ 先查是否已被他人处置 ＋ 检索式不得截断 |
 
-### 追加：**记忆全量复核**（2026-10-13 · 老大指令「检查记忆是否存在过期事实」）
-
-15 条逐条对**仓库现状**核（凡点名了文件／行号／版本／配置位的，一律拿现状实证，不靠回忆）。结果：**删 1 · 订正 2 · 盖章 8 · 未动 4**。
-
-| 处置 | 条目 | 依据（实证） |
-|---|---|---|
-| 🗑 **删除** | `token-double-cost-in-chat-flow`（62 天，最老一条） | **那条问题已被修复**：`backend/services/chat_service.py` 现已全程流式（提交 `fa42636`「P3.3：Token 统计 + 翻倍优化（全程流式）」），且 `chat_completion(`／`chat_completion_stream(` 在该文件**调用点 = 0** ⇒ 记忆里「当前不修复」是过期状态，留着会误导 |
-| ✏️ **订正** | `dsh-heal-injects-cli-generation` | 机制仍在（`healProfilesModuleFallback` 仍在 `dsh-app-boot@0.1.5-rc.2`；`~/.dsh/profiles/sdk/.dsh-module-fallback/` 实存）**但状态全变**：①`~/.dsh-015`、`~/harness` 两树已不存在 ②`.pnpm` 里 `@deepseek-ai+dsh*@0.1.2` 命中 **0** ③「5 项 peer」现为 **3 项** ⇒ 已标注历史化 |
-| ✏️ **订正** | `dsh-probe-criteria-no-discrimination` | 对 `dsh-session@0.1.5-rc.2` 实读：`eventAt`／`snapshotEvents`／`ownEvents` 仍在、`events` 仍私有 ✓；**但** `deriveEventMessage` 现在**也有实例方法**（`index.d.ts:292`）⇒ 原句「不是 session 方法」只对当时版本成立；另补记 `s0-resume` 判据 09-17 已订正、**子串假阳面仍未解** |
-| ✅ **盖章 8 条** | 模型 id 三处配置位／全局 socks5 代理／git rm 逐级修剪（`2.53.0.windows.2` 仓外重测）／s0-e2e 落红前提（`cpSync:275`＋`installPlugin:92`＋绝对 `virtualStoreDir`）／`s0-e2e.test.ts:193,288-293` 两处引文／`S0_EVIDENCE_DIR` 默认值／372 同名覆盖／`~/.claude/projects` 唯一／cordis "without inject" | 逐条实证，章盖在各记忆的「2026-10-13 复核」行 |
-| ➖ **未动 4 条** | 今日新增／订正的 4 条（key 来源、WSL 取证三坑、产物枚举、外部区域判断纪律） | 当日写就，无需复核 |
-
-⚠️ **顺带核到**（⛔ **未动**，该文件正被 Trae 编辑）：`backend/services/chat_service.py:32` 的 import 里，`chat_completion`／`chat_completion_stream` **已无使用点**（双调用消除后的孤儿 import，一处清理机会，属 Trae 手）。
-
 ### 未闭合项
 
 1. **F1 要不要改**（空掩码归类）—— 等老大/WB 一句话；不裁定不动。
