@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | **DSH-3.5 判定轮** | Trae | **CVM（landlock ABI 4）** | ✅ **回报已交 ＋ WB 复验成立（2026-10-08）** —— J1–J7 **全判 PASS**（三档边界互异 ＋ 提权双层可观测 ＋ fail-closed 构造成功非降级 ＋ J7 负向红）；1 观察项如实登记（`SANDBOX_UNAVAILABLE` code 字面值不落 session 日志，判定不依赖）；证据已回传 `D:\Code\_trae-evidence\35\`（CVM 10-09 到期，非唯一副本 ✓）。**WB 复验**：回源取证（物证 sha 逐位一致 ／ WB 自扫 Tier0 0 命中 ／ 引文逐字属实）＋ **上机只读核 4 条**（硬链接 ×6 ／ `NO_BWRAP` ／ `apparmor=1` ／ J7 归因逐字复现）；**5 条表述 ／ 证据完整性缺陷**（不改结论，前 3 条为应订正项）⇒ 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 · S3 sandbox：判定轮复验〉 | 2026-10-08 |
 | **DSH-3 · 待实测 ① · `workspace` 运行时行为实测** | Trae | **本机 Windows** | ✅ **回报已交 ＋ WB 复验成立（2026-10-09，含独立复跑）** —— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路含 `headerFrozen` ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud「pending 字面 ＋ 无空历史」）；承载 = 路 B 运行时 `--patch`（**未走降级路径**）；§2.3.3 **⚪ 已准出 → 🟡**（WB 按〈对手侧状态口径〉订正：隔离语义仍属我方 ⇒ 非 🟢；⛔ 不外推隔离语义）；证据 `D:\Code\_trae-evidence\wksp\` | 2026-10-09 |
-| **后端一致性 · 两处修复** | Trae | **本机 Windows** | ⏳ **待派发（2026-10-13）** —— R1 幽灵 `error` 事件（`chat_service.py`）＋ R2 `tools.py:60` 绕过统一异常体系；来源 = Qoder 核证转办 · WB 回源复核**两条均成立**；判据／取证见下方〈📤 派发稿 · 后端代码级一致性修复〉 | 2026-10-13 |
+| **后端一致性 · 两处修复** | Trae | **本机 Windows** | ✅ **回报已交（2026-10-13）** —— **R1=PASS ＋ R2=PASS**：R1 幽灵 `error` 分支（原 `:74-75`）＋ docstring `error` 行（原 `:115`）已删，事件列表 ≡ yield 集合**各 4 项完全一致**（连带消除裸 `ValueError`）；R2 `tools.py` 404 改走 `ResourceNotFoundError`（import ＋ 使用）、`HTTPException` 代码使用清零；`py_compile` 两文件 exit=0；判据／取证见下方〈📤 派发稿〉＋〈📥 回报〉 | 2026-10-13 |
 
 - **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ 完成态快照 `archive/roadmap-history.md`「DSH-3.4」段**（原写「`TODO.md`「DSH-3.4」段 ＋ §3.6」**一处两面**；其中 `TODO.md` 侧已于 2026-10-01 归档）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
@@ -120,6 +120,132 @@
 - ⚠️ 若 `grep` 过程中发现**第三处**同类绕过 ⇒ **先报不擅改**（列出即可，不纳入本次改动）。
 
 **8 · 回报后**：WB 复验（回源核两处改动 ＋ grep 对照）。
+
+---
+
+## 📥 回报 · 后端代码级一致性修复（两处）（Trae ／ 2026-10-13）
+
+**结论先行**：
+- **R1=PASS** —— 幽灵 `elif etype == "error"` 分支（原 `:74-75`）与 docstring `- error: 错误` 行（原 `:115`）已删；改后 docstring 事件列表与 `_chat_flow` 实际 yield 的 type 集合**各 4 项、完全一致**（`tool_call` / `tool_result` / `delta` / `done`）；连带消除该处裸 `ValueError`（原会绕过统一异常体系落 `main.py:107` 兜底 500）。
+- **R2=PASS** —— `tools.py` 404 已改 `raise ResourceNotFoundError(f"Tool '{req.name}' not found")`（改后 `:61`）＋ 新增 `from exceptions import ResourceNotFoundError`（`:17`）＋ 清 `HTTPException` import（`:14`）；`HTTPException` 在 backend **代码使用（import / raise）层面清零**；两文件 `python -m py_compile` exit=0。
+
+**机读结论行**：
+
+```
+R1=PASS
+R2=PASS
+```
+
+### R1 取证（改前 / 改后对照）
+
+改前 —— docstring 事件列表 5 项（含幽灵 `error`，原 `:110-115`）＋ handle_chat 不可达分支（原 `:68-75`）：
+
+```
+68:    async for event in _chat_flow(req, caller_ip):
+69:        etype = event["type"]
+70:        if etype == "delta":
+71:            reply_parts.append(event["content"])
+72:        elif etype == "done":
+73:            conversation_id = event["conversation_id"]
+74:        elif etype == "error":
+75:            raise ValueError(event["message"])
+...
+110:    事件类型：
+111:    - tool_call: 工具即将执行
+112:    - tool_result: 工具执行完成
+113:    - delta: 文本片段（最终回复 + 工具调用前的过渡文字）
+114:    - done: 流结束
+115:    - error: 错误
+```
+
+改后 —— 分支已删（`:68-73`）＋ docstring 4 项（`:108-112`）：
+
+```
+68:    async for event in _chat_flow(req, caller_ip):
+69:        etype = event["type"]
+70:        if etype == "delta":
+71:            reply_parts.append(event["content"])
+72:        elif etype == "done":
+73:            conversation_id = event["conversation_id"]
+74:
+75:    reply = "".join(reply_parts)
+...
+108:    事件类型：
+109:    - tool_call: 工具即将执行
+110:    - tool_result: 工具执行完成
+111:    - delta: 文本片段（最终回复 + 工具调用前的过渡文字）
+112:    - done: 流结束
+113:    """
+```
+
+generator 实际 yield 的 type 集合（改后检索，改前同集合；`:254` 为 assistant_msg 构造的 `"type": "function"` 字段——**非事件类型**，甄别不计）：
+
+```
+183:                yield {"type": "delta", "content": evt["content"]}
+224:                yield {"type": "delta", "content": hint}
+236:            yield {"type": "done", "conversation_id": conversation_id}
+275:            yield {"type": "tool_call", "name": tool_name, "round": round_num, "arguments": args}
+294:            yield {
+295:                "type": "tool_result",
+319:    yield {"type": "delta", "content": fallback}
+322:    yield {"type": "done", "conversation_id": conversation_id}
+```
+
+⇒ 类型集 = {delta, tool_call, tool_result, done} ≡ docstring 4 项，**逐一对上**。
+
+### R2 取证（改前 / 改后对照）
+
+改前 —— `HTTPException` 全 backend 3 处（tools.py 两处代码使用 ＋ exceptions.py 自述 1 处）：
+
+```
+backend/exceptions.py:11:- 各路由和中间件优先 raise 具体子类，而非通用 Exception / HTTPException
+backend/api/tools.py:14:from fastapi import APIRouter, HTTPException, Request
+backend/api/tools.py:60:        raise HTTPException(status_code=404, detail=f"Tool '{req.name}' not found")
+```
+
+改后 —— 同命令 1 处（仅剩 exceptions.py 自述契约文字；**代码使用 0 处**）＋ 必中对照组（证明检索通道有效，防假绿）：
+
+```
+backend/exceptions.py:11:- 各路由和中间件优先 raise 具体子类，而非通用 Exception / HTTPException
+```
+
+```
+17:from exceptions import ResourceNotFoundError
+61:        raise ResourceNotFoundError(f"Tool '{req.name}' not found")
+```
+
+语法自检：
+
+```
+python -m py_compile backend/services/chat_service.py backend/api/tools.py
+py_compile exit=0
+```
+
+### 检索命令原文（本通道形态，见自曝 1）
+
+```
+python -c "import pathlib;[print(f'{p.as_posix()}:{i}:{l.rstrip()}') for p in pathlib.Path('backend').rglob('*.py') for i,l in enumerate(p.read_text(encoding='utf-8').splitlines(),1) if 'HTTPException' in l]"
+python -c "import pathlib;[print(f'{i}:{l.rstrip()}') for i,l in enumerate(pathlib.Path('backend/api/tools.py').read_text(encoding='utf-8').splitlines(),1) if 'ResourceNotFoundError' in l]"
+python -c "import pathlib;[print(f'{i}:{l.rstrip()}') for i,l in enumerate(pathlib.Path('backend/services/chat_service.py').read_text(encoding='utf-8').splitlines(),1) if ('yield {' in l) or (chr(34)+'type'+chr(34)+':') in l]"
+```
+
+（docstring/分支区间打印 = 同型 pathlib 逐行 `print(f'{i}:{ls[i-1].rstrip()}')`，区间改前 `range(68,79)+range(108,117)` ／ 改后 `range(61,78)+range(98,115)`。）
+
+### 自曝
+
+1. **本通道无 `grep`**：`grep` 在本机 PowerShell 报 `CommandNotFoundException` ⇒ 按派发稿 §5「或 Python 读文件，自选」改用 `python -c`（pathlib 逐行枚举，`file:line:content` 形态等价 `grep -rn`）。首次尝试还踩了 PowerShell 原生传参会吃掉内嵌双引号的坑（python 收到的代码引号全丢 ⇒ SyntaxError），改为「PS 双引号外层 ＋ Python 单引号内层」后正常——输出均为命令直出原文。
+2. **派发稿「改后 0 处」与实测 1 处的差异**：改后 `HTTPException` 检索仍命中 `exceptions.py:11` —— 那是统一异常体系**自述契约文字**（「优先 raise 具体子类，而非通用 Exception / HTTPException」），非代码使用；按禁区「只改这两处、不改其他文件」保留不动。**代码使用层面（import / raise）改后 0 处**成立 ⇒ 判据实质达成，预期数字与禁区有内在小矛盾，如实登记。
+3. **pattern 干扰行**：yield 取证命令同时命中 `chat_service.py:254`（`"type": "function"`）——系 FC 循环 assistant_msg 构造内 tool_calls 的字段，非 `_chat_flow` 事件类型，已甄别不计入集合。
+4. 行号全部自命令输出复制（应用 DSH-3 J2 教训「随机标识禁手抄」），未手抄。
+5. **取证动作改了现场（纪律 6 实践）**：跑 `python -c` 取证时，Windows Store 版 Python 在 cwd 落了 `Python/_cache/last_welcome.txt`（收尾 `git status` 冒出 untracked `Python/`）——非交付物，已删恢复现场；复核后仅余三个预期修改文件。`py_compile` 的 `backend/__pycache__/` 为 .gitignore 覆盖，不入版本控制。
+
+### 第三处同类绕过巡检
+
+改前 `HTTPException` 全 backend 检索（上列 3 处）即全量巡检——代码使用仅 tools.py 两处；另 `from exceptions import` 全 backend 8 处均为合法使用（`main.py` / `api/chat.py` / `api/conversations.py` / `api/memory.py` / `memory/archiver.py` / `middleware/auth.py` / `services/chat_service.py` / `tests/test_exceptions.py`）。**未发现第三处同类绕过**。
+
+### 未闭合项
+
+无。
 
 ---
 

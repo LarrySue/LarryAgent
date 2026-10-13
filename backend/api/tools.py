@@ -11,9 +11,10 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from exceptions import ResourceNotFoundError
 from tools.registry import get_tool, list_tools
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ async def execute_tool(req: ToolExecuteRequest, request: Request):
     """
     tool = get_tool(req.name)
     if tool is None:
-        raise HTTPException(status_code=404, detail=f"Tool '{req.name}' not found")
+        raise ResourceNotFoundError(f"Tool '{req.name}' not found")
 
     params = dict(req.params)
     if req.name == "shell":

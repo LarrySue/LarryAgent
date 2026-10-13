@@ -71,8 +71,6 @@ async def handle_chat(req: ChatRequest, caller_ip: str) -> ChatResponse:
             reply_parts.append(event["content"])
         elif etype == "done":
             conversation_id = event["conversation_id"]
-        elif etype == "error":
-            raise ValueError(event["message"])
 
     reply = "".join(reply_parts)
     return ChatResponse(conversation_id=conversation_id, reply=reply, model=req.model)
@@ -112,7 +110,6 @@ async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, N
     - tool_result: 工具执行完成
     - delta: 文本片段（最终回复 + 工具调用前的过渡文字）
     - done: 流结束
-    - error: 错误
     """
     cfg = get_config()
 
