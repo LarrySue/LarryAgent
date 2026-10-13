@@ -4,12 +4,19 @@ Shell 命令执行工具
 职责：
 - 允许 Agent 执行 Shell 命令
 - IP 白名单限制：仅允许来自配置中 shell_allowed_ips 的请求执行
-- 超时控制：命令执行超过 30 秒自动终止并清理子进程
+- 超时控制：命令执行超过 shell_timeout（默认 30 秒）自动终止；**杀进程范围分平台**——
+  Windows 走 taskkill /T /F 杀整棵进程树；POSIX 仅 proc.kill() 杀 /bin/sh 包装进程
+  （create_subprocess_shell 未设 start_new_session ⇒ 孙进程可能存活），**不承诺 POSIX 侧清理子进程**
 
-安全约束（单人使用，但仍然保留基础防护）：
+安全约束（单人使用；⚠️ 以下是**弱防护**，请勿当安全边界读）：
 - 仅允许本地回环地址调用（127.0.0.1 / ::1）
+  ⚠️ Agent 自身经 HTTP 打本机 ⇒ caller_ip 恒在白名单内：这道闸约束的是**外部调用者**，不约束 Agent
 - 命令执行有超时限制
-- 禁止执行部分高危命令（rm -rf / 等）
+- 部分高危命令按**子串包含**匹配拦截（_blocked_patterns 为硬编码类常量，**不可 config 调**）：
+  ⛔ 可绕过（如 `rm -fr /`、`rd /s /q C:\`、`poweroff`、`systemctl reboot` 均不命中），
+  且会误杀含 `--format` / `-Format` 的正常命令（如 `docker ps --format`、`rm -rf /tmp/…` 亦被拦）；
+  加固去向见 `HUMAN_NOTE.md`「本地能力下沉」条（老大 2026-09-03 裁：随下沉一并做，**勿单开加固**）。
+  ⚠️ 本壳实测为 cmd.exe（Windows）／/bin/sh（POSIX），**非 PowerShell／bash**——见 description 处待裁事项
 
 与其他模块的关系：
 - 被 tools/registry.py 注册
@@ -29,6 +36,12 @@ logger = logging.getLogger(__name__)
 
 class ShellTool(BaseTool):
     name = "shell"
+    # ⚠️ **待裁事项（2026-10-13 核证；本串是发给 LLM 的提示文本，未得裁定前请勿顺手改）**：
+    # ① 实测本壳为 cmd.exe（Windows）／ /bin/sh（POSIX），**并非**串中所称 PowerShell／bash
+    #    （Windows 侧读数 COMSPEC=C:\WINDOWS\system32\cmd.exe、OS=Windows_NT；黑名单里
+    #    `del /f /s C:\` 用 cmd 语法，也反证实现从未走 PowerShell）；
+    # ② 串里的"30 秒"实为 config 值 tools.shell_timeout（默认 30），改配置该串不随之变化。
+    # 处置二选一由老大定：改**声明**（表述）／改**实现**去真支持 PowerShell（代码行为）。
     description = (
         "执行 Shell 命令。支持 Windows (PowerShell) 和 Linux (Bash)。"
         "命令执行超时时间为 30 秒。"

@@ -53,6 +53,16 @@ async def get_long_term_memory(
 
     Returns:
         相关记忆文本列表（从 payload.text 字段提取）
+
+    ⚠️ **为何默认 0.3**（WHY 注，勿只记数值）：本地 bge-small-zh 实测——弱相关／不相关对
+    可打到 0.43~0.50，而真相关的短查询↔归档摘要只有 0.3573，两带**重叠** ⇒ 用 0.5 会滤掉
+    真命中；记忆量小的阶段**宁可多召回、不可漏召回**，故取 0.3（召回优先于精度的刻意取舍）。
+    根据 = `tests/test_embedding_enhanced_version.py` 的 `SIMILARITY_TEST_CASES` ＋
+    `tests/test_embedding.py` 的相似度对照（两脚本为**阈值标定器材**，可复跑）；
+    史料 `archive/qoder-work-historical-record.md:16478` 区；结论落点 `docs/product-positioning.md` 2.4.2。
+    ⚠️ 注意 `rag/vector_store.py` 的 `search()` 默认阈值是 **0.5**，与本函数不一致——
+    调用方须显式传参（本函数内对 `search()` 的调用即显式传 `score_threshold`）；
+    默认值去留属代码层，待老大裁。
     """
     # 开关关闭时跳过长期记忆召回：不加载 embedding、不建 ChromaDB 客户端
     # （与 api/memory.py:136 的写法保持一致，放在入口拦截以覆盖所有调用方）

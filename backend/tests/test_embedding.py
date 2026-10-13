@@ -4,6 +4,17 @@
 运行方式：`python tests/test_embedding.py`（会调真实 Embedding API）。
 ⚠️ 末尾 `asyncio.run(main())` 必须留在 `__main__` 守卫内：否则 pytest 收集时
 import 即执行（真网络调用），代理不通会让**整个测试会话在收集阶段**报错中断。
+
+📌 **史料价值 —— 本脚本属「阈值标定器材」，⛔ 勿当废脚本清理**：脚本内 `=== 相似度测试 ===`
+段的余弦对照（`我喜欢吃苹果` / `我爱吃水果` / `Python 编程` 三对）与
+`test_embedding_enhanced_version.py` 里的预定义断言表 `SIMILARITY_TEST_CASES`（`:71-113`，
+带期望下界）一起，构成召回阈值
+`score_threshold = 0.3`（消费方 `memory/engine.py:44`）的经验根据：**弱相关／不相关对实测可打到
+0.43~0.50**（苹果 vs 公司苹果 0.46、跨领域 0.50、英文不同主题 0.4339、跨语言 0.4448），
+而**真相关**的短查询↔归档摘要只有 **0.3573** ⇒ 两带重叠 ⇒ 若取 0.5 必滤真命中 ⇒ 取 0.3
+（**召回优先于精度**的刻意取舍）。史料：`archive/qoder-work-historical-record.md`——
+0.3573 论证见 `:16478` 区（P1.6 端到端测试），0.43~0.50 读数与小结见 `:9637`／`:10251-10298` 区。
+结论落点：`docs/product-positioning.md` 2.4.2。两个脚本均可复跑复现。
 """
 import asyncio
 import sys

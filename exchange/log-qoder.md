@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **文档/表述层事项 · 一批** | Qoder | **本机 Windows** | ⏳ **待处理（2026-10-13）** —— 甲组 3 项（embedding 脚本史料指针 ／ `engine.py` 补阈值理由 ／ 0.3 理由落稳定落点）＋ 乙组 2 项（`product-positioning.md` 的 `:321` 订正 ／ `:315` 改锚）＋ 丁组 1 项（`shell.py` 头注释如实化）；详见下方〈📤 转办 · 文档/表述层事项〉。⚠️ **代码行为层项不在本批**（丙组，已上报老大待裁） | 2026-10-13 |
+| **文档/表述层事项 · 一批** | Qoder | **本机 Windows** | ✅ **已办结并回报（2026-10-13）** —— 甲 3 ＋ 乙 2 ＋ 丁 1 **全办**（可核指针见下方〈📮 回报〉）；⚠️ **两处未动、待老大裁**：① `shell.py` `description` 串（改声明／改实现二选一）② `server.api_key` 现在就设一事——设前发现新前提，见回报末段。丙组三条仍归老大裁 | 2026-10-13 |
 
 - ⚠️ **本区是活日志**（已闭环段直接删；**不要把本区当承接目标**——引用必成断链；需回溯用 `git log -p -- exchange/log-qoder.md`）；**判据 ／ 边界类内容一律落 `docs/` ／ `archive/`**，本区只放"怎么做"。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.3 教训）**：
@@ -62,7 +62,31 @@
 
 ---
 
+## 📮 回报 · 文档/表述层一批已办结（Qoder ／ 2026-10-13）
+
+> **权限来源**：老大 2026-10-13 裁定「后续文档类工作，尤其 `docs/` ／ `archive/` 交 Qoder；WB 偏 `TODO.md`（归档时操作 roadmap）＋ 交流区 log」。本批据此**直接改 `docs/`**，不再走转办。
+> ⚠️ **连带一处治理漂移，提交人类处理**：`.qoder/rules/QODER.md` 的七区只读清单**仍把 `docs` ／ `archive` 列为"一律不得做任何改动"** ⇒ 与新分工直接冲突。该区归老大，我不擅动；建议改法＝把 `docs` ／ `archive` 移入「可写、但须回报并 commit」，其余（`.claude/` ／ `.trae/` ／ `.qoder/rules` ／ `.workbuddy` ／ `HUMAN.md`+`HUMAN_NOTE.md`）保持只读。
+
+**已办六项（逐项可核）**
+
+- **甲-1**：`backend/tests/test_embedding.py` ／ `test_embedding_enhanced_version.py` docstring 各加「史料价值 ＝ **阈值标定器材**，⛔ 勿当废脚本清理」段。**⚠️ 落笔前重测前提**（纪律 1）：断言表 `SIMILARITY_TEST_CASES` 实际只在 **enhanced 版 `:71-113`**，`test_embedding.py` 只有 `=== 相似度测试 ===` 段的三对对照 ⇒ 两处措辞按各自实况分开写，未照抄派发稿的"脚本内那张表"。
+- **甲-2**：`backend/memory/engine.py` `get_long_term_memory` docstring 补 **为何 0.3** 的 WHY 注（值／理由／根据／史料四要素同处），并点名 `search()` 默认 0.5 与之不一致、须显式传参（引用**按函数名不按行号**，避免自身插入导致行号漂移）。
+- **甲-3**：0.3 的理由落 **`docs/product-positioning.md` 2.4.2〈召回〉**（docs 此前无任何落点）；两脚本登记为标定器材；`rag/vector_store.py:107` 默认 0.5 的**静默陷阱**同处在册（⛔ 取值未改，待老大裁）。史料指针已回源核实：0.3573 论证见 `archive/qoder-work-historical-record.md:16478` 区，0.43~0.50 弱相关带（0.46 ／ 0.50 ／ 0.4339 ／ 0.4448）见 `:9637` ／ `:10251-10298` 区 ⇒ 派发稿只给了前一处，已补全。
+- **乙-1**：`docs/product-positioning.md` 2.7.2 订正——原「白名单 / 黑名单 / 工具开关**全部 config 可调**」改为**分档陈述**：`enabled_tools` ／ `shell_allowed_ips` ／ `shell_timeout` ／ `file_ops_workspace` 可调 🟢；**命令黑名单 `_blocked_patterns` 为硬编码类常量、不可调** ⇒ 不属用户可调边界。
+- **乙-2**：2.7.1〈已知弱点〉出处**改锚**至 `HUMAN_NOTE.md`「部署调试试运行／本地能力下沉」条（原引 `../TODO.md` 部署段已随 09-11 迁出而失效）；**按老大口径保留讨论稿性质引用**、不 git 化；并补 2026-10-13 实测的双向失效一句。加固仍按 09-03 裁定随下沉一并做，⛔ 未动防护。
+- **丁**：`backend/tools/shell.py` 头注释如实化——`:7` 超时行**分平台限定**杀进程范围（Windows `taskkill /T /F` 杀树 ／ POSIX 仅杀 `/bin/sh` 壳、孙进程可存活，不再笼统承诺"清理子进程"）；安全约束段改标「**弱防护，勿当安全边界读**」＋点破 IP 闸只约束外部调用者不约束 Agent；黑名单注明可绕过样本、误杀样本、硬编码不可调、加固去向。
+
+**验收（含回归）**：四份 py 文件 `py_compile` 全过；`_check_blocked` 行为不变（`rm -rf /` 仍命中、`echo hi` 仍放行）；`engine.get_long_term_memory.__defaults__` 仍 `(5, 0.3)` ⇒ **零行为变更**，只动表述。甲组判据 `grep -rn "score_threshold" docs/product-positioning.md backend/memory/engine.py` ⇒ 值与理由两处同现。
+**引文自纠（WB 复核触发）**：我在《后端第四处》引 `deployment-architecture.md:175` 作「建议**独立项目**」——行号在当时快照无误、**用词错**（实为「单独立项」），已改为**章节锚**引用（§七.1 末行）并在 WB 区留自纠注；教训：跨讨论稿引用优先用 §／条目号，不用 `:NNN`。
+
+**⚠️ 一处未执行、需老大再定一句：`server.api_key`「现在就设」在执行前实测出新前提**
+
+- 现查：`client/` 全仓 grep `Authorization|Bearer|api_key|apiKey` **零命中**（唯一命中 `src-tauri/src/main.rs:276` 讲的是模型侧 `DEEPSEEK_API_KEY` 环境变量，与 `server.api_key` 无关）。⇒ **一旦填上 key，现态前端全部 401**（同源 `chat.html` ／ Vue ／ Tauri 三条路径无一携带 Bearer），而方案 §4.2 的「运行期填 Key ＋ Bearer 注入」正是**尚未实现的改造点**。
+- ⇒ "设 key 零代码"这个前提只在**纯 API 调试**场景成立；对正在使用 UI 的现态不成立。故**本次未写入 key，`backend/config.yaml` 未被改动**（该文件 `.gitignore:17` 已忽略、未入库）。
+- 两条可一次跑完的路，老大点一条我即刻执行：**(A)** 设 key ＋ 同时派 Trae 补 `client/src/api.ts` 与 `client/chat.html` 的 Bearer 头（小改动，一次闭环）；**(B)** key 只落 prod profile（`LARRY_CONFIG=config.prod.yaml`，方案 §4.4 通道），dev 现态不动 ⇒ 闸门先备好、不锁自己，等真上云时天然生效。
+
 ## ⏳ 未结项（待老大裁）
+
 
 > **2026-10-09 批量办理**（老大授权「直接处理」）：原 **1–9 条已办结 8 条**，**仅余第 5 条**。
 > 办理明细（一处一行）：**#1** `larry-dsh-home` 承接滞后 ⇒ 6 处「当时形态留痕」批注已加（`dsh-migration:796/1073` ／ `production-env:464/515/517/532` 一带）｜**#2** 上游路径 ⇒ `dsh/README.md` 规则 4〈上游路径默认口径〉｜**#3** 落点口径 ⇒ `exchange/README.md` 对齐（`docs/` ／ `archive/` ／ `TODO.md`）｜**#4** 反引号惯例 ⇒ `docs/README.md`〈书写约定〉｜**#7** 索引 ⇒ `dsh/README.md` 补 `dsh-34-ref-research.md` 行｜**#8** 讨论稿引用 ⇒ `docs/README.md` 规则补「例外二」｜**#9** Tier0 源短副长 ⇒ 结（五载体末句全平、`production-env:483` 已加指向、余项皆已定论）。
