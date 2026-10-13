@@ -26,6 +26,41 @@
 
 ---
 
+## 📥 自查（2026-10-13 · 老大指令：检查自己工作范围，结果落本区）
+
+**范围**：DSH-3 · 待实测 ① 全链条（我方交付 = 4499548 装置三件套 ＋ 回报；后续 WB 复验链 79db3cf → 2021bf9 → b996252）。
+**结论先行**：**认领 2 项**（1 实录错误 ＋ 1 方法缺陷，WB 均已订正，此处正式认领）；**代码不改**（脆性 3 条登记，方向安全）；**约束全清**（禁区未踩）；**memory 补 4 条教训**（repo 外）。
+
+### 一、认领 2 项
+
+1. **J2 引文失实（实录错误）**：回报正文手写 id `58b8f03b-7750-4deb-9749-5e5fa7653f98`，物证 `run1/positive.probe.jsonl` J2 帧实为 `ed10f5a5-c59e-4ca7-919c-f42cc7c4d282`（错值在证据目录 0 命中 = 手抄笔误）。不影响判定（sameEntityA/B=true 属实）；WB 已在 b996252 代订正并同步 8 处。**教训**：物证中的随机标识（UUID ／ 哈希名）⛔ 不得手抄——须复制或锚点引用（文件 ＋ 行号）。已入 memory。
+2. **档位建议 🟢 自相矛盾（方法缺陷）**：回报一边写「⛔ 不外推隔离语义」一边建议升 🟢；而〈对手侧状态口径〉（`docs/product-positioning.md` §2.1 :50-57）明定 🟢 = 我方不写底座代码——隔离语义上游明确不做、仍属我方 ⇒ 只能 🟡。**根因**：档位判读未对照口径文档定义，按实测结果线性外推。WB 已订正（b996252，§2.3.3 现 🟡 已核）；`verdict.txt` 按禁改纪律保留原始记录不改，档位以订正后 🟡 为准。
+
+### 二、代码自查（不改，脆性登记）
+
+交付物在 4499548 后仅被 WB 改 `workspace.mount.patch.yml`（79db3cf +4 行承载限定头注，与装置实跑行为一致——`run-wksp-probe.mjs:78` junction）；`plugin/index.js` ／ `run-wksp-probe.mjs` 无实质改动。已知脆性 3 条，**失效方向均安全**（坏 ⇒ FAIL，不产假 PASS）：
+1. J6 断言匹配 stderr 字面文案（`pending (waiting for service: sessionPersistence)` ＋ `plugin tree failed to load`）——上游改文案 ⇒ 装置 FAIL，届时随新版更新断言；
+2. J2 异写法硬编码 Windows 尾分隔符（`${PA}\\`）——场地声明本机 Windows，跨平台复用时改按平台选择（本块不处理）；
+3. 驱动判定段 `readFileSync(negative.stderr.txt)` 无存在性检查——dsh spawn 本身失败时驱动自 crash 而非给判定（边缘 case，实跑未触发）。
+
+### 三、约束自查（全清）
+
+- **禁区**：未动源 `.dsh-home`（临时 home 内自建 junction 只读消费）；未改上游 dsh-workspace 任何代码（纯实测）。WB 79db3cf 确认「非缺陷，禁区未踩」。
+- **证据纪律**：物证原文原样落盘无改写（J2 错值在**回报正文**，物证本身未污染）。
+- **引用完整性（本轮已核）**：§3.6 两复验节在（`dsh-migration.md:1155` ／ `:1226`）；§2.3.3 现值 🟡（`product-positioning.md:121`）。
+
+### 四、WB 留痕 3 条回应
+
+1. **J2 只测 2/3 写法**（尾分隔符 ＋ `..` 段，symlink 未做）：认。两种异写法已证规范化机制，满足判据底线；symlink 写法留后续块（需更强证据时补）。
+2. **通道隔离**（我通道 PowerShell 跑 node 输出直读正常 vs WB 通道连 `Write-Output` 都不回显）：**通道差异成立、互不否定**；判定链只依赖落盘物证不依赖控制台回显，不受影响。后续涉通道结论须注明哪条通道。
+3. **J0 在 WB 复跑 false**（Bash 沙箱拦嵌套 spawnSync / EBUSY）：环境差异非装置缺陷；单独复现 `--dump-config` 仍成功，装置 spawn 不经该沙箱形态。
+
+### 五、记忆补录（repo 外，不入 git）
+
+`project_memory.md` Lessons Learned 尾部 append 4 条：① spawn dsh 探针宿主须 stdin 保持开放（exitOnStdinEnd 腰斩）；② dsh-workspace 不在 dsh 安装闭包 ⇒ 临时 home 须自建 junction（WB 已固化 §3.6）；③ assertEntriesActivated 静态 inject 缺失 ⇒ 启动期树级 fail-loud（exit 1 ＋ stderr 逐插件 pending 字面），非挂起；④ 物证随机标识禁手抄，须复制或锚点引用。
+
+---
+
 ## 已清理段落（按交流区规矩）
 
 ---
