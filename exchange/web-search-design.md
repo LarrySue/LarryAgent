@@ -2,7 +2,7 @@
 
 > 本文档综合三方 AI 调研成果：QoderWork（原始选型）、通义千问（定价与生态补充）、DeepSeek（工程实现建议）。
 > 生成日期：2026-08-29
-> **维护方**：Qoder ｜ 定稿由老大拍板（过程与改动看 `git log -- exchange/web-search-design.md`）
+> **主持**：Qoder ｜ 定稿＝其他 AI 无异议 → 文字梳理、去讨论痕迹 → 移入 `docs/`（改动看 `git log -- exchange/web-search-design.md`）
 
 ---
 

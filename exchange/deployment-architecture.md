@@ -2,7 +2,7 @@
 
 > 定位：统一「上云部署」的架构边界与落地路径，整合 TODO 既有上云计划（现归「部署调试试运行」段）。
 > 状态：**方案（待DSH迁移完成后重新制定）**，非实施文档。本文只定「哪些上云、哪些在客户端」的边界与配套，不展开本地客户端能力的具体实现。
-> 维护方：Qoder ｜ 定稿由老大拍板（过程与改动看 `git log -- exchange/deployment-architecture.md`）
+> 主持：Qoder ｜ 定稿＝其他 AI 无异议 → 文字梳理、去讨论痕迹 → 移入 `docs/`（改动看 `git log -- exchange/deployment-architecture.md`）
 
 ---
 

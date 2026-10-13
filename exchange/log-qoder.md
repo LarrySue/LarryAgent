@@ -64,8 +64,8 @@
 
 ## 📮 职责变更 · 文档区与交流区讨论稿归 Qoder
 
-- **现职责**：`docs/` ／ `archive/` 文档维护 ＋ 本区三份讨论稿（`deployment-architecture` ／ `discussion-time-context` ／ `web-search-design`）的整理综合与状态更新；**定稿由老大拍板**，我只提建议。
-- **已同步为当前分工的治理文本**：`exchange/README.md`〈讨论稿〉、`docs/README.md`、`archive/README.md`（维护方 ＋ WB 的归档动作分工）、三稿各自头部〈维护方〉行、`README.md`〈多 AI 协作〉角色行、`docs/product-positioning.md` 2.9.1 对该稿维护方的表述。
+- **现职责（任务闭环里的位置）**：Trae／Claude 执行并回报 → **WB 复验成果、把 `TODO.md` 条目标为已完成** → **Qoder 依实际同步 `docs/`**（⭐「一体两面」：改一面必同步另一面，两面不一致即为缺陷）→ 阶段（大小灵活，如 DSH-2 ／ DSH-3.3）完成后 **Qoder 归档该段进 `archive/roadmap-history.md`**，以控制 `TODO.md` 规模。另：**本区讨论稿由 Qoder 主持**（原 WB 主持，流程不变——各方发言 → 主持与老大讨论吸收 → 其他 AI 无异议即定稿 → 文字梳理去痕迹 → 移入 `docs/`）。
+- **治理文本已同步**：`docs/ai-governance.md` §3〈任务闭环〉（含一体两面原则）＋ `exchange/README.md`〈讨论稿〉主持与流程 ＋ 三稿头部 ＋ `docs/README.md`（同步职责与指向）＋ `archive/README.md`（归档动作归 Qoder）＋ `README.md`〈多 AI 协作〉角色行。
 - ⚠️ **仍与现职冲突、需老大亲改的文件** ⇒ 见〈⏳ 未结项〉第 10 条。
 
 ## 📮 回报 · 文档/表述层一批已办结（Qoder ／ 2026-10-13）
@@ -101,7 +101,7 @@
 5. **`TODO.md` 精简**：第二刀 ✅（09-30）；**第三刀**（`DSH-3 · 贯穿规则` 迁 `docs/`）按原裁**等 DSH-3 完成后议**。
 
 10. **需老大亲自修改的文件**（只读区 ／ 人类区，我不擅动）：
-    - `.qoder/rules/QODER.md`——〈行为准则〉只读清单里的 **`docs` ／ `archive` 两行**（现应改为「可写、须回报并 commit」）；〈职责重点〉宜补一行「维护 `exchange/` 讨论稿：整理综合、更新状态行，不定稿」。
+    - `.qoder/rules/QODER.md`——〈行为准则〉只读清单里的 **`docs` ／ `archive` 两行**（现应改为「可写、须回报并 commit」）；〈职责重点〉宜补：「维护 `exchange/` 讨论稿（主持，定稿后移入 `docs/`）」＋「WB 复验通过后按实际同步 `docs/`（一体两面）」＋「阶段完成后归档进 `archive/roadmap-history.md`」。
     - `HUMAN.md`（您加的序号那条）＋ `HUMAN_NOTE.md`——两处改动**目前仍在工作区未提交**，我没扫入任何提交，由您自行落。
     - WB 侧自述——`.workbuddy` 约束／记忆或其平台设置文本里若有「WB 维护 `docs/` ／ 讨论稿」一类表述，需您转告 WB 自行同步（该区我读不全、也无权改）。
 
