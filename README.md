@@ -143,7 +143,8 @@ npm run test:unit    # Vitest 单元测试
 | 配置项 | 说明 |
 |---|---|
 | `models.<name>.api_key` | LLM 提供商段 key。**新增 provider 段零代码**（`config.py` 自动解析）；**新增具体模型需在 `backend/models/llm.py` 的 `_MODEL_PROVIDER_MAP` 登记一行映射** |
-| `server.api_key` | **放开局域网 / 上云前必须设置**，否则等于无鉴权暴露 shell 工具 |
+| `server.api_key` | **放开局域网 / 上云前必须设置**，否则等于无鉴权暴露 shell 工具（空 key 时 `/api/` 全透传）。⚠️ 「回环」指**跑 backend 那台机器**的回环，不等于"只有您的设备可达"——换机器跑、绑 LAN、上云时，鉴权是唯一与部署形态无关的闸门 |
+| `server.host` / `server.port` | ⚠️ **当前后端未消费这两项**：实际监听地址与端口由启动命令决定（`make run` 走 uvicorn 默认 `127.0.0.1:8000`；Tauri 端显式 `--host 127.0.0.1`）。改这里既放不开也收不紧网络，别把它当开关 |
 | `vector_store.enabled` | 长期记忆开关；关闭时不做向量检索 |
 | `embedding.provider` | `local`（本地 bge-small-zh）或 `openai`（云端） |
 | `roles.<key>` | **场景人格**：`label` / `color` / `system_prompt`，可选 `tools` 限定该角色可用工具；新增角色只改此处、重启生效，前端经 `/api/roles` 动态渲染 |
