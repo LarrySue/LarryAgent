@@ -1,0 +1,48 @@
+#!/bin/sh
+# LarryAgent · pre-commit 凭据形态扫描（防 key / token 明文提交入库）
+#
+# 目的：拦住"把含凭据的配置原文粘进记录 / 文档 / 代码"这条旁路
+#       （典型：把 backend/config.yaml 片段粘进某 AI 的工作记录）。
+#
+# ⚠️ 只扫「本次暂存的新增行」——⛔ 不扫整个 index（否则历史遗留会把每次提交都拦死）。
+#
+# 豁免通道（任一即可）：
+#   ① 环境变量：LARRY_ALLOW_CRED=1         → 整体跳过（批量提交已授权的临时 key 时用）
+#   ② 行内标记：cred-scan:allow            → 仅该行豁免（哨兵 / 示例 / 文档讨论）
+#   ③ 路径白名单：harness/tests/sentinel-* → 整文件豁免（哨兵测试）
+#   ④ git 内建：git commit --no-verify     → 绕过全部钩子
+#
+# 命中时**只打印 文件:行号**，⛔ 不回显命中值。
+# 说明 / 安装：见同目录 README.md
+
+[ "$LARRY_ALLOW_CRED" = "1" ] && exit 0
+
+PAT='sk-[A-Za-z0-9_-]{20,}|(Bearer|token)[[:space:]]+[A-Za-z0-9._-]{20,}|(api_key|password|secret)[[:space:]]*[:=][[:space:]]*"[^"]{16,}"'
+
+# 取本次暂存 diff 的新增行（带 文件:行:内容），行号按新文件行计
+NEW=$(git diff --cached -U0 --no-color | awk '
+  /^\+\+\+ / { f = substr($0, 7); next }
+  /^@@ /     { match($0, /\+[0-9]+/); ln = substr($0, RSTART + 1, RLENGTH - 1) + 0; next }
+  /^\+/      { printf "%s:%d:%s\n", f, ln, substr($0, 2); ln++ }
+')
+
+hits=$(printf '%s\n' "$NEW" \
+        | grep -E "$PAT" \
+        | grep -v 'cred-scan:allow' \
+        | grep -vE '^harness/tests/sentinel-' \
+        | cut -d: -f1,2)
+
+if [ -n "$hits" ]; then
+  {
+    echo ""
+    echo "[cred-scan] 检出疑似凭据形态（⛔ 不回显值，只给位置）："
+    echo "$hits" | sed 's/^/  /'
+    echo ""
+    echo "  若属故意（哨兵 ／ 示例 ／ 文档讨论 ／ 已授权的临时 key），三选一："
+    echo "    · 该行加标记：cred-scan:allow"
+    echo "    · 提交时：  LARRY_ALLOW_CRED=1 git commit ..."
+    echo "    · 或：      git commit --no-verify"
+  } >&2
+  exit 1
+fi
+exit 0
