@@ -11,6 +11,7 @@
 |---|---|---|---|---|
 | **DSH-3.5 判定轮** | Trae | **CVM（landlock ABI 4）** | ✅ **回报已交 ＋ WB 复验成立（2026-10-08）** —— J1–J7 **全判 PASS**（三档边界互异 ＋ 提权双层可观测 ＋ fail-closed 构造成功非降级 ＋ J7 负向红）；1 观察项如实登记（`SANDBOX_UNAVAILABLE` code 字面值不落 session 日志，判定不依赖）；证据已回传 `D:\Code\_trae-evidence\35\`（CVM 10-09 到期，非唯一副本 ✓）。**WB 复验**：回源取证（物证 sha 逐位一致 ／ WB 自扫 Tier0 0 命中 ／ 引文逐字属实）＋ **上机只读核 4 条**（硬链接 ×6 ／ `NO_BWRAP` ／ `apparmor=1` ／ J7 归因逐字复现）；**5 条表述 ／ 证据完整性缺陷**（不改结论，前 3 条为应订正项）⇒ 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.5 · S3 sandbox：判定轮复验〉 | 2026-10-08 |
 | **DSH-3 · 待实测 ① · `workspace` 运行时行为实测** | Trae | **本机 Windows** | ✅ **回报已交 ＋ WB 复验成立（2026-10-09，含独立复跑）** —— J1–J6 **全 PASS**、`VERDICT=PASS`（membership 集合恰等 ＋ realpath 唯一性 ＋ attach 正路含 `headerFrozen` ＋ J4 负向 fail-loud 双锚 ＋ 接口 11 成员逐条 ＋ J6 启动期树级 fail-loud「pending 字面 ＋ 无空历史」）；承载 = 路 B 运行时 `--patch`（**未走降级路径**）；§2.3.3 **⚪ 已准出 → 🟡**（WB 按〈对手侧状态口径〉订正：隔离语义仍属我方 ⇒ 非 🟢；⛔ 不外推隔离语义）；证据 `D:\Code\_trae-evidence\wksp\` | 2026-10-09 |
+| **后端一致性 · 两处修复** | Trae | **本机 Windows** | ⏳ **待派发（2026-10-13）** —— R1 幽灵 `error` 事件（`chat_service.py`）＋ R2 `tools.py:60` 绕过统一异常体系；来源 = Qoder 核证转办 · WB 回源复核**两条均成立**；判据／取证见下方〈📤 派发稿 · 后端代码级一致性修复〉 | 2026-10-13 |
 
 - **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ 完成态快照 `archive/roadmap-history.md`「DSH-3.4」段**（原写「`TODO.md`「DSH-3.4」段 ＋ §3.6」**一处两面**；其中 `TODO.md` 侧已于 2026-10-01 归档）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
@@ -58,6 +59,67 @@
 ### 五、记忆补录（repo 外，不入 git）
 
 `project_memory.md` Lessons Learned 尾部 append 4 条：① spawn dsh 探针宿主须 stdin 保持开放（exitOnStdinEnd 腰斩）；② dsh-workspace 不在 dsh 安装闭包 ⇒ 临时 home 须自建 junction（WB 已固化 §3.6）；③ assertEntriesActivated 静态 inject 缺失 ⇒ 启动期树级 fail-loud（exit 1 ＋ stderr 逐插件 pending 字面），非挂起；④ 物证随机标识禁手抄，须复制或锚点引用。
+
+---
+
+## 📤 派发稿 · 后端代码级一致性修复（两处）（WB ／ 2026-10-13）
+
+> **派发方** = WB ／ **执行人** = **Trae** ／ **场地** = **本机 Windows** ／ **派发日** = 2026-10-13
+> **来源** = Qoder 核证转办（2026-10-13；其所载核证段已按交流区规矩清理，回溯 `git log -p -- exchange/log-workbuddy.md`）→ WB **回源复核两条均成立**（逐条见下）。
+> **口径**：**一次性小修，修毕即闭环、无长期落点**（老大 2026-10-13 定 ⇒ ⛔ 不进 `TODO.md` ／ 不进 `docs/`）。
+
+**0 · 目标**
+修两处 backend 代码与项目「统一异常体系」约定不一致之处，使代码与 `backend/exceptions.py` 的自述契约一致。
+⚠️ 两处**互相独立**（不同文件、不同问题），但同属"后端一致性"口径、均为一行级小修 ⇒ **合为一次派发**（不涉依赖树，只动两个源文件）。
+
+**1 · 判据**（逐条编号，含取证 ＋ "缺此即未闭合"）
+
+**R1 — 幽灵 `error` 事件（`backend/services/chat_service.py`）**
+- **事实**：`_chat_flow` 实际 `yield` 的事件类型**只有四种** —— `delta`（`:186` ／ `:227` ／ `:322`）／ `tool_call`（`:278`）／ `tool_result`（`:297`）／ `done`（`:239` ／ `:325`），**无 `error`**；故 `handle_chat` 的 `elif etype == "error"`（`:74-75`）**不可达**，而 `_chat_flow` docstring（`:115`）仍宣称有 `error`。
+- **动作**：① 删 `:74-75` 的 `elif etype == "error": raise ValueError(...)`；② 删 docstring `:115` 的 `- error: 错误` 行。
+- **取证**：给出 **docstring 的事件列表** 与 **generator 实际 `yield` 的 `type` 集合** 两个原文，逐一对上（改后应各 **4 项、完全一致**）。
+- **缺此即未闭合**：只删一处；或 docstring 仍留 `error`。
+- ⚠️ **连带**：`:75` 那个裸 `ValueError` 一并消除（它本会绕过统一异常体系 ⇒ 落 `main.py:107` 兜底 500）。
+
+**R2 — `tools.py` 绕过统一异常体系（`backend/api/tools.py`）**
+- **事实**：`:60` `raise HTTPException(status_code=404, detail=...)` 与 `exceptions.py:11` 自述「各路由和中间件**优先 raise 具体子类，而非通用 Exception ／ HTTPException**」矛盾；且与 `chat_service.py:134`（走 `ResourceNotFoundError` ⇒ `{"error":"NOT_FOUND",...}`）形成**同为 404、两种响应形状**。
+- **动作**：① `:60` 改 `raise ResourceNotFoundError(f"Tool '{req.name}' not found")`；② 清 `:14` 不再使用的 `HTTPException` import。
+- **取证**：`grep -rn "HTTPException" backend/ --include=*.py` ⇒ **改前 3 处**（`tools.py:14` ／ `:60` ／ `exceptions.py:11` 自述提及）／**改后 0 处**；`grep -n "ResourceNotFoundError" backend/api/tools.py` ⇒ 有 import ＋ 使用。
+- **缺此即未闭合**：换了 `raise` 却没清 import（或反之）；⛔ 用 `HTTPException(404)` 换皮不算（须用 `ResourceNotFoundError` —— `status_code=404` 与语义匹配、且走全局 handler）。
+
+⛔ **不算达标**：自述型（"已修好"）／ 只改不附 grep 原始输出 ／ 未给"改前 vs 改后"对照。
+
+**2 · 判据前置**：**无**（两处独立、无前置依赖）。`backend/` 为**现役**代码（Tauri 生产从 `backend/` 启动）。
+
+**3 · 交付物**
+- 两文件改动（`chat_service.py` ／ `tools.py`）。
+- **机读结论行**：`R1=PASS|FAIL` ＋ `R2=PASS|FAIL`。
+- 每条改动的**取证命令原文 ＋ 输出原文**（改前 / 改后两份，对照）。
+
+**4 · 参考件四要素**：**无外部件** —— 以仓库内既有约定为准：
+- ① **路径**：`backend/exceptions.py`（`:11` 自述契约 ／ `:66-70` `ResourceNotFoundError`，`status_code=404`）＋ `backend/main.py`（全局 handler，`:95` ／ `:107`）。
+- ② **怎么参考**：读上述三处即够（无需外部文档）。
+- ③ **参考程度**：**只借契约**（异常子类选择 ＋ 响应形状约定）。
+- ④ ⛔ **不可参考**：无外部件；⛔ 不得引入新依赖 / 新异常类型。
+
+**5 · 场地器材**
+- 通道：**本机 Windows**（仓库根 `D:/Code/LarryAgent`）。
+- 工具：`grep`（或 Python 读文件，自选）；语法自检可选 `python -m py_compile <file>`。
+- ⚠️ **已知假绿坑**：判「**0 命中**」**必须先有一个"必中的对照组"** —— 先拿一个明知存在的 pattern 跑一次证明检索通道有效，再跑目标 pattern（否则"检索失效"与"确无残留"**同形**）。
+- ⛔ 不动 `backend/config.yaml`（含凭据）。
+
+**6 · 回报格式**
+- **结论先行**：`R1` / `R2` 逐条 `PASS|FAIL` ＋ 一句依据。
+- 逐条给**命令原文 ＋ 输出原文**（⛔ 不得意译；随机标识 / 行号须**复制**，不得手抄）。
+- **未闭合项单列**；**自曝**：跑歪 ／ 判据要订正 ／ 发现矛盾**直接写**（「成因未知」可接受，别为叙事完整编一个）。
+
+**7 · 禁区**
+- ⛔ **只改这两处** —— 不顺手重构异常体系 ／ 不动其他路由 ／ 不改其他文件。
+- ⛔ 不把 `HTTPException` 引入别处。
+- ⛔ 不改 `backend/config.yaml`；不把任何凭据落进受版本控制文件 ／ 日志 ／ 工具输出。
+- ⚠️ 若 `grep` 过程中发现**第三处**同类绕过 ⇒ **先报不擅改**（列出即可，不纳入本次改动）。
+
+**8 · 回报后**：WB 复验（回源核两处改动 ＋ grep 对照）。
 
 ---
 
