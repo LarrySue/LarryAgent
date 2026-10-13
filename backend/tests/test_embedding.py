@@ -1,4 +1,10 @@
-"""临时测试脚本：验证 Embedding 模块"""
+"""
+手动脚本：验证 Embedding 模块（**非 pytest 用例** —— 无 test_ 函数，不参与 `pytest tests/`）。
+
+运行方式：`python tests/test_embedding.py`（会调真实 Embedding API）。
+⚠️ 末尾 `asyncio.run(main())` 必须留在 `__main__` 守卫内：否则 pytest 收集时
+import 即执行（真网络调用），代理不通会让**整个测试会话在收集阶段**报错中断。
+"""
 import asyncio
 import sys
 import os
@@ -47,4 +53,5 @@ async def main():
     print("\n✅ Embedding 模块验证通过")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
