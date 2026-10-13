@@ -48,16 +48,26 @@ async def run_migrations(db: aiosqlite.Connection):
     """
     执行所有建表语句 + 增量 ALTER。
     每条 SQL 都包含 IF NOT EXISTS，重复执行安全。
+    增量迁移任一条失败 ⇒ 抛 RuntimeError（fail-loud，一条异常带全部失败的 表.列 明细）。
+    唯一调用方 get_db() 在 lifespan 启动路径上 ⇒ 抛出即 uvicorn 起不来
+    （带病启动不如起不来）。
     """
     # 1. 建表
     for sql in ALL_TABLES:
         await db.execute(sql)
 
-    # 2. 增量迁移（新字段）
+    # 2. 增量迁移（新字段）——失败收集、循环后统一 raise：不吞、失败不 commit，
+    #    库保持迁移前形态，下次启动可重入。
+    failures = []
     for table, column, definition in _INCREMENTAL_ALTERS:
         try:
             await _ensure_column(db, table, column, definition)
         except Exception as e:
             logger.warning("Migration failed for %s.%s: %s", table, column, e)
+            failures.append(f"{table}.{column}: {e}")
+    if failures:
+        raise RuntimeError(
+            "Incremental migration failed (fail-loud): " + "; ".join(failures)
+        )
 
     await db.commit()

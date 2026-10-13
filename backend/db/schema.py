@@ -5,7 +5,7 @@
 - conversations: 对话会话
 - messages: 对话消息（属于某个 conversation）
 - memories: 长期记忆（归档后的摘要）
-- tools: 已注册的工具列表（启动时同步）
+- tools: 工具元数据表（当前无读写方；工具注册为纯内存机制，见 tools/registry.py）
 """
 
 # === 建表 SQL ===
@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS messages (
     role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'system', 'tool')),
     content TEXT NOT NULL DEFAULT '',
     tool_calls TEXT DEFAULT NULL,
+    tool_call_id TEXT DEFAULT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );

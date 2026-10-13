@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **后端一致性 · 两处修复** | Trae | **本机 Windows** | ✅ **已复验成立（WB 2026-10-13）** —— R1：幽灵 `error` 分支 ＋ docstring 行已删，**docstring 事件列表 ≡ `yield` 集合、各 4 项**（`delta`/`done`/`tool_call`/`tool_result`），SSE 层 `_format_sse` 无 error 特判；R2：404 改走 `ResourceNotFoundError`，**代码层面 `HTTPException` 清零**（仅余 `exceptions.py:11` 自述文字）。WB **回源复核**（非采信其输出）：读改动后代码本体 ＋ 独立跑检索 ＋ 改前/改后对照 ＋ 核改动范围（仅两文件、无越界）；Tier0 本轮交付 **0 命中**。**一次性小修、闭环即消**（⛔ 未落 `TODO.md` ／ `docs/`） | 2026-10-13 |
-| **迁移失败静默吞 · fail-loud 修复** | Trae | **本机 Windows** | ⏳ **待派发（2026-10-13）** —— R1 增量迁移失败即 raise（负向 query_only 场地 ＋ 正向锚双锚，WB 已实测有判别力）／ R2 `tool_call_id` 进 `CREATE_MESSAGES`（迁移条目保留给老库）；来源 = Qoder 核证转办 · WB 回源复核**成立**（文献级）；判据 ／ 取证见下方〈📤 派发稿 · 迁移失败静默吞修复〉 | 2026-10-13 |
+| **迁移失败静默吞 · fail-loud 修复** | Trae | **本机 Windows** | ✅ **回报已交（2026-10-13）** —— **R1=PASS**（负向 query_only 场地抛 `RuntimeError` 含全部 表.列 ＋ 正向锚同批绿，双锚测试 `tests/test_migrations.py` 2 passed）；**R2=PASS**（`CREATE_MESSAGES` 加 `tool_call_id TEXT DEFAULT NULL` 与 ALTER 条目逐字一致，`_INCREMENTAL_ALTERS` 三条保留）；**R3=PASS**（无新失败：既有 1 条同 ID 仍红；另 1 条 `test_windows_dir` 本通道转绿＝语言形态通道差异，与改动无因果，自曝登记）；**R4=PASS**（porcelain 恰好三文件）；**R5=PASS**（docstring 漂移已修） | 2026-10-13 |
 
 - **判据、边界与遗留的权威落点 = `docs/dsh/dsh-migration.md` §3.6 ＋ 完成态快照 `archive/roadmap-history.md`「DSH-3.4」段**（原写「`TODO.md`「DSH-3.4」段 ＋ §3.6」**一处两面**；其中 `TODO.md` 侧已于 2026-10-01 归档）；本区只放**怎么做**。⚠️ 活日志会被随时清理 ⇒ **不要把本区当承接目标**（引用必成断链）；需回溯时用 `git log -p -- exchange/log-trae.md`。
 - ⚠️ **通用纪律（沿用 3.7.2 ／ 3.7.3 ／ 3.2.1 教训）**：
@@ -139,6 +139,152 @@
 - **知悉项（⛔ 不改，仅备案）**：① `_ensure_column:39` f-string 拼表名进 PRAGMA——唯一调用点是 `run_migrations`、入参全模块内常量，**无注入风险**；② 上述两条既有测试失败（R3 已列）⛔ 不在本块修；③ 若发现**第三处**同类问题 ⇒ **先报不擅改**。
 
 **8 · 回报后**：WB 复验（回源核改动 ＋ 独立复跑负向 ／ 正向场地 ＋ pytest 基线对照）。
+
+---
+
+## 📥 回报 · 迁移失败静默吞修复（fail-loud）（Trae ／ 2026-10-13）
+
+**结论先行**：
+- **R1=PASS** —— `run_migrations` 增量迁移改为**失败收集、循环后统一 raise**（`RuntimeError`，一条异常带全部失败的 `表.列` 明细，warning 保留）；负向 A（query_only 场地）实测抛出含三 `表.列`，正向锚同批绿。
+- **R2=PASS** —— `CREATE_MESSAGES` 增加 `tool_call_id TEXT DEFAULT NULL`（与 `_INCREMENTAL_ALTERS` 条目定义**逐字一致**）；迁移条目**未删**（老库路径保留）；正向锚实测老形态库迁移后三列全部就位。
+- **R3=PASS** —— 全套 `1 failed, 163 passed, 3 skipped`：**新失败 0**；既有失败 `test_chromadb_degradation` 同 ID 仍红（知悉项②，不修）；基线另一条 `test_windows_dir` 本次**通过**（通道语言形态差异，自曝 2，与本次改动无因果）。
+- **R4=PASS** —— `git status --porcelain` 恰好三文件：`backend/db/migrations.py` ／ `backend/db/schema.py` ／ 新增 `backend/tests/test_migrations.py`。
+- **R5=PASS** —— `schema.py:8` 不再宣称「启动时同步」，改为「工具元数据表（当前无读写方；工具注册为纯内存机制，见 tools/registry.py）」。
+
+**机读结论行**：
+
+```
+R1=PASS
+R2=PASS
+R3=PASS
+R4=PASS
+R5=PASS
+```
+
+**commit 语义自报**：选**「无失败才 commit」**——raise 在 `await db.commit()` **之前**，失败时不提交，库保持迁移前形态、下次启动可重入；理由：①「部分提交后 raise」会留下半迁移落盘状态（虽幂等可重入但更脏）；② 与「带病启动不如起不来」的口径一致（起不来 ＋ 库未被半改，修复环境后重启即完整重入）。
+
+### R1 取证
+
+改前（吞失败原文，`python -c` pathlib 检索）：
+
+```
+57:    for table, column, definition in _INCREMENTAL_ALTERS:
+58:        try:
+59:            await _ensure_column(db, table, column, definition)
+60:        except Exception as e:
+61:            logger.warning("Migration failed for %s.%s: %s", table, column, e)
+62:
+63:    await db.commit()
+```
+
+改后（fail-loud 块，`migrations.py:59-73`）：
+
+```
+59:    # 2. 增量迁移（新字段）——失败收集、循环后统一 raise：不吞、失败不 commit，
+60:    #    库保持迁移前形态，下次启动可重入。
+61:    failures = []
+62:    for table, column, definition in _INCREMENTAL_ALTERS:
+63:        try:
+64:            await _ensure_column(db, table, column, definition)
+65:        except Exception as e:
+66:            logger.warning("Migration failed for %s.%s: %s", table, column, e)
+67:            failures.append(f"{table}.{column}: {e}")
+68:    if failures:
+69:        raise RuntimeError(
+70:            "Incremental migration failed (fail-loud): " + "; ".join(failures)
+71:        )
+72:
+73:    await db.commit()
+```
+
+双锚测试（`cd backend` ＋ `$env:PYTHONPATH='.'`，命令 `python -m pytest tests/test_migrations.py -q`）：
+
+```
+..                                                                       [100%]
+2 passed in 0.12s
+[conftest] Test session temp dir cleaned: D:\Temp\Sys\larry_test_6f53m8y5
+```
+
+（负向 A 场地 = 临时库预建四表老形态＋两索引 → `PRAGMA query_only=ON` → `run_migrations` 抛 `RuntimeError` 且断言三 `表.列` 全在异常信息中；正向锚 = 同老形态库不加 query_only → 正常返回且 `PRAGMA table_info` 三列就位。两测试同批跑。）
+
+### R2 取证
+
+改前 —— `schema.py` 中 `tool_call_id` **0 命中**（对照组：`migrations.py:27/:28` 命中，证明检索通道有效）：
+
+```
+（schema.py 无输出 —— 0 命中）
+control:
+27:    # messages 表：添加 tool_call_id 字段（tool 消息匹配 assistant tool_calls 用）
+28:    ("messages", "tool_call_id", "TEXT DEFAULT NULL"),
+```
+
+改后 —— 同命令命中（`schema.py:31`）＋ `_INCREMENTAL_ALTERS` 三条条目完好（老库路径）：
+
+```
+31:    tool_call_id TEXT DEFAULT NULL,
+```
+
+```
+26:    ("tools", "group_name", "TEXT NOT NULL DEFAULT 'core'"),
+27:    # messages 表：添加 tool_call_id 字段（tool 消息匹配 assistant tool_calls 用）
+28:    ("messages", "tool_call_id", "TEXT DEFAULT NULL"),
+29:    # conversations 表：添加 deleted_at 字段（软删除进回收站，NULL = 未删除）
+30:    ("conversations", "deleted_at", "TEXT DEFAULT NULL"),
+```
+
+逐字一致性：`CREATE_MESSAGES` 列定义 `tool_call_id TEXT DEFAULT NULL` ≡ `_INCREMENTAL_ALTERS:28` definition `TEXT DEFAULT NULL` ✓。正向锚断言 `PRAGMA table_info(messages)` 含 `tool_call_id`（老形态库迁移后）✓（见 R1 双锚输出）。
+
+### R3 取证（基线对照）
+
+全套命令（README:161 现式，PS 形态）：`$env:PYTHONPATH='.'; python -m pytest tests/ -q`：
+
+```
+1 failed, 163 passed, 3 skipped, 2 warnings in 39.68s
+FAILED tests/test_chromadb_degradation.py::TestChromaDBDegradation::test_confirm_and_store_chromadb_failure - AttributeError: <module 'memory.archiver' from 'D:\\Code\\LarryAgent\\backend\\memory\\archiver.py'> does not have the attribute 'get_db'
+```
+
+对照基线（WB 2026-10-13：`2 failed, 160 passed, 3 skipped`）：
+- **新失败 0** ✓；`test_chromadb_degradation` 同 test ID 仍红（知悉项②，⛔ 不在本块修）
+- passed 163 = 160 既有 ＋ 2 本块新增双锚 ＋ 1（`test_windows_dir` 本次转绿，见自曝 2）
+- `test_windows_dir` 单独重跑：`python -m pytest tests/test_shell_tool.py -q` ⇒ `15 passed in 4.18s`（两次均绿）
+
+### R4 取证
+
+```
+ M backend/db/migrations.py
+ M backend/db/schema.py
+?? backend/tests/test_migrations.py
+```
+
+### R5 取证
+
+改前 ／ 改后（`schema.py:8`）：
+
+```
+8:- tools: 已注册的工具列表（启动时同步）
+```
+
+```
+8:- tools: 工具元数据表（当前无读写方；工具注册为纯内存机制，见 tools/registry.py）
+```
+
+### 语法自检
+
+```
+python -m py_compile backend/db/migrations.py backend/db/schema.py backend/tests/test_migrations.py
+py_compile exit=0
+```
+
+### 自曝
+
+1. **首跑跑歪（已修）**：测试首版把 `_make_old_shape_db` 写成 sync 函数（内部 `asyncio.run`）却在 async `_run()` 内调用 ⇒ 嵌套事件循环 `RuntimeError: asyncio.run() cannot be called from a running event loop`，2 failed。修正为 async helper 直接 `await`，重跑 2 passed——判据未动，纯测试代码结构错误，按纪律 5「判据改动须实跑」如实留痕。
+2. **`test_windows_dir` 基线差异（通道语言形态，非本案因果）**：基线 2 failed 含 `test_windows_dir`（派发稿自述：中文 Windows 下 `dir` 输出中文卷标、断言写死英文 "Volume"）。本通道全套 ＋ 单独重跑两次均**通过** ⇒ 属输出语言形态的通道差异（同上轮「通道隔离互不否定」教训），非本次改动引起（改动面 = 迁移/schema/新测试，与 shell 工具零交集）。R3 按**判据意图**（「无**新**失败」）判 PASS，字面数字差异如实登记，请 WB 复验时留意通道形态。
+3. **本通道无 `grep`**（同上轮）：检索用 `python -c`（pathlib 逐行，`file:line:content` 等价 `grep -rn`），输出均为命令直出原文；行号全部复制未手抄。
+4. **pytest 时长差异**：全套 39.68s vs WB 基线 137.82s——本通道整体更快（环境差异），不影响判定。
+
+### 未闭合项
+
+无。
 
 ---
 
