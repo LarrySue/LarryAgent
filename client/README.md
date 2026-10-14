@@ -1,26 +1,8 @@
----
-AIGC:
-    Label: "1"
-    ContentProducer: 001191440300708461136T1XGW3
-    ProduceID: 44c052101e5e236a5489b447016cb8fe_e1b1ad4c90db11f1a102525400826444
-    ReservedCode1: NB5Er+0e8cLb/5cp4gLve4VYukFHEzdCcl+ZxY/vpqb+KNnn6sSmBP3AmjMdBQRnRRGC5yWB1VhJO2P4FODrGWzZuWLJcQT3EBP0ldwn9OdMFdrYIeaoiqgMIcBaeGxtW8l9h7eHsdIXmicZ4bIBtBOXfi7y++zFYidZ7nqlAw9YRP+KqFC2bX84iho=
-    ContentPropagator: 001191440300708461136T1XGW3
-    PropagateID: 44c052101e5e236a5489b447016cb8fe_e1b1ad4c90db11f1a102525400826444
-    ReservedCode2: NB5Er+0e8cLb/5cp4gLve4VYukFHEzdCcl+ZxY/vpqb+KNnn6sSmBP3AmjMdBQRnRRGC5yWB1VhJO2P4FODrGWzZuWLJcQT3EBP0ldwn9OdMFdrYIeaoiqgMIcBaeGxtW8l9h7eHsdIXmicZ4bIBtBOXfi7y++zFYidZ7nqlAw9YRP+KqFC2bX84iho=
----
 
-﻿---
-AIGC:
-    Label: "1"
-    ContentProducer: 001191440300708461136T1XGW3
-    ProduceID: 44c052101e5e236a5489b447016cb8fe_533b3f5090db11f1bafa525400287e28
-    ReservedCode1: cFoN9PGN0/ffBEZOC/vEEGNX+gM/0QtX1KadlfsTjDvpbsysq1H1JBWRUOu0+i/6uacRSVCH9SOEoPFriltDWODz15LVfWrivbd+rQtubp2+QHUt77rj1Nm/DjpRELmlUnSsByarn4kcLwVlrYgakVnyI45Q40eS70i8tZ2AgdiLp1USN1UR2xaIDto=
-    ContentPropagator: 001191440300708461136T1XGW3
-    PropagateID: 44c052101e5e236a5489b447016cb8fe_533b3f5090db11f1bafa525400287e28
-    ReservedCode2: cFoN9PGN0/ffBEZOC/vEEGNX+gM/0QtX1KadlfsTjDvpbsysq1H1JBWRUOu0+i/6uacRSVCH9SOEoPFriltDWODz15LVfWrivbd+rQtubp2+QHUt77rj1Nm/DjpRELmlUnSsByarn4kcLwVlrYgakVnyI45Q40eS70i8tZ2AgdiLp1USN1UR2xaIDto=
----
 
 # LarryAgent PC 客户端
+
+> 此文档已严重过时，不具有参考价值，不过目前也并无法修改，暂时搁置，AI不用读取（老大，2026-10-14）
 
 ## 架构说明
 
