@@ -25,10 +25,10 @@
 | `wsl-evidence-capture` | 宿主 MSYS 通道经 `wsl.exe` 取证 | 10-08 J6 重放、10-13 自检 7 轮、双场地回归等多轮 |
 | `evidence-discipline` | 判「没有／不可回核／有问题」、复核他人交付 | F2·F4·F7 三次翻车＋多轮复验；坑已固化 |
 
-**CLAUDE.md 瘦身建议（已当面交老大，本行为留痕）**：拟删 ① `:62-67` 全套注意事项明细 ② `:69-76` WSL 小节六条 ③ `:82-86` 运维约定 ④ `:94-109` mock 清单＋自检项 —— 方法入上表 skill；事实落点＝`docs/test-env.md`（唯一真相源）＋`HUMAN_NOTE.md`〈工程债务〉。拟留：⛔ `_ensure_event_loop` 不删改、测试范围／分层原则、WSL 三条 ⛔ 安全约束、`--real-api` 沾 key 必清（安全项**不上移** skill，折进指针行）。净减约 30 行（每轮注入体量约降两成）。
-**联动引用（若删，需改指 skill）**：`harness/tests/real-api.test.ts:213` 注释引「CLAUDE.md mock 覆盖不到清单」（我可顺手改）；`docs/test-env.md:149` 引「CLAUDE.md 运维约定」（转 Qoder）。
+**CLAUDE.md 瘦身 ✅ 已落地**（老大 10-15 逐次授权我自行改，**commit `b99bb03`**）——删／缩四块：① `:62-67` 六条 → 2 行（方法指 skill `backend-testing`；⛔ `_ensure_event_loop` 不删改行原样保留）② `:69-76` WSL 六条 → 3 行（三条 ⛔ 安全／判定边界保留在每轮注入层）③ 删〈运维约定〉整节 ④ 删〈mock 清单＋自检项〉两节 —— 方法入上表 skill；事实落点＝`docs/test-env.md`（唯一真相源）＋`HUMAN_NOTE.md`〈工程债务〉。安全项**未上移** skill：`--real-api` 沾 key 必清折进指针行。净减 **110→77 行**（10686→7794 B，约 −27%）。同 commit 带入了老大此前未提交的 `:45` 体例修正（已在 commit 信息中写明）。
+**联动引用（已处置）**：`harness/tests/real-api.test.ts:213` 注释**已改指** skill `backend-testing`「交付自检」✓（同 commit）；`docs/test-env.md:149` 引「CLAUDE.md 运维约定」**现为活漂移**（该节已删）⇒ 属 docs 区，**转 Qoder 改指 skill**。
 
-**⚠️ 加载实测**（供 Qoder 并 `ai-governance.md` §3 Claude 行时参考）：写入后**本会话当场试调用 `backend-testing` ＝ `Unknown skill`** ⇒ 至少「新写 skill 本会话不可见」成立（**快照语义**）——与 Trae 侧「同会话动态扫描」**相反**；新会话是否即加载，下轮复核（不排除格式因素）。另：`ai-governance.md:57` Claude 行「目录已建、当前为空」已过时（3 条已入 git）。
+**✅ 加载语义复核（结论闭合，供 Qoder 销账）**：写入侧原测＝本会话当场试调用 `Unknown skill`（快照语义）；**新会话复测**（2026-10-15）①可用技能列表**三条全可见** ②当场试调用 `backend-testing` **返回新版正文**（含后加的第 3 条坑「存量债务清单位置」）⇒ **「写后需新会话才可用、新会话即加载并生效」坐实**，与 Trae／Qoder 侧「同会话即读到新版」相反。判法统一＝**改完当场试调用看返回体**，⛔ 别拿可用技能列表当真伪判据。另：`ai-governance.md:57` Claude 行「目录已建、当前为空」**仍过时**（3 条已入 git），待 Qoder 顺手。
 
 ---
 
