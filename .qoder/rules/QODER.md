@@ -33,10 +33,10 @@ trigger: always_on
 
 ### 行为准则
 - **以下区域可自由阅读但一律不得做任何改动**（发现可优化内容 ⇒ 提交人类讨论）：
-  - `.claude/` — Claude 私有文件
-  - `.trae/` — Trae 私有文件
-  - `.qoder/rules` — Qoder 约束文件（本文件，归老大）
-  - `.workbuddy` — WorkBuddy 私有文件
+  - `.claude/`文件夹 — Claude 私有文件
+  - `.trae/`文件夹 — Trae 私有文件
+  - `.qoder/rules`文件夹 — Qoder 约束文件（本文件，归老大）
+  - `.workbuddy`文件夹 — WorkBuddy 私有文件
   - `HUMAN.md` 与 `HUMAN_NOTE.md` — 人类治理区
 - **以下区域可直接修改并 commit**（改完在本区回报，无需另行请示）：
   - `docs/` — 文档区（含文档面同步，见「一体两面」）
