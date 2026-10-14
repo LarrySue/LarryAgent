@@ -32,7 +32,14 @@
 
 10. **`server.api_key` 是否现在就设（待裁）**：设前实测出新前提——`client/` 全仓无任何 Bearer 注入通道（grep `Authorization|Bearer|api_key` 零命中）⇒ **直接填 key 会让现态 `/api/` 全部 401**；「运行期填 Key ＋ Bearer 注入」是方案 §4.2 的未实现改造点。两条路：**(A)** 设 key ＋ 派 Trae 补 `client/src/api.ts` 与 `client/chat.html` 的 Bearer 头（一次闭环）；**(B)** key 只写 prod profile（`LARRY_CONFIG` 通道），dev 现态不动、上云时天然生效。口径已落 `exchange/deployment-architecture.md` §五〈待裁〉。
 
-11. **代码行为层三条（待裁，⛔ 勿顺手改）**：① `backend/tools/shell.py` POSIX 超时只杀 `/bin/sh` 壳（未设 `start_new_session` ⇒ 孙进程可存活），真改要 `os.killpg` 且只能 CVM 侧验；② 同工具 `description` 声明 PowerShell／Bash，实测壳为 cmd.exe／/bin/sh ⇒「改声明」或「改实现」二选一；③ `rag/vector_store.py:107` 默认 `0.5` 与 `memory/engine.py` 默认 `0.3` 不一致（现因调用方显式传参未致错）。文档面已在册（`docs/product-positioning.md` 2.4.2 ／ 2.7.1 ／ 2.7.2）。
+11. **代码行为层（待裁两项 ＋ 一项已裁挂下沉）**：② 同工具 `description` 声明 PowerShell／Bash，实测壳为 cmd.exe／/bin/sh ⇒「改声明」或「改实现」二选一；③ `rag/vector_store.py:107` 默认 `0.5` 与 `memory/engine.py` 默认 `0.3` 不一致（现因调用方显式传参未致错）。
+
+⚠️ **①（POSIX 超时只杀 `/bin/sh` 壳，未设 `start_new_session` ⇒ 孙进程可存活，真改要 `os.killpg` 且只能 CVM 侧验）＝已裁**（10-13 丙组①：不现在修、随 shell／file_ops 端侧下沉一并做），但**代码未改**（`backend/tools/shell.py:104`／`:106` 仍走 `proc.kill()`；全库无引入 `killpg`／`start_new_session` 的实现提交），10-13 办结的只是**表述层**（丁组头注释如实化 ＋ `docs/product-positioning.md` 2.7.1／2.7.2 在册）。
+
+🔴 **顺带查出一条漏口（待你落笔）**：WB 那笔提交 `63e1aff` 的信息写「已写入 `HUMAN_NOTE:49`」，但实测**从未写进过**——`git log --all -S` 搜索串 `-- HUMAN_NOTE.md` **零命中**，现 `HUMAN_NOTE.md:50`「本地能力下沉」的**一并完成清单只有两项**（① shell 鉴权重构、② 命令注入加固），**不含 POSIX 杀组**。⇒ 若照现清单做下沉，这条会被漏掉（裁定与承接两处失联）。补法（在 :50 ② 之后加一条）：
+- `③ POSIX 侧超时杀进程组（create_subprocess_shell 设 start_new_session=True ＋ os.killpg 杀整组；若决定不做，则在 HUMAN_NOTE 与代码注释两侧同步改口径为"本壳不承诺 POSIX 侧子进程清理"）`
+
+⇒ 文档面我已就地改（① 从"待裁"挪成"已裁·挂下沉"），⛔ `HUMAN_NOTE` 归你，未动。
 
 
 ---
