@@ -97,6 +97,7 @@ Qoder的记忆机制与WB不同，非常值得借鉴，以及约束文件的动�
 - [ ] **前端集成层测试**：会话切换加载 / 角色切换传参的集成测试（mock RouterView + store 联动）。逻辑层已由 Claude 覆盖（P4.4 测试 31/31 绿），集成层待补；原规格"引入新逻辑层时一并补，或 WB 明确要求再做"。P4 完结时不阻塞（功能闭环已达成），归此待补
 - [ ] **存量测试债务是否修复**：`test_chromadb_degradation.py`（mock 了已不存在的 archiver.get_db）、`test_shell_tool.py::test_windows_dir`（中文 Windows 编码断言）。选项 A：修复恢复"全套绿"基线；选项 B：维持"相关测试 + 已知项甄别"现状。当前规则以 B 运转（见 CLAUDE.md/TRAE.md 测试环境段）。此事不是很急，找个合适的机会讨论一下
 - [ ] **边界侵蚀（工具/对话消息分离）**：`tool_calls` / `tool_call_id` 不再写入 `messages` 表，工具消息与对话消息分离（数据模型整洁）
+- [ ]`test_shell_tool.py` / `test_file_ops_tool.py` 的 `asyncio.get_event_loop()` 迁移到 `asyncio.run`（当前由 conftest `_ensure_event_loop` fixture 兜住，非红项）
 
 ### 其他长期增强（待触发）
 
