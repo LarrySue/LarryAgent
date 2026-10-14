@@ -120,7 +120,7 @@
 
 1. **本定稿收口**（本文件 v2）—— 完成即生效。
 2. **固化 Tier 1**：WB 将 Tier 0/1 固化进 Skill；HUMAN.md 分离顶层约束与记录文本。
-3. **测试隔离程序性强制**（Claude 认领）：`backend/tests/conftest.py` 在 pytest 收集前设 `LARRY_CONFIG` → 会话级临时 yaml（临时 db + 临时 chroma + 关 vector_store）；全套测试默认跑临时库，顺手堵 P3 存量污染口。**✅ 已派发（2026-08-17 22:00 WB→Claude，老大点头），Claude 实施中。**
+3. **〈测试隔离程序性强制〉**（Claude 认领）：`backend/tests/conftest.py` 在 pytest 收集前设 `LARRY_CONFIG` → 会话级临时 yaml（临时 db + 临时 chroma + 关 vector_store）；全套测试默认跑临时库，顺手堵 P3 存量污染口。**✅ 已落地**（2026-08-19 `5cd2104` 会话级隔离 ＋ 修 `test_chat_service` 的 env 泄漏；08-30 两轮加固＝`--real-api` 注入路径实测发现 `enabled=false` 被绕过、key 脱敏改递归替换；09-03 `aa17ebe` 两处小修）。机制与时序细节见 `backend/tests/conftest.py` 头部注释 ＋ `.claude/CLAUDE.md`〈测试隔离〉段。
 4. **HUMAN.md 加进 CLAUDE/TRAE read-first 清单**。
 5. **归档索引机制 → ✅ 已落地**（`archive/roadmap-history.md`，2026-08-17 起）。
 6. **Skill 零点击自动激活 → 缓**（开会话手动激活一次可接受，逃熊最小动作）。
