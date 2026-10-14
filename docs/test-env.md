@@ -146,7 +146,7 @@ Windows PATH 被注入 WSL（约 30 条 `/mnt/*`）。**两通道观察到的现
 | **Windows 防火墙 Public profile** | 局域网设备访问 WSL 服务超时（Windows 侧监听者是 `dllhost.exe`，服务进程的入站规则管不到它）；**loopback 不受影响** ⇒ 需显式入站规则 |
 | **CRLF 污染** | 仓库统一 LF ⇒ WSL 侧 `git config core.autocrlf input`（**已配**，`git status` 干净无噪声） |
 | **git 视图（防御已到位）** | 仓库另配 `core.filemode=false` ⇒ WSL 内权限位变化**不进** `git status`（🟢 Claude 实测）—— 上面两项合起来才是"WSL 内 `git status` 干净"的完整原因，**缺一项就会看到假噪声** |
-| ⚠️ **临时目录口径** | WSL 内 `tempfile.gettempdir()` = **`/tmp`（ext4）** —— 而 `CLAUDE.md` 运维约定里的 `D:\Temp\Sys\larry_test_*` 是 **Windows 侧**口径 ⇒ **两边排查别找错地方**（🟢 Claude） |
+| ⚠️ **临时目录口径** | WSL 内 `tempfile.gettempdir()` = **`/tmp`（ext4）** —— 而 **Windows 侧**的 `D:\Temp\Sys\larry_test_*`（Claude 本机实测）⇒ ⛔ 原引的 `CLAUDE.md`〈运维约定〉一节已搬家、**别再引它**；跑法与强杀后清理的**方法**落 skill `.claude/skills/backend-testing`，本档只留事实 ⇒ **两边排查别找错地方**（🟢 Claude） |
 | **空间** | 本次必需约 **3–3.5 GB**；`harness/node_modules` + dsh CLI + 运行时数据 **不能从 Windows 侧拷贝复用**（跨 OS，原生模块不通用），须在 WSL 内 `pnpm install` 重装；建议预留 8–10 GB |
 
 ---
