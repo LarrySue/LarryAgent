@@ -55,6 +55,7 @@
 - **WB**：`.workbuddy/memory/MEMORY.md`（另有全局级MEMORY、USER、SOUL文件） 强约束，每次启动WB客户端软件即可无感注入，目前作为WB的约束文件，考虑到该文件需要控制大小否则注入时会被截断，将部分具有全局价值的约束迁移到全局记忆（包括全局的用户级MEMORY文件，和WB的设置面板内的全局记忆，大概率是独立注入方式，注入时机经观察与项目级MEMORY.md相同）
 - **Qoder（另两类载体在此登记，免得查无此处）**：**工作法**在用户级技能库 `~/.qoder/skills/`（本区治理类 8 份：`doc-consistency-audit` 巡检 ／ `doc-archive-slimming` 归档瘦身 ／ `doc-proposal-application` 提案套用 ／ `doc-governance-recheck` 事后复检 ／ `doc-sunset-handoff` 清退承接 ／ `verifiable-criteria-design` 判据设计 ／ `claim-source-verification` 断言回源核证 ／ `scope-change-sync` 口径同步）；**记忆**在 `~/.qoder/projects/<proj>/memory/` ＋ `~/.qoder/memory/`（机制＝索引全文注入 ＋ 单条正文按需读）。两类均**在仓外、不入 git、跨会话共享**（由平台机制决定，非自行设计载体）⇒ **项目原则 4「严格版本管理」覆盖不到它们**；**操作流程按设计不进约束文件**（约束文件每轮加载，只留权限边界 ＋ "见某 skill"指针）。
 - **Claude（技能库在此登记）**：`.claude/skills/<skill-name>/SKILL.md` ⇒ 与上两者**反向**：这条通道**在仓内、入 git**（平台设计如此：项目级 skill 提交即共享）⇒ **原则 4 覆盖得到、其他 AI 可读**（读 `.claude/` 允许，⛔ 改仍禁）。代价＝写进 skill 的内容会被版本固化、日后只能靠作废轮换 ⇒ §3.3「⛔ 不放项目事实」对这一家最要紧。**目录已建、当前为空**；⛔ 空目录 git 不跟踪 ⇒ 首个 `SKILL.md` 提交后，其他 AI 与其他工作副本才看得见它。
+- **Trae（技能库在此登记，与 Claude 同形）**：`.trae/skills/`（仓内、入 git，同样**已建为空目录**、目录本身不被 git 跟踪）。🟡 **与 Claude 那条的唯一差别＝加载未证**：Claude 侧有官方文档格式（`.claude/skills/<name>/SKILL.md`）作证，Trae 侧**平台到底读不读这个目录至今无人实测**——目录是人建的。⇒ 首个 skill 放进去后**先验能否被加载**，验不成就把执行层那句改成"按 §3.3 自判、不写目录"。
 - **Marvis 不进约束体系**（⭐ Marvis 已于 2026-09-29 退出本项目；本条保留作决策追溯，该「外部审计」生态位随之不再单设）：保持"外部审计"定位——唯一不参与实施、能独立怀疑全局的视角，塞进约束反而削弱它。
 
 **统一结构：**
