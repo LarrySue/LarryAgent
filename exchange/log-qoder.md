@@ -35,9 +35,16 @@
 
 11. **代码行为层三条（待裁，⛔ 勿顺手改）**：① `backend/tools/shell.py` POSIX 超时只杀 `/bin/sh` 壳（未设 `start_new_session` ⇒ 孙进程可存活），真改要 `os.killpg` 且只能 CVM 侧验；② 同工具 `description` 声明 PowerShell／Bash，实测壳为 cmd.exe／/bin/sh ⇒「改声明」或「改实现」二选一；③ `rag/vector_store.py:107` 默认 `0.5` 与 `memory/engine.py` 默认 `0.3` 不一致（现因调用方显式传参未致错）。文档面已在册（`docs/product-positioning.md` 2.4.2 ／ 2.7.1 ／ 2.7.2）。
 
-12. **待他方同步的旧口径（我无写权）**：① `exchange/log-workbuddy.md`〈在飞任务〉末行仍写 WB「维护 `docs/`」；② WB 自有 skill `archive-closed-todos` ／ `apply-proposal-to-doc` 编的是旧分工（WB 已自记"不再按其触发"，是否正式改造待定）；③ 根 `README.md` 归属——WB 按旁证暂记 Qoder 维护，待老大确认；④ `TODO.md`〈治理约定〉宜补一行「一体两面、须同步」指针（TODO 属 WB 操作域，老大点头我可代加）。
+12. **WB 侧职责同步（2026-10-13 我实地读了 `~/.workbuddy/skills/`，逐件核过）**：⛔ 那些文件我无写权，此处只列实况与建议。
+    - ✅ **已自改完（无需再动）**：`archive-closed-todos`／`apply-proposal-to-doc` 正文顶部均标「执行权移交 Qoder，WB 不再执行；本文件留作移交吸收 ＋ 复验对照」；`doc-sunset-handoff` 已换新权限矩阵（`log-*` 归本人 ／ 讨论稿·`docs`·`archive`·`exchange/README` 归 Qoder ／ `TODO.md` 归 WB 只改标记 ／ 根 `README.md` 暂记 Qoder）并明文作废旧矩阵；`dispatch-ai-task` 末节已改为「后三者执行权归 Qoder，WB 仅在清理自己 `log-*` 时用 `doc-sunset-handoff`，其余作复验对照」。**⇒ 我此前那条「WB 两 skill 编的是旧分工待定」的判断已按实测撤销**。
+    - ⚠️ **仍差三处**：
+      ① **`exchange/log-workbuddy.md`〈在飞任务〉末行**仍是旧自述（把「维护 `docs/`」列为 WB 常态工作）。建议替换：
+      > `- ⚠️ **WB 常态工作**（派发 ＋ 复验 Trae／Claude 成果 ＋ 把本文档条目标为已完成并加说明 ＋ 清理 `log-*`）**不在此登记** —— 落在 `TODO.md`／`docs/`；**文档面同步与阶段归档归 Qoder**。本区只登记跨 AI 的派发与回报。`
+      ② **`verify-ai-delivery` 的 S7〈输出〉**只有三块结论，没有"复验通过之后"的下游动作 ⇒ 闭环链在这一环会断。建议加第 4 块：
+      > `4. **下游动作**（复验成立即执行，不排队）：① 在 `TODO.md` 把该条目标 `[x]` 并补必要说明；② **通知 Qoder 做文档面同步**（一体两面：docs 的结论／判据／验收基准须按执行实况修正）；③ 若该条属某阶段收尾 ⇒ 一并通知**归档**（阶段块 → `archive/roadmap-history.md`）。⚠️ 通知写在本区状态行或 TODO 条目旁注，⛔ 只口头不落地会静默漏同步。`
+      ③ **根 `README.md` 归属**：WB 按旁证暂记 Qoder 维护，待老大确认或改判。
 
-13. **老大自有文件的未提交改动**：`.qoder/rules/QODER.md` 已由老大写入新可写区与两条职责（一体两面 ／ 主持讨论稿），**目前仍在工作区未提交**，我不代提；`HUMAN.md` ／ `HUMAN_NOTE.md` 归老大自处。
+13. **老大自有文件的未提交改动**：`.qoder/rules/QODER.md` 的新可写区与两条职责由老大写入、**尚未提交**（我不代提）；`HUMAN.md` ／ `HUMAN_NOTE.md` 归老大自处。
 
 ---
 
