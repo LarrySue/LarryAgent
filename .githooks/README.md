@@ -19,7 +19,7 @@ git config --get core.hooksPath    # 应输出 .githooks
 **拦住什么**：把 API key / token 明文提交进库 —— 尤其是"把 `backend/config.yaml` 片段粘进
 记录 / 文档"这条旁路（`backend/config.yaml` 自身受 `.gitignore` 保护，但**粘出来的副本不受保护**）。
 
-**扫什么**：`git grep --cached` ⇒ 只扫**本次暂存**的内容；命中形态：
+**扫什么**：`git diff --cached -U0` ⇒ 只扫**本次提交新增的行**（⛔ **不扫整个 index** —— 首版用 `git grep --cached` 会把历史遗留的旧凭据一并报出，任何提交都被拦，等于把钩子变成无差别阻断器；2026-10-13 实测揪出并修正）；命中形态：
 - `sk-` 后接 20+ 位字母数字
 - `Bearer` / `token` 后接 20+ 位
 - `api_key` / `password` / `secret` 后接 16+ 位的引号串
