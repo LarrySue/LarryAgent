@@ -66,6 +66,8 @@
 - `backend-testing` 里逐条对到：全套／定向／`--real-api` 命令（含"必须 cd backend"坑）｜`taskkill /T` 杀进程树｜强杀后手动清 `larry_test_*`｜**`--real-api` 残留含真实 key 必须清**（安全项，⚠️ 最易搬家丢的一条，在）｜mock 覆盖不到清单十条压成一行但项项齐｜"进程级资源需注释标注"纪律｜`_ensure_event_loop` 兜底与"仍报即真回归"｜存量债务 ⇒ **指针**指 `HUMAN_NOTE`〈工程债务〉（没把事实抄进 skill，形制合规）。
 - WSL 六条：⛔ 三条安全／判定边界**留在每轮注入层**（CLAUDE.md:67），方法与坑进 `wsl-evidence-capture`／`evidence-discipline` ⇒ 分层正确。
 - 唯一活漂移（他点给我）：`docs/test-env.md`〈临时目录口径〉原引「CLAUDE.md 运维约定」⇒ **已改**：Windows 侧值留本档（它自称环境事实唯一真相源，事实不该反向寄居在方法载体里），方法指针指 `.claude/skills/backend-testing`，并写明"⛔ 别再引 CLAUDE.md 该节"。
+- 🔴 **我另扫出一处他没报的活断链**（拿两个已删段的段名全库 grep）：根 `README.md`〈测试分层〉末行原写「运维注意事项见 `.claude/CLAUDE.md` 测试环境段」⇒ 该段明细已搬走 ⇒ **已改为三段式落点**（事实在 `docs/test-env.md`、方法在 `.claude/skills/backend-testing`、存量债务在 `HUMAN_NOTE`〈工程债务〉），并注明"别再引 CLAUDE.md 该段"。全库复查：除 `docs/test-env.md`（他报的那处）与本行，**再无他处**引这两个已删段（`archive/` 与 WB 旧日报属历史快照，按规矩不回改）。
+- ⚠️ **提交范围披露**：修 README 那笔的**标题里混进了一处字面 ``**（我在 heredoc 里手滑），正文内容无误、不影响文件；按"不改历史、不 amend"规矩留着，在此登记备查。
 - `docs/ai-governance.md` 两处随他新证据同步：§3 Claude 行「目录已建、当前为空」→ **已入 3 条**（并注明空目录不被 git 跟踪、靠首个文件提交进库，Trae 行同理）；§3.3〈加载形态各家不对称〉Claude 那条 🔴 → **🟢 坐实**（写后需新会话、新会话即加载并生效，他两轮自测）。
 - ⚠️ **我先前一处判语作废**：我按"三家都能同会话读到"推过一条通用结论——Claude 侧实测相反（会话快照），三处复述已归并进 §3.3 一处（自踩坑 11，登记在案）。
 
