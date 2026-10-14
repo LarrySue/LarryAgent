@@ -206,7 +206,7 @@ cd client && npm run test:unit
 
 ## 多 AI 协作
 
-本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**WorkBuddy**（架构协调；复验 Trae／Claude 成果并把 `TODO.md` 条目标为已完成；交流区 `log-*` 汇总派发）、**Qoder**（文档一致性维护：`docs/` ／ `archive/` 文档区、交流区讨论稿主持、复验通过后同步 `docs/`、阶段完成后归档 roadmap），另有独立的 UI 设计角色。**Marvis**（产品宏观）已于 2026-09-29 退出项目。
+本项目由人类主导、多个 AI 分工协作开发：**Trae CN**（全栈实现）、**Claude Code**（测试）、**WorkBuddy**（组长：架构协调 ＋ 任务规划／统筹／分派；复验 Trae／Claude 成果并把 `TODO.md` 条目标为已完成；交流区 `log-*` 汇总派发 ＋ 定期清理已闭环段；**不含归档**）、**Qoder**（文档一致性维护：`docs/` ／ `archive/` 文档区、交流区讨论稿主持、复验通过后同步 `docs/`、阶段完成后归档 roadmap），另有独立的 UI 设计角色。**Marvis**（产品宏观）已于 2026-09-29 退出项目。
 
 分工定义、约束加载机制与协作规则见 `docs/ai-governance.md`；**各文件归谁维护的归属表**见其 §3。
 
@@ -225,4 +225,4 @@ MIT
 
 ---
 
-<sub>本文件最后核对：2026-09-17，Qoder</sub>
+<sub>本文件最后核对：2026-10-14，Qoder（核对日 ≠ 修改日；改动明细看 `git log -- README.md`）</sub>
