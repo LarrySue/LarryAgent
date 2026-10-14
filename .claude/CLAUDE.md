@@ -22,7 +22,7 @@
 
 ### 行为准则
 - **以下区域可自由阅读但一律不得做任何改动，发现错误、矛盾、冲突、缺失等严重问题而强烈建议改动时提交人类操作**：
-  - `.claude/`文件夹 — Claude私有文件
+  - `.claude/CLAUDE.md`文件夹 — Claude约束文件（本文件，归老大）
   - `.trae/`文件夹 — Trae私有文件
   - `.qoder/`文件夹 - Qoder私有文件
   - `.workbuddy` — WorkBuddy私有文件
@@ -56,11 +56,11 @@
 ## 测试环境
 
 - **测试隔离（conftest.py 已落地）**：`tests/conftest.py` 在收集测试前把 `LARRY_CONFIG` 指向会话级临时 yaml（临时 db/chroma、vector_store 关闭），autouse 断言解析后的 database.path ≠ 真实库，指向即 fail。新测试不自行设置 `LARRY_CONFIG` / `load_config(真实路径)`，直接享受隔离；需要临时 DB 路径用 `session_db_path` fixture
-- 全套测试 `python -m pytest tests/ -q` 的环境注意事项：
+- 全套测试（**在 `backend/` 下**执行 `python -m pytest tests/ -q`）的环境注意事项：
   - `test_integration_llm.py` 需 pytest-asyncio 插件 + 真实 API key + 网络
   - 中文 Windows 下 `test_shell_tool.py::test_windows_dir` 有 `dir` 输出编码断言问题（存量）
   - `test_chromadb_degradation.py` 存在存量 mock 问题（2026-08-12 已知，待修）
-  - `test_shell_tool.py` / `test_file_ops_tool.py` 的 `asyncio.get_event_loop()` 模式在全套顺序下抛 RuntimeError（存量，待迁移 asyncio.run，见 TODO 工程债务）
+  - `test_shell_tool.py` / `test_file_ops_tool.py` 用旧式 `asyncio.get_event_loop()`（未迁移 `asyncio.run`），靠 `conftest.py::_ensure_event_loop`（autouse）兜住跨文件事件循环污染。⛔ 不要删改该 fixture；这两个文件若再报 `no current event loop`，按正常回归排查，不当已知存量放过
   - 跑失败时先确认是否属于上述已知项，再判断是否自己引入的回归
 
 ### Linux 测试环境（WSL）

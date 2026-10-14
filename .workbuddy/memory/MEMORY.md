@@ -38,7 +38,7 @@
   - `.claude/`文件夹 — Claude私有文件
   - `.trae/`文件夹 — Trae私有文件
   - `.qoder/`文件夹 - Qoder私有文件
-  - `.workbuddy/memory/MEMORY.md` — WorkBuddy 约束
+  - `.workbuddy/memory/MEMORY.md` — WorkBuddy约束文件（本文件，归老大）
   - `HUMAN.md`与`HUMAN_NOTE.md` - 人类治理区
   - `docs` - 文档区
   - `archive` - 归档区
