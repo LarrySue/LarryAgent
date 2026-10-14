@@ -59,51 +59,19 @@
 ## 测试环境
 
 - **测试隔离（conftest.py 已落地）**：`tests/conftest.py` 在收集测试前把 `LARRY_CONFIG` 指向会话级临时 yaml（临时 db/chroma、vector_store 关闭），autouse 断言解析后的 database.path ≠ 真实库，指向即 fail。新测试不自行设置 `LARRY_CONFIG` / `load_config(真实路径)`，直接享受隔离；需要临时 DB 路径用 `session_db_path` fixture
-- 全套测试（**在 `backend/` 下**执行 `python -m pytest tests/ -q`）的环境注意事项：
-  - `test_integration_llm.py` 需 pytest-asyncio 插件 + 真实 API key + 网络
-  - 中文 Windows 下 `test_shell_tool.py::test_windows_dir` 有 `dir` 输出编码断言问题（存量）
-  - `test_chromadb_degradation.py` 存在存量 mock 问题（2026-08-12 已知，待修）
-  - `test_shell_tool.py` / `test_file_ops_tool.py` 用旧式 `asyncio.get_event_loop()`（未迁移 `asyncio.run`），靠 `conftest.py::_ensure_event_loop`（autouse）兜住跨文件事件循环污染。⛔ 不要删改该 fixture；这两个文件若再报 `no current event loop`，按正常回归排查，不当已知存量放过
-  - 跑失败时先确认是否属于上述已知项，再判断是否自己引入的回归
+- 全套测试（**在 `backend/` 下**执行 `python -m pytest tests/ -q`）：跑法明细、存量债务甄别、`--real-api` 与强杀后清理见 skill `backend-testing`；⚠️ **`--real-api` 模式会向临时目录写含真实 key 的 yaml ⇒ 跑完必须清理**（唯一沾 key 的测试路径）
+- `test_shell_tool.py` / `test_file_ops_tool.py` 用旧式 `asyncio.get_event_loop()`（未迁移 `asyncio.run`），靠 `conftest.py::_ensure_event_loop`（autouse）兜住跨文件事件循环污染。⛔ 不要删改该 fixture；这两个文件若再报 `no current event loop`，按正常回归排查，不当已知存量放过
 
 ### Linux 测试环境（WSL）
-**环境事实、入口、范式、边界一律以 `docs/test-env.md` 为准（唯一真相源）**；我不在交流区里存环境事实。
-- 我这条通道（宿主 bash / MSYS）的坑见该文档 §8.3.1：`MSYS_NO_PATHCONV=1`、脚本首行 `exec 2>&1`、**显式 `cd` 到自建目录**（否则产物落进仓库根）。
-- **工作副本一律放 ext4（`~/…`），绝不放 `/mnt/c`、`/mnt/d`**（§4、§6.1：9P 下 POSIX 锁与 inotify 语义失效 ⇒ 结论作废）。
-- ⚠️ **判定边界**：WSL 的 landlock ABI = **7**、生产 / CVM = **4**（§5）⇒ **WSL 上测出的"放行 / 被拒"不得搬到生产定论**；判 ABI 的测试留在 CVM。
-- ⚠️ WSL 是**宿主侧沙箱之外的一条写入路径**（§8.4）⇒ **不得据此绕过宿主侧沙箱 / 审批策略**
-- WSL 是**可抛弃的**（`wsl --unregister` 秒级重建）⇒ 破坏性试验放心做；但**别 `wsl --terminate`**（清掉全部后台长任务），也别动 `/etc/wsl.conf` 与无关文件。
-- 长输出 / 长任务：**落文件 + `\\wsl.localhost\` 读回**、`setsid nohup … &` + 复入轮询（§8.3.3、§8.1）。
+**环境事实、入口、范式、边界一律以 `docs/test-env.md` 为准（唯一真相源）**；我不在交流区里存环境事实；通道操作与取证见 skill `wsl-evidence-capture`。
+⛔ 按文档执行：**WSL 上测出的「放行 / 被拒」不得搬到生产定论**（ABI 7≠4，§5）｜**WSL 是宿主沙箱之外的写入路径，不得据此绕过任何沙箱 / 审批策略**（§8.4）｜**别 `wsl --terminate`（清掉全部后台长任务）、别动 `/etc/wsl.conf` 与无关文件**。
 
 ### 测试范围规则
 - 每个任务必须跑相关测试文件 + 已知存量债务甄别
 - 全套跑仅在跨模块改动时强制
-
-### 运维约定
-- **强杀 pytest 后手动清理临时目录**：atexit 清理在强杀（taskkill /F / timeout）时不执行，目录会残留。**路径 = `tempfile.gettempdir()`**（本机实测为 `D:\Temp\Sys\larry_test_*`，**不是** `/tmp`——那是 Linux 路径，别照着找）。
-  - **默认模式**：残留无 key（占位符设计，conftest 已硬化），仅为磁盘卫生，定期清即可
-  - **`--real-api` 模式**：`pytest_configure` 会注入真实 key 并重写 yaml 落盘（调真实 API 必须读到 key）→ **强杀会残留含 key 的目录，必须手动清理**。这是唯一会沾 key 的路径，排查该模式后务必清理
-- 后台跑 pytest 需 `taskkill /T` 杀进程树（Windows 下 TaskStop 只杀外层 shell 不杀 python 子进程）
 
 ### 测试分层原则
 - **单元/逻辑层（默认，全 mock）**：快、确定、隔离——验证"代码逻辑对"。永远 mock，不切真实
 - **集成冒烟层（`@pytest.mark.integration`，真实 API）**：验证"接得上、跑得通"——契约/鉴权/网络/模型行为。默认 skip（防误烧 key），`pytest tests/ --real-api` 显式跑；定位是"契约哨兵"，跑挂不阻塞交付（真实 API 不稳定属外部因素）
 - **不做"全量切换配置"**：同一批测试在 mock/真实间切换会毁掉 mock 层的确定性
 - 冒烟频率：发版前 + 大改动后；真实搜索暂不纳入冒烟
-
-### mock 覆盖不到清单（真实 API 才暴露，集成冒烟层为这些存在）
-- API 契约漂移：字段名/嵌套结构/usage 缺失/`reasoning_content` 等模型差异字段
-- SDK 行为：流式 chunk 真实结构、版本升级变化
-- 网络层：真实超时挂起语义、429/Retry-After/限流、TLS/DNS/代理
-- 鉴权与配额：key 失效/过期/余额不足
-- LLM 行为不确定性：tool_calls arguments 非法 JSON（模型幻觉）、不按 schema 输出、幻觉工具名
-- 字符/编码：真实环境中文输出等（如 test_windows_dir 存量问题）
-- 真实延迟下的 SSE 流式节奏
-- **资源生命周期（进程级，mock 结构性测不到）**：连接未关闭、临时文件残留、进程退出期 GC 挂起——见 `archive/report-2026-08-30.md`
-
-### 新增 mock / fixture 时的自检项
-- 凡涉及**进程级资源**——连接、临时文件、进程退出行为——在代码注释中标注
-  **「此处无法被 mock 覆盖，需集成层验证」**
-- 理由：mock 层的资源语义（模拟 API 行为）与真实链路的资源语义（进程级生命周期）
-  **不一致**；mock 全绿 ≠ 行为正确。靠人记住不可靠，写进注释才可靠
-- 交付测试时对照上节「mock 覆盖不到清单」自检，不要基于"测试通过"直接断言"没问题"

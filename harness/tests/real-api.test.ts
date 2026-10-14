@@ -210,7 +210,7 @@ describe.skipIf(!ENABLED)('real-api 真实调用（开关关闭时本组为 SKIP
       // 只打判定概要（含 error.code / 长度），不打会话正文、不打 key
       console.log(`[real-api] 有效 Key: ${formatVerdict(run.verdict)} 耗时=${Math.round(run.durationMs / 1000)}s`)
       expectRealApiSuccess(run.result)
-      // 资源生命周期自检（mock 结构性测不到，见 CLAUDE.md「mock 覆盖不到清单」）
+      // 资源生命周期自检（mock 结构性测不到，见 skill `backend-testing` 的「交付自检」）
       expect(run.closeError).toBeUndefined()
       // 残留自查（与主进程 teardown 同源判据）
       assertNoKeyOnDisk(run.home.home, key)
