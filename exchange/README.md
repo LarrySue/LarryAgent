@@ -8,11 +8,11 @@
 
 **各 AI 日志**（各自区域只有自己能修改）：
 
-- `log-workbuddy.md` — WorkBuddy（架构师 + 全局协调 + 拍板）
+- `log-workbuddy.md` — WorkBuddy（架构协调 ＋ 组长：任务规划／统筹／分派 ／ 复验；`TODO.md` 维护方；本区派发与定期清理，权限细则见 `../docs/ai-governance.md` §3）
 - `log_design.md` — UI DESIGN 负责人交流区（全面负责 UI 设计；当前独立于主团队、尚未正式入队，负责人待定）
 - `log-claude.md` — Claude Code（代码检查测试）
 - `log-trae.md` — Trae CN（代码具体编写）
-- `log-qoder.md` — Qoder（文档一致性维护者）
+- `log-qoder.md` — Qoder（文档一致性维护 ＋ `docs/`／`archive/` 文档区维护方 ＋ 本区讨论稿主持）
 - `log-other.md` — 编外 AI 区（老大按需点将，不属固定分工、不受各角色约束文件管辖）；各条标注 AI 名与日期，供整理采纳
 
 **讨论稿 / 草案**（尚未定稿，定稿后回 `docs/`）——**主持：Qoder**（归属表见 `../docs/ai-governance.md` §3） ｜ **流程**：所有 AI（含 WB）在本区发言 → 主持与老大讨论吸收 → **其他 AI 无异议即定稿** → 文字层面梳理、**去掉讨论痕迹** → 移入 `docs/`。
