@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **丙组 ②③ · 说明/契约与实现对齐** | Trae | **本机 Windows** | 📤 **已派发（WB 2026-10-15）** —— 待回报 | 2026-10-15 |
+| **丙组 ②③ · 说明/契约与实现对齐** | Trae | **本机 Windows** | ✅ **回报已交（2026-10-15）** —— **② 成立**（description 改实测壳 `cmd.exe`／`/bin/sh`、超时句指向 `tools.shell_timeout`、:39-44 待裁注释更新为已裁）；**③ 成立**（`score_threshold` 去默认值变必需参数＋签名重排，engine.py 唯一调用方显式传参跑通）；J1–J6 全过（**18 passed exit=0**，我通道无存量红＝已知通道差异）；自曝 5 条见回报段（含首版 SyntaxError 修正、第三文件 engine.py docstring 同步） | 2026-10-15 |
 
 - ✅ **此前各块均已闭环**：「后端一致性·两处修复」WB 已复验成立；〈重读清单〉已回报并经 Qoder 逐条复验 ⇒ 记录按老大 10-15 令代清，见下方〈已清理段落〉。
 
@@ -86,6 +86,105 @@
 **8 · 诚实边界（哪些话现在不能说）**
 - ② 改完 ⛔ **不得**声称"shell 现在支持 PowerShell" —— **恰恰相反**（如实标注为 cmd.exe／sh）。
 - ③ 改完 ⛔ **不得**声称"召回阈值问题已解决" —— 本轮只消掉**"契约与实现不一致"**，阈值取值本身未动。
+
+**9 · 补充（2026-10-15 18:40，WB 自补 —— ⚠️ 不影响 J1–J6 成立，不必为此返工）**
+
+WB 复核发现 J3 漏写了一个**实现方式选择**：去掉默认值后，`score_threshold` 的**位置**有两种放法，两者**都满足 J3**：
+
+| 方案 | 形态 | 代价 |
+|---|---|---|
+| **(a) 前置参数**（你当前采用的） | `search(query_vector, score_threshold, limit=5, collection_name=None)` | ⚠️ **改掉第 2／3 个位置参数的语义**（旧：第2=limit；新：第2=score_threshold） |
+| **(b) keyword-only** ⭐ | `search(query_vector, limit=5, *, score_threshold, collection_name=None)` | **不动任何位置参数语义**，且同样达成"必需参数" |
+
+- WB 已核：`search()` 的**唯一调用方 `engine.py` 用 keyword 传参** ⇒ **两方案当前都安全**，**没有实际受害方**。
+- ⇒ 故 (a) **判据已满足、无需返工**；此处仅作为**增量**记录：若你尚未提交，**(b) 的副作用更小**（免掉一个"看似等价、实为破坏性"的位置语义变更）；若已定稿，⛔ **不必回头改**。
+- ⚠️ 顺带钉一条诚实边界：无论取哪种方案，⛔ **都不得**声称"函数签名未变" —— 本轮**确实变了**（少了一个默认值）；能说的只是"**唯一调用方已核、行为未变**"。
+
+---
+
+## 📥 回报 · 丙组 ②③（Trae ／ 2026-10-15）
+
+**判定：② 成立 ／ ③ 成立**（J1–J6 全过，逐条证据如下）
+
+**机读结论行**：
+
+```
+② =PASS
+③ =PASS
+J1=PASS J2=PASS J3=PASS J4=PASS J5=PASS J6=PASS
+```
+
+**前置复测**（纪律 1：前提重新实测）：原生 Grep 盘点 `from rag.vector_store import|vector_store\.search|await search\(`（对照组 `engine.py:73` import 行必中 ✓）——非测试代码唯一调用方 = `engine.py:73/77`；`tests/` 仅 mock patch（`test_chromadb_degradation.py:49`，AsyncMock 全替换、不依赖签名）与 docstring 文字。**WB 前提成立，未发现不传参调用方**。
+
+### 逐条证据（改动后原文）
+
+**J1+J2**（`backend/tools/shell.py:43-46`，description 改实测壳 ＋ 超时句指向配置源）：
+
+```
+43:    description = (
+44:        "执行 Shell 命令。Windows 下为 cmd.exe，POSIX 下为 /bin/sh。"
+45:        "命令执行超时由配置 tools.shell_timeout 控制（默认 30 秒）。"
+46:    )
+```
+
+**J6**（:39-44 待裁注释 → 更新为已裁形态，核证证据链保留；:19 尾句指针同步）：
+
+```
+39:    # 壳形态（2026-10-13 核证、老大 2026-10-15 裁"以事实为准"改声明）：
+40:    # 实测本壳为 cmd.exe（Windows）／ /bin/sh（POSIX），并非 PowerShell／bash
+41:    # （Windows 侧读数 COMSPEC=C:\WINDOWS\system32\cmd.exe、OS=Windows_NT；黑名单里
+42:    # `del /f /s C:\` 用 cmd 语法，也反证实现从未走 PowerShell）。
+```
+
+```
+19:  ⚠️ 本壳实测为 cmd.exe（Windows）／/bin/sh（POSIX），**非 PowerShell／bash**（description 已如实标注）
+```
+
+**J3**（`backend/rag/vector_store.py:104-108`，签名无默认值——`score_threshold` 提至 `limit` 前并去默认值，见自曝 ①）：
+
+```
+104:async def search(
+105:    query_vector: list[float],
+106:    score_threshold: float,
+107:    limit: int = 5,
+108:    collection_name: str | None = None,
+```
+
+**J4**（唯一调用方 `backend/memory/engine.py:77-81` 显式传参、全关键字形式，与签名重排天然兼容；测试跑通见 J5）：
+
+```
+77:        results = await search(
+78:            query_vector=query_vector,
+79:            limit=top_k,
+80:            score_threshold=score_threshold,
+81:        )
+```
+
+**J5**（测试输出原样，含退出码；版本与派发稿一致：Python 3.11.9 ＋ pytest 9.1.1）：
+
+```
+$env:PYTHONPATH='.'; C:/Users/SuLarry/AppData/Local/Programs/Python/Python311/python.exe -m pytest tests/test_shell_tool.py tests/test_memory_engine.py -q --no-header
+..................                                                       [100%]
+18 passed in 5.50s
+[conftest] Test session temp dir cleaned: D:\Temp\Sys\larry_test_smv350o5
+pytest exit=0
+```
+
+基线对照：**新失败 0** ✓。我通道 18 passed 全绿（shell 15 ＋ memory_engine 3）vs WB 基线 1 failed（存量 `test_windows_dir`）＋ 14 ＋ 3——差异即 `test_windows_dir`：**我通道 `dir` 输出英文卷标形态 ⇒ 断言过**（10-13 起两次实测登记的通道语言形态差异，派发稿 §5 亦标注其为存量、⛔ 不得顺手改；本轮未碰、非回归）。
+
+**语法自检**：`python -m py_compile backend/tools/shell.py backend/rag/vector_store.py backend/memory/engine.py` ⇒ `py_compile exit=0`
+
+### 自曝
+
+1. **首版签名 SyntaxError（测试首跑即抓，已修）**：去掉默认值时未注意 `limit: int = 5` 排在 `score_threshold` 之前 ⇒ `SyntaxError: non-default argument follows default argument`（`vector_store.py:107`，test_memory_engine 3 条全红）。修法＝**参数重排**（`score_threshold` 提到 `limit` 前）——唯一调用方全用关键字传参 ⇒ 零影响（重跑 18 passed 实证）。教训：去默认值要同时看参数位序，非尾部参数去默认值须重排或 keyword-only。
+2. **第三文件 `engine.py`（超出交付物清单）**：`:62-64` 的「⚠️ `search()` 默认阈值是 0.5……默认值去留属代码层，待老大裁」在 ③ 改完后变**假话**——留着＝制造新的「说明与实现不一致」（与本任务目标冲突）。处置＝同步更新为必需参数现状（与 J6「待裁前提消失须同步」同构）。只动 docstring 三行（`:63-65`），零行为改动；如需回退可单点 revert。
+3. **J6 选「更新」而非「删除」**：待裁注释块保留了核证证据链（COMSPEC 读数、黑名单 cmd 语法反证），只把「待裁」改为「已裁」——判据允许二选一，选保留证据的形态。
+4. **存量 DeprecationWarning 未动**：`shell.py:1: invalid escape sequence '\``（指向 `:16-17` 黑名单描述行的 `C:\``）——我未触碰的行，非本轮引入，登记不修。
+5. **J4 的 docstring 同步**：`engine.py:63-65` 更新后仍声明「调用方必须显式传参」——现在这句从「口头契约」变成了**签名强制**（漏传即 TypeError），契约与实现正式对齐。
+
+### 未闭合项
+
+无。
 
 ---
 

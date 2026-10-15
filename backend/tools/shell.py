@@ -16,7 +16,7 @@ Shell 命令执行工具
   ⛔ 可绕过（如 `rm -fr /`、`rd /s /q C:\`、`poweroff`、`systemctl reboot` 均不命中），
   且会误杀含 `--format` / `-Format` 的正常命令（如 `docker ps --format`、`rm -rf /tmp/…` 亦被拦）；
   加固去向见 `HUMAN_NOTE.md`「本地能力下沉」条（老大 2026-09-03 裁：随下沉一并做，**勿单开加固**）。
-  ⚠️ 本壳实测为 cmd.exe（Windows）／/bin/sh（POSIX），**非 PowerShell／bash**——见 description 处待裁事项
+  ⚠️ 本壳实测为 cmd.exe（Windows）／/bin/sh（POSIX），**非 PowerShell／bash**（description 已如实标注）
 
 与其他模块的关系：
 - 被 tools/registry.py 注册
@@ -36,15 +36,13 @@ logger = logging.getLogger(__name__)
 
 class ShellTool(BaseTool):
     name = "shell"
-    # ⚠️ **待裁事项（2026-10-13 核证；本串是发给 LLM 的提示文本，未得裁定前请勿顺手改）**：
-    # ① 实测本壳为 cmd.exe（Windows）／ /bin/sh（POSIX），**并非**串中所称 PowerShell／bash
-    #    （Windows 侧读数 COMSPEC=C:\WINDOWS\system32\cmd.exe、OS=Windows_NT；黑名单里
-    #    `del /f /s C:\` 用 cmd 语法，也反证实现从未走 PowerShell）；
-    # ② 串里的"30 秒"实为 config 值 tools.shell_timeout（默认 30），改配置该串不随之变化。
-    # 处置二选一由老大定：改**声明**（表述）／改**实现**去真支持 PowerShell（代码行为）。
+    # 壳形态（2026-10-13 核证、老大 2026-10-15 裁"以事实为准"改声明）：
+    # 实测本壳为 cmd.exe（Windows）／ /bin/sh（POSIX），并非 PowerShell／bash
+    # （Windows 侧读数 COMSPEC=C:\WINDOWS\system32\cmd.exe、OS=Windows_NT；黑名单里
+    # `del /f /s C:\` 用 cmd 语法，也反证实现从未走 PowerShell）。
     description = (
-        "执行 Shell 命令。支持 Windows (PowerShell) 和 Linux (Bash)。"
-        "命令执行超时时间为 30 秒。"
+        "执行 Shell 命令。Windows 下为 cmd.exe，POSIX 下为 /bin/sh。"
+        "命令执行超时由配置 tools.shell_timeout 控制（默认 30 秒）。"
     )
     parameters = {
         "type": "object",

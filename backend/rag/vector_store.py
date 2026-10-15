@@ -103,8 +103,8 @@ async def insert(
 
 async def search(
     query_vector: list[float],
+    score_threshold: float,
     limit: int = 5,
-    score_threshold: float = 0.5,
     collection_name: str | None = None,
 ) -> list[dict]:
     """
@@ -113,7 +113,7 @@ async def search(
     Args:
         query_vector: 查询向量
         limit: 返回结果数上限
-        score_threshold: 相似度阈值（余弦相似度），低于此值的结果被过滤
+        score_threshold: 相似度阈值（余弦相似度，必需参数），低于此值的结果被过滤
         collection_name: 集合名
 
     Returns:

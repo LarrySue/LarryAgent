@@ -60,9 +60,9 @@ async def get_long_term_memory(
     根据 = `tests/test_embedding_enhanced_version.py` 的 `SIMILARITY_TEST_CASES` ＋
     `tests/test_embedding.py` 的相似度对照（两脚本为**阈值标定器材**，可复跑）；
     史料 `archive/qoder-work-historical-record.md:16478` 区；结论落点 `docs/product-positioning.md` 2.4.2。
-    ⚠️ 注意 `rag/vector_store.py` 的 `search()` 默认阈值是 **0.5**，与本函数不一致——
-    调用方须显式传参（本函数内对 `search()` 的调用即显式传 `score_threshold`）；
-    默认值去留属代码层，待老大裁。
+    ⚠️ `rag/vector_store.py` 的 `search()` 的 `score_threshold` 为**必需参数**（已无默认值，
+    老大 2026-10-15 裁：契约对齐实现）——调用方必须显式传参，本函数内的调用即显式传
+    `score_threshold`。
     """
     # 开关关闭时跳过长期记忆召回：不加载 embedding、不建 ChromaDB 客户端
     # （与 api/memory.py:136 的写法保持一致，放在入口拦截以覆盖所有调用方）
