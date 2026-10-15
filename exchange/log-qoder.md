@@ -82,6 +82,14 @@
 
 **未结项 28 现状**：①`.githooks/README`〈已知边界〉仍写 `git grep --cached`（本轮实测未改）⇒ 仍候 WB；②Trae 那条照抄旧前提 ⇒ 无新动。
 
+32. **Qoder 技能库载体＝项目级（老大一句「肯定有吧」是对的；我此前只登记用户级，属不完整表述，现已实测并迁完）**
+
+    - 🔬 **探针实测**（零副作用、测完即删、未入 git）：仓内新建 `.qoder/skills/qoder-probe-9001/SKILL.md` 后**同会话当场调用成功**，返回体基目录就在 `D:\Code\LarryAgent\.qoder\skills\` 下 ⇒ **Qoder 确有项目级技能库、且动态扫描**（与 Trae 同形；比 Claude 侧会话快照语义强）。⇒ 我这 8 份原先放用户级是**历史选择，不是平台限制**。
+    - ⚠️ **同名并存时用户级生效**（影子件实测：把同名 `doc-consistency-audit` 放进项目级，调用返回的基目录**仍是用户级** ⇒ 项目级不覆盖）。⇒ 搬家顺序有讲究：**先复制入仓并提交 → 逐份 `cmp` 验字节一致 → 再删净用户级同名件 → 当场试调用验返回的是仓内路径**；反序或留双份＝仓内那份静默失效。🟡 该"用户级优先"结论**尚需新会话复测一次**（现无法排除「名称解析走会话注册表、后落盘的同名件不重新注册」这一解释；两种解释对操作要求相同，不影响本轮）。
+    - ✅ **已迁完并验讫**（`89c0d05`）：8 份治理类工作法（`doc-consistency-audit`／`doc-archive-slimming`／`doc-proposal-application`／`doc-governance-recheck`／`doc-sunset-handoff`／`verifiable-criteria-design`／`claim-source-verification`／`scope-change-sync`）入 `.qoder/skills/`、逐份字节一致、用户级同名件已删净；调用 `doc-sunset-handoff` 返回基目录＝仓内路径 ⇒ **确认走项目级**。⇒ 与 WB／Claude／Trae 同形，**原则 4「严格版本管理」现在覆盖得到我的方法论了**（此前是治理体系里的一块暗区：改了什么、几时改的，git 一概不知）。
+    - 🟡 **待你一句话**：① 用户级还余 **7 份通用件**（`deep-research`／`content-research-writer`／`ui-designer`／`general-ppt`／`drafter-diagram`／`build-local-reference-kb`／`diegosouzapw-testing-strategy-builder-ariegoldkin`）——多为**市场安装件／非本仓知识**，我倾向**不入仓**（把别人的产品件当项目资产管，上游一升级就会与仓内副本互相漂移）；你要全入仓我照办。② `docs/ai-governance.md` §3〈技能库〉那行现写「原有用户及技能已全部迁入项目级」——对 Qoder 精确态＝**治理类 8 份已迁、7 份通用件留用户级**；你那次手改**尚未提交**（`git status` 里该文件是 M），按"他人正在编辑的治理文本只引用不追改"的规矩我**没动它**，你提交后我按你定的口径补准（或直接给我改，我一次到位）。
+
+
 ---
 
 ## 🗂 已清理段落（按交流区规矩）
