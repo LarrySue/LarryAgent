@@ -90,7 +90,7 @@
 | `exchange/` 讨论稿 ＋ `exchange/README.md` | **Qoder**（主持人） | 定稿＝各方无异议 → 文字梳理去痕迹 → 移入 `docs/` |
 | **根 `README.md`** | **Qoder** | 含〈项目结构〉〈配置〉〈多 AI 协作〉等门面段；改完回报 |
 | `TODO.md` | **WB** | 新增待办／标完成／加说明；Qoder 仅在阶段归档时搬块 |
-| `exchange/log-*.md`（**含 `log_design.md`／`log-other.md`／`log-zcode.md`** —— 前两者历史命名用下划线、第三个为新加入的审计岗 ZCode，一律按本行同例处理；ZCode 的角色与约束文件尚未定稿，暂不占 §3 分工表） | 各 AI 自己 | **WB** 有权：派发（＝在他人名下**新增**内容）、干涉、**定期清理已闭环段**（⛔ 不改他人**结论正文**，清理前须核无孤儿 ＋ 登记承接落点）；其余 AI 只可新增派发内容。**老大保留不定期复核清理权**（可直接或要求 WB 干涉）。**编外区 `log-other.md`**：整理采纳归 **WB**，采纳结果的落点由 **Qoder 承接**（结论／判据 → `docs/`，任务 → `TODO.md`）；本表为唯一权威落点，`exchange/README.md` 只留指针 |
+| `exchange/log-*.md`（**含 `log_design.md`／`log-other.md`／`log-zcode.md`** —— 前两者历史命名用下划线、第三个为新加入的审计岗 ZCode，一律按本行同例处理） | 各 AI 自己 | **WB** 有权：派发（＝在他人名下**新增**内容）、干涉、**定期清理已闭环段**（⛔ 不改他人**结论正文**，清理前须核无孤儿 ＋ 登记承接落点）；其余 AI 只可新增派发内容。**老大保留不定期复核清理权**（可直接或要求 WB 干涉）。**编外区 `log-other.md`**：整理采纳归 **WB**，采纳结果的落点由 **Qoder 承接**（结论／判据 → `docs/`，任务 → `TODO.md`）；本表为唯一权威落点，`exchange/README.md` 只留指针 |
 | `HUMAN.md` ／ `HUMAN_NOTE.md` | **老大** | AI 只读，可建议不可代改 |
 | `.claude/`／`.trae/`／`.qoder/rules/`／`.workbuddy/`／`.zcode/` ＋ 仓根 `AGENTS.md`（ZCode 约束文件） | 各 AI 本主（`QODER.md` 归老大；`AGENTS.md` 归 ZCode 本主、老大保留裁定权） | 互不改；发现问题 ⇒ 暴露 ＋ 备精确改法 |
 | `backend/**`／`client/**`／`harness/**` | **Trae**（实现）／**Claude**（测试） | Qoder 可只读核证；**注释／docstring 类**改动属表述层，可代做，动到行为须先裁 |
