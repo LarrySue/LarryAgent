@@ -48,15 +48,25 @@
 5. **待办与决策分离**：讨论稿定稿后（移入`docs`后）仅保留判定依据、行事规则、验收基准等，其中准备进入执行的项目移入 `TODO.md` ，文档内只留指针。
 6. **一体两面、须同步**：决策稿 = 「**做什么**」（事实 / 判定 / 验收基准），TODO = 「**怎么做**」（任务 / 进度 / 派发状态）。二者是同一件事的两面，**改一面必同步另一面，两面不一致即为缺陷**（如：决策稿写死某选型而 TODO 侧留活口 = 缺陷）。同步是**双向**的：决策稿定调 → TODO 承接；TODO 执行中产出的新事实 → 回流决策稿修正结论。
 
-## 六、文档治理复检清单（删减类任务专用）
+## 六、技能沉淀
+重复的活儿同类 ≥2 次、或步骤可复算（命令／顺序／判据写得出来），沉淀进 .codebuddy/skills/ 目录，条目含触发条件＋可复跑命令＋已知坑；⛔ 不放约束条款与项目事实。判据见 docs/ai-governance.md §3.3。接活儿后先看有没有合用的 skill，有的话先加载对应 skill 再动手，鼓励根据项目推进、实际执行情况、工作安排等升级优化 skill。若发现实际调用技能的目录不是该目录，主动暴露向老大报告且高优先级记入 `log-workbuddy.md` 文件。
 
-> **本节已收敛至 skill `doc-governance-recheck`，做删减 / 搬家 / 归档类任务的复检前先加载它。**，相关经验沉淀至该 skill，不进入记忆或约束文件。
+**本项目技能一览**
 
-## 七、复验方法论
+| 技能 | 何时加载 |
+|---|---|
+| `verify-ai-delivery` | 复验派发回报前（另见本文 §九 证据纪律） |
+| `doc-governance-recheck` | 删减／搬家／归档类**复检**前 |
+| `dispatch-ai-task` | 写派发稿前 |
+| `doc-sunset-handoff` | 清 `exchange/log-*` 前后 |
+| `design-verifiable-criteria` | 把口语判据落成可复算基准时 |
+| `plan-test-cost-ladder` | 跑计费／耗资源测试前 |
+| `probe-context-injection` | 验"某配置是否真注入"时 |
+| `remote-probe-dryrun` | 远程机判定前 |
+| `apply-proposal-to-doc` | ⛔ 已移交 Qoder（已加 `disable-model-invocation`）——WB 仅复验对照 |
+| `archive-closed-todos` | ⛔ 同上 |
 
-> **本节已收敛至 skill `verify-ai-delivery`，做复验前先加载它。**，相关经验沉淀至该skill，不进入记忆或约束文件。
-
-## 八、WB 环境约束
+## 七、WB 环境约束
 
 - **node `fs.renameSync` 跨盘会 `EXDEV`**：C:→D: 不允许 rename，清理/移动文件须**同设备内**重命名
 - **pnpm 的 `.pnpm` 目录名是哈希截断名**：长包名会被砍短并追加哈希，**用完整包名 glob 匹配不到**。查某包是否存在/版本时，**遍历 `.pnpm/*/node_modules/@scope/*/package.json` 读 `name` 比对**，不用目录名判断
@@ -77,17 +87,13 @@
 - **Bash 批量删除**：**百级目录 `rm -rf` 现可直接成功**（附 `Sandbox bypassed (escalation-approved)`，系升级到无沙箱执行）；**万级未验**（旧返回 `[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED]`）。⇒ 大规模删除仍走上条对策（请人类删 / 逐项删 / 回收站 API）。
 - **`worktree remove --force`** 现可直接删除（静默失败已修复）；**`prune` 顺序规律仍适用**：`.git` 指针文件还在时 `prune` 无输出、注册不变 ⇒ **须「先物理删目录 → 再 prune」**，prune 才会输出 `Removing worktrees/<n>: ...`。
 
-## 九、老大的推进节奏
+## 八、老大的推进节奏
 
 - **节奏**：无固定交付压力，允许多次迭代，精力放在做对而非赶进度，项目过程、协调AI、完善机制本身也是一种乐趣。
 
-## 十、证据纪律
+## 九、证据纪律
 
 > **本节"证据资格 / 判据有效性"类条目已收敛至 skill `verify-ai-delivery`** —— 身份不加权 / 闲聊不进结论 / 先问证据支点 / 论据真实≠适用 / 判据取自真实运行时 / "机制存在"≠"走这条路" / `exit code=0`≠已退出 / 取空值先疑路径 / "必现"须谨慎，均以该 skill 为准（原则层另见 `docs/ai-governance.md` §3）。
 
 - **查 DSH 凭据载体走 `$DSH_HOME/.credentials.yaml` 的 `refs:` 分节（非 config.yaml、非 `.env`）**：四层优先级=启动环境 > 受管文件 > 项目 `.env` > 主目录 `.env`；**POSIX 强制"仅属主可读"，否则启动直接失败**；**agent 工具进程可读该文件**（官方明说"是审慎不是边界"）。**机制详情见 `docs/production-env.md` §12〈凭据落位〉**。
 - **Windows 原生 Python 不认 MSYS 风格路径**：`open('/c/Users/...')` → `No such file or directory`，而 Git Bash 的 `find`/`ls` 认。⇒ 传给 Python 的路径用 `C:/Users/...`（正斜杠盘符）或先 `cd` 再用相对路径。**同一会话里两种工具对同一路径的判定可能不一致，别据此判"文件不存在"。**
-
-## 十一、派发方法论（拆块编号 / 写派发稿）
-
-> **本节已收敛至 skill `dispatch-ai-task`（2026-10-09）** —— **写派发稿、判"一个切片该不该拆 / 拆成几块 / 要不要加次级编号"前先加载它**（目的：防"一次派发太多""计划不够细导致派不出去" ⇒ 多 AI 分不清自己做哪一块 ⇒ 已做 / 未做混乱）。相关经验沉淀至该 skill，不进入记忆或约束文件。
