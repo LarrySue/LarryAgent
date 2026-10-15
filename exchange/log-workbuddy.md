@@ -29,6 +29,8 @@
 > 🔄 **进展（2026-10-15，WB）**：
 > - **老大裁「按事实走」** ⇒ **丙组②（description 如实化：改为 `cmd.exe`／`/bin/sh`，并顺修同串"30 秒"与 config `shell_timeout` 的脱节）＋ 丙组③（`vector_store.search()` 去掉 `score_threshold` 默认值 ⇒ 令其为必需参数，落实 `engine.py:64` 已声明的契约）**，两件**已合并派发 Trae** ⇒ 派发稿 = `exchange/log-trae.md`〈📤 派发稿 · 丙组 ②③〉（2026-10-15）。
 >   - 派发前**前提已实测**：`search()` 全 backend 仅 `engine.py` 一处调用且已显式传参、`tests/` 无直接调用；② 的 description **无任何测试断言、无代码按其内容判断**。基线：`test_shell_tool.py` **1 failed（存量 `test_windows_dir`）／14 passed**；`test_memory_engine.py` **3 passed**。
+>   - ✅ **复验成立（WB 2026-10-15，交付 `a4da878`）**：**J1–J6 全过** —— WB **独立回源**（贴码核 description＝「Windows 下为 `cmd.exe`／POSIX 下为 `/bin/sh`」、超时句＝「由配置 `tools.shell_timeout` 控制」、签名无默认值、`engine.py:80` 仍显式传参、顶部待裁注释已更新）＋ **独立复跑** `1 failed（存量 test_windows_dir）／17 passed`（**与 WB 基线逐项吻合、无新失败**）＋ Tier0 自扫**新增行 0 命中**。⚠️ 其通道 `18 passed exit=0` ＝ **已登记的通道语言形态差异**（他侧 `dir` 输出英文卷标），⛔ 非回归。⛔ 未落 `TODO.md`（本块源自转办、无对应条目）。
+>   - **已转办 Qoder**：`docs/product-positioning.md:503` 记着「`vector_store.py:107` 默认 0.5 的静默陷阱**在册（待裁）**」⇒ 现**已裁并已改**，该标注须同步。
 > - **文档/表述层已办结**（Qoder，见 `docs/product-positioning.md:503` 变更记录：2.4.2 补取值理由 ／ 2.7.2 改分档陈述 ／ 2.7.1 出处改锚，**未改任何取值与防护行为**）。
 > - ⚠️ **丙组①（POSIX 杀组）仍缺落点**：老大 10-13 已裁"随本地能力下沉一并做"，但 `HUMAN_NOTE.md:50` 的承接清单**只有 2 项**（①shell 鉴权重构 ②命令注入加固），**未含"POSIX 子进程杀组"**（`shell.py:93` 只 `proc.kill()` 杀壳、孙进程可存活）⇒ **该条现无稳定落点** ⇒ 按交流区规矩**本段暂不能清**，待老大补清单。
 >   - 🔄 **2026-10-15 复核订正（重要）**：本段上文〈(3) 定性订正二〉里「**`:7`『超时自动终止并清理子进程』这一句确实言过其实**」**已失效** —— **丁组已办结**，`shell.py` 文件头现为「**杀进程范围分平台**：Windows 走 `taskkill /T /F` 杀整棵树；**POSIX 仅 `proc.kill()` 杀 `/bin/sh` 包装进程（未设 `start_new_session` ⇒ 孙进程可能存活），不承诺 POSIX 侧清理子进程**」（`:7-9`）⇒ **说明层已如实** ✓。⇒ 故丙组①**不再是"说明脱节"，而是"行为待加固项"**（补进下沉清单的理由相应变为：**防"不承诺"被永久化**）。
