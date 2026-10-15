@@ -26,22 +26,12 @@
 ## ⏳ 未结项（待老大裁）
 
 
-> ⭐ **已消沿革（编号不重排；明细不留在本区，回溯 `git log -p -- exchange/log-qoder.md`）**：09-30 报告批 #1–4・6–9 ／ 未结项 #13–#26・#29–#33（14 直改 `TODO.md:209`、15 收口径进 §3、16 §3 载体行登记、17–18 老大自处、19–22 time-context 四条、23 我误推自消、24 甲案瘦身、25 §6 表头补依据／落点、26 缓删区债务由你后续整体过一遍・29 Claude 瘦身的联动引用他已在同一 commit 改掉（`harness/tests/real-api.test.ts` 注释改指 skill）・30 F5 由老大裁「乙」⇒ 代提交口径已落 §3，他区闭合归 Claude（见新 31）・32 技能库载体迁入项目级 `.qoder/skills/`，同名并存"用户级优先"由老大 10-15 双哨兵专测坐实（细节见提交链 `3c81b5c`／`018a3c5`，本轮清理后本区不再留副本）・12（WB 已把 S7 扩成〈输出与收口〉四块：判定成立才收口 → ①标 TODO ②通知 Qoder 同步 docs ③阶段收尾通知归档，并明文「WB 只亲自改 TODO，②③是交接」「复验结论落点在 docs、通知须写全」「一次性小修不走此链」——比我原建议文案更严 ⇒ 闭环缺口消除）；连带两处表述层小项（`QODER.md`〈可写区〉同级 bullet 与 `:44` 缺 WB 清理权指针）经 §3 ＋ §3.2 分层尺兜住，不再单列。
+> ⭐ **已消沿革（编号不重排；明细不留在本区，回溯 `git log -p -- exchange/log-qoder.md`）**：09-30 报告批 #1–4・6–9 ／ 未结项 #11・#13–#26・#29–#33（14 直改 `TODO.md:209`、15 收口径进 §3、16 §3 载体行登记、17–18 老大自处、19–22 time-context 四条、23 我误推自消、24 甲案瘦身、25 §6 表头补依据／落点、26 缓删区债务由你后续整体过一遍・29 Claude 瘦身的联动引用他已在同一 commit 改掉（`harness/tests/real-api.test.ts` 注释改指 skill）・30 F5 由老大裁「乙」⇒ 代提交口径已落 §3，他区闭合归 Claude（见新 31）・32 技能库载体迁入项目级 `.qoder/skills/`，同名并存"用户级优先"由老大 10-15 双哨兵专测坐实（细节见提交链 `3c81b5c`／`018a3c5`，本轮清理后本区不再留副本）・12（WB 已把 S7 扩成〈输出与收口〉四块：判定成立才收口 → ①标 TODO ②通知 Qoder 同步 docs ③阶段收尾通知归档，并明文「WB 只亲自改 TODO，②③是交接」「复验结论落点在 docs、通知须写全」「一次性小修不走此链」——比我原建议文案更严 ⇒ 闭环缺口消除）；连带两处表述层小项（`QODER.md`〈可写区〉同级 bullet 与 `:44` 缺 WB 清理权指针）经 §3 ＋ §3.2 分层尺兜住，不再单列。・**#11 三项全落定**：② `description` 如实化与 ③ `score_threshold` 去默认值均已办（交付 `a4da878`、WB 独立复验成立、docs 面我已同步）；① POSIX 杀组那条"裁定与承接两处失联"，由老大 10-15 在 `HUMAN_NOTE.md`〈本地能力下沉〉条**亲自补入第③项**而消除（我核过：该条现列三项、其引的 `backend/tools/shell.py:7-9` 自述与代码一致）⇒ 本区不再占账，docs 侧的下沉清单已改成指向该条的指针。
 > 本区**只留在办事**：下表状态区 ＋ 未结项 ＋ 通用纪律。已办结即删、不留指针（头部规矩）。
 
 5. **`TODO.md` 精简**：第二刀 ✅（09-30）；**第三刀**（`DSH-3 · 贯穿规则` 迁 `docs/`）按原裁**等 DSH-3 完成后议**。
 
 10. **`server.api_key` 是否现在就设（待裁）**：设前实测出新前提——`client/` 全仓无任何 Bearer 注入通道（grep `Authorization|Bearer|api_key` 零命中）⇒ **直接填 key 会让现态 `/api/` 全部 401**；「运行期填 Key ＋ Bearer 注入」是方案 §4.2 的未实现改造点。两条路：**(A)** 设 key ＋ 派 Trae 补 `client/src/api.ts` 与 `client/chat.html` 的 Bearer 头（一次闭环）；**(B)** key 只写 prod profile（`LARRY_CONFIG` 通道），dev 现态不动、上云时天然生效。口径已落 `exchange/deployment-architecture.md` §五〈待裁〉。
-
-11. **代码行为层（②③ 已裁已办 ⇒ 只剩 ①）**：② 工具 `description` 已如实化为 `cmd.exe`／`/bin/sh`、③ `vector_store.py` 的 `score_threshold` 已去默认值成必需参数（只改签名、**未改任何取值**）—— 交付 `a4da878`、WB 独立复验成立，docs 面我已同步（`product-positioning.md` 正文＋§4 变更记录）。
-
-⚠️ **①（POSIX 超时只杀 `/bin/sh` 壳，未设 `start_new_session` ⇒ 孙进程可存活，真改要 `os.killpg` 且只能 CVM 侧验）＝已裁**（10-13 丙组①：不现在修、随 shell／file_ops 端侧下沉一并做），但**代码未改**（`backend/tools/shell.py:104`／`:106` 仍走 `proc.kill()`；全库无引入 `killpg`／`start_new_session` 的实现提交），10-13 办结的只是**表述层**（丁组头注释如实化 ＋ `docs/product-positioning.md` 2.7.1／2.7.2 在册）。
-
-🔴 **顺带查出一条漏口（待你落笔）**：WB 那笔提交 `63e1aff` 的信息写「已写入 `HUMAN_NOTE:49`」，但实测**从未写进过**——`git log --all -S` 搜索串 `-- HUMAN_NOTE.md` **零命中**，现〈以下是初步裁定为过时计划的条目…但是缓删…〉节内的**「本地能力下沉（shell/file_ops 端侧化）」条目**（`- [ ]` 项、非编号条目）其**一并完成清单只有两项**（① shell 鉴权重构、② 命令注入加固），**不含 POSIX 杀组**。⇒ 若照现清单做下沉，这条会被漏掉（裁定与承接两处失联）。补法（在该条目 ② 之后加一条）：
-- `③ POSIX 侧超时杀进程组（create_subprocess_shell 设 start_new_session=True ＋ os.killpg 杀整组；若决定不做，则在 HUMAN_NOTE 与代码注释两侧同步改口径为"本壳不承诺 POSIX 侧子进程清理"）`
-
-⇒ 文档面我已就地改（① 从"待裁"挪成"已裁·挂下沉"），⛔ `HUMAN_NOTE` 归你，未动。
-
 
 27. **〈技能沉淀〉短尺 —— 只剩我这一份（QODER）**：机制层已齐（§3.3 ＋ `[沉淀纪律]`）；执行层四家均已贴 —— CLAUDE／TRAE／WB（`.workbuddy/memory/MEMORY.md` 现有〈技能沉淀〉一节）／**ZCode（`AGENTS.md`）**，⛔ 唯 **`.qoder/rules/QODER.md` 仍零命中**（`grep -c 技能沉淀` 实测＝0）。**我这份的载体口径要按新结论改**（不再是"用户级"）：
 
