@@ -25,7 +25,7 @@
   - `.claude/CLAUDE.md` — Claude约束文件（本文件，归老大）
   - `.trae/`文件夹 — Trae私有文件
   - `.qoder/`文件夹 - Qoder私有文件
-  - `.workbuddy`文件夹 — WorkBuddy私有文件
+  - `.workbuddy`与`.codebuddy`文件夹 — WorkBuddy私有文件
   - `HUMAN.md`与`HUMAN_NOTE.md` - 人类治理区
   - `docs` - 文档区
   - `archive` - 归档区
