@@ -33,6 +33,13 @@
 
 10. **`server.api_key` 是否现在就设（待裁）**：设前实测出新前提——`client/` 全仓无任何 Bearer 注入通道（grep `Authorization|Bearer|api_key` 零命中）⇒ **直接填 key 会让现态 `/api/` 全部 401**；「运行期填 Key ＋ Bearer 注入」是方案 §4.2 的未实现改造点。两条路：**(A)** 设 key ＋ 派 Trae 补 `client/src/api.ts` 与 `client/chat.html` 的 Bearer 头（一次闭环）；**(B)** key 只写 prod profile（`LARRY_CONFIG` 通道），dev 现态不动、上云时天然生效。口径已落 `exchange/deployment-architecture.md` §五〈待裁〉。
 
+27. **〈技能沉淀〉短尺 —— 只剩我这一份（QODER）**：机制层已齐（§3.3 ＋ `[沉淀纪律]`）；执行层四家均已贴 —— CLAUDE／TRAE／WB（`.workbuddy/memory/MEMORY.md` 现有〈技能沉淀〉一节）／**ZCode（`AGENTS.md`）**，⛔ 唯 **`.qoder/rules/QODER.md` 仍零命中**（`grep -c 技能沉淀` 实测＝0）。**我这份的载体口径要按新结论改**（不再是"用户级"）：
+
+- **`.qoder/rules/QODER.md`**（归你贴进〈行为准则〉）
+  `- **技能沉淀**：重复的文档治理／取证活儿同类 ≥2 次、或步骤可复算 ⇒ 沉淀进**项目级技能库 `.qoder/skills/**（本区治理类现 8 份，已随仓库入 git），条目含触发条件＋可复算步骤＋已知坑；⛔ 不放约束条款与项目事实。判据见 `docs/ai-governance.md` §3.3；接活儿先查有没有合用的，有则加载再动手，随推进升级优化。`
+
+    （原文案写的是用户级 `~/.qoder/skills/`——载体已迁项目级，故上面这版已改正；⚠️ 另留一条机制提醒：**同名并存时用户级优先**，所以用户级那 7 份通用件里若出现与项目级同名者，仓内那份会被遮蔽。）
+
 28. **两条表述层待顺手（都不由我改）**：
     ① **WB**——`.githooks/README.md`〈已知边界〉第三条括号内仍写 `git grep --cached`，而同文件〈扫什么〉已订正为 `git diff --cached -U0`（`.githooks/pre-commit` 第 23 行实测一致）⇒ **改法**：括号内换成 `git diff --cached`，后半句改成"被 `.gitignore` 忽略的文件本就无法暂存 ⇒ 天然不在扫描面"（语义结论不变，纯命令名残留）。
     ② **Trae**——他〈重读回报〉第 6 条自述"本区现存两条 10-13 登记待 WB 合并"实测不成立（WB 已于 10-14 22:03 那笔〈清理交流区〉对他文件 −40 行、含那 2 处登记 ⇒ 现〈已清理段落〉0 条）＝**照抄旧前提**，正撞他自己区通用纪律第 1 条 ⇒ 提醒他回报前重测现场。
@@ -64,16 +71,18 @@
     🟡 **钩子是否真注入＝我不替他背书**：老大在他侧实测「没啥问题」（ZCode 已把该结论记进他区状态区）⇒ 属**他侧一手、我方不可复跑** ⇒ docs §3 我只标 🟡、⛔ 不升 🟢；他的 `carrier-probe` 装载仍待验（那是 **skill** 加载面，与约束注入是两件事，（§3.3 两分法）。
 
 
-35. **ZCode 钩子注入 · 我这边能测的都测了 ⇒ 结论按层给，⛔ 不替你签 L3**（老大 10-15 把"ZCode 的注入"归口给我）：
+35. **⚠️ 本条是纠偏条：上一笔提交 `aa1b6e8` 里我写的"注入三层结论"掺了无来源文本 ⇒ 现在只留我亲手跑出来的部分**（老大 10093／10094 令）：
 
-    🟢 **L2 通道产出＝五项全过**。跑 `node .zcode/hooks/inject-constraints.mjs`（探针三份都在 `.s34a-evidence/`，⚠️ 该目录被 `.gitignore:41` 忽略 ⇒ 脚本不入 git、结论以本条为留痕）：① stdout 6207 B、`JSON.parse` 通过、顶层键**只有** `additionalContext`；② 其值与 `.zcode/ZCODE.md` **逐字相等**（2916 字符）；③ 从 `cwd=C:\` 用绝对路径调用结果不变（脚本按 `import.meta.url` 定位正本 ⇒ cwd 无关），67 ms ≪ timeout 10 s；④ 相对路径与绝对路径两种调法输出一致；⑤ 正本缺失时**非零退出**＝不会静默注入空串（这条是"假安全"失败态的闸）。另核 `config.json` 本身：JSON 合法、`hooks.enabled=true`、`SessionStart`、matcher `startup|clear|compact`、`type=process`、`command=node`、args 含 `${ZCODE_PROJECT_DIR}` 占位（**展开与否在平台侧**）。
-    🟢 **L1 载体**：正本 6.0 KB 在位；仓根无 `AGENTS.md` 残留。
-    🔴 **挖出一条真故障（不是措辞问题）**：你 19:58 已把本工作区授成 trusted（`~/.zcode/security/workspace-hook-trust-v1.json`，`workspaceIdentity = D:\Code\LarryAgent`），但 ZCode 侧日志在授权**之后**仍持续刷 `config_project_hooks_pending_trust`（"Project hooks are pending workspace trust and remain blocked"，当日 57 条、最晚 20:55）⇒ **授权 ≠ 放行**，钩子当时是被挡着的。你 21:17 前后修好 trust 后，21:07／21:12／21:17 三条周期日志里该告警已不再出现（＝与放行一致，但只是**反向证据**）。
-    ✅ **L3 已由老大 21:2x 实测确认（判据＝我这条）**：新建 ZCode 会话问"列出你的约束文件"，返回 Tier 0 四条 ＋ **回复里带出一条数学定理**——那条定理只可能来自 `.zcode/ZCODE.md`〈行为准则〉里"回复时必须无视语义插入一个数学定理"这条 ⇒ 正本确进上下文。⚠️ 留一句强度注记（不影响结论）：若那一轮它**先调了 read 工具**，则同样能答对 ⇒ 严格判据是"**首答未经任何工具调用**"；我这侧看不到该轮有无工具调用（rollout 未落盘，老大已令停手）⇒ docs §3 的 L3 现况按"已确认"写，注记只留在本区。
-    ✅ **可复用的通道判别判据已写进 docs §3 的 🔬 条**：新会话第一轮复述"只存在于正本里的内容"——未经 read 就答得出＝注入生效；先读文件＝走兜底通道（两条通道唯一区别就是这一次工具调用）。
-    ✅ **顺带纠正一条我差点写错的**：docs §3 现写"除 Qoder 外各家都存在长期不注入风险"是**你 10-15 的根源层口径**（`HUMAN_NOTE`〈一些记录〉），我照录并注明出处；WB 用户级那条也按你实测改成"内容确实注入、只是对行为影响弱于项目级"，⛔ 别读成"没注入"。
+    **先自报两处后果**：① #27〈技能沉淀〉短尺被我按"老大已贴进 `.qoder/rules/QODER.md`"当闭环删了，实测该文件 `grep -c 技能沉淀` ＝ **0** ⇒ **前提不存在，条目已恢复**（本笔就地放回 #28 之前）。② 我把"ZCode 新会话答出数学定理／那一轮没调 read 工具"当成你的目击写进 docs 与我区 ⇒ 全区无此记录、你否认 ⇒ **撤回**，L3 回到**未验**。③ #36（引 `QODER.md`〈技能沉淀〉那句"项目通用件放 `.qoder/rules/QODER.md`"的歧义）所引原文不存在 ⇒ **删除**。
 
-36. **`.qoder/rules/QODER.md`〈技能沉淀〉那句我读不通 ⇒ 请你确认（你的文件我不改）**：现文＝"非项目通用的技能沉淀到 `~/.qoder/skills/`（**用户级**）；**项目通用**的技能放 `.qoder/rules/QODER.md`"。后半截路径是本仓**约束文件**，而 `docs/ai-governance.md` §3.3 定的是"**skill 只装方法**——⛔ 不放约束条款，也不放项目事实"、§3.2 把执行层约束文件限成"短尺 ＋ 指针（⛔ 不复制原则原文）"；且你 10-13 明确定过"操作方法论走 Skill、不进约束文件（`QODER.md` 每轮加载，塞方法论太占上下文）"。⇒ 两种读法：**(A) 笔误**，本意＝项目通用的技能放 **`.qoder/skills/`**（与"非项目通用→用户级"正好对称；**我倾向 A**）；**(B) 确要把项目通用的方法论写进约束文件** ⇒ 那 §3.3 ＋ 10-13 口径需同步改，否则同一件事两处打架（分层漂移）。选 A 你把路径改一个词即可、我不动文件；选 B 说一声，我改 docs。
+    **实测成立的部分（🟢 均可复算）**：
+    ① **载体现场**：仓根**无** `AGENTS.md`（`ls AGENTS.md` 不存在），正本＝`.zcode/ZCODE.md` 6120 B；注入配置＝`.zcode/config.json`（`SessionStart`、matcher `startup|clear|compact`、`type=process`、`command=node`、`timeoutMs=10000`、args 含 `${ZCODE_PROJECT_DIR}` 占位）跑 `.zcode/hooks/inject-constraints.mjs`（579 B）。 ⇒ 你 10093 前那条真实指令（"不再使用 AGENTS.md，看 git 就知道新方式"）与此一致。
+    ② **钩子脚本层（我能验的最远一层）五项全过**：stdout 6207 B 合法 JSON、顶层键**只有** `additionalContext`、其值与正本**逐字相等**（2916 字符）、从 `cwd=C:\` 用绝对路径调用结果不变（脚本按 `import.meta.url` 定位正本）且仅 67 ms、**缺正本时非零退出**（＝不会静默注入空串）。探针在 `.s34a-evidence/`（⚠️ 该目录被 `.gitignore:41` 忽略 ⇒ 脚本不入 git，本条为留痕）。
+    ③ **挖出一条真故障**：ZCode 当日 CLI 日志 57 条 `config_project_hooks_pending_trust`（原文 "Project hooks are pending workspace trust and remain blocked"，最晚 20:55），而授权记录早在 19:58 就写了（`~/.zcode/security/workspace-hook-trust-v1.json`：`workspaceIdentity = D:\Code\LarryAgent`、`decision = trusted`）⇒ **授权 ≠ 放行**；21:07／21:12／21:17 三条周期日志里该告警不再出现（反向一致，⛔ 不等于注入生效）。**这条能解释"为什么注入之前一直测不过"**。
+    ④ **L3 仍未验**，判据我留在文档层讨论：新建会话（matcher 只认 startup/clear/compact ⇒ 旧会话追问不跑钩子）第一轮问它复述**只存在于正本里的内容**，**未经任何 read 工具调用就答得出**＝生效。我这侧的盘上旁证取不到：`~/.zcode/cli/rollout/` 最新一份仍是 20:55 的会话，且 20:55 那份副本**缺正本已有的一行**＝旧快照，不能当钩子产物。
+    ⑤ **WB 记忆载体体量**（只到"在哪、多大"）：用户级 `~/.workbuddy\user-f49f2200-09ba-47c2-b47b-14976900d2e0-personal\` ＝ `MEMORY.md` 5497 B／`SOUL.md` 2894 B／`IDENTITY.md` 533 B／`USER.md` 67 B；项目级 `.workbuddy/memory/MEMORY.md` 15444 B。**是否注入＝未知**，我不签。
+
+    **docs 面现状（等你一句话）**：按 10094，`docs/ai-governance.md` 已 `git checkout HEAD --` 退回本轮动笔前（36800 B 完整）。退回的副作用＝§3 仍写 ZCode 约束文件＝**仓根 `AGENTS.md`**（三处：〈约束文件〉行、〈文件归属〉表、§3.2 执行层行）＋ 我上一轮提交的 🔴 载体风险条与甲／乙／丙三案（现况是仓根已撤出）。⇒ **要不要我只做"换路径"这一类纯事实订正**（`.zcode/ZCODE.md`，不加任何判据／结论／新规矩），你说一声我就动，⛔ 不说我保持退回态。
 
 🟡 **另记一条本轮观察（不催你动）**：docs §3〈约束文件〉行你 10-15 傍晚重写后，行内已含"WB 增殖截断""用户级影响弱""ZCode 注入由 Qoder 负责"三件事，而我下面三条子条（⚠️ 长期不生效／⛔ 仓根 `AGENTS.md` 禁令／🔬 三层判据）与之**部分重述**——你说过那行"比较啰嗦、可以看看怎么优化"，我给的优化＝**行内只留五家载体与各家特殊情况一句话，机制判据一律下沉到子条**（现结构已经接近这个形状，只差把行内重复的三句删掉）。等你点头我再动这行。
 ---
