@@ -9,9 +9,11 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| — | — | — | ✅ **评审块已闭环**（Claude 回报 `1b5d07c` ＋ WB 复验成立：18 漏洞抽核属实）⇒ 判据草稿已修订为 **v2**（`exchange/dsh-36-s4-criteria.md`），**待老大终审**（重点 §6-3 补偿定义不验） | 2026-10-17 |
+| Qoder · #38 docs 落笔（DSH-3.6 判据进 `dsh-migration.md` §3.6 ＋ `product-positioning:205` 指针修正） | Qoder | 本机 | 🔵 待办（改法在 `log-qoder.md` #38） | 2026-10-17 |
+| Trae · DSH-3.6 双写闭环＋注入面（J0–J5，0 token） | Trae | 本机 Windows | 🔵 待跑（稿在 `log-trae.md`） | 2026-10-17 |
+| Trae · DSH-3.6.1 召回闭环（J6，需 key） | Trae | 本机 Windows | ⏸ **卡点**：3.6 回报且 WB 复验通过后才跑 | 2026-10-17 |
 
-> 历史各块（3.7.4·J6 ／ 3.8.1 ／ 3.8.2）均已回报并复核成立，落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。**3.6 后续链**：老大终审 v2 → 判据定稿 → Qoder 落 `docs/dsh/dsh-migration.md` §3.6 → 派发稿 Trae（3.6 双写＋注入面 0 token ／ 3.6.1 召回需 key）。
+> ✅ 前置链已闭环：判据 v1 → Claude 反向举证（`1b5d07c`，18 漏洞）→ WB 复验成立 → v2 → **老大 2026-10-17 终审通过（v3 定稿）**：补偿「定义不验」＋ 时点三层（HUMAN_NOTE:103 ／ DSH-4 默认 ／ 降级真发生提前触发）＋ J5 并入 3.6。历史各块（3.7.4·J6 ／ 3.8.1 ／ 3.8.2）均已回报并复核成立，落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
 
 ---
 

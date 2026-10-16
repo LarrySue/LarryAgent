@@ -56,7 +56,7 @@
 #### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
 
 > **2026-10-17 就地细分（WB，按「一次派发 ／ 一次测试 ／ 一次复验」标准）**：拆 **3.6 双写闭环**（0 token）＋ **3.6.1 召回闭环**（需 key · LLM 端到端）—— 依据：两块交付面与失败模式不同（事件→库 vs 库→prompt 注入）；3.6 先排掉最大风险（Cordis 哑坑 ／ 假绿哨兵）且**不需要 key**；3.6.1 的 key 侧调试不污染双写侧归因（判据可分，同 3.0 三态教训）。**串行卡点**：3.6.1 待 3.6 库就位后再派。
-> **判据草稿 v2（待老大终审）** = `exchange/dsh-36-s4-criteria.md`（v1 经 **Claude 反向举证评审**〔回报 `1b5d07c`，18 条漏洞 ／ 堵洞 9〕＋ **WB 复验抽核属实**后修订为 v2；J5 并入 3.6、J0 新增、18 条修补逐条落位）；定稿后权威落点归 `docs/dsh/dsh-migration.md` §3.6（Qoder 办，WB 不亲自改 docs）。
+> **判据定稿 v3** = `exchange/dsh-36-s4-criteria.md`（v1 → Claude 反向举证评审〔回报 `1b5d07c`，18 条漏洞〕＋ WB 复验抽核属实 → v2 修订 → **老大 2026-10-17 终审通过**；J5 并入 3.6、J0 新增、补偿「定义不验」已裁）—— ⭐ **权威落点 = `docs/dsh/dsh-migration.md` §3.6（Qoder 落笔中，转办已发）**；本稿为派发期自包含副本，docs 落笔后引用改指 docs。
 > **派发前已实测（WB 2026-10-17）**：① `.dsh-home/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` 已就位（结构校验 PASS，冒号空格哑坑未中）② sdk profile 装配含 `system-prompt`（`--dump-config`）⇒ 召回注入面有承载 ③ 参考件 peer `^0.1.0-rc.7` 兼容基线 `0.1.5-rc.2`（版本脱节哨兵不命中）。
 > ⚠️ **派发稿须含的待实测前提（Trae 侧）**：自做插件 import 的 `@deepseek-ai/*` 是否已在 `harness/package.json`（3.3-b 机制事实 (a)）；`npx chroma run` 本机可用性；TS 侧 embedding 资产（`embed-probe`）可跑性。
 
