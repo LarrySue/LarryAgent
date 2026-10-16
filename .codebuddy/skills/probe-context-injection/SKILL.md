@@ -2,7 +2,7 @@
 name: probe-context-injection
 description: "Verify whether a piece of configuration / rule / memory actually reaches the model's context — by inspecting external records (traces, request bodies), never by asking the model. Use when the user asks whether their custom instructions still work, why the agent 'doesn't know' a rule, whether a config is injected, or when any rule file was edited and you must confirm it is really loaded."
 description_zh: "探针：核查「某段配置/规则/记忆是否真的注入到 AI 上下文」。当用户问「我设的规则生效了吗」「这条指令有没有注入给你」「你为什么不知道 X」，或改动规则文件后要确认真的被加载时使用。核心铁律：AI 无法内省自己的 system prompt，一律查外部记录（trace/请求体）；且必须按目录做全量统计，区分「通道/窗口差异」与「时间回归」，单样本结论不可用。"
-version: 1.0.0
+version: 1.1.0
 allowed-tools: Read,Write,Edit,Bash,Grep,Glob
 agent_created: true
 ---
@@ -43,10 +43,20 @@ WorkBuddy 侧常见位置：
 ### 2. 找「实际发出的请求」记录
 
 ```
-~/.workbuddy/traces/<端口号>/trace_*.json
+~/.workbuddy/traces/<端口号>/trace_*.json        # 旧格式（~2026-10-11 前）：单 JSON，spans 完整
+~/.workbuddy/traces/<端口号>/trace_*.jsonl       # 新格式（2026-10-12 起）：逐行 span_start/span_end
 ```
 
-每个文件含该会话的 system prompt 全文 ＋ spans。二进制安全搜索即可（json 内标签原样保留）。
+⚠️ **jsonl 格式的 generation 请求体被截断在 ~20KB** —— 而 `<user_custom_instructions>` 块位于
+**首轮 user 消息尾部**（`</product_identity>` 之后，**不在 system 消息本体**），刚好被截掉
+⇒ **10-12 后的会话纯 trace 不可判**，只能判 10-11 前的旧格式会话；新会话只能新开会话用自报辅助。
+先按扩展名分流再下结论，别把「截断」误判成「未注入」。
+
+**探针选择**：别用指令内容本身做 needle（对话引用会污染命中）。用**结构探针**：
+`user_custom_instructions` 标签字节存在性，或正则 `</product_identity>.{0,100}<user_custom_instructions>`
+（真·注入形态）。内容 needle 命中 ≠ 注入，须再定位相对首个 `"role":"user"` 的位置。
+
+每个文件含该会话的请求记录 ＋ spans。二进制安全搜索即可（json 内标签原样保留）。
 
 ### 3. 先做全量统计（**关键，别跳过**）
 
