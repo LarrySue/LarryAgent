@@ -9,9 +9,9 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.6 · S4 判据反向举证评审 | Claude | 本机只读 | 🔵 待跑（稿落 `exchange/log-claude.md`） | 2026-10-17 |
+| — | — | — | ✅ **评审块已闭环**（Claude 回报 `1b5d07c` ＋ WB 复验成立：18 漏洞抽核属实）⇒ 判据草稿已修订为 **v2**（`exchange/dsh-36-s4-criteria.md`），**待老大终审**（重点 §6-3 补偿定义不验） | 2026-10-17 |
 
-> 历史各块（3.7.4·J6 ／ 3.8.1 ／ 3.8.2）均已回报并复核成立，落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。**3.6 后续链**（评审回报 → 判据修订定稿 → Qoder 落 `docs/dsh/dsh-migration.md` §3.6 → 派发稿 Trae：3.6 双写 0 token ／ 3.6.1 召回需 key）。
+> 历史各块（3.7.4·J6 ／ 3.8.1 ／ 3.8.2）均已回报并复核成立，落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。**3.6 后续链**：老大终审 v2 → 判据定稿 → Qoder 落 `docs/dsh/dsh-migration.md` §3.6 → 派发稿 Trae（3.6 双写＋注入面 0 token ／ 3.6.1 召回需 key）。
 
 ---
 
