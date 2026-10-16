@@ -48,4 +48,4 @@ CVM  ：EXIT=1  FS_MASK_USED=0x0  …errno=42(ENOMSG)                           
   - ② **自检段已闭环部分** ⇒ 删：**F2**（技术事实并入 F1：内核 `ENOMSG` 拒空掩码 ⇒ 读码推出的"假绿"不存在，`NOTE=` 行为防御性死代码）／**F3**（两坑已入私有记忆 `wsl-msys-evidence-capture-traps`，方法论已入 skill `wsl-evidence-capture`）／**F4**（纪律已入私有记忆 `evidence-capability-enumerate-artifacts`）／**F5**（✅ 已闭合：老大裁定＋口径成文 `docs/ai-governance.md:98`〈代提交口径〉）／**F6**（私有记忆已改写为 `dsh-real-api-key-sources-on-my-channel`）／**F7**（纪律已入私有记忆 `external-claims-context-and-ownership`）＋〈记忆变更〉〈自曝〉〈通用纪律自查〉〈证据落点〉（同上，各自有记忆／git 承接）。
   - ③ **旧登记一条**（WB·二轮）⇒ 按"只留最新一条"规矩随替。
   - ⛔ **未删**：F1 证据本体（唯一待裁活账）＋〈未闭合项〉三条。
-- ⚠️ **同文件另记一条非本次清扫**：本文件工作树曾于 13:07:56 出现 **147 行未提交删除**（`🚨 现场核查` 一～十 ＋ `🧰 技能沉淀` ＋ `🔎 记忆/环境复核`）—— **非我本次所为、无清理登记**，按老大事件收口进程处理。承接核过：事件结论 → `HUMAN_NOTE` `93ce400`；仓外扫描面清单 → `log-workbuddy.md`（WB `77b697b`）；逐字全文 → git 史。若有异议 ⇒ **`git show 883caf8:exchange/log-claude.md` 即恢复源**。
+- ⚠️ **同文件另记一条非本次清扫**：本文件工作树曾于 13:07:56 出现 **147 行未提交删除**（`🚨 现场核查` 一～十 ＋ `🧰 技能沉淀` ＋ `🔎 记忆/环境复核`）—— **非我本次所为；老大 2026-10-16 亲认系其所为**，按事件收口处理。承接核过：事件结论 → `HUMAN_NOTE` `93ce400`；仓外扫描面清单 → `log-workbuddy.md`（WB `77b697b`）；逐字全文 → git 史（`883caf8` 版为完整源）。
