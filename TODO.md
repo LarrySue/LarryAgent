@@ -62,7 +62,7 @@
 
 - [ ] **3.6 · 双写闭环 ＋ 注入面**（0 token ／ 本机 Windows ／ Trae）—— 判据 **J0–J5**：J0 无 key 自证 ＋ 事件清单预检（**开工第一件**）／ 事件确实被消费（含 `sourceEventSeq` 交叉核对）／ 落我们自己的库（反向哨兵 ＋ 阳性证据）／ ChromaDB 双写落库（含**向量指纹 512 维**断言）／ 降级行为（双锚改向：活臂「不得出现降级行」）／ `systemPrompt.context` 注入面（帧原文断言）。场地形态 = 381 同款临时 home ＋ **J0 显式无 key 自证**（临时 home 只消凭据四层中的两层）＋ 临时 memory 库。
 - [ ] **3.6.1 · 召回闭环**（需 key ／ LLM 端到端 ／ 本机 Windows ／ Trae）—— 判据 **J6**（v2：J5 已并入 3.6）：LLM 端到端（A 会话 nonce → B 会话召回；负向对照 = 空库 ＋ **存在性断言双锚**；nonce ≥8 hex；采样口径写死）。key 走 env 层注入（`.credentials.yaml` 值不落稿）。
-- [ ] ⚠️ **双写一致性模型**（3.6 交付「定义」）：SQLite = 真相源 ／ ChromaDB = 派生索引 ／ 不可达时不阻塞对话 ＋ 日志记降级 ／ 补偿行为（恢复后补写）**定义不验**（最小闭环边界；产品规划已列，属 2.4.4）。
+- [ ] ⚠️ **双写一致性模型**（3.6 交付「定义」）：SQLite = 真相源 ／ ChromaDB = 派生索引 ／ 不可达时不阻塞对话 ＋ 日志记降级 ／ 补偿行为（恢复后补写）**定义不验**（最小闭环边界）—— ⭐ **时点（2026-10-17 钉死）**：**产品承接 = `HUMAN_NOTE.md:103`**〈记忆系统调优〉（老大掌握 · 长期）；**工程默认时点 = DSH-4 记忆块**（下方「长期记忆双写 + 人审」行）开工时一并做；**提前触发** = 3.6 之后联调 ／ 使用中 ChromaDB 降级**真发生过一次** ⇒ 单独立块，先到为准。⚠️ `product-positioning.md:205` 指针（「见 TODO.md 记忆系统调优段」）**已失效**（段已挪入 HUMAN_NOTE）—— 修正改法已备，待 Qoder 落笔。
 - ⚠️ 写码前必读：`node:sqlite` 在并发 + `busy_timeout=0` 时 **`prepare()` 阶段就抛错**（Python 侧只在 `run()` 阶段失败）⇒ 错误处理须包到 `prepare` 层。
 - [ ] 📚 **参考件**（登记表 3.6 行）：`ref/community/Asher-2000__dsh-memory-connect` —— 可抄形状 5 处（provide 实例化后的 service ／ inject 声明 seam ／ `systemPrompt.context` order 500 ／ `turn/end` 轮末摘要 ／ `recallSync` 跨会话过滤 `session_id !=`）；⛔ 不可参考：无 ChromaDB 形态（其向量在自家 SQLite 表）／ schema 按产品 2.4 域自做 ／ LLM consolidation 非本步靶子。其 CHANGELOG 自曝两个**静默不生效**根因（Cordis 惰性构造服务 ⇒ 只 `ctx.provide()` 不实例化；召回写进无人读的字段），**与本步判据「事件确实被消费」同源**。
 
