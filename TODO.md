@@ -55,11 +55,16 @@
 
 #### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
 
-- [ ] **session 事件订阅插件**（TS）+ SQLite / ChromaDB 双写
-- [ ] 判据：事件**确实被消费**（不是只注册了监听）+ 数据落在**我们自己的库**（⭐ **带反向哨兵**）+ **新会话能召回**
-- [ ] ⚠️ **双写不是事务** ⇒ 须定义**一致性模型**（ChromaDB 不可达 / SQLite 独存时的降级行为与召回路径）
-- ⚠️ 写码前必读：`node:sqlite` 在并发 + `busy_timeout=0` 时 **`prepare()` 阶段就抛错**（Python 侧只在 `run()` 阶段失败）⇒ 错误处理须包到 `prepare` 层
-- [ ] 📚 **参考件**（登记表 3.6 行）：`ref/community/Asher-2000__dsh-memory-connect` —— SQLite FTS5 + 本地 embedding（`scripts/embed_server.py`）+ `systemPrompt.context` 逐轮召回；⚠️ 其 CHANGELOG 记了两个**静默不生效**根因（Cordis 惰性构造服务 ⇒ 只 `ctx.provide()` 不实例化；召回写进无人读的字段），**与本步判据“事件确实被消费”同源**
+> **2026-10-17 就地细分（WB，按「一次派发 ／ 一次测试 ／ 一次复验」标准）**：拆 **3.6 双写闭环**（0 token）＋ **3.6.1 召回闭环**（需 key · LLM 端到端）—— 依据：两块交付面与失败模式不同（事件→库 vs 库→prompt 注入）；3.6 先排掉最大风险（Cordis 哑坑 ／ 假绿哨兵）且**不需要 key**；3.6.1 的 key 侧调试不污染双写侧归因（判据可分，同 3.0 三态教训）。**串行卡点**：3.6.1 待 3.6 库就位后再派。
+> **判据草稿（未定稿）** = `exchange/dsh-36-s4-criteria.md`（WB 拟 2026-10-17）；定稿后权威落点归 `docs/dsh/dsh-migration.md` §3.6（Qoder 办，WB 不亲自改 docs）。
+> **派发前已实测（WB 2026-10-17）**：① `.dsh-home/.credentials.yaml` 的 `refs.DEEPSEEK_API_KEY` 已就位（结构校验 PASS，冒号空格哑坑未中）② sdk profile 装配含 `system-prompt`（`--dump-config`）⇒ 召回注入面有承载 ③ 参考件 peer `^0.1.0-rc.7` 兼容基线 `0.1.5-rc.2`（版本脱节哨兵不命中）。
+> ⚠️ **派发稿须含的待实测前提（Trae 侧）**：自做插件 import 的 `@deepseek-ai/*` 是否已在 `harness/package.json`（3.3-b 机制事实 (a)）；`npx chroma run` 本机可用性；TS 侧 embedding 资产（`embed-probe`）可跑性。
+
+- [ ] **3.6 · 双写闭环**（0 token ／ 本机 Windows ／ Trae）—— 判据 J1–J4：事件确实被消费 ／ 落我们自己的库（反向哨兵）／ ChromaDB 双写落库 ／ 降级行为（停 chroma server 不阻塞 ＋ 真相源完好 ＋ 日志 fail-loud）。场地形态 = 381 同款临时 home（无凭据 ⇒ 天然无 key 态，0 token）＋ 临时 memory 库。
+- [ ] **3.6.1 · 召回闭环**（需 key ／ LLM 端到端 ／ 本机 Windows ／ Trae）—— 判据 J5–J6：`systemPrompt.context` 注入面（0 token 断言）＋ LLM 端到端（A 会话 nonce → B 会话召回，负向对照：空库答不出）。key 走 env 层注入（`.credentials.yaml` 值不落稿）。
+- [ ] ⚠️ **双写一致性模型**（3.6 交付「定义」）：SQLite = 真相源 ／ ChromaDB = 派生索引 ／ 不可达时不阻塞对话 ＋ 日志记降级 ／ 补偿行为（恢复后补写）**定义不验**（最小闭环边界；产品规划已列，属 2.4.4）。
+- ⚠️ 写码前必读：`node:sqlite` 在并发 + `busy_timeout=0` 时 **`prepare()` 阶段就抛错**（Python 侧只在 `run()` 阶段失败）⇒ 错误处理须包到 `prepare` 层。
+- [ ] 📚 **参考件**（登记表 3.6 行）：`ref/community/Asher-2000__dsh-memory-connect` —— 可抄形状 5 处（provide 实例化后的 service ／ inject 声明 seam ／ `systemPrompt.context` order 500 ／ `turn/end` 轮末摘要 ／ `recallSync` 跨会话过滤 `session_id !=`）；⛔ 不可参考：无 ChromaDB 形态（其向量在自家 SQLite 表）／ schema 按产品 2.4 域自做 ／ LLM consolidation 非本步靶子。其 CHANGELOG 自曝两个**静默不生效**根因（Cordis 惰性构造服务 ⇒ 只 `ctx.provide()` 不实例化；召回写进无人读的字段），**与本步判据「事件确实被消费」同源**。
 
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件） ✅ **全族已归档（2026-09-22）**
 
