@@ -47,6 +47,47 @@
 3. 真伪清单以 Trae 区为准（第 6 条已结，其余等老大逐条核销）；WB 侧无二致。
 4. 账务同步：我区原未结项①（丙组① POSIX 缺落点）与②（docs 同步转办）**均已闭环**（`HUMAN_NOTE.md:50` 已含③ POSIX 杀组；`product-positioning.md:181/:507` 已回填），本区已销账，勿重复办。
 
+### 五、仓外扫描面全量（WB 10-16 上午补查，老二轮）
+
+> 动因：老大最担心 `C:\Users\SuLarry` 下 Qoder 文件被污染（长期深度影响），且提示「Qoder 形态复杂，不止 `~/.qoder/`」。方法＝**窗口 mtime 扫描**（10-15 17:00 起被改动的文件逐一过）× **标记串 grep**（`数学定理`／`now says`／毒化会话 ID `822f2c9d`），两维交叉。**结论：可排除持久污染——所有会被新会话继承的载体全部干净；毒化只留在不会被加载的运行痕迹里。**
+
+**覆盖的 11 个根目录**（Qoder 在本机的全部足迹）：
+
+| # | 根目录 | 形态 | 结论 |
+|---|---|---|---|
+| 1 | `~/.qoder/` | 主数据目录 | ✅ 继承面全净，详见下表 |
+| 2 | `~/.qoder-cli/` | CLI 数据 | ✅ 窗口内仅 `ai-stats/verified-*`（提交统计收据，正常产物） |
+| 3 | `~/.qodersec/` | 安全扫描组件 | ✅ 零可疑改动 |
+| 4 | `~/.qoderwork/` | QoderWork 数据 | ✅ 零可疑改动 |
+| 5 | `AppData/Roaming/Qoder/` | IDE 形态应用数据 | ✅ 窗口改动 **0 文件**（IDE 当时未运行） |
+| 6 | `AppData/Roaming/QoderWork/` | QoderWork 应用数据 | ✅ 同上 0 文件 |
+| 7 | `AppData/Roaming/com.qoder.app.stable/` | 桌面形态应用数据 | ⚠️ 仅一处残留，见下（无注入能力） |
+| 8–11 | `AppData/Local/` 下 `Qoder`／`QoderCli`／`qoder-updater`／`qoder-work-updater` | 安装器／运行时 | ✅ 无可写数据面，略 |
+
+**`~/.qoder/` 内部逐面结论**（继承面＝新会话启动会读的东西）：
+
+| 面 | 结论 |
+|---|---|
+| 全局记忆 `memory/`（30+ 份） | ✅ 窗口**零新增**（最新 10-14 23:54） |
+| 项目记忆 `projects/d--Code-LarryAgent/memory/` | ✅ 仅两笔良性：18:08 `qoder-methods-as-skills.md`＋21:37 `numbered-instructions-only.md`（老大立的编号协议） |
+| 旧记忆树 `memories/019d0559/` | ✅ 窗口零改动 |
+| `settings.json`／`mcp.json`／`mcp-router.json`／`argv.json` | ✅ 全部窗口前（9-15 ～ 10-15 15:06） |
+| `skills/`（7 个技能） | ✅ 目录 mtime 18:28 但**内容零改动**（仅访问痕迹） |
+| `agents/`（空）／`canvas/`／`entry/`／`tasks/` | ✅ 无内容改动 |
+| `qoder-knowledge/` 知识库 DB | ✅ 标记 grep 零命中（窗口内仅 `.db-shm` 临时文件） |
+| `host-actions/result-index/`（40+ json） | ✅ 纯遥测元数据（sessionId／时间戳／开关位），无标记 |
+| `plugins/data/qoder-context-*` | ✅ 索引服务配置，无标记 |
+| `shell-snapshots/` | ✅ 仅一条正常 shell 快照 |
+| `file-history/822f2c9d-…/`（234 个快照） | ⚠️ 毒化会话的文件历史快照，**只读痕迹**，新会话不加载 |
+
+**⚠️ 两点残留（均无注入能力，仅取证意义）**：
+1. `com.qoder.app.stable/chat-session-turn-payload-buffer.sqlite`：可 grep 到毒化会话残留（数学定理×48／now says×17／会话 ID×901），但 **解析表结构确认两张表均为 0 行**——是 SQLite 删行后未 VACUUM 的字节残留，不会被读回。要彻底抹掉可 VACUUM，不做无害。
+2. **毒化会话本体 `822f2c9d-….jsonl` 已从 `projects/` 消失**（`d--Code-LarryAgent` 目录 mtime 10-15 22:17，晚于当夜核查收尾）——老大手动删除或 Qoder 自动清理，**待老大确认**。残留物仍在：`~/.qoder/logs/sessions/D--Code-LarryAgent/822f2c9d-…/segments/*.jsonl`（10 段）＋ Roaming qodercli 会话日志（14 MB）＋ 上述 file-history——均只读。
+
+**排除的误报**：另 6 个历史项目会话 jsonl 含 "now says"（Desktop×2／Documents-Qoder×1／qoderwork-workspace×3），逐条核语境＝正常文档比对句式（"now says X instead of Y"），时间均在窗口前（9 月～10 月初），与毒化无关。`skill-usage.json`（17:58 改动）含 `probe-skill-load`／`qoder-probe-9001` 使用记录＝老大注入探针测试的正常留痕。
+
+⇒ **重开 Qoder 会话不会带毒**。唯一进入长期载体的窗口写入是你自己立的编号协议记忆。
+
 ---
 
 ## 🗂 已清理段落（按交流区规矩）
