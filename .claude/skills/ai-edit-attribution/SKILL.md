@@ -18,6 +18,7 @@ description: 多 AI 共用工作副本里判「某文件改动/某次写回是�
 1. **会话转录空闲证明（最强）**
    - Claude：`~/.claude/projects/<项目>/*.jsonl`，每条消息带 `"timestamp":"…Z"`。扫时间窗内条目＝0 ⇒ 该会话全程空闲。⚠️ 时间戳是 **UTC**（本地 +8h）。
    - ZCode：`~/.zcode/cli/rollout/model-io-sess_*.jsonl`，每行一次模型调用（几十 MB 也逐行解析）。`startedAt` 定回合（UTC）→ `response.toolCalls[].{name,input}` 定该回合**实际工具调用与落点文件**（这就是"它有没有碰过该文件"的铁证）。⚠️ 参数键名是 **`input`**，不是 `args`（写错会静默扫出零条）；⚠️ `request.body` 里没有 messages，别去那里找上下文。
+   - Qoder：聊天会话转录＝`~/.qoder/logs/sessions/<projectKey>/<sessionId>/segments/<ts>-*.jsonl`（每段＝一次运行；`projectKey` 形如 `D--Code-LarryAgent`；含 `tool.requested`（工具参数键是 **`args`**，与 ZCode 的 `input` 相反）与 PostToolUse 钩子载荷）。⚠️ `~/.qoder/projects/<proj>/<sessionId>.jsonl` **未必存在**（headless/插件会话的转录还会自清）；可恢复态在 `projects/<proj>/<sid>/state.json` 与 `compression-v2/state.json`，**没有这两个＝该会话无自动续载入口**。Qoder 记忆注入形态（判"某文件会不会传给新会话"）：项目记忆＝`~/.qoder/projects/<proj>/memory/`，**索引 `MEMORY.md` 自动进会话、正文按需取** ⇒ 新写的 md **不进索引就不进新会话**（索引文件 mtime＋新会话上下文双证）。
 2. **工具目录窗口扫描**：对各家痕迹目录跑 `find <dir> -type f -newermt 'T1' ! -newermt 'T2'`。窗口内有其自身文件写入＝当时在活动；零写入＝该分钟没跑命令（只证「AI 没做」，不证「人类没做」）。
    - ⚠️ **别直接 find 大目录**（`~/AppData/Roaming/<IDE>`、含 `.git`/`node_modules` 的仓）——慢到超时。先 `-maxdepth`，或分目录扫。
    - ⚠️ `-not -path '*/node_modules/*'` **不剪枝**，仍会遍历；要剪枝用 `-prune`。
