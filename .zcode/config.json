@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "SessionStart": [
+        {
+          "matcher": "startup|clear|compact",
+          "hooks": [
+            {
+              "type": "process",
+              "command": "node",
+              "args": ["${ZCODE_PROJECT_DIR}/.zcode/hooks/inject-constraints.mjs"],
+              "timeoutMs": 10000,
+              "statusMessage": "注入 ZCode 审计职责约束（.zcode/ZCODE.md）"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
