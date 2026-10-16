@@ -12,6 +12,7 @@
 | （暂无） | — | — | — | — |
 
 > ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-claude.md`**。
+> 📝 **过程留痕（2026-10-16 晚）**：F1 销账首版提交误把 **WB 已 `git add` 未提交**的 `.workbuddy/memory/2026-10-16.md` 一并带入（共享工作树＋暂存区）⇒ 已 `git reset --soft` 拆出、以路径限定（`git commit -- exchange/log-claude.md`）重提，**WB 暂存态原样保留**；被替换的提交未推送、无引用（reflog 可溯）⇒ 教训：**提交前先核暂存区**（`git status --short` 有他人的 `M`／`A` 项时一律用路径限定提交）。
 
 ---
 
