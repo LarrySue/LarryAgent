@@ -87,7 +87,7 @@
 ### 八、本节挂账
 
 - 六·③～⑦ 待老大核后逐项收口（六·① ② 已闭环＝均系老大手笔/手改；**老大 2026-10-15 晚明示：其余待细看、缓办**）；本节按活日志规矩清理，`RECOVERED` 副本去留随事件闭环。
-- ⏳ **2026-10-16 追加**：家目录 Qoder 面污染判定（第九节）已交付——结论＝**仅 1 个含毒持久文件、且不在自动加载面**；a～d 处置待老大拍板（⛔ 我未动 `~/.qoder` 任何文件）。
+- ⏳ **2026-10-16 追加**：家目录 Qoder 面污染判定（第九节）已交付——结论＝**仅 1 个含毒持久文件、且不在自动加载面**；a～d 处置待老大拍板（⛔ 我未动 `~/.qoder` 任何文件）。**仓外扫描面清单见十（老大令落账）。**
 
 ### 九、`C:\Users\SuLarry` Qoder 面污染判定（2026-10-16 · 老大追加问「新会话会不会把毒带过去、有无长期深度影响」）
 
@@ -106,6 +106,22 @@
 **处置建议（⛔ 我未动 `~/.qoder` 任何文件，供老大裁定／转 Qoder 新会话执行）**：a) ⛔ 别恢复/继续 `822f2c9d`，新会话一律新建｜b) numbered 文件我倾向**移出注入面**（删除或移入非索引目录），其教训价值并入 `log-qoder.md`〈交接〉、改写为「幻觉指令识别」而非"现行协议"，「10095」不实则删｜c) 新会话开工可复算验证句：让它复述所见记忆索引有无「只认编号」条目，出现即索引被重建需再处置｜d) 附带发现（与毒化无关、同机制）：用户级 `~/.qoder/memory/MEMORY.md` 含约 30 条**私人线**记忆，会注入所有工作区会话（22:11 会话已确认）——是否收归老大定。
 
 **边界**：①「默认不会吃到」＝机制推断＋索引实态，非实测新会话（截至落账无新会话跑过）；②"UI 恢复"路径未测；③ 核查面＝10-15/10-16 写入面＋签名串（数学定理／已改名／10094／10095／毒化／金丝雀／trust／幻觉／编号），非逐字通读全部知识/插件文件。
+
+### 十、项目目录之外的扫描面清单（本次事件取证范围 · 2026-10-16 老大令落账）
+
+> 口径：以下均为 `C:\Users\SuLarry\`（`~`）下、**仓外**的面；全部**只读**，未改动、未清理任何残留。仓内各家工具目录（`.claude/`／`.qoder/`／`.trae/`／`.workbuddy/`／`.zcode/`）不属本节。
+
+**扫描根（按面）**
+1. **AI 工具私有区**：`~/.qoder/` 全树（`projects/*/`（含 `memory/`／`state.json`／`compression-v2/`）、`memory/`（用户级）、`skills/`、`memories/019d0559/`、`qoder-knowledge/`、`logs/sessions/*/segments/`、`logs/runs/`、`file-history/`、`host-actions/`、`plugins/`（含 data/*）、`tasks/`、`settings.json`）｜`~/.zcode/`（`cli/rollout/model-io-sess_*.jsonl` 三份、`cli/memories/…`、`cli/artifacts/sess_*/call_*.json`）｜`~/.claude/`（`projects/d--Code-LarryAgent/*.jsonl`、`file-history/a8b4e429-…/`）｜`~/.workbuddy/`（`changes-detail/`、`file-history/`）｜`~/.trae/` ＋ Trae CN 应用数据
+2. **编辑器/应用面**：`~/AppData/Roaming/Code/User/History/`（编辑器本地历史·第 6 路痕迹）｜`~/AppData/Roaming/Code/logs/20261015T135113/`
+3. **家目录根与临时区**：`C:\Users\SuLarry\` 根（脚本残骸）｜`%TEMP%`
+4. **顺带核过的旁键**：`~/.qoder/projects/C--Users-SuLarry-Documents-Qoder-2026-10-13/-10-14`（另两个工作区·仅记 mtime 与毒串，未深查）
+
+**时间窗**：主窗 **10-15 16:45–21:47**（授权"近五小时"）｜定点窗 **18:30–18:45**、**20:35–20:45**、**20:38–20:44**（全盘文件清单）｜追加窗 **10-16 全天**（写入面复排＋`logs/sessions` 零写入核查）
+
+**判据/方法**：`find -newermt` 窗口扫描（注意 `-maxdepth`／`-prune` 剪枝）｜`grep -rl` 签名串（数学定理／已改名／10094／10095／毒化／金丝雀／trust／幻觉／编号／numbered-instructions）｜rollout 逐轮解析（工具键＝`input`）｜编辑器 History `entries.json`＋快照逐版 diff（行尾先归一化）｜mtime 全排序（10-15/10-16 写入面）
+
+**未覆盖/浅覆盖边界（如实）**：① `AppData\Local\` 未逐目录深扫（仅窗口扫描顺带命中 SogouPY/QQ/Chrome 等无关日志；Qoder 索引实体已定位在 `~/.qoder/qoder-knowledge/`，未再另查 AppData）｜② Qoder 程序安装目录/二进制未扫｜③ `~/.qoder/projects` 下 60+ 旧会话 `state.json` 只做毒串扫描、未逐字读｜④ 两个 Documents 工作区 jsonl 只记 mtime｜⑤ 插件 514 文件、知识库 281 文件＝mtime 排序＋毒串扫，非逐字通读。
 
 ---
 
