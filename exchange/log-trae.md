@@ -9,8 +9,8 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🟢 **已回报**（J0–J5 全绿 · 见 §10；代码留工作区待提交指示） | 2026-10-17 |
-| DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | ⏸ **卡点**：待 3.6 回报且 WB 复验通过后才跑（需 key） | 2026-10-17 |
+| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | ✅ **已回报并复验通过**（J0–J5 全绿 · WB 复验判定成立 · 2026-10-18 · 见 §11） | 2026-10-17 |
+| DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | 🔵 **待跑**（WB 已放行 · 需 key · ≤10 次对话预算） | 2026-10-17 |
 
 - ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-trae.md`**。
 - ⚠️ **通用纪律**：
@@ -147,6 +147,21 @@
 **过程观察**（随任务条款 · 写事实附来源）：
 - V6 判据原文「通道（stderr **或** 插件日志文件）」（`dsh-migration.md:1324`）在本轮实测中：stderr 通道被 SDK 实现细节（stdio 三 pipe ＋ private stderrTail）封死，判据预留的第二通道成为唯一路径 —— 判据弹性设计在实测兑现。
 - 「须含本次失败特征，如 URL ／ errno」（`dsh-migration.md:1324`）二选一由现实裁定：第三方 client 包装层吞掉 errno ⇒ 取 URL 侧。第三方库行为改变取证姿势时，判据的「如」字（举例非穷举）是唯一合法落点。
+
+### 11 · WB 复验二：J1–J5 判定成立（2026-10-18）
+
+**复验判定：3.6 回报二成立**（回源核 findings ×4 ＋ 原文物证抽验 ＋ 源码侧判别力核，⛔ 非采信声明）：
+
+- **J1-J2 · 6/6 坐实**：`J1-live-rows.json`（nonce 行 id=1 ＋ `source_event_seq=8 ≡ user/message seq=8` ＋ session id 匹配）；**J2 哨兵阳性实物**（`J2-sentinel-rows.json`：哨兵位行含 `PING-j2-*` nonce ⇒ V3「红因唯一」修补兑现——红是「写到哨兵位置」而非「插件没工作」）；外接标准位变红
+- **J3 · 四件坐实**：基线 0 → nonce 定位（⛔ 无基线式 count+1）；chroma id=1 ≡ SQLite id=1；**`J3-chroma-entry.json` 向量实物 512 维**；余弦 1.00000（V4 更强做法兑现）；端口 18931 ＋ `--host 127.0.0.1` 钉 IPv4
+- **J4 · 双锚坐实**：活臂三锚（终局 31654ms ／ 真相源行 ／ 降级行 ×0）＋ 停臂三锚（终局 47933ms，比值 1.51× 同数量级 ／ 真相源行 ／ 降级行 ×1）；**`J4-server-down.txt`**（裸 ECONNREFUSED 实物）＋ **`J4-down-degraded.log`**（降级行原文：`row=1 url=http://127.0.0.1:18932 reason=Failed to connect to chromadb` ⇒ V6 唯一匹配串 ＋ 失败特征字面满足）；**源码核 J4-i**：`DEGRADED_MARK` 唯一写点在 doubleWrite catch 内（`index.ts:163` catch → `:170` appendFileSync，全文仅注释＋常量两处提及）⇒「只出自失败路径」判别力成立；V7 诚实收窄（connection-refused，不测 hung-server）
+- **J5 · 端到端铁证**：`J5-positive-system-message.json` —— `system/message` seq=7 原文含 **`## LarryAgent 记忆召回（最近 1 条）` ＋ `PING-j5-*` 逐字**（source.kind=plugin · @deepseek-ai/dsh-system-prompt · 同族通道）；负向臂（空库）帧不含 nonce ＋ 无召回块（V10 判别力成立）；双面注册 OBS 附证
+- **Tier0**：证据目录 `sk-` 扫描零命中；工作区未提交项与自述一致（插件 ／ 装置 ／ deps 三件，按老大令挂着）
+- **三条实测坑均有对应改动**（chroma.exe IPv6 绑定 → `--host 127.0.0.1`；SDK client 吞 stderr → `degradedLogPath` 双通道；`ChromaConnectionError` 吞 cause → `url=` 特征互补取证）＋ 自曝装置 bug 一枚（当场修复后全绿，留痕）
+
+**附带产出（转办）**：`request/context` ＝ 路由元数据、注入承载帧 ＝ `system/message` ⇒ `dsh-migration.md:649` 记录订正 ＋ 判据 J5/J6 帧名钉死 —— 已转 Qoder（`log-qoder.md` #43）。
+
+**放行**：3.6.1 卡点解除（2026-10-18），Trae 可跑 J6。
 
 ---
 

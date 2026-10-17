@@ -54,6 +54,12 @@
     - ⚠️ **自曝一处本轮我自己的错**：我先是往 `doc-consistency-audit` §四 **新写**了一条「引用 HUMAN* 不带行号」，动手前没搜自己——回来发现**坑 9 早有同一规矩**（还记着 10-14 你重排〈目前参与AI〉导致全库 5 处 `:NN` 当场失效那次，含我两处）。已**撤掉 §四 那条重复项**，把 10-17 新证据（`HUMAN.md:48` 当场被一笔编辑顶成空行）＋锚串写法＋复算式＋开工触发自检**并进坑 9 原条**。⇒ 教训：**改 skill 前先 grep 自己有没有**（这正是坑 9 该管的领域，我却现学现犯）。
     - 💡 **待裁要不要成文**：这条目前只在**我的 skill**（别家 AI 读不到）。可粘贴进 `docs/ai-governance.md` 的判据句：「⚠️ **引用 `HUMAN.md`／`HUMAN_NOTE.md` 一律「文件 ＋ 锚串」（标题或句子里可 grep 的字面片段），⛔ 不带 `:NN` 行号、不以条目号为锚**——这两份老大常改；各家若持行号引用，改动只限自己区，他人区出文案。」（老大点头 ⇒ 我落 `docs/ai-governance.md`；⛔ 不点头我不动机制层）
 
+43. **docs 帧名订正两件（WB 转办 · 2026-10-18 · DSH-3.6 实测产出、非新判据）**：
+    - **件一**：`dsh-migration.md:649` 事件流粒度清单里「`request/context`（**注入上下文**）」**记录不准** —— DSH-3.6 J0/J5 实测（物证 `D:\Code\_trae-evidence\36\run-j0\J0-frame-request-context.json`〔四字段路由元数据〕＋ `run-j5\J5-positive-system-message.json`〔注入块 rendered in `system/message`〕）：`request/context` = **路由元数据帧**（`provider`/`model`/`contextWindow`/`systemPromptUpdate`，不承载提示词内容）；真正承载 `systemPrompt.context` 注入内容的是 **`system/message`**（渲染后系统提示词原文 · surface node 0 · 实测首块 "You are an AI agent powered by DeepSeek Harness…"）⇒ 该处订正为路由元数据，并补 `system/message`＝注入承载帧事实。
+    - **件二**：docs §3.6 判据 **J5 ／ J6 的断言对象**由「J0 预检定死的帧」改钉 **`system/message` 帧原文** —— 依据＝**帧名由 J0 预检实测定，正是预检的设计用途**（判据「J0 定帧名」机制按设计工作，⛔ 非判据实质改动；实测已在真 DSH 端到端兑现：J5 正向臂 nonce 逐字出现在该帧）。
+    - **附**：`dsh-015-capability-mapping.md` 若亦有 `request/context` 同款描述，顺手 grep 一并核改（WB 未全扫该文件）。
+    - ⚠️ 与 #41 纪律对齐：本转办是「事实订正 ＋ 断言帧名钉死」，有实测物证与 J0 设计用途支撑，⛔ 不泛化成顺手改判据表述。
+
     - ⏩ **B／C／D 老大自办**（`TODO.md:65` 归 WB・`log-workbuddy.md:21` 的 `:50` 已断・`log-zcode.md:35` 的 `:13/:21`）：10-17 老大明示「其他的我看着就改了」⇒ 文案我已在上一轮给出，我不再跟进、也不碰他人区。
     - ⚠️ **forward-annotate（甲案已失效）**：`230437b` 的**提交信息错位**（正文与标题都是上一笔 `ecba599` 的，文件与 diff 本身**全对**：`docs/dsh/dsh-migration.md` 一行引用串 ＋ 本区两行）。发现时 WB 的 `a20de41` 已落在其后（`git rev-list --count 230437b..HEAD` ＝ 1）⇒ ⛔ 不 amend、不 rebase（会连别人那笔一起重写），只作本条登记。**按 hash 找东西的人请注意**：判性尺（位置不判性／措辞判性）的真身在 `ecba599`，`230437b` 实际内容＝A 项引用串修正 ＋ #41 两条；坑防已沉进 `doc-governance-recheck` §四 第 11 条。
 

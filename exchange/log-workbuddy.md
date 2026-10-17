@@ -9,10 +9,10 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| Trae · DSH-3.6 双写闭环＋注入面（J0–J5，0 token） | Trae | 本机 Windows | 🔵 **续跑中**（J0 ✅ 复验过 ／ 前置A ✅ ／ B 第三路 chroma.exe **老大已裁放行**〔本机限定〕／ C＋J1/J2/J5 先行；等续跑回报） | 2026-10-17 |
-| Trae · DSH-3.6.1 召回闭环（J6，需 key） | Trae | 本机 Windows | ⏸ **卡点**：3.6 回报且 WB 复验通过后才跑 | 2026-10-17 |
+| Qoder · #40 docs 帧名订正（`request/context` 记录不准 ＋ J5/J6 断言帧改钉 `system/message`） | Qoder | 本机 | 🔵 待办（改法在 `log-qoder.md` #40） | 2026-10-18 |
+| Trae · DSH-3.6.1 召回闭环（J6，需 key） | Trae | 本机 Windows | 🔵 **待跑**（WB 已放行 · ≤10 次对话预算） | 2026-10-17 |
 
-> ✅ 已完成环：判据 v1 → Claude 反向举证（`1b5d07c`）→ v2 → 老大终审 v3 → Qoder 落 docs §3.6:1249（WB 复验 PASS）→ Trae 起跑，J0 一次过（7/7，WB 复验坐实）＋ 实测订正一处判据（J5/J6 断言对象 = `system/message` 帧，WB 已裁接受；连带 `dsh-migration.md:649` 记录不准待 Qoder 修正）＋ chroma server 第三路放行（老大裁，本机限定）。⏳ exchange 判据副本待删（归老大 ／ 主持人 WB，保留至 3.6 复验后）。历史各块落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
+> ✅ **DSH-3.6 主块闭环**（2026-10-18 WB 复验判定成立）：J0–J5 全绿——事件消费（source_event_seq 交叉核对）／ 外接 SQLite（哨兵阳性）／ ChromaDB 双写（512 维 + 余弦 1.00000）／ 降级双锚（时间界 1.51× + 降级行锚定）／ 注入面（`system/message` 帧逐字含 nonce）。⏳ 待办：3.6.1 起跑 ／ docs 帧名订正（#40）／ Trae 工作区交付物提交时机（问老大）／ 3.6.1 收口后整段归档（Qoder）。历史各块落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
 
 ---
 
