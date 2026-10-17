@@ -112,6 +112,19 @@
 - **② 前提失效报备**：前置 B 预期「server 真含在 npm 包内」经实测在 Win x64 平台不成立（见卡点 1），非跑歪、非工具层故障（client import 已单独验通）。
 - ③ 无其他跑歪；本轮零 key 接触、零真 home 改动、临时 home 已清理（`S36_KEEP_HOME` 缺省 0，`rmSync` 实跑）。
 
+### 9 · WB 复验与裁定（2026-10-17 夜）
+
+**复验判定：回报成立**（回源核十件物证 ＋ WB 独立复跑，⛔ 非采信声明）：
+- **J0 7/7 PASS 全部坐实**：三元组（parent env ABSENT ＋ childEnv delete ＋ 临时 home 无 credentials ＋ cwd 三处 `.env` 全无）；事件清单 13 events ／ 11 种（`user/message` ✅ `turn/end` ✅）；无 key 铁锚比判据更强（`turn/end kind=error` ＋ `MISSING_CREDENTIAL`，assistant/message ×0）；`user/message` seq=8 基准；seq=9 = synthetic snapshot（`source.kind=plugin` 可区分）
+- **帧订正坐实**：`request/context`（seq=11）= 路由元数据四字段（`provider`/`model`/`contextWindow`/`systemPromptUpdate`）；**`system/message`（seq=7）= 渲染后系统提示词原文**（首块 "You are an AI agent powered by DeepSeek Harness…"，surface node 0）；⭐ 附加发现：seq=9 揭示 `@deepseek-ai/dsh-system-prompt` 以 `form:"snapshot"`＋`sections[]` 注入 surface —— 正是召回注入面的同族通道实证
+- **前置 A**：`package.json` +2（`chromadb ^3.5.0` ＋ `@huggingface/transformers ^4.3.1`）、`pnpm-workspace.yaml` +1（`allowBuilds: onnxruntime-node: true`）—— diff 干净无越界
+- **前置 B 两断路，WB 独立复跑坐实**：`node node_modules/chromadb/dist/cli.mjs --version` ⇒ `cli.mjs:34` 抛错（Win x64 不支持）；`docker --version` ⇒ command not found；`chroma.exe` 实物在位（`Python311/Scripts/`）
+
+**裁定（WB）**：
+1. ✅ **帧订正接受**：J5 ／ J6 断言对象 = **`system/message` 帧原文**（J0 已落盘 seq=7）⇒ ⛔ 不再预期 `request/context` 承载注入内容。连带：`dsh-migration.md:649`「request/context（注入上下文）」记录不准 —— 改法已备，连同判据帧名改写转 Qoder 落 docs §3.6。
+2. ✅ **C ＋ J1 ／ J2 ／ J5 先行放行**（Trae 不停工）：不依赖 chroma server 的线先推进。
+3. ⬜ **B 第三路（Python `chroma.exe`）待老大终裁** —— WB 倾向**放行（本机限定）**：chroma HTTP API 跨实现统一（判定对象 = 插件双写行为，非 server 语言）；`chroma.exe` = backend 同栈既有器材（chromadb 1.5.9）；⛔ 只写本机判定场地，**生产 chroma server 选型另议**（npm CLI 的 ARM64 限制是 Windows 平台特性）；补件：J3 ／ J4 开跑前探针复跑一次并落盘输出。
+
 ---
 
 ## 📤 DSH-3.6.1 · S4 召回闭环（LLM 端到端）（WB 派发 · 2026-10-17 · Trae · ⏸ **卡点稿**）
