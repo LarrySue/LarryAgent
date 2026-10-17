@@ -10,6 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并复验通过**（§10 交付 `ae33325` ＋ WB §11 复验成立）｜🔵 **待老大上手体验** ⇒ 退出信号① | 2026-10-18 |
+| DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §12；①②③ 已查实，⛔ ③ 只定性不修） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -141,6 +142,46 @@
 - **Tier0** ✅ 证据目录 ＋ dsh-console `sk-` 零命中；交付物 Trae 自行提交（`ae33325`）；`.dsh-home` 三件按 §2-A（含备份）
 
 **放行**：台子干净，可交老大上手。**给老大的体验提示**（README 已知边界提炼）：① 审批卡不点会一直等（`answerTimeoutMs=0`）——想放弃就停 bridge ② 每次起台是新临时 home，**记忆库持久**（`.dsh-home/larry-memory.db`，里面躺着 Trae 测的 5 行——包括 ORANGE-742 暗号，可直接翻玩）③ 体验重点：事件流面板有没有让「DSH 内部发生了什么」变透明——这正是退出信号①的靶子。
+
+---
+
+## 📤 DSH-3.9.1-a · 实测反馈返工（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
+
+### 0 · 背景（老大上手实测五条，WB 已查实归因；④⑤ 不属本块）
+
+老大摸台后五条反馈，WB 排查结论：**① cwd = 产品决策要变**（`bridge.mjs:58` 默认 `--cwd REPO` 是有意设计——仓库根即工作空间、信任区内操作合法；但 system prompt 注入「Your working directory is D:\Code\LarryAgent」暴露源码根，老大见路径判危险，**已创建 `D:\Temp\DSH-Dev-Temp`** 作替代）；**② 时间戳 UTC 错位**（实锤我方代码：`new Date().toISOString()` 恒 UTC，与 DeepSeek 服务器无关）；**③ shell 调不动 = 独立技术 bug**（帧实证：pwsh 起外部 PS 子进程，DSH 沙箱放行前对它做 Windows ACL 自授权 `SetNamedSecurityInfoW → grantWrite(cwd)`，在仓库根 **ACCESS_DENIED（Win32 5）** ⇒ 进程起不来；信任区不走授权流程 ⇒ 无弹窗静默 fail-closed；非 shell 工具走 Node 进程内不过此 ACL ⇒ 创建/列举全正常）。④（8 轮＝机制确认）⑤（召回双注入面疑点，**待老大裁**）⛔ 不属本块。
+
+### 1 · 任务（四项）
+
+- **A · 默认 cwd 改安全区**：`bridge.mjs:58` 默认值 REPO → `D:\Temp\DSH-Dev-Temp`（保留 `--cwd` 参数可覆盖；README 起法说明同步）。
+- **B · 时间戳本地化**：`bridge.mjs:69`（marker 落盘）／`:299`（stop-report）＋ `packages/dsh-driver/src/index.ts:225/232`（及其构建产物 `lib/index.js` 对应处）的 `new Date().toISOString()` → 输出**本地时刻**（ISO 带 `+08:00` 偏移或本地 wall-clock，择一，全台统一）。⭐ **epoch 值（帧内 `time`）不动**——那是中性事实，只改序列化/显示层。页面显示若有时钟组件一并核。
+- **C · ③ 定性探针（⛔ 只定性、⛔ 不修）**：以新默认 cwd（`D:\Temp\DSH-Dev-Temp`）起台，跑一次**最小 pwsh 调用**（echo 级别），记录 `grantWrite` 是否仍失败。产出二选一判决：
+  - **pwsh 成功** ⇒ ③ = 仓库根目录特例，**已随换 cwd 修复** ⇒ 记档关闭
+  - **仍 Win32 5** ⇒ ③ = 代码缺陷实锤（`SetNamedSecurityInfoW` 调用方 = 上游 dsh-sandbox 组件 vs 我方 `plugin-sandbox-dialect`〔已挂 `.dsh-home` 持久 profile〕——能定位到哪一层就写到哪层，定位不了就如实记「未定位」）⇒ **记档挂「套壳前必修」**，本块⛔不动手修
+- **D · J5 演示路径连锁**：cwd 换区后，README/验收说明里「工作区外需提权」的参照路径同步更新（选一个稳定的台外路径，⛔ 不要用仓库根反向制造提权演示——那正是要消除的暴露面）。
+
+### 2 · 判据（J-a～J-d，工具验收 · 每条可复算）
+
+| # | 判据 | 取证 |
+|---|---|---|
+| J-a | 起台后 **working directory = `D:\Temp\DSH-Dev-Temp`**（帧原文 ／ startup.json 自报二选一，须原文） | `J-a/system-message-frame.json` 或 startup 自报 |
+| J-b | **时间为本地时刻**：wireLog/事件流时间与墙钟差 **<2s**（同机对表），且形态为本地（+08:00 偏移 ／ 本地 wall-clock） | `J-b/clock-compare.json`（wireLog 首末 t vs `date` 墙钟） |
+| J-c | **探针判决明确落盘**：pwsh 退出码＋输出原文（成功 ⇒ 关 ③；Win32 5 ⇒ 记「套壳前必修」＋ 调用方定位到哪层写到哪层） | `J-c/probe-*.json`（含失败原文） |
+| J-d | **J5 两臂在新 cwd 配置下仍成立**：批准 → 动作发生 ／ 拒绝 → 被拦（用 D 更新后的路径） | `J-d/approvals.jsonl` ＋ 文件级证明 |
+
+### 3 · 前置实测（WB 已做 · Trae 开工即用，⛔ 仍须自行复测不照抄）
+
+- `bridge.mjs:58` `const cwd = resolve(argOf('--cwd', REPO))`；`D:\Temp\DSH-Dev-Temp` **已由老大创建存在**
+- ③ 帧证据在 `D:\Code\_trae-evidence\391\run-1792266691996\driver.log.wire.jsonl`（seq 25/47/48 tool/result 原文）＋ 同 run `approvals.jsonl`（仅 child-exit 一条，**零授权帧** ⇒ 信任区静默）
+- 时间戳点：`bridge.mjs:69/:299`；dsh-driver `src/index.ts:225/232`（`lib/index.js` 是构建产物，改 src 后须连产物一起改 ／ 或重新构建——你定，README 注明）
+- 假绿坑：`--dump-config` 不证生效（须真 boot）｜时间「看起来是本地」≠ 判据成立（须与墙钟对表 <2s）｜pwsh 一次成功 ≠ 稳（探针至少 2 次，都记）
+
+### 4 · 交付物与纪律
+
+- 改动仅限：`harness/scripts/dsh-console/`（bridge＋README）＋ `packages/dsh-driver/`（时间戳）；⛔ **不动** `plugin-s4-memory` ／ `.dsh-home`（本块零落盘）／ `docs/` `archive/` `HUMAN*.md` ／ `backend/`
+- 证据：`D:\Code\_trae-evidence\391a\`（J-a～J-d 各子目录 ＋ README）
+- 提交：只提自己文件（提交前 `git diff --cached --stat`）；以 Trae 身份签名（L38 单次参数法）
+- 回报格式：结论先行 → J-a～J-d 逐条证据（原文落盘、⛔ 不改写、注明通道）→ ③ 判决书 → 未闭合项 → 自曝。写完改顶部状态区。
 
 ---
 
