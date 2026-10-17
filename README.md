@@ -183,7 +183,7 @@ cd client && npm run test:unit
 | `HUMAN.md` / `HUMAN_NOTE.md` | 人类治理区（AI 只读）：前者为约束，后者为零散记录 |
 | `TODO.md` | **活跃待办，唯一事实源**——未决事项一律以此为准 |
 | `docs/README.md` / `archive/README.md` / `exchange/README.md` | 三区各自规则（落位标准 / 维护归属 / 区域纪律） |
-| `.claude/CLAUDE.md` / `.trae/TRAE.md` / `.qoder/rules/QODER.md` / `.workbuddy/memory/MEMORY.md` / `.zcode/ZCODE.md`（ZCode；由 `.zcode/config.json` 的 SessionStart 钩子注入） | 各 AI 角色约束文件（**一律放各自私有目录，仓根不设约束文件**） |
+| `.claude/CLAUDE.md` / `.trae/rules/TRAE.md` / `.qoder/rules/QODER.md` / `.workbuddy/memory/MEMORY.md` / `.zcode/ZCODE.md`（ZCode；由 `.zcode/config.json` 的 SessionStart 钩子注入） | 各 AI 角色约束文件（**一律放各自私有目录，仓根不设约束文件**） |
 
 **定案区 `docs/`**（活跃权威 / 单一真相源）—— ⚠️ **完整索引见 `docs/README.md`「文件索引」，本表只列最常引用者**（避免两处各列一半而漂移）：
 
