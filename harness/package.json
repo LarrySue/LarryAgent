@@ -29,6 +29,7 @@
     "@deepseek-ai/dsh-sdk-protocol": "0.1.5-rc.2",
     "@huggingface/transformers": "^4.3.1",
     "chromadb": "^3.5.0",
+    "ws": "^8.22.0",
     "zod": "^4.5.4"
   }
 }
