@@ -12,6 +12,7 @@
 | DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并通过 WB 复验**（§10 `ae33325` ＋ §11）｜🔵 **待老大再体验**（返工 §13 已完成）⇒ 退出信号① | 2026-10-18 |
 | DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | ✅ **已回报并通过 WB 复验**（§12-5 ／ §12-6：J-a–J-d 全过；③ 判仓库根特例已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
 | DSH-3.9.1-b · ① 补修：召回块时间戳 UTC（memories 表 created_at） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §14；⚠️ 本单**授权动 plugin-s4-memory 时间相关行**——破 §12 禁区，见稿内边界） | 2026-10-18 |
+| DSH-3.9.1-c · token 经济性（缓存前缀审计 ＋ usage 计量 ＋ compaction 核查 ＋ 双面去重） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §15；⛔ 不含体验权衡项） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -245,6 +246,45 @@
 ### 4 · 回报格式
 
 结论先行 → J-e/J-f 逐条证据（原文落盘、⛔ 不改写）→ 是否发现第三时间源 → 自曝。写完改顶部状态区。
+
+---
+
+## 📤 DSH-3.9.1-c · token 经济性优化（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
+
+### 0 · 背景（老大红线 ＋ 调研修正 ＋ 老大插话定位）
+
+老大二轮实测第五条：「问了几句话的消耗 ≈ Trae 两轮工作的量，真用不起」。WB 初列「就地省钱」候选被老大纠正「**勿闭门造车——上下文放大增成本但影响体验，关键是两端平衡，成熟方案大量存在，须充分参考**」。两路调研（sombrainc ／ aifrontierpost ／ particula 三源综述 ＋ DeepSeek 官方计价）后方案重排：
+
+- ⭐ **DeepSeek V4-Flash 缓存命中输入价 = 未命中的 1/30**（低谷 $0.05 vs $1.5/百万 token；工作日 9-12/14-18 点双价、周末全低谷）⇒ **ROI 第一是「让前缀命中缓存」而非「减少上下文」**——后者伤体验，前者免费
+- ⭐ **老大插话定位（WB 帧原文验证坐实）**：召回块位于 system prompt **第 4 行**（两行框架身份之后、几千 token 工具说明**之前**），每条带 `[created_at]` 时间戳——**新记忆写入即前缀变动 ⇒ 第 4 行往后全部缓存必 miss**。这是成熟方案里点名最狠的反模式（volatile prefix：动态值混进前缀 = 永久 cache miss，single highest-return fix）
+
+**成本四源诊断**（`391a/run` wireLog）：① 缓存必 miss（上述）② 消息历史线性累积（第 N 轮背全部前轮）③ 工具结果滞留（老大测试时模型整本 read 俄乌简报——几十 k token 一次进、之后每轮背着走）④ reasoningEffort=high 输出侧计费。
+
+### 1 · 任务（四项）
+
+- **A · 缓存前缀修复（核心）**：① **召回块移除 `created_at` 时间戳**——时间戳是 debug 信息、对模型零价值却毒化前缀；可见性移居事件流面板（或保留 SQLite 内，⛔ 不进 prompt）；② **召回块移出稳定前缀区**——改到动态区（尾部 ／ 或仅走 context 面 synthetic 帧），保证系统提示词前 1k token 在无新记忆时 **byte-identical**；③ **全审计**：把一次真实请求的前 1k token 逐行过一遍，列出所有 volatile 元素（时间戳 ／ session id ／ 随机值），逐个处置。
+- **B · usage 计量（配套先行）**：查 DeepSeek API 的 `prompt_cache_hit_tokens`／`prompt_cache_miss_tokens` 是否被 DSH provider 层透传（grep 上游 adapter ／ 真调用抓 usage 字段）；若透传 ⇒ 事件流面板显示每轮「输入 token ＋ 缓存命中 ／ 未命中 ＋ 输出 token」；未透传 ⇒ 如实记「未定位」并给最小可行替代（请求大小日志）。**没有计量，A 的效果无法验证**。
+- **C · compaction 生效性核查**：`compaction-basic` ＋ `compaction-tool-result-pruner` 实际在不在跑（⛔ 不信 bundles 列表——3.4 只 disable 了手动入口 `command-compact`，自动档状态未知）；在跑则报阈值与实测触发证据；没跑则报默认配置与启用路径。⚠️ 只核查不改（改 compaction 策略属 DSH-2 域另有流程）。
+- **D · 双面注入去重**：`injectSection/injectContext` 现状双开 ⇒ 同一召回文本注入两次（system prompt 一份 ＋ user snapshot 一份）。关一个面（留哪个你判——留 section 则 prompt 内可读、留 context 则消息流内可读，README 写明），回归验证召回仍生效（nonce 仍逐字在帧内）。
+
+### 2 · 判据（J-g～J-k）
+
+| # | 判据 | 取证 |
+|---|---|---|
+| J-g | **前缀稳定可证**：连发两轮**不写新记忆**的对话 ⇒ 两次请求的 system prompt 前 1k token 逐字节相同（哈希一致） | `J-g/prefix-hash.json`（两轮请求前缀 sha256 对照） |
+| J-h | **计量可见**：事件流 ／ 落盘可见每轮输入 ＋ 缓存命中 ／ 未命中 ＋ 输出（或明确记录「未透传」＋ 替代方案） | `J-h/usage-*.json` ＋ 面板截图 |
+| J-i | **compaction 状态报告**：在跑（阈值＋触发证据）或未跑（默认配置＋启用路径），二选一落盘 | `J-i/compaction-report.md` |
+| J-k | **召回回归**：去重后新写一条记忆，召回块仍含该条逐字（nonce 同款手法） | `J-k/recall-regression.json` |
+
+### 3 · 边界（⚠️ 本单续 §14 授权，范围明示）
+
+- ✅ **授权动**：`plugin-s4-memory/src/index.ts` 的召回呈现相关行（时间戳移除 ／ 注入面顺序 ／ 双面开关）＋ `.dsh-home` 持久副本同步（照 §14 同法）＋ `dsh-console` 面板 ／ bridge 计量显示
+- ⛔ **不碰**：reasoningEffort（体验权衡——留老大拍，⛔ 本单不许动）｜工具集裁剪（25 个的能力面影响，同上）｜召回**语义**（SELECT 排序 ／ recallLimit ／ session 过滤——⑤-b 联动向量召回，DSH-4 流程）｜compaction **策略**（只核查）｜`docs/` `archive/` `HUMAN*.md` `backend/`
+- 附产品层备忘（不派活）：峰谷计费——工作日白天双价，重活（长会话 ／ 批处理）可排低谷，纯产品策略题
+
+### 4 · 回报格式
+
+结论先行 → J-g～J-k 逐条证据（原文落盘、⛔ 不改写）→ 缓存前缀审计的 volatile 清单（含 A-③ 结果）→ 未闭合项 → 自曝。写完改顶部状态区。
 
 ## 已清理段落（按交流区规矩）
 
