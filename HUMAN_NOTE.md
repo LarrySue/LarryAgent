@@ -101,6 +101,7 @@ Qoder的记忆机制与WB不同，非常值得借鉴，以及约束文件的动�
 - [ ] `search()` score_threshold 分级：不同来源检索用不同阈值
 - [ ] 记忆保鲜机制：`last_hit_at` / `priority`，被频繁检索的记忆提升保留权重
 - [ ] 向量同步补偿：长期 — ChromaDB 异常恢复后自动校验 SQLite ↔ ChromaDB 一致性并补写缺失向量
+- [ ] 记忆失效机制：长期 — 保鲜字段只管"不该忘的别忘"，管不了"该更新的没更新" 所以要做版本化 supersede ＋ `valid_from` / `valid_to` ＋ 检索证据打 `current` / `historical` / `transition` 状态标签；目前规模大概率不需要知识图谱（未来如果技术有发展，出现了合用的轻量级知识图谱，倒也可以考虑）。依据与量化见 `docs/product-positioning.md` 2.4.4 （和向量同步补偿一起做）
 - [ ] Embedding 模型迁移脚本：长期 / 待触发 — 更换模型时重建 collection + 全量重索引
 
 ### 多场景 AI 架构
