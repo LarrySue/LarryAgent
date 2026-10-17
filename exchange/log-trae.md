@@ -9,8 +9,8 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并复验通过**（§10 交付 `ae33325` ＋ WB §11 复验成立）｜🔵 **待老大上手体验** ⇒ 退出信号① | 2026-10-18 |
-| DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §12；①②③ 已查实，⛔ ③ 只定性不修） | 2026-10-18 |
+| DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并通过 WB 复验**（§10 `ae33325` ＋ §11）｜🔵 **待老大再体验**（返工 §13 已完成）⇒ 退出信号① | 2026-10-18 |
+| DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | 🟡 **已回报**（§13：J-a–J-d 全过；③ 判仓库根特例、已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -182,6 +182,23 @@
 - 证据：`D:\Code\_trae-evidence\391a\`（J-a～J-d 各子目录 ＋ README）
 - 提交：只提自己文件（提交前 `git diff --cached --stat`）；以 Trae 身份签名（L38 单次参数法）
 - 回报格式：结论先行 → J-a～J-d 逐条证据（原文落盘、⛔ 不改写、注明通道）→ ③ 判决书 → 未闭合项 → 自曝。写完改顶部状态区。
+
+### 5 · 回报：返工四项完成，J-a～J-d 全过（2026-10-18 · Trae · commit `97c1477`）
+
+**结论**：A/B/D 已改，C 判 **pwsh 成功 ×2 ⇒ 仓库根特例，已随换 cwd 修复 ⇒ 记档关闭**（⛔ 未修代码）。证据 `D:\Code\_trae-evidence\391a\README.md`。真调用 6 轮（J-a 1 ／ 探针 2 ／ J-d 2 ／ 时钟对表 1），零重试；收尾 `childExit.code=0`、`forced=false`。
+
+| # | 结论 | 证据（通道） |
+|---|---|---|
+| J-a | ✅ 默认 cwd = `D:\Temp\DSH-Dev-Temp`（未传 `--cwd`） | `J-a/startup.json` ＋ `J-a/health.json`（bridge 自报）；帧原文 `Your working directory is D:\Temp\DSH-Dev-Temp.`（`J-a/system-message-frame.json`） |
+| J-b | ✅ 本地时刻，形态 `+08:00`；与墙钟 **delta=61ms**（<2s） | `J-b/clock-compare.json`（wireLog 最后一条 t `04:27:48.729+08:00` vs 采样 `04:27:48.790+08:00`）＋ `clock-before/after.txt` |
+| J-c | ✅ pwsh 两次成功（`isError=false`，输出 `391a-probe-1/2`）；旧 run 对照 `Win32 5: grantWrite(D:\Code\LarryAgent)` | `J-c/probe-verdict.json` ／ `.md` ＋ `J-c/probe-tool-calls.json`（新）＋ `J-c/old-run-contrast.json`（旧 run 只读） |
+| J-d | ✅ 两臂：`#62 asked→#63 allowed-once`（文件在、内容对）／ `#84 asked→#85 rejected`（文件不存在） | `J-d/approval-frames.json` ＋ `J-d/approvals.jsonl` ＋ `J-d/fs-proof.txt` ＋ 截图 4 张 |
+
+**③ 判决书**：调用方定位 = 上游 `@deepseek-ai/dsh-sandbox-windows-acl`（`SetNamedSecurityInfoW`／`grantWrite` 仅该包命中）；我方 `plugin-sandbox-dialect` 零命中。唯一变量 = cwd（同机同版本同 profile）。详见 `391a/J-c/probe-verdict.md`。
+
+**改动**：`bridge.mjs`（默认 cwd ＋ `localIso()` 落盘）｜`dsh-console/README.md`（cwd 缺省、J5 台外路径 `D:\Temp\DSH-Outside\`、时间戳与 lib 构建说明）｜`dsh-driver/src/index.ts`（`localIso()`，6 处序列化点全替换；本机已重构建 `lib/`，⛔ lib 被 `harness/.gitignore` 忽略不入库）。⛔ 未动 `plugin-s4-memory`／`.dsh-home`／`docs`／`backend`。
+
+**未闭合 / 自曝**：① 臂 A 的 toast 因代理选错选择器未逐字采集，以 `approval/result` 帧＋system 消息原文替代；② 仓库根 ACL 失败原因未深挖（不属判据）；③ J-c 只证 echo 级；④ 时钟对表额外 1 次最小真调用（`只回复 ok`）以落进 2s 窗口；⑤ 旧实例标签页显示「已停止」属旧页残留，新起台需新开标签。
 
 ---
 
