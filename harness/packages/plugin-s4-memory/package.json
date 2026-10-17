@@ -1,0 +1,27 @@
+{
+  "name": "@larryagent/plugin-s4-memory",
+  "version": "0.0.1",
+  "description": "LarryAgent DSH-3.6 S4: session-memory double-write (SQLite source of truth + ChromaDB derived vector index) + recall injection surface. Zero hard npm deps; runtime imports resolve in the harness workspace.",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.2",
+    "@deepseek-ai/dsh-session": "0.1.5-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.1.5-rc.2"
+  }
+}

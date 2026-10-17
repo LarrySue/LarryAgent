@@ -27,6 +27,8 @@
     "@deepseek-ai/dsh-sdk-client": "0.1.5-rc.2",
     "@deepseek-ai/dsh-sdk-jsonrpc-server": "0.1.5-rc.2",
     "@deepseek-ai/dsh-sdk-protocol": "0.1.5-rc.2",
+    "@huggingface/transformers": "^4.3.1",
+    "chromadb": "^3.5.0",
     "zod": "^4.5.4"
   }
 }

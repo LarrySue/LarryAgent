@@ -5,4 +5,5 @@ allowBuilds:
   '@google/genai': false
   koffi: false
   node-pty: false
+  onnxruntime-node: true
   protobufjs: false
