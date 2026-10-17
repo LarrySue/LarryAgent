@@ -9,11 +9,10 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| Qoder · #38 docs 落笔（DSH-3.6 判据进 `dsh-migration.md` §3.6 ＋ `product-positioning:205` 指针修正） | Qoder | 本机 | 🔵 待办（改法在 `log-qoder.md` #38） | 2026-10-17 |
 | Trae · DSH-3.6 双写闭环＋注入面（J0–J5，0 token） | Trae | 本机 Windows | 🔵 待跑（稿在 `log-trae.md`） | 2026-10-17 |
 | Trae · DSH-3.6.1 召回闭环（J6，需 key） | Trae | 本机 Windows | ⏸ **卡点**：3.6 回报且 WB 复验通过后才跑 | 2026-10-17 |
 
-> ✅ 前置链已闭环：判据 v1 → Claude 反向举证（`1b5d07c`，18 漏洞）→ WB 复验成立 → v2 → **老大 2026-10-17 终审通过（v3 定稿）**：补偿「定义不验」＋ 时点三层（HUMAN_NOTE:103 ／ DSH-4 默认 ／ 降级真发生提前触发）＋ J5 并入 3.6。历史各块（3.7.4·J6 ／ 3.8.1 ／ 3.8.2）均已回报并复核成立，落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
+> ✅ **Qoder #38 已办结并复验**（`dabf102` ＋ WB 复验 PASS：docs §3.6 `:1249` 新节 154 行正文归一化逐字一致；`product-positioning:205` 指针已修正）；判据权威 = docs §3.6。⏳ **exchange 判据副本待删**（引用已全切；删稿归 Qoder ／ 老大，连带改法已备）。⚠️ **Qoder 转 #39 两则待老大**：① `product-positioning` 2.4.4「失效机制」条在 HUMAN_NOTE 调优段零承接 ⇒ 孤儿计划项（待裁）② `.qoder/rules/QODER.md:45` 规则窄于 ai-governance §3（附可粘贴文案，待老大改）。✅ 前置链已闭环：判据 v1 → Claude 反向举证（`1b5d07c`，18 漏洞）→ WB 复验成立 → v2 → **老大 2026-10-17 终审通过（v3 定稿）**。历史各块（3.7.4·J6 ／ 3.8.1 ／ 3.8.2）均已回报并复核成立，落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
 
 ---
 
