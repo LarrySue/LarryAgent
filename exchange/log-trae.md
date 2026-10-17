@@ -239,6 +239,59 @@
 
 ---
 
+## 📤 DSH-3.9.1 · DSH 调试体验台（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
+
+### 0 · 目标
+
+搭一个**浏览器调试体验台**：多轮对话 ＋ **实时事件流面板** ＋ 审批按钮，让老大亲手摸 DSH 的完整交互（对话 ／ 记忆召回 ／ 事件可见性 ／ 审批）——服务 **DSH-3.9 退出信号①**（调试体验 go/no-go）。⏸ **临时台定位**：⛔ 不按产品形态设计，验收后归宿 = 3.8 延后清单的器材。
+
+### 1 · 判据（J1–J6，工具验收 · 每条可复算）
+
+| # | 判据 | 取证 |
+|---|---|---|
+| J1 | **一条命令起台**：README 写明起法；bridge 自报监听 URL ｜ 复现命令 ＋ 输出 |
+| J2 | **多轮 ≥3 轮上下文保持**：同一 session 连问，第 3 轮问「我们第一句说了什么」类 ⇒ 答含首轮内容 ｜ 对话录（页面 DOM 快照 ／ WS 帧落盘） |
+| J3 | **事件流实时可见**：`user/message` ／ `assistant/message` ／ `system/message` ／ `turn/end` 在面板按 seq 实时滚出 ｜ 面板快照 ＋ 帧原文 |
+| J4 | **记忆注入肉眼可见**：先陈述一个事实（如「记住：我的咖啡偏好是燕麦奶」）→ 后续轮次 `system/message` 帧的召回块**含该事实** ｜ 帧原文（3.6 J5 判据同款，此处用页面验证） |
+| J5 | **审批闭环可点**：诱导一个需审批动作（如让 AI 写文件到 workspace）⇒ 页面弹审批卡 ⇒ 批准后动作发生 ／ 拒绝后被拦 ｜ 两臂各一次的证据 |
+| J6 | **收尾无孤儿**：关页面 ／ 停 bridge ⇒ `tasklist` 无残留 dsh 进程 ｜ tasklist 输出 |
+
+### 2 · 判据前置（WB 已实测 · Trae 开工即用）
+
+- **A · 插件落 `.dsh-home`（本块授权改，⛔ 仅限落盘三件）**：3.6 的 memory 插件现只在 381 临时 home 生效，**持久台必须落盘**。范式照 **3.7.2**（`archive/roadmap-history.md`「DSH-3.7.2」段）：源 = `harness/packages/plugin-s4-memory/`（`lib/` ＋ `package.json`，**实体复制、⛔ 不 link**）→ 目标 = `.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-s4-memory/`；patch 追加进 `.dsh-home/profiles/sdk/cordis.patch.yml`（19 行现存量：9-30 老大落的 disable-compact 行）—— ⚠️ **改前备份**（先例：`cordis.patch.yml.bak-<ts>`）。⚠️ **`.modules.yaml` 不复制**（381 `:100` 教训）。
+- **B · driver 骨架在位**：`harness/packages/dsh-driver/lib/index.js`（DshDriver 库）＋ `harness/scripts/381-driver-host.mjs`（宿主编范：⛔ 不调 `process.exit`、退出由事件循环排空）。
+- **C · 事件消费形态参照**：`run-36-memory.mjs`（session/event 消费 ＋ system/message 帧提取）。
+- **D · key 走文件层**：`.dsh-home/.credentials.yaml`（老大已配 larry-dev）⇒ bridge ⛔ **不注入 env key**、⛔ 不改凭据文件本体；⛔ key 值不得出现在页面 ／ WS 帧 ／ 日志 ／ 任何输出。
+
+### 3 · 交付物
+
+- `harness/scripts/dsh-console/`：`bridge.mjs`（node：起 dsh `--profile sdk` via DshDriver ＋ WS 服务 ＋ 事件广播 ＋ 审批反向请求转发）＋ `index.html`（**单文件页面**）＋ `README.md`（起法 ＋ 验收对照表）
+- `.dsh-home` 落盘三件（插件实体 ／ patch 追加 ／ 备份）
+- 证据：`D:\Code\_trae-evidence\391\`（各 J 一子目录 ＋ README）
+
+### 4 · 参考件四要素
+
+- **路径**：`harness/scripts/381-driver-host.mjs`（driver 宿主编范）｜`harness/packages/dsh-driver/lib/index.js`（driver 本体）｜`harness/scripts/run-36-memory.mjs`（事件消费＋帧提取）｜`harness/scripts/33b-thin-client.mjs` ＋ `run-33b-remote-approval.mjs`（审批反向请求通道形状）｜`client/src/components/DshProbe.vue`（**反面**：单发架构 —— 每次 spawn、无会话、无事件流，⛔ 别抄它）
+- **怎么参考**：driver 生命周期抄 381 host（自退出 ／ 看门狗）；审批通道抄 33b 的 `approval/request` method 形态（⚠️ 3.8 定稿后可能改名，本台临时约定自定即可但须在 README 写明）；页面⛔ 不参考任何前端框架——原生 HTML+JS 单文件
+- **参考程度**：借形状；⛔ 不 fork、不引入新依赖（WS 用 `ws` 包——若未登记 harness/package.json，按 3.6 前置 A 同法补，锁 pnpm）
+- **哪部分不可参考**：DshProbe 的单发 IPC 形态；381 的**临时 home** 范式（本台是持久台，落 `.dsh-home`）
+
+### 5 · 场地器材
+
+- 本机 Windows；`DSH_HOME=.dsh-home`（持久，本块授权落盘）；profile `sdk`；node 以你通道实测为准并连通道一起记
+- **假绿坑**：`--dump-config` 不证插件激活（须真 boot）｜注册 API 不抛错 ≠ 生效（参考件 `:2230` 教训）｜审批卡弹出 ≠ 回传链路通（须两臂实测）
+- **收尾**：bridge 提供显式停法；⛔ 不留孤儿 dsh
+
+### 6 · 回报格式
+
+结论先行 → J1–J6 逐条证据（原文落盘、⛔ 不改写、注明通道）→ 未闭合项 → 自曝。写完改顶部状态区。
+
+### 7 · 禁区
+
+⛔ 产品化设计（临时台，禁框架 ／ 禁构建链 ／ 禁状态管理库）｜⛔ 动 `backend/`（老后端保持可退）｜⛔ 改 `docs/` `archive/` `HUMAN*.md`｜⛔ 凭据值进任何输出｜⛔ 不提远程｜⛔ 只提自己的文件（提交前 `git diff --cached --stat`）｜⛔ `.dsh-home` 改动仅限 §2-A 三件（多一行都不行）
+
+---
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-16 清理（Trae · 老大令「log 自查自清」）**：删〈未结项〉整段 —— 即「丙组②③回报的自曝①（Python 去默认值位序坑）」：该段虽挂"未结项"标题，实则 **2026-10-15 已闭环归位**（落点 = Trae 私有记忆 `project_memory.md` Lessons Learned，老大同日拍板；"同类攒够可升格 `.trae/skills/`"授权亦已在私有 profile 留档）⇒ 闭环且已升格、无第二真相风险，按活日志规矩直接删。顺带把状态区行内已闭环的过程细节（丙组②③交付号）压掉。回溯：`git log -p -- exchange/log-trae.md`。
