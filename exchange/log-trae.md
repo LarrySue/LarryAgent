@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并通过 WB 复验**（§10 `ae33325` ＋ §11）｜🔵 **待老大再体验**（返工 §13 已完成）⇒ 退出信号① | 2026-10-18 |
-| DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | 🟡 **已回报**（§13：J-a–J-d 全过；③ 判仓库根特例、已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
+| DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | ✅ **已回报并通过 WB 复验**（§12-5 ／ §12-6：J-a–J-d 全过；③ 判仓库根特例已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -199,6 +199,18 @@
 **改动**：`bridge.mjs`（默认 cwd ＋ `localIso()` 落盘）｜`dsh-console/README.md`（cwd 缺省、J5 台外路径 `D:\Temp\DSH-Outside\`、时间戳与 lib 构建说明）｜`dsh-driver/src/index.ts`（`localIso()`，6 处序列化点全替换；本机已重构建 `lib/`，⛔ lib 被 `harness/.gitignore` 忽略不入库）。⛔ 未动 `plugin-s4-memory`／`.dsh-home`／`docs`／`backend`。
 
 **未闭合 / 自曝**：① 臂 A 的 toast 因代理选错选择器未逐字采集，以 `approval/result` 帧＋system 消息原文替代；② 仓库根 ACL 失败原因未深挖（不属判据）；③ J-c 只证 echo 级；④ 时钟对表额外 1 次最小真调用（`只回复 ok`）以落进 2s 窗口；⑤ 旧实例标签页显示「已停止」属旧页残留，新起台需新开标签。
+
+### 6 · WB 复验：3.9.1-a 判定成立（2026-10-18）
+
+**复验判定：回报成立**（回源核证据 12+ 件 ＋ 关键原文 ＋ 源码，⛔ 非采信声明）：
+
+- **J-a** ✅ 源码实改坐实：`bridge.mjs:59` 默认值 = `D:\Temp\DSH-Dev-Temp`；帧原文逐字 `Your working directory is D:\Temp\DSH-Dev-Temp.`（`J-a/system-message-frame.json`——顺带佐证：同帧召回块 8 条仍在，老大实测样本未丢）
+- **J-b** ✅ `clock-compare.json`：wireLog 末条 `04:27:48.729+08:00` vs 墙钟采样 `04:27:48.790+08:00`，**delta=61ms**（判据 <2000ms），全序列化点带 `+08:00` 偏移；源码侧 `localIso()` 落实（bridge :70/:300 ＋ driver src 六处），注释写明「为什么不用 toISOString」——修法有据
+- **J-c** ✅ 判决书三要素齐：新配置探针帧（`echo 391a-probe-1/2`，seq 24/39，`isError=false`）＋ 旧配置对照原文（`Win32 5: grantWrite(D:\Code\LarryAgent)`）＋ **唯一变量论证**（同机同版本同 profile）；调用方定位 = 上游 `@deepseek-ai/dsh-sandbox-windows-acl`，我方 `plugin-sandbox-dialect` grep 零命中——**③ = 仓库根目录特例，已随换 cwd 修复，记档关闭**；探针期零 `approval/asked` 帧（信任区静默，与旧配置对照的静默失败同形）
+- **J-d** ✅ `approvals.jsonl` 两臂帧链（reverse-request → page-answer `allowed-once` ／ `rejected`）＋ `child-exit code=0`；fs-proof 文件级因果在回报内
+- **Tier0** ✅ 证据目录 ＋ dsh-console `sk-` 零命中；Trae 自行提交 `97c1477`（返工）＋ `2190bb4`（回报）
+
+**放行**：①②③④ 闭环。**连带处理**：③ 判决已转 Qoder 登记（连同 J6 边界注记 ／ 判据设计教训，见 `log-qoder.md`）；⑤ 两疑点仍挂老大（向量召回接入后联动裁决）。**台子可再摸**：cwd 已安全区化、时间已本地化——老大重新体验时，①（路径暴露）和②（时间错位）两条体感应消失；③（shell）在新区内已通。
 
 ---
 
