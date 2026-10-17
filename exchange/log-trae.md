@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | 🟡 **已回报**（§10：J1–J6 全过；代码 `2a6e066`；证据 `_trae-evidence/391`） | 2026-10-18 |
+| DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并复验通过**（§10 交付 `ae33325` ＋ WB §11 复验成立）｜🔵 **待老大上手体验** ⇒ 退出信号① | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -124,6 +124,23 @@
 **未闭合项 / 边界**：① C 案（`--patch` 引绝对路径插件名）未探针验证——WB 已标 optional、不专排轮；② 审批 method 名 `approval/request` 仍是 3.3-b 临时约定，3.8 定稿改名则本台同步；③ 关页面只断 WS，停止手段是「停 bridge」（设计如此，不算孤儿）；④ 会话日志随临时 home 删除，证据一律取自 bridge 通知流；⑤ `.dsh-home/` 在 `.gitignore:32`，三件落盘是本机状态、不进 git。
 
 **自曝**：① bridge 初版未落 `startup.json`，J1 由第二次起台补采（同命令同形态）；② `system/message` 帧是整块系统提示词（含工具说明），页面原样展示、未截断；③ J4 第 3 轮同时受上下文与召回影响，不能单独归因召回——判别力取自第 2 轮帧原文（仅 1 条召回即含首句）。
+
+---
+
+### 11 · WB 复验：3.9.1 判定成立，放行老大体验（2026-10-18）
+
+**复验判定：回报成立**（回源核证据目录 10+ 件 ＋ 关键原文 ＋ 源码核心，⛔ 非采信声明）：
+
+- **J1** ✅ `startup.json` 自报完整：listen 8791 ／ bundles 含审批三插件（B 案落地）／ tempHome 在 `D:\Temp\Sys\larry-391-*`（临时 home 形态）／ srcHome=.dsh-home 持久 ／ **envKeyPresent=false**（key 走文件层 ✅）
+- **J2** ✅ 同 session 3 轮，第 3 轮答含首句 `ORANGE-742`
+- **J3** ✅ 四类事件计数：user/message×11 ／ assistant/message×9 ／ system/message×6 ／ turn/end×5
+- **J4** ✅ **B 案核心修正坐实**：`memory-db-rows.json` 显示 `dbPath=.dsh-home/larry-memory.db`（**持久路径、不在临时 home 内**，5 行记忆含 ORANGE-742 暗号）；`system-message-checks.json`：6 帧全含召回标题＋nonce 逐字
+- **J5** ✅ **两臂因果闭合**：`approvals.jsonl` 帧链（reverse-request〔真实 escalation 理由：D:\Temp 工作区外需提权〕→ page-answer allowed-once/rejected → child-exit code=0）＋ `fs-proof.txt`（批准臂文件在且内容对 ／ 拒绝臂文件不存在）
+- **J6** ✅ tasklist 双采样（after-stop ＋ boot2 后）：node 进程中命令行含 dsh 的段**空**、原 child PID 段**空** ⇒ 无孤儿
+- **源码核心** ✅ bridge `buildTempHome`（复制源 profile＋junction 审批三件＋改副本 bundles＋overlay）＋ 审批链路 = dsh 出站 → bridge → 页面 → `driver.answer` 写回（⛔ bridge 不代答）
+- **Tier0** ✅ 证据目录 ＋ dsh-console `sk-` 零命中；交付物 Trae 自行提交（`ae33325`）；`.dsh-home` 三件按 §2-A（含备份）
+
+**放行**：台子干净，可交老大上手。**给老大的体验提示**（README 已知边界提炼）：① 审批卡不点会一直等（`answerTimeoutMs=0`）——想放弃就停 bridge ② 每次起台是新临时 home，**记忆库持久**（`.dsh-home/larry-memory.db`，里面躺着 Trae 测的 5 行——包括 ORANGE-742 暗号，可直接翻玩）③ 体验重点：事件流面板有没有让「DSH 内部发生了什么」变透明——这正是退出信号①的靶子。
 
 ---
 
