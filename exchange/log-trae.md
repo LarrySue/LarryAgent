@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🔵 待跑（0 token） | 2026-10-17 |
+| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🟡 已回报（中段卡点：J0 ✅ ／ 前置A ✅ ／ 前置B ⛔ 待裁） | 2026-10-17 |
 | DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | ⏸ **卡点**：待 3.6 回报且 WB 复验通过后才跑（需 key） | 2026-10-17 |
 
 - ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-trae.md`**。
@@ -81,6 +81,36 @@
 ### 7 · 禁区
 
 ⛔ 不动 `.dsh-home/`（真 home）与 `backend/` 任何活数据 ｜⛔ 不改 `docs/` `archive/` `HUMAN*.md` ｜⛔ 凭据值不进任何输出 ｜⛔ 不直装参考件 ｜⛔ 不提远程（push/fetch 归老大）｜⛔ git 提交路径限定（只提自己文件，先 `git diff --cached --stat`）
+
+### 8 · 回报一（2026-10-17 · 中段卡点 · 全程 PowerShell 通道 · node v24.14.1 system）
+
+**结论先行**：J0 **7/7 PASS**（装置首跑一次过，事件清单无缺项）；前置 A **PASS**；前置 B **⛔ 卡点停手**——两条指定路实测全断，第三路（Python `chroma.exe`）已实测可行但按纪律不自行启用，**待裁**。J1–J5 未跑。装置已建未提交（老大令：log 单独提交，其余暂不提交）。
+
+**J0 逐条证据**（证据目录 `D:\Code\_trae-evidence\36\run-j0\`；装置 `harness/scripts/run-36-memory.mjs` J0 段）：
+
+- **三元组**：① `DEEPSEEK_API_KEY` ABSENT（检索式 `Test-Path Env:DEEPSEEK_API_KEY` → False；child env 代码化再 delete；临时 home 只 `cpSync(profiles/sdk)` 天然无 `.credentials.yaml`）② cwd `.env` 三处（根/harness/backend）`Test-Path` → 全 False ③ node `v24.14.1`（`Get-Command node` → `D:\App\node\node.exe`，**PowerShell 通道**——与 381 记录的 Bash 通道同版本异通道，已按派发稿记差异）
+- **事件清单**（`J0-event-types.json`，13 events / 11 种）：`agent/inbox/spliced ×2`、`turn/start`、`step/start`、`system/message`、`user/message ×2`、`request/header`、`request/context`、`session/title`、`assistant/attempt`、`step/end`、`turn/end`——**`user/message` ✅ ＋ `turn/end` ✅ 在列，无缺项**（不断触发停手条件）
+- **无 key 态铁锚**：`turn/end` 实测 `reason.kind='error'` ＋ `error.code='MISSING_CREDENTIAL'`（比「非 completed」更强的自证锚）；全程无 `assistant/message`（失败尝试只有 `assistant/attempt`）
+- **J1 基准**：真 prompt 的 `user/message` seq=8（seq=9 是 synthetic runtime context，`source` 字段可区分）；`J0-user-message-seqs.json` 已落盘
+- **注入面帧实测定名 `system/message`**（seq=7，content 为 block 数组＝渲染后系统提示词原文，首块实测 `"You are an AI agent powered by DeepSeek Harness..."`）——**与派发稿 J5 预期不同**，详见自曝①
+
+**前置 A 证据**：`chromadb ^3.5.0` ＋ `@huggingface/transformers ^4.3.1` 已入 `harness/package.json` deps（pnpm 11.7.0 实跑）。**pnpm 11 新坑**：`package.json` 的 `pnpm` 字段已废（pnpm 明示改读全局/`pnpm-workspace.yaml`），`onnxruntime-node` build 放行落点 = `pnpm-workspace.yaml` 的 `allowBuilds: onnxruntime-node: true`；放行后 postinstall 实跑 Done，`@huggingface/transformers` 4.3.1 与 `chromadb` 双双 import 实测 PASS。
+
+**前置 B 卡点（两条指定路实测全断，证据见 `_trae-evidence\36\`）**：
+
+1. `npx chroma run` ❌ —— chromadb@3.5.0 CLI **只支持 Windows ARM64**，实测原文：`Error: Unsupported Windows architecture: x64. Only ARM64 is supported.`（`dist/cli.mjs`，`npx chroma --version` 通道）。派发稿前提「server 真含在 npm 包内」在 Win x64 不成立——bin 在（`bin: {"chroma": "dist/cli.mjs"}`）但二进制缺 Win x64 架构。
+2. Docker ❌ —— 本机无 Docker：`docker --version` → `CommandNotFoundException`。
+3. **候选第三路（已实测可行，未启用）**：全局 Python 3.11.9 的 chromadb 1.5.9 自带 `chroma.exe`（Rust server `chroma 1.4.4`，backend 同栈既有器材，非新装）。探针（`probe-chroma-compat.mjs`）实测：TS client 3.5.0 ↔ Python server **协议兼容**——heartbeat 返回 ✅、collection 建删 ✅、**512 维向量显式写入后取回维度 512 ✅**；探针中的 `DefaultEmbeddingFunction` 警告正中 J3「⛔ 防 server 默认 embedding 免费满足」坑，已验「显式传 embedding 写读」绕开成立；探针与临时目录已清理（server 进程停，`Get-Process` 验空）。
+4. **请裁**：J3/J4 的 chroma server 走第三路（Python `chroma.exe`）是否放行？判定链不受影响（chroma HTTP API 跨实现统一，判定对象是插件双写行为，非 server 实现语言）。
+5. **同时请示**：前置 C（bge 模型三步）与 server 路裁定无依赖，可否先行推进？J1/J2/J5（SQLite 线 ＋ 注入面）同样不依赖 chroma server。
+
+**未闭合项**：J1–J5 全部未跑（等 B 裁定 ＋ 插件未写——插件源码与装置 J1–J5 段尚未动工）；前置 C 未跑。
+
+**自曝**：
+
+- **① 判据要订正（J5 断言对象）**：派发稿 J5 写「J0 定死的帧原文里注入块含 nonce」并预期 dump `request/header`/`request/context` 两帧定帧名。实测：`request/context` 是**路由元数据帧**（实测字段＝`provider`/`model`/`contextWindow`/`systemPromptUpdate`），不承载系统提示词内容；真正承载 `systemPrompt.context` 注入内容的是 **`system/message` 帧**（类型定义＝「The rendered system prompt on the model-visible surface」，surface node 0）。**建议 J5 断言订正为：`system/message` 帧原文含 nonce（逐字）**，J0 已 dump 该帧（`J0-events.jsonl` seq=7）。
+- **② 前提失效报备**：前置 B 预期「server 真含在 npm 包内」经实测在 Win x64 平台不成立（见卡点 1），非跑歪、非工具层故障（client import 已单独验通）。
+- ③ 无其他跑歪；本轮零 key 接触、零真 home 改动、临时 home 已清理（`S36_KEEP_HOME` 缺省 0，`rmSync` 实跑）。
 
 ---
 
