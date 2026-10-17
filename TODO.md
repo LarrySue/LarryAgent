@@ -114,6 +114,11 @@
 - [ ] **【退出信号 · 主观】老大本人对 DSH 调试体验的可接受度确认**（S0 跑通后）：alpha 框架 + Cordis 插件总线内部状态不透明 + 跨进程 source map，出 bug 时定位难度阶梯式跳升 —— 不可量化但真实的 go/no-go 信号（文档 §3.7）
 - [ ] 退出条件勾对（核心链路达 **P4 等价**）+ 上游漂移复核 + 阶段归档
 - [ ] **DSH-3.9.1 · DSH 调试体验台**（老大 2026-10-18 立项 · 退出信号①的器材）—— 判据 **J1–J6 全过并复验成立**（Trae 交付 `ae33325`：B 主案〔临时 home＋审批三插件 junction＋memory 持久库 `.dsh-home/larry-memory.db`〕；WB 复验坐实：审批两臂帧链+文件级因果 ／ 6 帧召回+nonce ／ 起台自报 ／ tasklist 无孤儿；Tier0 零命中）。⏳ **待老大上手体验 ⇒ 退出信号①**（go/no-go 落定才算本块闭环）。台子入口：`node harness/scripts/dsh-console/bridge.mjs` → `http://127.0.0.1:8791/`（README 含验收对照＋已知边界）。⏸ **临时台定位**：⛔ 不按产品形态设计、禁框架禁构建链，退出信号确认后归宿 = 并入 3.8 延后清单当器材。
+- [ ] **3.9.1-a · 老大实测反馈返工（2026-10-18 夜 · 五条已查实归因）**：
+  - **①＋③ 同根因（cwd 选错）**：`bridge.mjs:58` 默认 `--cwd REPO`（仓库根）⇒ (a) system prompt 注入「Your working directory is D:\Code\LarryAgent」暴露源码根；(b) 沙箱 grantWrite 与 cwd 脱节——wireLog 实证：模型自述「pwsh call failed with a sandbox error (grantWrite failed)」，且文件同时落在 `D:\Temp\DSH-Dev-Temp`（已授权）与仓库根（被拦）两处。**修法**：默认 cwd 改 `D:\Temp\DSH-Dev-Temp`（老大指定安全区）＋ 复核沙箱授权边界与该目录的关系；⚠️ 连锁：审批卡演示路径依赖「cwd 外需提权」，改默认后需换一个台外路径维持 J5 验收形态。产品层另记一笔：部署形态下 cwd 应为用户授权工作区（归 docs 产品域）。
+  - **② 时间戳 UTC 错位（实锤，我们的代码）**：wireLog `t=2026-10-17T19:54:59` = 本地 10-18 03:54 ⇒ 差 8h。根因 = `new Date().toISOString()` 序列化（ISO 恒 UTC）落在 `bridge.mjs:69/:299` ＋ `dsh-driver` lib/src 五六处；⛔ 与 DeepSeek 服务器无关（老大判断正确，事件帧内 `time` 为 epoch 中性值，纯粹显示/落盘层问题）。**修法**：落盘＋页面显示统一转本地时区。
+  - **④ 同会话 8 轮 = 机制确认非 bug**：memories 只记 `user/message`（`plugin-s4-memory/src/index.ts:177` 类型过滤）⇒ 召回条全是用户的话；`recallLimit=8`。刷新页面不重启 bridge 进程 ⇒ sessionId 不变 ⇒ runtime 消息历史保持（老大已自查 JSON 分辨过）。
+  - **⑤ 跨会话「像同一会话继续」= 召回双注入面设计疑点（待老大裁产品行为）**：查实机制链 = `SELECT … ORDER BY id DESC LIMIT 8` **无 session 过滤（全表含本会话）** ＋ `systemPrompt.context` 面以 **synthetic user/message 帧**把 8 条历史注入消息流。两个疑点：**(a) 双注入面同文本注入两次**（section 进 system/message ＋ context 进 user snapshot）——重复且费 token；**(b) 全表含本会话**——本会话消息被真实流+召回双重计入（参考件 recallSync 形状是 `session_id !=` 只召回别会话）。改动触及 3.6 已闭环代码 ⇒ 需判据修订流程，⛔ 不随手改。
 
 #### DSH-3 · 贯穿规则（写码 / 验收前必读）
 
