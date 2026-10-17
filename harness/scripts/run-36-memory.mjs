@@ -85,14 +85,16 @@ function mountPlugin(home, tag, config) {
   return join(OUT, overlayName)
 }
 
-/** 跑一轮无 key 会话（带 nonce prompt），返回 { result, home } */
-async function runOnce(tag, config, prompt) {
+/** 跑一轮会话（缺省无 key；opts.key 注入 child env——仅 J6 用，值 ⛔ 不进日志/证据/提交） */
+async function runOnce(tag, config, prompt, opts = {}) {
   const home = makeHome()
   const overlay = mountPlugin(home, tag, config)
+  const env = childEnvOf(home)
+  if (opts.key) env.DEEPSEEK_API_KEY = opts.key
   const harness = new DeepSeekHarness({
     profile: 'sdk',
     dshHome: home,
-    env: childEnvOf(home),
+    env,
     patches: [overlay],
     provider: 'deepseek-official',
     model: 'deepseek-flash',
@@ -620,14 +622,93 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_seq ON memories(session_i
   judge('J5-e-negative-no-block', !negText.includes(RECALL_TITLE), `空库 ⇒ 空贡献（无召回块）`)
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// Phase J6 · LLM 端到端召回（3.6.1 · 需 key · ≤10 次对话预算）
+// 判据权威 = dsh-migration.md:1340-1349：A 写入 → 全新 B 召回答答逐字含 nonce；
+// 负向空库同问：不含 nonce ＋ 非空回答 ＋ turn/end.reason.kind==='completed'（V11 防真空）。
+// 省预算：A 无 key 跑（写入靠 user/message 事件与模型无关，判据 :1342 允许「user message 直接陈述」）；
+// 真调用 = B 正向（≤2，含一次留痕重试）＋ B 负向 ×1。
+// key 纪律（:1348）：env 层注入；值经 S36_KEY_FILE 文件转 env，⛔ 不进稿/日志/证据/提交。
+// ══════════════════════════════════════════════════════════════════════════
+async function phaseJ6() {
+  const keyFile = process.env.S36_KEY_FILE ?? 'D:/Temp/s36-test.key'
+  if (!existsSync(keyFile)) {
+    console.error(`[36] ❌ J6 前置缺 key 文件：${keyFile}（S36_KEY_FILE 可覆写）—— ⛔ key 值不进日志/证据`)
+    process.exitCode = 2
+    return
+  }
+  const key = readFileSync(keyFile, 'utf8').trim()
+  if (!key.startsWith('sk-')) {
+    console.error('[36] ❌ key 文件内容不像 DeepSeek key（应以 sk- 开头）—— 不打印值')
+    process.exitCode = 2
+    return
+  }
+  obs('J6-key-mode', `key 经 ${keyFile} → child env 注入（老大测试 key，用完即关；⛔ 值不进稿/日志/证据/提交）`)
+  let turns = 0 // 真调用对话计数（预算 ≤10）
+
+  // ── A 会话（无 key）：user message 直接陈述项目代号 → 插件消费落库（:1342 允许）──
+  const nonce = `PING-${Math.random().toString(16).slice(2, 10)}` // V13：随机 ≥8 hex
+  const sharedDb = join(OUT, 'larry-memory-j6.db')
+  const tA = Date.now()
+  const { result: rA } = await runOnce('j6-A', { dbPath: sharedDb },
+    `请记住：我的项目代号是 ${nonce}。现在只回复两个字：已记住。`)
+  save('J6-A-events.jsonl', rA.events.map((e) => JSON.stringify(e)).join('\n') + '\n')
+  const aEnd = rA.events.find((e) => e.type === 'turn/end')
+  obs('J6-A-run', `A 会话 ${Date.now() - tA}ms，turn/end.kind=${aEnd?.data?.reason?.kind ?? 'absent'}（无 key 属预期：写入靠 user/message 事件，J0/J1 已证）`)
+  const aRow = findNonceRow(sharedDb, nonce)
+  judge('J6-a-premise-row', aRow !== null,
+    aRow ? `跑 B 前库已有含 nonce 的行 id=${aRow.id}（V12 前置复述）` : 'A 后库无 nonce 行 ⇒ 属 J1/J2 未过，停手（非本判据结论）')
+  if (!aRow) return
+
+  // ── B 会话（带 key，全新 home/session，同库）：问代号（允许一次留痕重试 V13）──
+  const question = '我的项目代号是什么？直接回答。'
+  let bResult = null, bRetry = 0, bHit = false, bDone = false, bSys = false
+  while (true) {
+    const t = Date.now()
+    const { result: rB } = await runOnce('j6-B', { dbPath: sharedDb }, question, { key })
+    turns++
+    save(`J6-B-events${bRetry ? `-retry${bRetry}` : ''}.jsonl`, rB.events.map((e) => JSON.stringify(e)).join('\n') + '\n')
+    bResult = rB
+    const answer = frameText(rB, 'assistant/message')
+    bHit = answer.includes(nonce)
+    bDone = rB.events.some((e) => e.type === 'turn/end' && e.data?.reason?.kind === 'completed')
+    bSys = frameText(rB, 'system/message').includes(nonce)
+    obs(`J6-B-run${bRetry ? '-retry' + bRetry : ''}`,
+      `B ${Date.now() - t}ms；completed=${bDone}；system/message 含 nonce=${bSys}；回答「${answer.slice(0, 150) || '（空）'}」`)
+    if ((bHit && bDone && bSys) || bRetry >= 1) break
+    bRetry++
+  }
+  judge('J6-b-answer-contains-nonce', bHit,
+    `B 回答${bHit ? '逐字含（连续子串）' : '不含'} nonce${bRetry ? `；重试 ×${bRetry}（V13 留痕报次数）` : ''}`)
+  judge('J6-c-b-completed', bDone, `B turn/end.reason.kind === 'completed'（真调用成功——双取证之输出侧）`)
+  judge('J6-d-b-frame-face-nonce', bSys,
+    `B system/message 帧原文含 nonce（J0 定帧——双取证之帧侧，证明是召回注入起的作用，⛔ 只凭模型输出不算 :1349）`)
+  if (!(bHit && bDone && bSys)) save('J6-B-answer-dump.txt', frameText(bResult, 'assistant/message'))
+
+  // ── 负向臂（带 key，空库，不复用 A 库文件，同一问句）：V11 存在性三断言 ──
+  const negDb = join(OUT, 'larry-memory-j6-negative.db')
+  const tN = Date.now()
+  const { result: rN } = await runOnce('j6-B-neg', { dbPath: negDb }, question, { key })
+  turns++
+  save('J6-B-neg-events.jsonl', rN.events.map((e) => JSON.stringify(e)).join('\n') + '\n')
+  const negAnswer = frameText(rN, 'assistant/message')
+  const negDone = rN.events.some((e) => e.type === 'turn/end' && e.data?.reason?.kind === 'completed')
+  obs('J6-neg-run', `负向臂 ${Date.now() - tN}ms；completed=${negDone}；回答「${negAnswer.slice(0, 150) || '（空）'}」`)
+  judge('J6-e-neg-no-nonce', !negAnswer.includes(nonce), `负向臂（空库、不复用 A 库文件、同问句）回答不含 nonce`)
+  judge('J6-f-neg-existence', negDone && negAnswer.length > 0,
+    `存在性断言：assistant/message 非空 ＋ turn/end.reason.kind='completed'（V11 ⛔ 防 key 失效/网络失败/拒答 ⇒ 空回答真空成立）`)
+  obs('J6-g-budget', `真调用对话计数 ${turns} ≤ 10 预算（B ×${1 + bRetry} ＋ 负向 ×1；A 无 key 不计）`)
+}
+
 try {
   if (PHASE === 'j0') await phaseJ0()
   else if (PHASE === 'j1j2') await phaseJ1J2()
   else if (PHASE === 'j3') await phaseJ3()
   else if (PHASE === 'j4') await phaseJ4()
   else if (PHASE === 'j5') await phaseJ5()
+  else if (PHASE === 'j6') await phaseJ6()
   else {
-    console.error(`[36] ❌ 未实现的 phase：${PHASE}（本版实现 j0 / j1j2 / j3 / j4 / j5）`)
+    console.error(`[36] ❌ 未实现的 phase：${PHASE}（本版实现 j0 / j1j2 / j3 / j4 / j5 / j6）`)
     process.exitCode = 2
   }
 } catch (err) {
