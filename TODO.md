@@ -146,6 +146,7 @@
 ### DSH-4 · 差异化能力迁移
 
 - [ ] 长期记忆双写 + 人审（`memory/archiver.py` + `engine.py` → TS 插件挂 `session/` 事件流，保 SQLite+ChromaDB 双写）
+- [ ] ⭐ **向量召回归档（2026-10-18 老大实测发现 · 3.6 设计边界显形）**：3.6 召回路径实际走 **SQLite 时间倒序**（`SELECT … ORDER BY id DESC LIMIT 8`），**ChromaDB 只写不读**（铁证：`getChroma` 全文件仅定义处＋doubleWrite 一处调用；recallText 零 Chroma 引用）⇒ 双写成本（embedding 计算＋HTTP＋存储）零收益兑现。⚠️ **3.6 J6 判据盲区（认账）**：「LLM 能召回 nonce」被**小数据量偶然满足**（5 条记忆时 LIMIT 8 全量注入，nonce 必中）——未验「大数据量下语义命中」；Claude 18 条评审亦未抓到（聚焦假绿源，未质疑召回路径本身）。**本块必须包含**：① 召回路径切向量语义检索（top-k 相关度替代时间倒序）② 判据加「大数据量语义命中」臂（20+ 条库中相关条不在最近 N 内仍能捞到）③ 与 3.9.1-a⑤ 两个疑点联动裁决（排序从「最近」变「相关」后，双面注入／无 session 过滤的解法随之变）④ 库小阶段时间倒序≈语义（最近即相关），库大后（数百条）时间倒序召回质量崩——产品化前必须切换。
 - [ ] **记忆迁移（活资产，非数据搬运）**：**无需全量重嵌**（DSH-2.5 ⑤ 实测：TS `bge-small-zh` 与 Python 侧漂移 `2.2e-7`、cosine ≥ 0.9999999999；⚠️ **硬前提 = 预处理严格对齐**，任一项不对齐会产生 0.77 级假漂移）+ 召回等价性抽样验收 + 语义字段不降级（`is_active` / `last_hit_at` / `source_role`，ChromaDB 只能重灌、机会只有一次）
 - [ ] **2.7.2 边界透明 → TS answerer 插件**（B1 通道已实测可行；退路 = permission-preset 白名单）
   - ⛔ **执行前置（DSH-3.0.2 实测，配错就 boot 不起来）**：`preset` 服务要求会 confinement 的 `ctx.shell`（`sandboxMode === undefined` ⇒ load throw）；`patch` 整行替换非 merge（加自定义档须重述官方三条、`workspace-write` 必留表）。**依据** → `docs/dsh/dsh-015-capability-mapping.md` §3.1
