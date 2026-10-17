@@ -23,7 +23,7 @@
 ### 行为准则
 - **以下区域可自由阅读但一律不得做任何改动，发现错误、矛盾、冲突、缺失等严重问题而强烈建议改动时提交老大操作**：
   - `.claude/`文件夹 — Claude私有文件
-  - `.trae/TRAE.md` — Trae约束文件（本文件，归老大）
+  - `.trae/rules/TRAE.md` — Trae约束文件（本文件，归老大）
   - `.qoder/`文件夹 - Qoder私有文件
   - `.zcode/`文件夹 — ZCode私有文件
   - `.workbuddy`与`.codebuddy`文件夹 — WorkBuddy私有文件
