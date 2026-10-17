@@ -162,6 +162,22 @@ function defaultDshBin(): string {
   throw new Error('@larryagent/dsh-driver: cannot locate @deepseek-ai/dsh/lib/bin.js (pass options.dshBin)')
 }
 
+/**
+ * 本地时刻的 ISO 序列化（带本机 UTC 偏移，如 `2026-10-18T02:53:58.471+08:00`）。
+ *
+ * 为什么不用 `toISOString()`：它恒为 UTC（`Z`）——本机证据/日志与墙钟差 8 小时，
+ * 会把"刚发生"读成"八小时前"。⭐ 协议帧内的 epoch 值不动：那是中性事实，
+ * 只有序列化/显示层需要本地化。
+ */
+export function localIso(date: Date = new Date()): string {
+  const pad = (n: number, width = 2): string => String(Math.abs(n)).padStart(width, '0')
+  const offsetMin = -date.getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}` +
+    `${sign}${pad(Math.floor(Math.abs(offsetMin) / 60))}:${pad(Math.abs(offsetMin) % 60)}`
+}
+
 function markerPathFor(config: DriverOptions): string | null {
   if (config.marker === false) return null
   if (typeof config.marker === 'string' && config.marker !== '') return config.marker
@@ -222,18 +238,18 @@ export class DshDriver {
     if (this.marker === null) return
     try {
       mkdirSync(dirname(this.marker), { recursive: true })
-      appendFileSync(this.marker, `${JSON.stringify({ t: new Date().toISOString(), ...record })}\n`)
+      appendFileSync(this.marker, `${JSON.stringify({ t: localIso(), ...record })}\n`)
     } catch {
       /* 诊断失败不得影响协议 */
     }
   }
 
   private wire(dir: 'in' | 'out', raw: string): void {
-    this.frames.push({ dir, raw, at: new Date().toISOString() })
+    this.frames.push({ dir, raw, at: localIso() })
     if (this.frames.length > 500) this.frames.shift()
     if (this.wireLog === null) return
     try {
-      appendFileSync(this.wireLog, `${JSON.stringify({ t: new Date().toISOString(), dir, raw })}\n`)
+      appendFileSync(this.wireLog, `${JSON.stringify({ t: localIso(), dir, raw })}\n`)
     } catch {
       /* 留痕失败不影响协议 */
     }
@@ -287,7 +303,7 @@ export class DshDriver {
     })
     child.once('exit', (code, signal) => {
       this.childExited = true
-      this.childExitInfo = { code, signal, at: new Date().toISOString() }
+      this.childExitInfo = { code, signal, at: localIso() }
       this.trace({ event: 'child-exit', code, signal, pid: child.pid ?? null })
       this.childExitWaiter?.({ code, signal })
       this.childExitWaiter = null
@@ -374,7 +390,7 @@ export class DshDriver {
       callId: typeof rawParams.callId === 'string' ? rawParams.callId : null,
       agentId: typeof rawParams.agentId === 'string' ? rawParams.agentId : null,
       reason: typeof rawParams.reason === 'string' ? rawParams.reason : null,
-      receivedAt: new Date().toISOString(),
+      receivedAt: localIso(),
     }
     this.trace({
       event: 'reverse-request',
@@ -526,7 +542,7 @@ export class DshDriver {
    */
   async stop(): Promise<StopReport> {
     if (this.stopReport !== undefined) return this.stopReport
-    const stopRequestedAt = new Date().toISOString()
+    const stopRequestedAt = localIso()
     const childWasAliveAtStop = !this.childExited
     const shutdownTimeoutMs = this.options.shutdownTimeoutMs ?? 5_000
     const forceAfterMs = this.options.forceAfterMs ?? shutdownTimeoutMs + 2_000

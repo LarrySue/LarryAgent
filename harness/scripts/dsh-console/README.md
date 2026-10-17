@@ -20,7 +20,7 @@ node harness/scripts/dsh-console/bridge.mjs
 | 参数 | 缺省 | 说明 |
 |---|---|---|
 | `--port <n>` | `8791` | HTTP ＋ WS 同端口，只绑 `127.0.0.1` |
-| `--cwd <dir>` | 仓库根 | dsh 会话工作区（沙箱 `workspaceRoot`） |
+| `--cwd <dir>` | `D:\Temp\DSH-Dev-Temp` | dsh 会话工作区（沙箱 `workspaceRoot`；安全区，⛔ 默认不暴露仓库根） |
 | `--home <dir>` | `<repo>/.dsh-home` | 源 home（只读；跑完不在里面留运行时文件） |
 | `--evidence <dir>` | `D:/Code/_trae-evidence/391/run-<ts>` | 帧／通知／审批／收尾报告落盘目录 |
 | `--keep-home` | 关 | 保留临时 home 供复核（默认收尾删除） |
@@ -72,7 +72,7 @@ page → server：
 | J2 | 多轮 ≥3 轮上下文保持 | 同一 session 连问；第 3 轮问「我们第一句说了什么」，答含首轮内容；对话录见 `ws-frames.jsonl` ／事件帧 |
 | J3 | 事件流实时可见 | 右侧面板按 `#seq` 滚出；`user/message` ／ `assistant/message` ／ `system/message` ／ `turn/end` 四类都在 |
 | J4 | 记忆注入肉眼可见 | 先陈述事实 → 后续轮左侧出现「召回注入（system/message #N）」气泡；展开事件可看帧原文（含 `## LarryAgent 记忆召回`） |
-| J5 | 审批闭环可点 | 让 AI 写**工作区外**路径（如 `D:\Temp\...`）⇒ 页面弹审批卡；批准 → 文件出现，拒绝 → 工具报被拒且文件不存在 |
+| J5 | 审批闭环可点 | 让 AI 写**工作区外**路径（如 `D:\Temp\DSH-Outside\hello.txt`；⛔ 不要用仓库根反向制造提权演示）⇒ 页面弹审批卡；批准 → 文件出现，拒绝 → 工具报被拒且文件不存在 |
 | J6 | 收尾无孤儿 | 页面「停止 bridge」或 Ctrl+C ⇒ 终端 `STOP-REPORT`（`childExit.code=0`）⇒ `tasklist` 无 dsh 进程 |
 
 ## 已知边界（诚实清单）
@@ -83,3 +83,9 @@ page → server：
 - 审批 `answerTimeoutMs=0`（不设答者侧超时）：页面不点，该回合会一直等；想放弃就停 bridge。
 - 依赖 `ws`（已登记 `harness/package.json`，`pnpm-lock.yaml` 锁定）。
 - 记忆插件不配 `chromaUrl`：本台只验注入面（召回 = SQLite 最近 N 条）；向量双写仍由 3.6 装置覆盖。
+- **时间戳为本地时刻**：落盘／显示层统一用 `localIso()`（ISO 带本机偏移，如 `+08:00`）；
+  dsh 协议帧内的 epoch 值保持原样（中性事实，不改）。
+- **dsh-driver 时间戳改动要连构建产物**：源在 `harness/packages/dsh-driver/src/index.ts`
+  （`localIso()` 是唯一序列化点）；改后运行
+  `pnpm --filter @larryagent/dsh-driver run build` 重新生成 `lib/`。
+  ⚠️ `harness/packages/*/lib/` 被 `harness/.gitignore` 忽略、**不入库** ⇒ 换机/新 clone 后必须先构建。

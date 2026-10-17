@@ -34,7 +34,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { WebSocketServer } from 'ws'
-import { DshDriver } from '../../packages/dsh-driver/lib/index.js'
+import { DshDriver, localIso } from '../../packages/dsh-driver/lib/index.js'
 
 const HARNESS = resolve(import.meta.dirname, '..', '..')
 const REPO = resolve(HARNESS, '..')
@@ -55,7 +55,8 @@ const argOf = (name, fallback) => {
 const hasFlag = (name) => argv.includes(name)
 
 const port = Number(argOf('--port', '8791'))
-const cwd = resolve(argOf('--cwd', REPO))
+/** 缺省工作区 = 安全区（⛔ 不暴露仓库根）；`--cwd` 可覆盖。 */
+const cwd = resolve(argOf('--cwd', 'D:\\Temp\\DSH-Dev-Temp'))
 const srcHome = resolve(argOf('--home', join(REPO, '.dsh-home')))
 const keepHome = hasFlag('--keep-home')
 const sessionId = argOf('--session', `session-391-${randomUUID().replaceAll('-', '').slice(0, 12)}`)
@@ -66,7 +67,7 @@ const frameFile = join(evidence, 'ws-frames.jsonl')
 const notifFile = join(evidence, 'notifications.jsonl')
 const approvalFile = join(evidence, 'approvals.jsonl')
 const save = (file, record) => {
-  try { appendFileSync(file, `${JSON.stringify({ t: new Date().toISOString(), ...record })}\n`) } catch { /* 取证失败不影响台 */ }
+  try { appendFileSync(file, `${JSON.stringify({ t: localIso(), ...record })}\n`) } catch { /* 取证失败不影响台 */ }
 }
 
 /** 临时 home：复制源 profile ＋ junction 审批三件 ＋ 改副本 bundles ＋ 写 overlay。 */
@@ -296,7 +297,7 @@ try {
   console.log(`[391] sessionId=${sessionId}`)
   // J1 取证：起台自报的监听 URL / 启动形态 / 插件 bundle 顺序（⛔ 不含凭据值）
   writeFileSync(join(evidence, 'startup.json'), `${JSON.stringify({
-    when: new Date().toISOString(),
+    when: localIso(),
     node: process.version,
     execPath: process.execPath,
     command: [process.execPath, ...process.argv.slice(1)],
