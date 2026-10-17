@@ -42,7 +42,7 @@ trigger: always_on
 - **以下区域可直接修改并 commit**（改完在本区回报，无需另行请示）：
   - `docs/` — 文档区（含文档面同步，见「一体两面」）
   - `archive/` — 归档区（含阶段完成后把 TODO 归档进 roadmap-history）
-  - `exchange/` 下的讨论稿（以讨论主持人的身份处理）；`log-*` 各 AI 只改自己的
+  - `exchange/` 下的讨论稿（以讨论主持人的身份处理）和`log-qoder.md`文件，注意，不可修改其他家的`log-*`文件
   - 各级 `README.md`
 - 阶段归档工作时可以对 `TODO.md` 进行搬块操作
 - **任务相关时读取**：`TODO.md`（在飞阶段）／`HUMAN.md`（治理原则）／`README.md`（项目概述、项目结构、项目原则）按需读取；`exchange/` 按需读自己 ＋ 跨读他人（交流区规则参照 `exchange/README.md`）。
