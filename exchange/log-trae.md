@@ -290,6 +290,27 @@
 
 ⛔ 产品化设计（临时台，禁框架 ／ 禁构建链 ／ 禁状态管理库）｜⛔ 动 `backend/`（老后端保持可退）｜⛔ 改 `docs/` `archive/` `HUMAN*.md`｜⛔ 凭据值进任何输出｜⛔ 不提远程｜⛔ 只提自己的文件（提交前 `git diff --cached --stat`）｜⛔ `.dsh-home` 改动仅限 §2-A 三件（多一行都不行）
 
+### 8 · ⛔ 开工阻塞：J5 在 §2-A／§7 约束下不可实现（2026-10-18 · Trae）
+
+**结论**：现行 `.dsh-home` 里**没有任何审批答者**，审批请求不会到达 bridge；J5「页面弹审批卡 ⇒ 批准／拒绝」在「`.dsh-home` 只落三件」的约束下无法成立。**已停手等裁决**，未改任何文件。
+
+**事实（均可复算）**：
+
+1. 持久 profile 现状：`package.json` 的 `dsh.profile.bundles` 只有 `@deepseek-ai/dsh-base` ＋ `@deepseek-ai/dsh-sdk-app`（[package.json](file:///d:/Code/LarryAgent/.dsh-home/profiles/sdk/package.json#L8-L15)）；`cordis.patch.yml` 只有 sandbox／compact 两类行（[cordis.patch.yml](file:///d:/Code/LarryAgent/.dsh-home/profiles/sdk/cordis.patch.yml#L1-L19)）；`node_modules/@larryagent/` 下只有 `plugin-sandbox-dialect`。
+2. `dsh-base` 的 `approval` 行默认 `policy: ask`（[cordis.patch.yml](file:///d:/Code/LarryAgent/.dsh-home/profiles/sdk/node_modules/@deepseek-ai/dsh-base/cordis.patch.yml#L224-L227)）。
+3. `dsh-user-approval` 的裁决走 `ctx.waterfall('approval/request', …)`，**无答者时的默认返回值 = `'unavailable'`**（[index.js](file:///d:/Code/LarryAgent/.dsh-home/profiles/sdk/node_modules/@deepseek-ai/dsh-user-approval/lib/index.js#L179)）——即 fail-closed，页面来不及介入。
+4. `dsh-sdk-app` 不注册 `approval/request` 答者（grep `approval` 仅命中一行注释）。
+5. 出站审批链路 = `plugin-sdk-relay` ＋ `plugin-approval-answerer` ＋ `plugin-approval-remote-answerer` 三插件（[run-33b-remote-approval.mjs](file:///d:/Code/LarryAgent/harness/scripts/run-33b-remote-approval.mjs#L38-L53)）——三者都只在 3.3-b 的**临时 home** 里装过，持久 `.dsh-home` 从未装。
+
+**选项（请 WB／老大裁定）**：
+
+- **A · 扩 `.dsh-home` 落盘**：多落 3 个插件实体 ＋ 3 条 patch 条目（relay 的 bundle patch 会 disable 官方 `sdk-jsonrpc-server` 行）。代价：持久 profile 变成 relay 形态，影响后续所有 dsh 启动。
+- **B · 起台时临时 home**：bridge 每次从 `.dsh-home` 复制出临时 home，junction 三插件 ＋ overlay patch。代价：放弃 §2-A 的「持久落盘」意图（J4 记忆链路只在台内有效），但无持久副作用。
+- **C · `--patch` overlay 引实体**：若 loader 接受绝对路径插件名，则 `--patch` 直接引 `harness/packages/` 实体，`.dsh-home` 仍只落 memory 三件。**未验证**（需一次 boot 探针）。
+- **D · 砍 J5**：判据不成立，不建议。
+
+**我倾向**：C ＞ B ＞ A。C 最贴合 §2-A／§7 原文；C 不可行时用 B（副作用可控，J1–J4／J6 不受影响）；A 会永久改变持久 profile，最后选。裁定前不实施。
+
 ---
 
 ## 已清理段落（按交流区规矩）
