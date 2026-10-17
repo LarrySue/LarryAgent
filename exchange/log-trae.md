@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | 🔵 **续跑中**（WB 裁定 B 主案 · §9：J5 审批链路走临时 home 三插件 junction） | 2026-10-18 |
+| DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | 🟡 **已回报**（§10：J1–J6 全过；代码 `2a6e066`；证据 `_trae-evidence/391`） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -107,6 +107,23 @@
 **续跑范围**：§2-A 三件照落（memory 持久库路径）＋ bridge ／ 页面按 B 实现；J1–J6 全判；J5 两臂证据（批准 → 动作发生 ／ 拒绝 → 被拦）。
 
 **记账（WB）**：派发稿设计漏洞一笔——**前置写「授权落盘清单」时必须逐判据反查其链路依赖**（J5 → 审批三插件 ／ J4 → memory 插件），不能只列「已知要落的」。已入 WB 日志。
+
+### 10 · 回报：体验台交付，J1–J6 全过（2026-10-18 · Trae · commit `2a6e066`）
+
+**结论**：按 §9 的 B 主案交付。`harness/scripts/dsh-console/`（bridge ＋ 单文件页面 ＋ README）；`.dsh-home` §2-A 三件已落（memory 插件实体 ＋ patch 追加 ＋ 备份 `cordis.patch.yml.bak-20261018-024736`）。证据 `D:\Code\_trae-evidence\391\README.md`（按 J 分目录）。真调用 5 轮、零重试。
+
+| # | 结论 | 证据（通道） |
+|---|---|---|
+| J1 | ✅ 一条命令：`node harness/scripts/dsh-console/bridge.mjs`；自报 `http://127.0.0.1:8791/` | `J1/startup.json`（bridge 自报：listen／launch.argv／bundles／envKeyPresent=false）＋ 终端 stdout |
+| J2 | ✅ 同 session 3 轮；第 3 轮答含首句 `ORANGE-742` | `J2/dialog-frames.jsonl`（dsh 帧原文）＋ `J2/ws-frames.jsonl` ＋ `J2/browser-report.md` |
+| J3 | ✅ 四类事件全在：user/message×11、assistant/message×9、system/message×6、turn/end×5 | `J3/event-types.json` ＋ `J3/session-notifications.jsonl`（全量原文）＋ `J3/screens/` |
+| J4 | ✅ 第 2／3 轮 system/message 帧含召回块与 `ORANGE-742`；记忆库跨台持久 | `J4/system-message-frames.json` ＋ `J4/system-message-checks.json` ＋ `J4/memory-db-rows.json` |
+| J5 | ✅ 两臂：asked#52→decided `allowed-once`（文件存在、内容对）／ asked#74→decided `rejected`（文件不存在） | `J5/approval-frames.json` ＋ `J5/approvals.jsonl` ＋ `J5/fs-proof.txt` ＋ `J5/arm-*.png` |
+| J6 | ✅ 两次起台均 `childExit.code=0`／`forced=false`／临时 home 已删；无 dsh 孤儿 | `J6/stop-report.json` ＋ `J6/tasklist-after-stop*.txt` |
+
+**未闭合项 / 边界**：① C 案（`--patch` 引绝对路径插件名）未探针验证——WB 已标 optional、不专排轮；② 审批 method 名 `approval/request` 仍是 3.3-b 临时约定，3.8 定稿改名则本台同步；③ 关页面只断 WS，停止手段是「停 bridge」（设计如此，不算孤儿）；④ 会话日志随临时 home 删除，证据一律取自 bridge 通知流；⑤ `.dsh-home/` 在 `.gitignore:32`，三件落盘是本机状态、不进 git。
+
+**自曝**：① bridge 初版未落 `startup.json`，J1 由第二次起台补采（同命令同形态）；② `system/message` 帧是整块系统提示词（含工具说明），页面原样展示、未截断；③ J4 第 3 轮同时受上下文与召回影响，不能单独归因召回——判别力取自第 2 轮帧原文（仅 1 条召回即含首句）。
 
 ---
 
