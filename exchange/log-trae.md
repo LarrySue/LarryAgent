@@ -11,6 +11,7 @@
 |---|---|---|---|---|
 | DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并通过 WB 复验**（§10 `ae33325` ＋ §11）｜🔵 **待老大再体验**（返工 §13 已完成）⇒ 退出信号① | 2026-10-18 |
 | DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | ✅ **已回报并通过 WB 复验**（§12-5 ／ §12-6：J-a–J-d 全过；③ 判仓库根特例已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
+| DSH-3.9.1-b · ① 补修：召回块时间戳 UTC（memories 表 created_at） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §14；⚠️ 本单**授权动 plugin-s4-memory 时间相关行**——破 §12 禁区，见稿内边界） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -213,6 +214,37 @@
 **放行**：①②③④ 闭环。**连带处理**：③ 判决已转 Qoder 登记（连同 J6 边界注记 ／ 判据设计教训，见 `log-qoder.md`）；⑤ 两疑点仍挂老大（向量召回接入后联动裁决）。**台子可再摸**：cwd 已安全区化、时间已本地化——老大重新体验时，①（路径暴露）和②（时间错位）两条体感应消失；③（shell）在新区内已通。
 
 ---
+
+## 📤 DSH-3.9.1-b · ① 补修：召回块时间戳 UTC（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
+
+### 0 · 背景（老大二轮实测 · WB 认账）
+
+老大二轮实测：②③ 已确认修复（工作空间内创建/删除/修改全通；工作空间外弹窗两臂有效），**但 ① 时间戳还在**——召回块里 `[2026-10-17 20:46:08]` 等她本地 04:46 说的话，UTC 原样呈现。
+
+**根因（WB 派发稿盲区，认账）**：3.9.1-a 的 ② 只排查了 bridge/driver 的**证据落盘序列化层**（wireLog 的 `t`），漏了面向用户的**第二个时间源**——`plugin-s4-memory/src/index.ts:102` 的 `created_at TEXT NOT NULL DEFAULT (datetime('now'))`：**SQLite `datetime('now')` 恒为 UTC**，且该值由插件直接写进 system prompt 召回块，⛔ 不过 bridge 序列化层。教训：**「时间戳本地化」必须按「时间源」穷举（序列化层 ／ 数据库默认值 ／ 框架帧内字段），不能只修已知的那一层**。
+
+### 1 · 任务
+
+- **A · INSERT 显式传本地时间**：`index.ts:108` 的 INSERT 改为四列（`session_id, source_event_seq, content, created_at`），`created_at` 用 `datetime('now', 'localtime')`（SQLite 原生 localtime modifier——⛔ 不改依赖表 DEFAULT，`CREATE TABLE IF NOT EXISTS` 对已存在的表改 DEFAULT 无效，已知坑）。表 DEFAULT 那行可同步改成 `datetime('now','localtime')` 语义（对新库有效，双保险），⚠️ 但别以为它能修旧库。
+- **B · 旧数据修正（评估后执行）**：`.dsh-home/larry-memory.db` 里已入库数据（含老大二轮实测的 8 条）时间戳仍是 UTC。本机时区固定 UTC+8 ⇒ `UPDATE memories SET created_at = datetime(created_at, '+8 hours')` 可一次性修正。⚠️ 执行前**先备份 db 文件**（cp 一份 `.bak-<ts>`），⚠️ 先 SELECT 抽样确认值确为 UTC 形态再 UPDATE。
+- **C · 全查其他面向用户的时间源**：grep 插件内全部 `datetime(` ／ `new Date` ／ `toISOString`，确认没有第三个时间源漏网（如召回文本里别处还有时间格式化）。
+
+### 2 · 判据（J-e～J-f）
+
+| # | 判据 | 取证 |
+|---|---|---|
+| J-e | **新写一条记忆 ⇒ 召回块时间戳 = 本地时刻**（与墙钟差 <2s，形态本地） | `J-e/`：写记忆 → system/message 帧召回块原文 ＋ 墙钟对表 |
+| J-f | **旧数据修正结论明确**：已 UPDATE（前后抽样对照）或判定不修（附理由），二选一落盘 | `J-f/db-before-after.json`（抽样行前后值）＋ 备份文件在位证明 |
+
+### 3 · 边界（⚠️ 本单破 §12 禁区，明示授权范围）
+
+- ✅ **授权动**：`plugin-s4-memory/src/index.ts` 的**时间相关行**（INSERT 列 ／ created_at 生成 ／ DEFAULT 行）＋ `.dsh-home/larry-memory.db` 的数据修正（带备份）＋ 源插件同步落 `.dsh-home` 持久 profile 的实体副本（`.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-s4-memory/`——照 3.7.2 范式，⛔ 仍只此一件、改前备份）
+- ⛔ **仍不碰**：召回逻辑（SELECT 排序 ／ recallLimit ／ 双注入面——⑤ 待老大裁，判据修订流程）｜判据文件｜`docs/` `archive/` `HUMAN*.md`｜`backend/`
+- ⚠️ 时间源改动不得影响 3.6 J4「时间界」判据语义（该判据用两条 created_at 的**差值**，时区平移不改变量——但回归时顺带核一句）
+
+### 4 · 回报格式
+
+结论先行 → J-e/J-f 逐条证据（原文落盘、⛔ 不改写）→ 是否发现第三时间源 → 自曝。写完改顶部状态区。
 
 ## 已清理段落（按交流区规矩）
 
