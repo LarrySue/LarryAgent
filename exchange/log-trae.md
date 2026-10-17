@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🔵 **续跑中**（B 第三路已裁放行 · 见 §9-3；帧订正已裁 · §9-1；C＋J1/J2/J5 先行） | 2026-10-17 |
+| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🟢 **已回报**（J0–J5 全绿 · 见 §10；代码留工作区待提交指示） | 2026-10-17 |
 | DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | ⏸ **卡点**：待 3.6 回报且 WB 复验通过后才跑（需 key） | 2026-10-17 |
 
 - ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-trae.md`**。
@@ -124,6 +124,29 @@
 1. ✅ **帧订正接受**：J5 ／ J6 断言对象 = **`system/message` 帧原文**（J0 已落盘 seq=7）⇒ ⛔ 不再预期 `request/context` 承载注入内容。连带：`dsh-migration.md:649`「request/context（注入上下文）」记录不准 —— 改法已备，连同判据帧名改写转 Qoder 落 docs §3.6。
 2. ✅ **C ＋ J1 ／ J2 ／ J5 先行放行**（Trae 不停工）：不依赖 chroma server 的线先推进。
 3. ✅ **B 第三路（Python `chroma.exe`）已裁放行（老大 2026-10-17 夜）** —— 理由：chroma HTTP API 跨实现统一（判定对象 = 插件双写行为，非 server 语言）；`chroma.exe` = backend 同栈既有器材（chromadb 1.5.9，production-env 有登记）。**边界（写死）**：⛔ 只写本机判定场地，**生产 chroma server 选型另议**（npm CLI 的 ARM64 限制是 Windows 平台特性，Linux 侧未验、不外推）。**补件（判据前置）**：J3 ／ J4 开跑前，`probe-chroma-compat.mjs` 复跑一次并将输出落盘（本轮探针输出未留档 —— 放行不等于证据已闭环）。
+
+### 10 · 回报二：J1–J5 全绿（2026-10-17 深夜 · Trae）
+
+**状态：3.6 判据 J0–J5 全部通过**（J0 见 §8 回报一 ＋ §9 复验；本轮补齐 J1–J5 全证据）。装置 = `harness/scripts/run-36-memory.mjs`（J1–J5 段已逐段补齐，phase 分发 `j0/j1j2/j3/j4/j5`）；证据 = `D:\Code\_trae-evidence\36\`（`run-j1j2/` `run-j3/` `run-j4/` `run-j5/` 各含 findings.json ＋ 原文物证）。
+
+- **J3 补件（§9-3 件）**：`probe-chroma-compat.mjs` 复跑并落盘 `probe-chroma-compat-rerun.log` —— heartbeat / getOrCreateCollection / add 512 维 / get 512 维 ✓ / deleteCollection 全通；另有 4 行 `DefaultEmbeddingFunction` 噪音 ＋ `'path' deprecated` 警告（client 内部探测行为，终态成功非失败）。
+- **J1–J2 · 6/6 PASS（run-j1j2）**：J1-a 库文件在 ／ J1-b nonce 行（id=1）／ J1-c `source_event_seq=8 ≡ 事件流 user/message seq=8` ／ J1-d session_id ≡ RunResult.sessionId ／ J2-a 哨兵位阳性（home 内 `sessions/larry-memory-sentinel.db` 有 nonce 行）／ J2-b 外接标准位变红。插件消费链路（junction 挂载 → `--patch` insert → 激活 → `session/event` 消费 → SQLite 落库 → dbPath 臂控）首次端到端实测即通。
+- **J3 · 6 PASS ＋ 4 OBS（run-j3）**：四件全过 —— ① 基线条目=0 → nonce 定位到目标条（⛔ 无基线式 count+1）；② chroma id=1 ≡ SQLite 行 id=1；③ 临时端口 18931 ＋ `--host 127.0.0.1` 钉 IPv4，两侧显式同配置；④ 取回向量 512 维 ＋ **同文本本地向量余弦 = 1.00000 ≥ 0.9999**（更强做法，DSH-2.5 实测漂移 2.2e-7 量级）；自检索 top-1 命中（旁证）；活臂降级行 ×0。断言视图 = chroma HTTP get/query 返回原文（`J3-chroma-entry.json`）。
+- **J4 · 9 PASS ＋ 1 OBS（run-j4）**：活臂三锚（终局到达 31.7s ／ 真相源行在 ／ 降级行 ×0——反向日志哨兵）→ 停 server 取证（裸 `ECONNREFUSED`，`J4-server-down.txt`）→ 停臂三锚（终局到达 47.9s，比值 1.51× 同数量级 · V7 时间界 ／ 真相源行在（fail-open 只在向量侧）／ 降级行 ×1）→ 降级行锚 `row=1 ≡ SQLite 行 id` ＋ 失败特征 `url=http://127.0.0.1:18932` ＋「Failed to connect to chromadb」；只出自失败路径 = 活臂同通道零行对照 ＋ 唯一写点（插件 doubleWrite catch）。V7 诚实收窄：本臂只覆盖 connection-refused 快失败，不测 hung-server。
+- **J5 · 4 PASS ＋ 1 OBS（run-j5）**：正向臂（预置库）`system/message` 帧原文含 nonce 逐字（§9-1 裁定断言帧）＋ 召回块非空；context 面（synthetic `user/message`，`source.kind=plugin`）亦含 nonce —— 双面注册同源成立（附证）；负向臂（全新空库）帧不含 nonce ＋ 无召回块（两臂 prompt 均不含 nonce、不复用会话 ⇒ 判别力成立 · V10 ①）。帧原文落盘 `J5-{positive,negative}-system-message.json`。
+
+**实测坑三条（含装置/插件对应改动，均有注释留痕）**：
+
+1. **chroma.exe 默认 `--host localhost` 在 Windows 绑 `[::1]` 仅 IPv6**（netstat 实证 `TCP [::1]:18931 LISTENING`，`127.0.0.1` 全连失败）⇒ 装置 `spawnChroma` 显式 `--host 127.0.0.1` 钉 IPv4，插件 `chromaUrl` 与断言侧 client 同用 `127.0.0.1`。
+2. **SDK client pipe 吞 child stderr**（`dsh-sdk-client/lib/index.js:356-360` stdio 三 pipe ＋ `stderrTail` private · `types/client.d.ts:71`，仅 runtime 死亡诊断时拼进报错）⇒ stderr 通道装置不可达，降级取证走判据 V6 预留通道二（插件日志文件）：插件新增 `degradedLogPath` 配置，降级行 stderr 照写 ＋ 追加落文件。
+3. **chromadb client `ChromaConnectionError` 吞 cause 链**（实测 `cause=undefined`、无 `code`/`url` 属性，裸 errno 不可得）⇒ 降级行加 `url=`（V6「须含本次失败特征，如 URL ／ errno」的 URL 侧字面满足）；errno 侧由装置 `J4-server-down-proven`（同端口裸 ECONNREFUSED）互补取证。
+4. 另：装置自身 bug 一枚（`save()` 路径双拼导致 J1/J2 首跑 ENOENT），当场修复后全绿 —— 自曝留痕。
+
+**工作区状态**：装置（run-36-memory.mjs J1–J5 段）／ 插件（`degradedLogPath` ＋ `url=` 两处，已重编译）／ harness deps（前置 A 三件）—— 按老大「其他工作暂时不提交」指示全部**留工作区未提交**；本轮只单独提交本 log 文件。**下一步**：3.6.1（J6，需 key）按 §卡点稿等 WB 复验通过后跑。
+
+**过程观察**（随任务条款 · 写事实附来源）：
+- V6 判据原文「通道（stderr **或** 插件日志文件）」（`dsh-migration.md:1324`）在本轮实测中：stderr 通道被 SDK 实现细节（stdio 三 pipe ＋ private stderrTail）封死，判据预留的第二通道成为唯一路径 —— 判据弹性设计在实测兑现。
+- 「须含本次失败特征，如 URL ／ errno」（`dsh-migration.md:1324`）二选一由现实裁定：第三方 client 包装层吞掉 errno ⇒ 取 URL 侧。第三方库行为改变取证姿势时，判据的「如」字（举例非穷举）是唯一合法落点。
 
 ---
 
