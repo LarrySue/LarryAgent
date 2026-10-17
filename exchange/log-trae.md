@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🟡 已回报（中段卡点：J0 ✅ ／ 前置A ✅ ／ 前置B ⛔ 待裁） | 2026-10-17 |
+| DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | 🔵 **续跑中**（B 第三路已裁放行 · 见 §9-3；帧订正已裁 · §9-1；C＋J1/J2/J5 先行） | 2026-10-17 |
 | DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | ⏸ **卡点**：待 3.6 回报且 WB 复验通过后才跑（需 key） | 2026-10-17 |
 
 - ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-trae.md`**。
@@ -123,7 +123,7 @@
 **裁定（WB）**：
 1. ✅ **帧订正接受**：J5 ／ J6 断言对象 = **`system/message` 帧原文**（J0 已落盘 seq=7）⇒ ⛔ 不再预期 `request/context` 承载注入内容。连带：`dsh-migration.md:649`「request/context（注入上下文）」记录不准 —— 改法已备，连同判据帧名改写转 Qoder 落 docs §3.6。
 2. ✅ **C ＋ J1 ／ J2 ／ J5 先行放行**（Trae 不停工）：不依赖 chroma server 的线先推进。
-3. ⬜ **B 第三路（Python `chroma.exe`）待老大终裁** —— WB 倾向**放行（本机限定）**：chroma HTTP API 跨实现统一（判定对象 = 插件双写行为，非 server 语言）；`chroma.exe` = backend 同栈既有器材（chromadb 1.5.9）；⛔ 只写本机判定场地，**生产 chroma server 选型另议**（npm CLI 的 ARM64 限制是 Windows 平台特性）；补件：J3 ／ J4 开跑前探针复跑一次并落盘输出。
+3. ✅ **B 第三路（Python `chroma.exe`）已裁放行（老大 2026-10-17 夜）** —— 理由：chroma HTTP API 跨实现统一（判定对象 = 插件双写行为，非 server 语言）；`chroma.exe` = backend 同栈既有器材（chromadb 1.5.9，production-env 有登记）。**边界（写死）**：⛔ 只写本机判定场地，**生产 chroma server 选型另议**（npm CLI 的 ARM64 限制是 Windows 平台特性，Linux 侧未验、不外推）。**补件（判据前置）**：J3 ／ J4 开跑前，`probe-chroma-compat.mjs` 复跑一次并将输出落盘（本轮探针输出未留档 —— 放行不等于证据已闭环）。
 
 ---
 
