@@ -9,10 +9,9 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| Qoder · #40 docs 帧名订正（`request/context` 记录不准 ＋ J5/J6 断言帧改钉 `system/message`） | Qoder | 本机 | 🔵 待办（改法在 `log-qoder.md` #40） | 2026-10-18 |
-| Trae · DSH-3.6.1 召回闭环（J6，需 key） | Trae | 本机 Windows | 🔵 **待跑**（WB 已放行 · ≤10 次对话预算） | 2026-10-17 |
+| Qoder · #43 帧名订正 ＋ #44 DSH-3.6 整段归档 | Qoder | 本机 | 🔵 待办（改法在 `log-qoder.md`） | 2026-10-18 |
 
-> ✅ **DSH-3.6 主块闭环**（2026-10-18 WB 复验判定成立）：J0–J5 全绿——事件消费（source_event_seq 交叉核对）／ 外接 SQLite（哨兵阳性）／ ChromaDB 双写（512 维 + 余弦 1.00000）／ 降级双锚（时间界 1.51× + 降级行锚定）／ 注入面（`system/message` 帧逐字含 nonce）。⏳ 待办：3.6.1 起跑 ／ docs 帧名订正（#40）／ Trae 工作区交付物提交时机（问老大）／ 3.6.1 收口后整段归档（Qoder）。历史各块落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
+> ✅ **DSH-3.6 整段闭环**（2026-10-18 WB 三次复验判定成立）：3.6（J0–J5 双写＋注入面）＋ 3.6.1（J6 LLM 端到端——正向逐字含 nonce · 双取证 · 负向空库无瞎编击穿）全过；Trae 交付物已自行提交入库（`53d6821`／`e42de25`／`0ed0f24`）。⏳ 待办：Qoder 归档（#44）＋ 帧名订正（#43）｜`D:/Temp/s36-test.key` 残留待清（归 Trae）＋ 测试 key 待老大关闭｜判据副本删稿（归老大 ／ 主持人 WB，保留至归档后）。✅ Trae 约束注入失效问题（`.trae/TRAE.md` → `.trae/rules/TRAE.md` 路径变更）已由老大+Qoder 闭环（`938c716`→`a6fed33`→`7ce470e`）。历史各块落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
 
 ---
 

@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | DSH-3.6 · S4 双写闭环 ＋ 注入面 | Trae | 本机 Windows | ✅ **已回报并复验通过**（J0–J5 全绿 · WB 复验判定成立 · 2026-10-18 · 见 §11） | 2026-10-17 |
-| DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | 🟡 **已回报**（J6 6 PASS 一次过零重试 · 真调用 2≤10 · 2026-10-18 · 见 §12） | 2026-10-17 |
+| DSH-3.6.1 · S4 召回闭环（LLM 端到端） | Trae | 本机 Windows | ✅ **已回报并复验通过**（J6 全绿 · WB 复验三判定成立 · 2026-10-18 · 见 §13） | 2026-10-17 |
 
 - ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-trae.md`**。
 - ⚠️ **通用纪律**：
@@ -162,6 +162,21 @@
 **附带产出（转办）**：`request/context` ＝ 路由元数据、注入承载帧 ＝ `system/message` ⇒ `dsh-migration.md:649` 记录订正 ＋ 判据 J5/J6 帧名钉死 —— 已转 Qoder（`log-qoder.md` #43）。
 
 **放行**：3.6.1 卡点解除（2026-10-18），Trae 可跑 J6。
+
+### 13 · WB 复验三：3.6.1 · J6 判定成立（2026-10-18）
+
+**复验判定：J6 回报成立**（回源核 findings 11 项 ＋ 三臂 events 原文抽验，⛔ 非采信声明）：
+
+- **正向双取证闭合**：`J6-B-events.jsonl` 原文 `项目代号是 **PING-75cac5dc**。`（source.kind=model · deepseek-official · deepseek-flash）—— 逐字含 nonce（连续子串）；`turn/end.reason.kind='completed'`；`system/message` 帧原文含 nonce ⇒ **帧侧＋输出侧双取证**，是召回注入起的作用（⛔ 只凭模型输出不算）
+- **负向对照无瞎编击穿**：空库臂回答「我不知道。我的记忆里没有存过你的项目代号，只有你这次的提问。」不含 nonce；存在性断言（assistant/message 非空 ＋ completed）成立；⭐ **bonus**：负向臂思维链里模型明写「I'm being run as the 'B session' in a J6 test. The nonce is random per test run…」——**自知是测试仍答不出值** ⇒ 比判据要求的更强
+- **预算 2/10**（B ×1 ＋ 负向 ×1；A 无 key 写入不计——写入靠 user/message 事件，J0/J1 已证）
+- **交付物已入库**（Trae 自行提交：`53d6821` 插件+装置+探针+deps ／ `e42de25` J6 装置段 ／ `0ed0f24` 回报）
+
+**复验认账（派发稿措辞瑕疵）**：派发稿 §2 写「无 key 的**负向臂**」与判据 V11 存在性要求（`completed` ＋ assistant/message 非空）**打架**——无 key 必 `MISSING_CREDENTIAL`、存在性断言必假 ⇒ Trae 按判据权威办（负向臂带 key）**正当**，且留痕供核。派发稿该句是我写窄了，判据本身无问题；教训：派发稿与判据冲突时**判据优先**（Trae 这次示范了正确姿势）。
+
+**待处理（转交）**：① `D:/Temp/s36-test.key` 残留待清（归 Trae 造的文件）＋ **测试 key 待老大关闭**（DeepSeek 侧，L4「用完即关」口径）；② Trae 约束注入失效问题（`.trae/TRAE.md` → `.trae/rules/TRAE.md` 路径变更）已由老大+Qoder 闭环（`938c716`→`a6fed33`→`7ce470e`），与本块判据无涉。
+
+**收口**：DSH-3.6 整段（3.6 ＋ 3.6.1）判据全过并三次复验成立 ⇒ TODO 已标 ✅、归档转办 Qoder（`log-qoder.md` #44）。
 
 ---
 

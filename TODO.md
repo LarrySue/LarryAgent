@@ -53,7 +53,7 @@
 > ⚠️ **本段未闭合的下游尾巴 0 条** —— **判据 ／ 器材规格 ／ 复验结论的权威落点 = `docs/dsh/dsh-migration.md` §3.6**〈DSH-3.5 · S3 sandbox：CVM 前置核查实测回填〉／〈DSH-3.5 · S3 sandbox 器材：`landlock_probe.py` 登记〉／〈DSH-3.5 · S3 sandbox：判定轮复验〉（本段不重复结论）。
 > 📌 本区**在飞内容自 `DSH-3.6` 起**（下方）。
 
-#### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）
+#### DSH-3.6 · S4 记忆最小闭环（→ 2.4.2）✅ **全段判据已过并复验（2026-10-18 · 待 Qoder 归档 · 转办 #44）**
 
 > **2026-10-17 就地细分（WB，按「一次派发 ／ 一次测试 ／ 一次复验」标准）**：拆 **3.6 双写闭环**（0 token）＋ **3.6.1 召回闭环**（需 key · LLM 端到端）—— 依据：两块交付面与失败模式不同（事件→库 vs 库→prompt 注入）；3.6 先排掉最大风险（Cordis 哑坑 ／ 假绿哨兵）且**不需要 key**；3.6.1 的 key 侧调试不污染双写侧归因（判据可分，同 3.0 三态教训）。**串行卡点**：3.6.1 待 3.6 库就位后再派。
 > **判据定稿 v3 权威落点 = `docs/dsh/dsh-migration.md` §3.6〈DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3〉**（`:1249`，Qoder 落笔 `dabf102` ＋ **WB 复验 PASS**：154 行正文归一化逐字一致、仅头部性质段按授权调整）—— 历程 v1 → Claude 反向举证（`1b5d07c`）→ v2 → 老大终审；J5 并入 3.6、J0 新增、补偿「定义不验」已裁。⚠️ **exchange 副本 `exchange/dsh-36-s4-criteria.md` 待删**（收口四步：① 复验落笔 ② 切断引用 ③ 均已 Done；**④ 删稿归老大 ／ 讨论主持人（WB）** —— ⛔ **Qoder 不可单删**（按 `.qoder/rules/QODER.md:46` 细化边界「讨论稿以主持人身份处理」，本稿主持 = WB；2026-10-13「讨论稿归 Qoder」裁定以此为执行细则）；**副本保留至 3.6 回报复验后再删**（派发期自包含判据有兜底价值）；git 留底 `80e6270`，⛔ 不另存 `.bak`；**连带改法已备**：`docs/dsh/dsh-migration.md:1251` 性质段「派发期自包含副本」句随删同步更新）。
@@ -61,10 +61,10 @@
 > ⚠️ **派发稿须含的待实测前提（Trae 侧）**：自做插件 import 的 `@deepseek-ai/*` 是否已在 `harness/package.json`（3.3-b 机制事实 (a)）；`npx chroma run` 本机可用性；TS 侧 embedding 资产（`embed-probe`）可跑性。
 
 - [x] ✅ **3.6 · 双写闭环 ＋ 注入面**（0 token ／ 本机 Windows ／ Trae）—— 判据 **J0–J5 全过并复验**（WB 复验判定成立 · 2026-10-18：J0 7/7 ／ J1-J2 6/6〔哨兵阳性 ＋ source_event_seq 交叉核对〕／ J3 6P+4O〔四件全过 · 512 维 ＋ 余弦 1.00000〕／ J4 9P+1O〔双锚 ＋ 时间界 1.51× ＋ 降级行锚定〕／ J5 4P+1O〔`system/message` 帧逐字含 nonce · 负向臂不含〕）；chroma server 第三路 = `chroma.exe`（老大裁 · 本机限定）。完成态快照归 `archive/`（Qoder 办 · 待 3.6.1 收口后整段归档）。
-- [ ] **3.6.1 · 召回闭环**（需 key ／ LLM 端到端 ／ 本机 Windows ／ Trae）—— 判据 **J6**（v2：J5 已并入 3.6）：LLM 端到端（A 会话 nonce → B 会话召回；负向对照 = 空库 ＋ **存在性断言双锚**；nonce ≥8 hex；采样口径写死）。key 走 env 层注入（`.credentials.yaml` 值不落稿）。🔓 **卡点已解除**（WB 复验 3.6 通过并放行 · 2026-10-18）。
-- [ ] ⚠️ **双写一致性模型**（3.6 交付「定义」）：SQLite = 真相源 ／ ChromaDB = 派生索引 ／ 不可达时不阻塞对话 ＋ 日志记降级 ／ 补偿行为（恢复后补写）**定义不验**（最小闭环边界）—— ⭐ **时点（2026-10-17 钉死）**：**产品承接 = `HUMAN_NOTE.md`〈记忆系统调优〉段内「向量同步补偿」条**（老大掌握 · 长期）；**工程默认时点 = DSH-4 记忆块**（下方「长期记忆双写 + 人审」行）开工时一并做；**提前触发** = 3.6 之后联调 ／ 使用中 ChromaDB 降级**真发生过一次** ⇒ 单独立块，先到为准。⚠️ `product-positioning.md:205` 指针（「见 TODO.md 记忆系统调优段」）**已失效**（段已挪入 HUMAN_NOTE）—— 修正改法已备，待 Qoder 落笔。
+- [x] ✅ **3.6.1 · 召回闭环**（需 key ／ LLM 端到端 ／ 本机 Windows ／ Trae）—— 判据 **J6 全过并复验**（WB 复验判定成立 · 2026-10-18：6P+5OBS 一次过零重试；正向回答「项目代号是 PING-75cac5dc。」逐字含 nonce · 帧侧＋输出侧**双取证闭合**；负向空库「我不知道…」不含 nonce ＋ 存在性断言双锚 · **无瞎编击穿**（模型思维链自知是 J6 测试仍答不出值）；真调用 2≤10）。⚠️ **复验认账**：派发稿 §2「无 key 的负向臂」与判据 V11 存在性要求（completed）打架 ⇒ Trae 按判据权威办（负向臂带 key）**正当**（派发稿措辞瑕疵，判据无问题）；⏳ key 残留 `D:/Temp/s36-test.key` 待清（归 Trae）＋ 测试 key 待老大关闭。
+- [x] ✅ ⚠️ **双写一致性模型**（3.6 已交付「定义」）：SQLite = 真相源 ／ ChromaDB = 派生索引 ／ 不可达时不阻塞对话 ＋ 日志记降级 ／ 补偿行为（恢复后补写）**定义不验**（最小闭环边界）—— ⭐ **时点（2026-10-17 钉死）**：**产品承接 = `HUMAN_NOTE.md`〈记忆系统调优〉段内「向量同步补偿」条**（老大掌握 · 长期）；**工程默认时点 = DSH-4 记忆块**（下方「长期记忆双写 + 人审」行）开工时一并做；**提前触发** = 3.6 之后联调 ／ 使用中 ChromaDB 降级**真发生过一次** ⇒ 单独立块，先到为准。⚠️ `product-positioning.md:205` 指针（「见 TODO.md 记忆系统调优段」）**已失效**（段已挪入 HUMAN_NOTE）—— 修正改法已备，待 Qoder 落笔（#40 死链批处理一并）。
 - ⚠️ 写码前必读：`node:sqlite` 在并发 + `busy_timeout=0` 时 **`prepare()` 阶段就抛错**（Python 侧只在 `run()` 阶段失败）⇒ 错误处理须包到 `prepare` 层。
-- [ ] 📚 **参考件**（登记表 3.6 行）：`ref/community/Asher-2000__dsh-memory-connect` —— 可抄形状 5 处（provide 实例化后的 service ／ inject 声明 seam ／ `systemPrompt.context` order 500 ／ `turn/end` 轮末摘要 ／ `recallSync` 跨会话过滤 `session_id !=`）；⛔ 不可参考：无 ChromaDB 形态（其向量在自家 SQLite 表）／ schema 按产品 2.4 域自做 ／ LLM consolidation 非本步靶子。其 CHANGELOG 自曝两个**静默不生效**根因（Cordis 惰性构造服务 ⇒ 只 `ctx.provide()` 不实例化；召回写进无人读的字段），**与本步判据「事件确实被消费」同源**。
+- [x] ✅ 📚 **参考件**（登记表 3.6 行）：`ref/community/Asher-2000__dsh-memory-connect` —— 可抄形状 5 处（provide 实例化后的 service ／ inject 声明 seam ／ `systemPrompt.context` order 500 ／ `turn/end` 轮末摘要 ／ `recallSync` 跨会话过滤 `session_id !=`）；⛔ 不可参考：无 ChromaDB 形态（其向量在自家 SQLite 表）／ schema 按产品 2.4 域自做 ／ LLM consolidation 非本步靶子。其 CHANGELOG 自曝两个**静默不生效**根因（Cordis 惰性构造服务 ⇒ 只 `ctx.provide()` 不实例化；召回写进无人读的字段），**与本步判据「事件确实被消费」同源**。
 
 #### DSH-3.7 · 生产挂载落盘（Windows 方言修复件） ✅ **全族已归档（2026-09-22）**
 
