@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并通过 WB 复验**（§10 `ae33325` ＋ §11）｜🔵 **待老大再体验**（返工 §13 已完成）⇒ 退出信号① | 2026-10-18 |
 | DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | ✅ **已回报并通过 WB 复验**（§12-5 ／ §12-6：J-a–J-d 全过；③ 判仓库根特例已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
-| DSH-3.9.1-b · **缓存前缀修复 ＋ 召回块时间戳收口**（**原 b／c 合单**：cache 前缀＋时间戳移除＋DB 修正＋usage 计量＋compaction 核查＋双面去重） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §14；⚠️ 本单**授权动 plugin-s4-memory 时间／召回呈现行**——破 §12 禁区，见稿内边界；⛔ 不含 reasoningEffort／工具裁剪／**全局上下文重排**） | 2026-10-18 |
+| DSH-3.9.1-b · **缓存前缀修复 ＋ 召回块时间戳收口**（**原 b／c 合单**：cache 前缀＋时间戳移除＋DB 修正＋usage 计量＋compaction 核查＋双面去重） | Trae | 本机 Windows | 🟡 **已回报**（§14-5：J-e–J-k 成立，J-i 已挂载未触发；代码 `55ae302`；证据 `_trae-evidence/391b`） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -267,6 +267,27 @@
 ### 4 · 回报格式
 
 结论先行 → J-e～J-k 逐条证据（原文落盘、⛔ 不改写）→ 缓存前缀审计的 volatile 清单（含 A-③）→ 第三时间源清查登记（A-⑤）→ 未闭合项 → 自曝。写完改顶部状态区。
+
+### 5 · 回报：3.9.1-b 四项完成，J-e～J-k 成立（2026-10-18 · Trae · commit `55ae302`）
+
+**结论**：A（前缀修复）／B（usage 计量）／C（compaction 核查）／D（双面去重）全部落地。真调用 3 轮，零重试；收尾 `childExit.code=0`、`forced=false`。证据 `D:\Code\_trae-evidence\391b\README.md`。
+
+| # | 结论 | 证据（通道） |
+|---|---|---|
+| J-e | ✅ 召回块无时间戳（正则命中 0） | `J-e/recall-block.txt`（context 面帧 #30 原文）＋ `J-e/timestamp-check.json` |
+| J-f | ✅ 42 行 UPDATE +8h，备份在位 | `J-f/db-before-after.json`（前后抽样 id=1/2 对照；备份 `.dsh-home/larry-memory.db.bak-20261018-160549`） |
+| J-g | ✅ 前缀稳定：`system/message` 仅第 1 轮 #7；第 2/3 轮无更新帧（`request/header` 同）⇒ 前缀未变；前 4096 字符 sha256 `9807275…998a` | `J-g/prefix-hash.json` ＋ `J-g/prefix-first4096.txt` ＋ `J-g/prefix-audit.json` |
+| J-h | ✅ usage 已透传并可见：1 轮 in 6892/cache 768/out 77 → 2 轮 369/7680/2 → 3 轮 383/7936/9 | `J-h/usage.jsonl` ＋ `J-h/usage-summary.json` ＋ 页面截图（内存 `tok in … | cache … | out …`） |
+| J-i | ⚠️ **已挂载、auto=true、未触发**：阈值 80%×1M=800k，实测最高 8328；无触发证据 | `J-i/compaction-report.md`（含默认配置出处、启用路径、手动入口已 disable） |
+| J-k | ✅ 第 2 轮写入 `391B-NONCE-7Q` → 第 3 轮 context 召回帧 #30 逐字含；回答逐字一致 | `J-k/recall-regression.json` |
+
+**A-③ volatile 清单**：前 4096 字符 27 行，date／time／session-id／uuid／ISO **0 命中**；框架身份／persona／工具说明均为静态（cwd 是部署常量）。唯一 volatile 是召回块，已移出 system prompt（原第 4 行 → context 面 synthetic 帧）。
+
+**A-⑤ 时间源清查**：插件内只剩 `src/index.ts:104` `created_at DEFAULT (datetime('now'))`（数据层 UTC，**不进 prompt**，登记保留）；无 `new Date`／`toISOString`。`.dsh-home` 实体副本已同步（备份 `plugin-s4-memory.bak-20261018-160536`）。
+
+**改动**：`plugin-s4-memory/src/index.ts`（A-① 去时间戳／A-②+D 默认仅 context 面／SELECT 去 created_at）｜`bridge.mjs`（`usage.jsonl` 落盘）｜`index.html`（逐轮 usage ＋ 累计；context 面召回气泡）｜`dsh-console/README.md`。⛔ 未动 reasoningEffort／工具集／召回语义／compaction 策略／docs／backend。
+
+**未闭合 / 自曝**：① J-i 落在判据二选一之外（已挂载但无触发证据），如实记；② J-g 用「无 system/message 更新帧 + request/header 仅一次」论证（无第二份样本可哈希）；③ A-④ 依赖本机 UTC+8；④ 每轮都会写新记忆，字面「不写新记忆的两轮」不可构造——稳定性由「召回移出前缀」保证；⑤ 页面新增 context 面召回气泡（UI 变化）。
 
 ---
 
