@@ -1,8 +1,8 @@
 ---
 name: kb-semantic-audit
 description: "用本地语义检索（knowledge engine）做两件事：① 字面不同但意思相近的跨文件查找（grep 换了三种说法仍无果时）；② **文档语义体检**——把『命中分布』当证据，反推文档哪里语义不合理（同一概念散落多处／正本被旁支压住／两处表述互相打架／该回答的段根本没有『问题语言』）。当用户说『哪些地方讨论过 X』『这个定义是不是有好几份』『查一下这两处说法冲不冲突』『文档语义上有没有毛病』时使用。Use when semantic (not keyword) lookup is needed, or when auditing documents for semantic defects via retrieval distribution."
-description_zh: "kb 语义检索 + 文档语义体检：探针查询法 / 五类语义病灶判据 / 反义陷阱（相似≠一致，向量只粗筛）/ 四类审计动作（口径一致性·矛盾候选·孤岛·漂移）/ 命中必须回读正本"
-version: 1.1.0
+description_zh: "kb 语义检索 + 文档语义体检：⛔ 前置闸（先验索引健康，红则只出检索层）/ 探针查询法 / 五类语义病灶判据 / 反义陷阱（相似≠一致，向量只粗筛）/ 四类审计动作（口径一致性·矛盾候选·孤岛·漂移）/ 命中必须回读正本"
+version: 1.2.0
 allowed-tools: Read,Bash,Grep,Glob
 agent_created: true
 ---
@@ -46,6 +46,40 @@ python kb.py rebuild -p LarryAgent          # ④ 索引坏了／换模型时（
 
 ## 四、⭐ 语义体检：把检索当测量
 
+### 4.0 ⛔ 前置闸：**先证明索引健康，再解释分布**（不通过就只出检索层结论）
+
+> **为什么**：命中分布可能是**索引缺陷**的产物，不是文档语义的产物。索引坏了的时候，"排不上来"跟"文档没写清"**长得一模一样** —— 直接解释分布，会把"索引坏了"判成"文档该改"，然后去改一份本来没问题的文档。
+
+**三条自检**（在 `indexes/` 目录跑，秒级、只读）：
+
+```bash
+cd "D:/AI Work/knowledge engine/LarryAgent/indexes"
+
+# ① 向量坍缩：文本不同但向量完全相同（>0 即不准做分布类结论）
+python -c "import numpy as np;X=np.load('index.npy');u,c=np.unique(X.view([('','float32')]*512),axis=0,return_counts=True);d=c[c>1];print('dup groups',len(d),'rows',int(d.sum()),'distinct',len(u))"
+
+# ② 长面包屑：单个标题过长会把正文挤出嵌入窗口 ⇒ 其子孙块共用一个向量（这些区域改走 grep）
+python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['chunks'];t=[c for c in ch if len(c['title'])>800];print('long-breadcrumb',len(t),sorted({c['file'] for c in t}))"
+
+# ③ 空块／碎片块：只有标题或 `---` 的占位块（它们会占用 top-k 名额）
+python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['chunks'];print('fragments',sum(1 for c in ch if len([l for l in c['text'].splitlines() if l.strip()])<=2),'/',len(ch))"
+```
+
+**判据**：`dup rows > 0` 或 `long-breadcrumb > 0` ⇒ **索引不健康**（fragments 只作参考：占比 >5% 时 top-k 名额被明显挤占）。
+
+- 🟢 **健康** ⇒ 照常做 §4.1–§4.4，可以下"文档语义病灶"结论。
+- 🔴 **不健康** ⇒ **降级为检索层**：只回答"去哪儿读"，⛔ **不出**"概念散落／正本不自解释／结论未升格"这类分布类结论。**先把索引修好（或换用 grep），再谈文档。**
+
+**索引坏了时，§4.2 的表会怎么骗你**（实测形态，逐条对上）：
+
+| §4.2 的判据 | 索引不健康时的假象 |
+|---|---|
+| 同一概念命中散在 3+ 文件 | 坍缩块**不参与**正常分布 ⇒ **低估**该区域的重复，漏报 |
+| 正本排不过旁支 | 坏掉的那一侧**根本排不上来** ⇒ 把"索引坏了"读成"正本不够自解释"，从而**去改一份没问题的文档** |
+| 命中过程稿而正本无结论 | 空块／碎片块**占着 top-k 名额** ⇒ 看起来"正本缺失"，其实是被占位块挤掉 |
+
+> ⚠️ 这条闸的日期基线（2026-10-19 实测）：`dup rows 200 / distinct 2476`、`long-breadcrumb 143`（全在 `archive/roadmap-history.md`）、`fragments 304/2648`。**基线会变**（引擎一修就失效）—— 记它只为说明"闸真的会红"，⛔ 别当常量引用；每次体检**现跑**。
+
 ### 4.1 出探针
 
 同一主题，**换 4 种问法**各查一次（这四条就是你的"测量组"，记下来可复跑）：
@@ -58,6 +92,8 @@ python kb.py rebuild -p LarryAgent          # ④ 索引坏了／换模型时（
 | 同义词式 | 换成行业说法／口语说法再问 | 概念是否**只绑了一个专名** |
 
 ### 4.2 读分布 → 定病灶
+
+> ⚠️ **本表只在 §4.0 闸通过后适用**；闸红时下表每一行都可能反向骗你。
 
 | 症状（看命中集合的形状） | 说明什么 | 怎么办 |
 |---|---|---|
