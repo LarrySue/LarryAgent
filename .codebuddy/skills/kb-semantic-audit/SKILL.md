@@ -2,7 +2,7 @@
 name: kb-semantic-audit
 description: "用本地语义检索（knowledge engine）做两件事：① 字面不同但意思相近的跨文件查找（grep 换了三种说法仍无果时）；② **文档语义体检**——把『命中分布』当证据，反推文档哪里语义不合理（同一概念散落多处／正本被旁支压住／两处表述互相打架／该回答的段根本没有『问题语言』）。当用户说『哪些地方讨论过 X』『这个定义是不是有好几份』『查一下这两处说法冲不冲突』『文档语义上有没有毛病』时使用。Use when semantic (not keyword) lookup is needed, or when auditing documents for semantic defects via retrieval distribution."
 description_zh: "kb 语义检索 + 文档语义体检：⛔ 前置闸（先验索引健康，红则只出检索层）/ 探针查询法 / 五类语义病灶判据 / 反义陷阱（相似≠一致，向量只粗筛）/ 四类审计动作（口径一致性·矛盾候选·孤岛·漂移）/ 命中必须回读正本"
-version: 1.2.0
+version: 1.3.0
 allowed-tools: Read,Bash,Grep,Glob
 agent_created: true
 ---
@@ -67,6 +67,8 @@ python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['c
 
 **判据**：`dup rows > 0` 或 `long-breadcrumb > 0` ⇒ **索引不健康**（fragments 只作参考：占比 >5% 时 top-k 名额被明显挤占）。
 
+- ⚠️ **fragments 不能只看比例，必须抽验**：按"字数"过滤碎片块会**误杀"短但实义"的结论行**（实发生过：一次修复把 19 行真结论当空块丢掉，后改按**形状**过滤——只丢分隔线／表框／围栏／纯标题行——才修回）。⇒ 看到 fragments 大幅下降，先抽 3–5 条被剔掉的块，确认里面有实义结论。
+
 - 🟢 **健康** ⇒ 照常做 §4.1–§4.4，可以下"文档语义病灶"结论。
 - 🔴 **不健康** ⇒ **降级为检索层**：只回答"去哪儿读"，⛔ **不出**"概念散落／正本不自解释／结论未升格"这类分布类结论。**先把索引修好（或换用 grep），再谈文档。**
 
@@ -78,7 +80,10 @@ python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['c
 | 正本排不过旁支 | 坏掉的那一侧**根本排不上来** ⇒ 把"索引坏了"读成"正本不够自解释"，从而**去改一份没问题的文档** |
 | 命中过程稿而正本无结论 | 空块／碎片块**占着 top-k 名额** ⇒ 看起来"正本缺失"，其实是被占位块挤掉 |
 
-> ⚠️ 这条闸的日期基线（2026-10-19 实测）：`dup rows 200 / distinct 2476`、`long-breadcrumb 143`（全在 `archive/roadmap-history.md`）、`fragments 304/2648`。**基线会变**（引擎一修就失效）—— 记它只为说明"闸真的会红"，⛔ 别当常量引用；每次体检**现跑**。
+> ⚠️ **基线会变，⛔ 别当常量引用，每次体检现跑**。两次实测（同一天，修复前后各一次）：
+> - **修复前（闸红）**：`dup rows 200 / distinct 2476`（总 2648）、`long-breadcrumb 143`（全在 `archive/roadmap-history.md`，成因＝`:541` 一个 968 字符的 `####` 标题把正文挤出 512-token 窗）、`fragments 304/2648`。
+> - **修复后（闸绿，2026-10-19 复跑）**：`dup 0 / distinct 1814`（总 1814）、`long-breadcrumb 0`、`fragments 135/1814`（≈7.4%）。总块数下降＝主库排除了 `ref/*`。
+> ⇒ 这两组数字的用处：**证明这道闸真的会红、也真的能转绿**；判据只用"`>0` 即红"，与具体数值无关。
 
 ### 4.1 出探针
 
