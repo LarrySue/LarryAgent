@@ -6,7 +6,7 @@ description: 文档一致性巡检与审计工作法（Qoder 视角）：全量�
 # 文档一致性巡检（Qoder 工作法）
 
 > 适用：全量职责巡检 ／ 针对性梳理 ／ 重要内容落点核实 ／ 引用与索引完整性检查。
-> 定位：这是「审计视角」——发现跨文档的漂移、断链、缺项、过期与“无处可办的建议”。配套工作法（各成一份 skill，本件不展开）：归档瘦身 `doc-archive-slimming`、提案套用 `doc-proposal-application`、事后复检 `doc-governance-recheck`、清退与承接 `doc-sunset-handoff`、判据设计 `verifiable-criteria-design`、断言回源核证 `claim-source-verification`、职责变更同步 `scope-change-sync`。
+> 定位：这是「审计视角」——发现跨文档的漂移、断链、缺项、过期与“无处可办的建议”。配套工作法（各成一份 skill，本件不展开）：归档瘦身 `doc-archive-slimming`、提案套用 `doc-proposal-application`、事后复检 `doc-governance-recheck`、清退与承接 `doc-sunset-handoff`、判据设计 `verifiable-criteria-design`、断言回源核证 `claim-source-verification`、职责变更同步 `scope-change-sync`、语义检索与落点第一跳 `kb-semantic-lookup`。
 > ⭐ **一体两面、须同步**：本区（docs）与 `TODO.md` 是同一件事的两面（做什么／怎么做），改一面必同步另一面，两面不一致即为缺陷；同步双向（定调→TODO 承接；执行新事实→回流修正本区结论）。
 
 ## 一、先定模式（三选一，可组合）
@@ -21,8 +21,8 @@ description: 文档一致性巡检与审计工作法（Qoder 视角）：全量�
 
 **C. 重要内容落点核实**（“X 落在哪” ／ “是否一致” —— 高频轻量）
 - 次序（省时间的关键）：
-  1. 全库 `git grep`（多关键词变体，注意**前缀陷阱**：`landlock*` 会漏 `cvm-landlock-verify`）；
-  2. **先查两处 skill 库**：`~/.workbuddy/skills/*/SKILL.md` 与 Qoder skills —— 原则 ／ 方法论常沉淀于此且**不在 git 内**；
+  1. 全库 `git grep`（多关键词变体，注意**前缀陷阱**：`landlock*` 会漏 `cvm-landlock-verify`）；⚠️ **词不确定时 kb 先行**——换了说法仍无果就 ⛔ 别继续穷举同义词，走 `kb-semantic-lookup`（kb 定位 → Read 正本 → 拿**正本里的词**回头 grep 补穷尽）；
+  2. **再查各家 skill 库**（项目专属件已全数入仓、git 可搜 ⇒ 权威清单见 `docs/ai-governance.md` §3〈文件与载体〉；各家**用户级**目录只剩不属本项目的通用件）—— 原则 ／ 方法论常沉淀于此；
   3. **git pickaxe 全历史**：`git log --all -S "短语" --oneline`（`-S` 是精确子串；含已删文档），命中后看 diff；
   4. 历史版本：`git show <rev>:<path>`（已删文件的原文）；
   5. 落点找不到时，报告**检索覆盖范围**＋“未见成文”结论（不得只写“没有”）。
