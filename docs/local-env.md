@@ -704,6 +704,43 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 （另两条已由老大裁掉：英文触发机制**关闭收口**并降为规则（即本条 §12.6）；`④_bytesAtKill` **降级为参考项**——它本就不是断言项。）
 - `no-session-dir` 的 **POSIX 分支**未在 Linux 上验过 ⇒ **不属延后**，属**发版前必做**（见 §12.3）。**已转出（2026-09-20）** ⇒ 承接位置 = `TODO.md` 3.7.4 段处置表 **#5** ＋ **`archive/roadmap-history.md` 的 `##### DSH-3.7.4-T`**（⚠️ **2026-09-30 订正**：原写「派发稿 `exchange/log-claude.md` 的 `DSH-3.7.4-T·P` 块（实际跟踪点在后者）」—— 该块已于 2026-09-21 复核后收口 ⇒ **活区指针已失活，改为指向定案区**）。
 
+### 12.9 ⭐ 仓库根目录 **ACL 特例** —— 沙箱自授权在仓库根被拒（🟢 2026-10-18 判决 · DSH-3.9.1-a `J-c`；落点经老大 2026-10-18 裁）
+
+> **一句话**：`shell`（pwsh）工具在 **cwd = 仓库根 `D:\Code\LarryAgent`** 时**起不来**，换到安全区 `D:\Temp\DSH-Dev-Temp` 即通 ⇒ **判决 = 仓库根目录 ACL 特例、⛔ 非代码缺陷**；**根因（仓库根为何被拒）未深挖**。
+> **登记价值**：**套壳选 cwd 时须避开此类目录**（会让沙箱 ACL 自授权失败的目录类型）。
+> ⚠️ **本节出处 = DSH-3.9.1-a，⛔ 非 §12 标题所写的 3.7.4** —— 归入 §12 只因其属同族「Windows 装置类事实与判据纪律」；与 §13（3.9.1 沉淀）互为同源，⛔ 勿当成两件事的结论。
+
+**机制链（🟢 wireLog ＋ 帧原文实证）**
+
+1. pwsh 工具要起**外部 PowerShell 子进程**；DSH 沙箱在放行前对它做 **Windows ACL 自授权**：`SetNamedSecurityInfoW → grantWrite(cwd)`。
+2. 该调用在仓库根上 **ACCESS_DENIED（Win32 5）** ⇒ shell 进程起不来。帧原文（`tool/result #25`／`#48`）：`Error: SetNamedSecurityInfoW failed (Win32 5): grantWrite(D:\Code\LarryAgent)`。
+3. **与命令内容无关**：同轮 `seq 47` 只读的 `Test-Path` 对比**同样挂** ⇒ 不是"某条命令被拦"。
+4. **静默 fail-closed**：沙箱内属**信任区、不走用户授权流程** ⇒ 无弹窗、`approvals.jsonl` **零授权帧**；体感 =「莫名其妙调不动」。
+5. **非 shell 工具不受影响**：`create_file`／`glob`／`read`／`grep` 在 **Node 进程内**执行、**不过此 ACL** ⇒ 同环境下创建／列举全正常。与老大现场逐条吻合（区内创建成功／区外弹窗授权／区内删除静默失败／区外拒绝后失败／模型自述「shell 直接调不动」）。
+
+**调用方定位（🟢 双侧核过）**
+
+- **上游**：`@deepseek-ai/dsh-sandbox-windows-acl` —— `SetNamedSecurityInfoW`／`grantWrite` 仅出现在该包（在树：`.dsh-home/profiles/sdk/node_modules/@deepseek-ai/dsh-sandbox-windows-acl`；亦作依赖出现在 `harness/packages/plugin-sandbox-dialect/node_modules/` 下）。
+- **我方**：`@larryagent/plugin-sandbox-dialect` **自有源码零命中** —— 2026-10-18 Qoder 复跑 `grep -rn "SetNamedSecurityInfo\|grantWrite" harness/packages/ --exclude-dir=node_modules` ⇒ **0**；它是「拒绝方言」翻译件、**不负责 ACL 授予**。⚠️ **口径陷阱**：**含 `node_modules` 的同一 grep 会命中 48 处** —— 那是上游依赖，⛔ 不得读成「我们的代码」。
+
+**对照实验（唯一变量 = cwd）**
+
+| 配置 | cwd | pwsh 结果 |
+|---|---|---|
+| 旧（老大体验时那轮） | 仓库根 `D:\Code\LarryAgent` | ❌ `SetNamedSecurityInfoW failed (Win32 5)`（`#25`／`#48`） |
+| 新（3.9.1-a 返工后） | 安全区 `D:\Temp\DSH-Dev-Temp` | ✅ **两次均一次成功、无重试**（`tool/call #24→#25`／`#39→#40`，`isError=false`，输出逐字回显）；探针期间**零 `approval/asked` 帧**（信任区静默） |
+
+同机、同 dsh 版本、同 profile ⇒ **唯一变量 = cwd**。装置侧规避**已落地**：`harness/scripts/dsh-console/bridge.mjs:59` 缺省 cwd 已改为安全区（`:58` 注「⛔ 不暴露仓库根」，`--cwd` 可覆盖）。
+
+**边界（诚实清单）**
+
+- 本判决只证「在 `D:\Temp\DSH-Dev-Temp` 上 **echo 级** pwsh 可跑」，⛔ 不证其它目录或复杂命令。
+- **仓库根为何 ACL 授权失败 = 未深挖**（不在 `J-c` 判据内）⇒ 属**认知缺口、非待修 bug**；再遇同类目录按「避开」处置，要根治须另立项（读 Windows ACL／所有权链）。
+- ⭐ **换 cwd 不保证在别处不犯**：ACL 授权对象会变成**新 cwd** ⇒ **每换一处工作区都须实测一次**（①「cwd 产品决策」与 ③「本特例」因此**解耦**，⛔ 勿混谈）。
+- **产品层启示**（本节只记事实，⛔ 产品口径归 `product-positioning.md`）：信任区操作**静默 fail 无提示**（fail-closed 本身正确、但体感「莫名其妙」）。
+
+**证据**：`D:\Code\_trae-evidence\391a\J-c\`（`probe-verdict.md`／`probe-verdict.json`／`probe-tool-calls.json`／`old-run-contrast.json` ＋ 2 张截图）；旧配置帧原文取自 `391/run-1792266691996/driver.log.wire.jsonl`。⚠️ **仓外路径、⛔ 不入 git** ⇒ 若该机证据目录被清，本节即唯一留存。
+
 ---
 
 ## 13. DSH-3.9.1 调试体验台沉淀 · 两条永久操作纪律（🟢 2026-10-18 实测派生）
