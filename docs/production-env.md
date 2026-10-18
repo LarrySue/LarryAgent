@@ -593,7 +593,7 @@ records:
 
 ## 13. CVM 产出回传核对（DSH-3.9 收口项 · 2026-10-18 🟢 WB 在该机上只读枚举）
 
-> **性质**：DSH-3.9 收口项「CVM 产出回传核对表」的**权威落点**——原专题稿 `exchange/cvm-produce-checklist.md`（WB 出）已并入本节。
+> **性质**：DSH-3.9 收口项「CVM 产出回传核对表」的**权威落点**——原专题稿（WB 出，交流区 `cvm-produce-checklist.md`）已并入本节并**于 2026-10-18 退役删除**。⚠️ 该路径**已不存在**，回溯全文用 `git log -p -- exchange/cvm-produce-checklist.md`（留底 `768f687`／`86a1417`）。
 > **为何落本档**：`test-env.md` §1 的角色定位表已钉死 **CVM 的文档 ＝ 本档**（该档是 WSL 的）；CVM 相关命中数亦为本档最多 ⇒ ⛔ 不落 `test-env.md`，免得把 WSL 与 CVM 两个环境混在一处（那份最重要的一条恰是 §5「与生产环境的边界」）。
 > **取证方式**：CVM 上（连接信息见 §1）**只读枚举** ＋ 逐文件 `sha256sum` 生成本地清单；本机侧对 `_trae-cvm-evidence`／`_claude-cvm-evidence`／`_claude-evidence` 全量算 sha **按内容比对**（⛔ 不按路径——两侧目录结构不同）。
 > **回传落点**：`D:\Code\_cvm-inv\`（清单 ＋ 回传包 ＋ 解包目录）。⚠️ 在仓库外（与既有 `_trae-cvm-evidence` 同惯例），⛔ 不进 git。
