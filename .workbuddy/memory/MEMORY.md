@@ -65,6 +65,7 @@
 | `plan-test-cost-ladder` | 跑计费／耗资源测试前 |
 | `probe-context-injection` | 验"某配置是否真注入"时 |
 | `remote-probe-dryrun` | 远程机判定前 |
+| `kb-semantic-audit` | 词不对的跨文件查找／"哪些地方讨论过 X"／**文档语义体检**（读命中分布，探针法）前 |
 | `apply-proposal-to-doc` | ⛔ 已移交 Qoder（已加 `disable-model-invocation`）——WB 仅复验对照 |
 | `archive-closed-todos` | ⛔ 同上 |
 
