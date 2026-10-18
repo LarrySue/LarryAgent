@@ -350,7 +350,7 @@ DSH 自带 `node-addon-landlock-run`。**「内核支持」≠「sandbox 真在�
 
 > ⚠️ **2026-09-16 更新（已回传入仓）**：上列三个探针原置于 CVM `~/dshprobe/` 与 `~`，**已回传进仓库 `harness/scripts/cvm-probes/`**（加 `cvm-` 前缀以与同目录既有命名一致），**CVM 侧原件已删** ⇒ 本项不再依赖 CVM 存活（正合下方「该机有期限」一条的要求）。原记「DSH 安装：`~/dshprobe`（303MB，`0.1.2-rc.1`）」**已不存在**（该目录随清理删除）；CVM 现只有**落点树 `~/harness`**（= CLI 落点，代际 `0.1.5-rc.2`）与各 home，结构见 `docs/dsh/dsh-migration.md` §3.6。
 
-> ⚠️ **本项已闭合（2026-09-16）**：上述三个探针**已回传入仓**（见上条），不再依赖 CVM 存活。**仍只在 CVM 上**的产出（会话库 / session 落盘 / 采数曲线 / `~/larry-data/larry.db` 等）由 **3.9「CVM 产出回传核对表」**统一收口 —— 该机**已续费（一年 · 200 元）⇒ 到期日 = 2027-10-09 21:08:53**（2026-10-09 更新）。
+> ⚠️ **本项已闭合（2026-09-16）**：上述三个探针**已回传入仓**（见上条），不再依赖 CVM 存活。**仍只在 CVM 上**的产出（会话库 / session 落盘 / 采数曲线 / `~/larry-data/larry.db` 等）由 **3.9「CVM 产出回传核对表」**统一收口（⇒ ✅ **该表已于 2026-10-18 执行完毕并并入本档 §13**：CVM 侧 216 件全匹配、缺失 0、`~/larry-data/larry.db` 原件已回传）—— 该机**已续费（一年 · 200 元）⇒ 到期日 = 2027-10-09 21:08:53**（2026-10-09 更新）。
 
 ---
 
@@ -588,3 +588,35 @@ records:
 
 - **不采纳 Claude「WSL 当演练场、CVM 当判定场」的建议**，三条理由（沙箱探针 ABI 自适应 ⇒ 无需在 ABI 7 的 WSL 预演；WSL 与 CVM 差异不止 ABI ⇒ 预演结论不可外推、反造假安全感；一次性风险用 CVM 上 dry-run + 采数化解更便宜）见 `TODO.md` DSH-3 段。
 - ⚠️ 是"**DSH-3 期间不参与**"，**不是**"WSL 定位降级" —— `test-env.md` §1「WSL 长期担任核心测试环境」的定位**不变**；该文档 §10「WSL 具体承载哪类测试」在 DSH-3 期间**挂起**（状态仍是待定，勿读成已解决）。
+
+---
+
+## 13. CVM 产出回传核对（DSH-3.9 收口项 · 2026-10-18 🟢 WB 在该机上只读枚举）
+
+> **性质**：DSH-3.9 收口项「CVM 产出回传核对表」的**权威落点**——原专题稿 `exchange/cvm-produce-checklist.md`（WB 出）已并入本节。
+> **为何落本档**：`test-env.md` §1 的角色定位表已钉死 **CVM 的文档 ＝ 本档**（该档是 WSL 的）；CVM 相关命中数亦为本档最多 ⇒ ⛔ 不落 `test-env.md`，免得把 WSL 与 CVM 两个环境混在一处（那份最重要的一条恰是 §5「与生产环境的边界」）。
+> **取证方式**：CVM 上（连接信息见 §1）**只读枚举** ＋ 逐文件 `sha256sum` 生成本地清单；本机侧对 `_trae-cvm-evidence`／`_claude-cvm-evidence`／`_claude-evidence` 全量算 sha **按内容比对**（⛔ 不按路径——两侧目录结构不同）。
+> **回传落点**：`D:\Code\_cvm-inv\`（清单 ＋ 回传包 ＋ 解包目录）。⚠️ 在仓库外（与既有 `_trae-cvm-evidence` 同惯例），⛔ 不进 git。
+
+**结论**：CVM 侧 **216 个文件全部**在本机有同 sha 副本 ⇒ **缺失 0、无唯一副本**。本次补回 **39 件**（此前本机无同 sha 件），合计 119 KB 打包；`~/larry-data/larry.db`（该机独有原件）已回传。
+
+| # | 项 | CVM 路径 | 机上实况 | 处置 | 本机落点 |
+|---|---|---|---|---|---|
+| 1 | **会话库** | `~/larry-dsh-home/sessions/` | 2 个 project 目录／**9 个** `session.jsonl.zstd`（164 KB） | ✅ 本次补回 9 件 | `_cvm-inv/cvm-produce/larry-dsh-home/sessions/` |
+| 1b | 会话投影缓存 | `~/larry-dsh-home/storages/session_projcache/` | 4 个 `*.json`（24 KB） | ✅ 本次补回 4 件 | 同上 `.../storages/` |
+| 2 | **SQLite 原件** | `~/larry-data/larry.db` | **57,344 B（56 KB）**·4 表：`units`=2／`unit_globals`=0／`u_session_projcache_sessions`=10／`u_larry_probe_items`=1 | ✅ 本次补回 | `_cvm-inv/cvm-produce/larry-data/larry.db` |
+| 3 | **ChromaDB** | `~/.cache/chroma/` | 仅 `onnx_models/all-MiniLM-L6-v2`（2.4 MB）——**模型权重缓存、不是数据** | ⬜ **无需回传**（可重建、非唯一副本） | — |
+| 4 | **日志与曲线** | `~/trae-evidence/mem-sample.csv`（13,244 B）＋ `sampler.sh`／`sampler.log` | 采样器与小时级曲线在位 | ✅ 已在本机（sha 匹配） | `_trae-cvm-evidence/` |
+| 5 | **dump-config 快照** | **机上未落盘**（`grep typert-gateway` 全盘 0 命中，排除 node_modules） | 当时 dump 输出未存机 | ✅ 已在**本机**（Claude 3.7.3 两版对照） | `_claude-evidence/373t/t1a/372-{un,}patched.dump-config.out.txt` |
+| 6 | **复现脚本** | `~/ll-probe/landlock_probe.py` | 探针脚本 | ✅ 本次补回 | `_cvm-inv/cvm-produce/ll-probe/` |
+| 7 | 证据包（Trae） | `~/trae-evidence/`（832 KB）、`~/s0-evidence.tgz`（44 KB）、`~/larry35-out/`（240 KB）＋ `.tar.gz`、`~/larry35-sbox/`（20 KB） | — | ✅ 大部已在本机；`larry35-sbox` 2 件本次补回 | `_cvm-inv/cvm-produce/larry35-sbox/` |
+| 8 | 证据包（Claude） | `~/claude-tp-evidence/`（96 KB）、`~/claude-305/` | — | ✅ 已在本机 | `_claude-cvm-evidence/` |
+| 9 | 证据包（Qoder） | `~/qoder-evidence/`（100 KB，22 件） | — | ✅ 本次补回 22 件 | `_cvm-inv/cvm-produce/qoder-evidence/` |
+
+**校验值**：回传包 `cvm-produce-20261018.tgz`（119,239 B）sha256 ＝ `8c5f861b26cd146dd2f1666e8e31342284a6a578d11316f6e557724cac8a80a8`；清单 `produce-manifest-20261018.txt`（216 行／23,061 B，按内容比对即校验）。
+
+**闭环验证**：回传前「216 件中 39 件本机无同 sha 副本」→ 解包后重跑比对 ⇒ **216 匹配／0 未匹配**，且解包文件数 **= 39**（与缺口数一一对应）；tar 包本机复算 sha 与 CVM 侧一致 ⇒ **传输无损**。
+
+> ⚠️ **两处事实订正（本节为权威，⛔ 勿再引旧读数）**：① **`larry.db` ＝ 56 KB／57,344 B**（mtime `2026-09-16 18:47`），⛔ **非「36 KB」**——那是更早时点读数、09-16 后未更新（`../../TODO.md` 收口项原记已由 WB 同日订正）；② **「ChromaDB 产出」机上无持久数据**——只有模型权重缓存目录 ⇒ 记 **「无需回传」**（可重建、非唯一副本），⛔ **不是「遗漏未回传」**（若当时走 HTTP client，数据在服务侧／内存，机上本就不落盘）。
+
+> **边界与未覆盖**：① **云侧监控曲线**（Lighthouse 自带 CPU／流量）属**平台侧数据**，不在机上、不属本项目产出 ⇒ 本表不含，如需留档须在控制台导出；② **本表只证「文件都在」，⛔ 不证「内容正确」**——内容层判定在各切片的复验节（权威落点 ＝ `dsh/dsh-migration.md` §3.x ＋ `../../archive/roadmap-history.md` 各段；原稿所指交流区 `log-*` 已随清理不可查）；③ ⛔ **本表不构成「可退机」判据**——它只证产出已回传，该机期限与退机条件见 §10〈本项已闭合〉条。
