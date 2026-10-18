@@ -1350,6 +1350,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   - **承载帧** = J0 预检定死的帧（⛔ 不再悬置 `request/context` vs `request/header`）。〔⚠️ J0 实测定死为 **`system/message`**、两候选均不成立；正文 ⛔ 不回改，复用时按 J0 定帧断言。〕
 - **key 纪律**：env 层注入；⛔ 不承担 key 落位证成（3.0 已闭环事）。
 - **断言视图**：帧原文 ＋ assistant/message 输出**双取证**；⛔ 只凭模型输出不算（证明不了是召回注入起的作用）。
+- ⚠️ **边界注记（2026-10-18 补 · Qoder；⛔ 非改判据 —— 判据是历史事实、已闭环，本条只补边界防后人误读）**：**J6 只覆盖「召回注入管道通」，⛔ 不覆盖「语义检索路径」**。依据（2026-10-18 Qoder 复读 `harness/packages/plugin-s4-memory/src/index.ts` 自核，⛔ 不采信转述）：① 召回 SQL = 预编译语句 `selectRecent` 的 `SELECT id, content, created_at FROM memories ORDER BY id DESC LIMIT ?` ⇒ **时间／id 倒序，无相关度**；② 验收当时**库内仅 5 条**而 `recallLimit=8` ⇒ 近于**全量注入、nonce 必中**（"LLM 能召回 nonce" 被小数据量偶然满足）；③ 该插件的 ChromaDB 侧**只写不读** —— `getChroma` 全文件**仅 1 处调用**且在双写路径内、句柄只用 `chroma.add`，`recallText` **零 Chroma 引用**。⇒ ⛔ **不得读成「J6 过了 = 语义检索通了」**；「召回切向量语义检索（top-k 相关度替代时间倒序）＋ **大数据量语义命中臂**（20+ 条库中相关条不在最近 N 内仍能捞到）」归 **DSH-4〈向量召回归档〉**（`TODO.md` 已记，含与「记忆归属模型」讨论题的联动）。
 
 **3 · 双写一致性模型（3.6 交付的「定义」，判据只验其可观测部分）**
 
