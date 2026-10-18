@@ -646,7 +646,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 **能做（sdk profile + TS SDK，已实测）**：
 
 - **真实完整会话**：`initialize → session/prompt → 模型回复 → shutdown`，一条龙（exit 0）
-- **事件流粒度足够**：`turn/start|end`、`step/start|end`、`assistant/chunk`（流式增量）、`assistant/message`、`user/message`、`request/header`（LLM 请求头）、`request/context`（注入上下文）、`session/title`（自动标题）、`agent/inbox/spliced`（收件箱回执）→ **记忆双写、流式 UI、会话标题所需信号粒度都在**，不是"窄面"能概括
+- **事件流粒度足够**：`turn/start|end`、`step/start|end`、`assistant/chunk`（流式增量）、`assistant/message`、`user/message`、`system/message`（**渲染后系统提示词原文 ＝ 召回注入承载帧**；3.6 J0 实测补入）、`request/header`（LLM 请求头 ＋ 工具 schema）、`request/context`（⚠️ **路由元数据帧**＝`provider`／`model`／`contextWindow`／`systemPromptUpdate` 四字段，**⛔ 不承载提示词**；3.6 J0 实测订正，原记「注入上下文」不准）、`session/title`（自动标题）、`agent/inbox/spliced`（收件箱回执）→ **记忆双写、流式 UI、会话标题所需信号粒度都在**，不是"窄面"能概括
 - **会话持久化**：每次 prompt 落 `.dsh-home/sessions/`（`session.jsonl`），sessionId 可复现
 - **服务端智能体能力**：base 全套（tools/session/agent 等）经 sdk profile 可达 → client 拿到的是「agent 完整回合结果 + 事件」而非裸 LLM 流
 
@@ -1282,7 +1282,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   1. 显式清除 ／ 不注入 `DEEPSEEK_API_KEY`，确认 invocation cwd 无 `.env`；记 **(DSH_HOME, profile, 凭据来源层) 三元组**（照 3.0 口径）；
   2. 断言该轮**无 `assistant/message`** 且 `turn/end` 非 completed（reason=error 态）；
   3. **落事件类型清单**，断言 `user/message` 与 `turn/end` **在列**（3.0 旧证只到「12 条事件」数目、未枚举类型 ⇒ 本步补枚举）。
-- **顺带预检（0 成本，闭合 V13）**：同一次跑 dump `request/header` 与 `request/context` **两帧原文** ⇒ 定死「召回注入块出现在哪一帧」，J5 ／ J6 按它落（项目自有记录：`request/header` = 完整 system prompt ＋ 工具 schema ／ `request/context` = 注入上下文，`dsh-migration.md:649`；**注入块在哪帧未实测**，写错 = Trae 撞假红后自行换帧、无人复核）。
+- **顺带预检（0 成本，闭合 V13）**：同一次跑 dump `request/header` 与 `request/context` **两帧原文** ⇒ 定死「召回注入块出现在哪一帧」，J5 ／ J6 按它落（项目自有记录：`request/header` = 完整 system prompt ＋ 工具 schema ／ `request/context` = 注入上下文，`dsh-migration.md:649`；**注入块在哪帧未实测**，写错 = Trae 撞假红后自行换帧、无人复核）。〔✅ **J0 已实测定死（2026-10-17，物证 `_trae-evidence/36/run-j0/J0-frame-request-context.json`）**：`request/context` ＝ **路由元数据帧**（data 仅 `provider`／`model`／`contextWindow`／`systemPromptUpdate` 四字段、⛔ 不承载提示词）；召回注入块出现在 **`system/message`** 帧（渲染后系统提示词原文，J0 事件类型清单内 ×1）。⇒ 本条原文「注入块在哪帧未实测」与「`request/context` = 注入上下文」系**当时状态、⛔ 不回改**，现况以本注为准。〕
 - **结果态可分**：清单缺 `user/message` ／ `turn/end` ⇒ **停手回报**（⛔ 不得自行换事件类型凑）。
 - **断言视图**：事件清单原文 ＋ 两帧原文落证据目录。
 
@@ -1330,7 +1330,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 **J5 召回注入面（v2 并入 3.6 · 0 token）**
 
-- **作用层（v2 上移 · V9）** = **装配产物**：召回注入块出现在 **J0 预检定死的帧**（`request/context` 或 `request/header`）原文里，且含目标 nonce。
+- **作用层（v2 上移 · V9）** = **装配产物**：召回注入块出现在 **J0 预检定死的帧**（`request/context` 或 `request/header`）原文里，且含目标 nonce。〔⚠️ **J0 实测：括注两候选均不成立**——定死帧为 **`system/message`**；3.6 J5 即按它验收通过（物证 `_trae-evidence/36/run-j5/findings.json`：「system/message 帧 ×1，原文含 nonce 逐字」）。判据正文系历史事实、⛔ 不回改；**DSH-4 向量召回复用本判据时断言 `system/message` 帧**。〕
 - ⛔ **不算的层**：① 「provider 注册成功」—— ⚠️ 参考件自己把注册包在 try/catch 里（`lib/index.js:2230`，失败只 `console.error`）⇒ **注册 API 不抛错 ≠ 注册生效**；② `text()` 返回值单独断言 —— 相对「模型实际收到的 system prompt」**同样是中间表示**（provider 算得对 ≠ 装配时调到了它：注册在无人读的路径 ／ 被后注册覆盖 ／ order 后被裁剪 —— 哑坑②变体）；**若因故只能调 `text()`**，须改为「观测**装配过程调用过该 provider**」（调用计数 ／ 入参留痕），⛔ 不许测试自己构造 context 调它（那样「装配真的调到了它」完全没验）；③ **WB 台账②（`system-prompt` 在 `--dump-config` 在位）只证装配存在，⛔ 不证运行时激活**（`--dump-config` 是已定假绿源，`dsh-migration.md:812`）。
 - **计量口径**：注入块含同一 nonce（逐字）；块为空字符串即红。
 - **v2 修补（V10）**：① **B 会话自身输入不得含 nonce**、⛔ 不复用 A 的会话（防「不召回也见到」）；② 参考件 `recallSync` 无命中时**兜底最近记忆**（`lib/index.js:1327-1333`）⇒ 小库任何 query 恒含最近条目 ⇒ **明写「本步不区分 query 命中 ／ 兜底命中」**（诚实边界，与 §5 同层；语义固定为兜底的对照臂属加强项，最小闭环不派）。
@@ -1345,7 +1345,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   - **负向臂加存在性断言**：该轮须有 `assistant/message` 且 `turn/end.reason.kind === 'completed'`（⛔ 防「key 失效 ／ 网络失败 ／ 拒答 ⇒ 没回答 ⇒ 『不含 nonce』真空成立」—— 负锚假绿，同 3.0 失败态误读教训）；
   - **正向臂加前置**：跑 B 前库里已有含该 nonce 的行（J1 已过的复述），否则停手报「属 J1 ／ J2 未过，非本判据结论」；
   - **采样口径写死**：正向 n=1 判逐字包含，允许**一次留痕重试**（报次数）；负向 1 次但须**非空回答**；**nonce 随机 ≥8 hex**（防模型瞎编击穿）、两臂**同一问句**、A ／ B **不同 session**、负向臂**不得复用 A 的库文件**；
-  - **承载帧** = J0 预检定死的帧（⛔ 不再悬置 `request/context` vs `request/header`）。
+  - **承载帧** = J0 预检定死的帧（⛔ 不再悬置 `request/context` vs `request/header`）。〔⚠️ J0 实测定死为 **`system/message`**、两候选均不成立；正文 ⛔ 不回改，复用时按 J0 定帧断言。〕
 - **key 纪律**：env 层注入；⛔ 不承担 key 落位证成（3.0 已闭环事）。
 - **断言视图**：帧原文 ＋ assistant/message 输出**双取证**；⛔ 只凭模型输出不算（证明不了是召回注入起的作用）。
 
