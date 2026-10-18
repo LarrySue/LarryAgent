@@ -12,8 +12,7 @@
 | Qoder · #43 帧名订正 ＋ #44 DSH-3.6 整段归档 | Qoder | 本机 | 🔵 待办（改法在 `log-qoder.md`） | 2026-10-18 |
 | Trae · DSH-3.9.1 调试体验台（多轮对话＋事件流面板＋审批按钮） | Trae | 本机 Windows | ✅ **判据全过并复验**（B 主案交付 `ae33325`）｜🔵 **待老大上手体验** ⇒ DSH-3.9 退出信号① | 2026-10-18 |
 | Trae · DSH-3.9.1-a 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针 ＋ J5 演示路径连锁） | Trae | 本机 Windows | ✅ **已回报并通过 WB 复验**（J-a–J-d 全过；③ 判仓库根 ACL 特例、换 cwd 即修复〔上游 `dsh-sandbox-windows-acl`，根因未深挖〕；代码 `97c1477`）｜✅ **老大二轮实测确认**②③ 修复生效 | 2026-10-18 |
-| Trae · DSH-3.9.1-b ① 补修（召回块时间戳 UTC：`created_at` 改 localtime ＋ 旧数据修正 ＋ 全查第三时间源） | Trae | 本机 Windows | 🔵 **已派发待跑**（稿在 `log-trae.md` §14；⚠️ 授权破 §12 禁区动 plugin-s4-memory 时间相关行） | 2026-10-18 |
-| Trae · DSH-3.9.1-c token 经济性（缓存前缀修复＋usage 计量＋compaction 核查＋双面去重） | Trae | 本机 Windows | 🔵 **已派发待跑**（稿在 `log-trae.md` §15；⭐ 老大插话定位：召回块+时间戳在 prompt 第 4 行 = volatile prefix 实锤；⛔ 不含体验权衡项） | 2026-10-18 |
+| Trae · DSH-3.9.1-b **缓存前缀修复 ＋ 召回块时间戳收口**（**原 b／c 合单**：召回块时间戳移除＋移出前缀区＋前 1k token volatile 审计＋存量 DB `+8h` 修正＋第三时间源清查＋usage 计量＋compaction 核查＋双面去重） | Trae | 本机 Windows | 🔵 **已派发待跑**（稿在 `log-trae.md` §14；⭐ volatile prefix 实锤＝召回块＋时间戳在 prompt 第 4 行；⚠️ 授权破 §12 禁区动 `plugin-s4-memory` 时间/召回呈现行；⛔ 不含 reasoningEffort／工具裁剪／**全局上下文重排**） | 2026-10-18 |
 
 > ✅ **DSH-3.6 整段闭环**（2026-10-18 WB 三次复验判定成立）：3.6（J0–J5 双写＋注入面）＋ 3.6.1（J6 LLM 端到端——正向逐字含 nonce · 双取证 · 负向空库无瞎编击穿）全过；Trae 交付物已自行提交入库（`53d6821`／`e42de25`／`0ed0f24`）。⏳ 待办：Qoder 归档（#44）＋ 帧名订正（#43）｜`D:/Temp/s36-test.key` 残留待清（归 Trae）＋ 测试 key 待老大关闭｜判据副本删稿（归老大 ／ 主持人 WB，保留至归档后）。✅ Trae 约束注入失效问题（`.trae/TRAE.md` → `.trae/rules/TRAE.md` 路径变更）已由老大+Qoder 闭环（`938c716`→`a6fed33`→`7ce470e`）。历史各块落点见 `TODO.md` 与 `archive/roadmap-history.md`；正文按活日志规矩清理，见文末〈已清理段落〉。
 

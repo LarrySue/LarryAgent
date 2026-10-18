@@ -11,8 +11,7 @@
 |---|---|---|---|---|
 | DSH-3.9.1 · DSH 调试体验台 | Trae | 本机 Windows | ✅ **已交付并通过 WB 复验**（§10 `ae33325` ＋ §11）｜🔵 **待老大再体验**（返工 §13 已完成）⇒ 退出信号① | 2026-10-18 |
 | DSH-3.9.1-a · 实测反馈返工（cwd 换安全区 ＋ 时间戳本地化 ＋ ③ 定性探针） | Trae | 本机 Windows | ✅ **已回报并通过 WB 复验**（§12-5 ／ §12-6：J-a–J-d 全过；③ 判仓库根特例已随换 cwd 修复；代码 `97c1477`） | 2026-10-18 |
-| DSH-3.9.1-b · ① 补修：召回块时间戳 UTC（memories 表 created_at） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §14；⚠️ 本单**授权动 plugin-s4-memory 时间相关行**——破 §12 禁区，见稿内边界） | 2026-10-18 |
-| DSH-3.9.1-c · token 经济性（缓存前缀审计 ＋ usage 计量 ＋ compaction 核查 ＋ 双面去重） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §15；⛔ 不含体验权衡项） | 2026-10-18 |
+| DSH-3.9.1-b · **缓存前缀修复 ＋ 召回块时间戳收口**（**原 b／c 合单**：cache 前缀＋时间戳移除＋DB 修正＋usage 计量＋compaction 核查＋双面去重） | Trae | 本机 Windows | 🔵 **待跑**（稿见 §14；⚠️ 本单**授权动 plugin-s4-memory 时间／召回呈现行**——破 §12 禁区，见稿内边界；⛔ 不含 reasoningEffort／工具裁剪／**全局上下文重排**） | 2026-10-18 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -216,76 +215,62 @@
 
 ---
 
-## 📤 DSH-3.9.1-b · ① 补修：召回块时间戳 UTC（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
+## 📤 DSH-3.9.1-b · 缓存前缀修复 ＋ 召回块时间戳收口（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
 
-### 0 · 背景（老大二轮实测 · WB 认账）
+> **本单 ＝ 原 3.9.1-b 稿（时间戳 UTC 补修）＋ 原 3.9.1-c 稿（token 经济性）合并**（2026-10-18 老大拍板）。合并原因：两单在时间戳上**方向相反** —— b 稿要把 `created_at` 在召回块里**显示成本地时间**，c 稿要把 `created_at` 从召回块里**整个删掉**；且改**同一文件同一行**（`index.ts:203`）、同步**同一份 `.dsh-home` 持久副本**，分跑必有一单白做。合单后**以 c 稿的「移除」为主线**，b 稿的两项（存量数据修正 ／ 第三时间源清查）并入 A-④／A-⑤。原 **3.9.1-b 单号停用**。
 
-老大二轮实测：②③ 已确认修复（工作空间内创建/删除/修改全通；工作空间外弹窗两臂有效），**但 ① 时间戳还在**——召回块里 `[2026-10-17 20:46:08]` 等她本地 04:46 说的话，UTC 原样呈现。
+### 0 · 背景（老大红线 ＋ 调研修正 ＋ 老大插话定位 ＋ 时间戳根因认账）
 
-**根因（WB 派发稿盲区，认账）**：3.9.1-a 的 ② 只排查了 bridge/driver 的**证据落盘序列化层**（wireLog 的 `t`），漏了面向用户的**第二个时间源**——`plugin-s4-memory/src/index.ts:102` 的 `created_at TEXT NOT NULL DEFAULT (datetime('now'))`：**SQLite `datetime('now')` 恒为 UTC**，且该值由插件直接写进 system prompt 召回块，⛔ 不过 bridge 序列化层。教训：**「时间戳本地化」必须按「时间源」穷举（序列化层 ／ 数据库默认值 ／ 框架帧内字段），不能只修已知的那一层**。
+**① 时间戳仍在（原 3.9.1-b 稿背景 · WB 派发稿盲区认账）**：老大二轮实测 ②③ 已修复，但召回块里 `[2026-10-17 20:46:08]` 写的是她本地 04:46 说的话 —— UTC 原样呈现。根因 = `plugin-s4-memory/src/index.ts:102` 的 `created_at TEXT NOT NULL DEFAULT (datetime('now'))`（SQLite `datetime('now')` **恒为 UTC**），该值由插件直写进 system prompt 召回块，⛔ 不过 bridge 序列化层。**3.9.1-a 的 ② 只排查了序列化层（wireLog 的 `t`），漏了数据库默认值这个第二时间源。教训：「时间戳本地化」必须按「时间源」穷举（序列化层 ／ DB 默认值 ／ 框架帧内字段），不能只修已知那一层。**
 
-### 1 · 任务
+**② 消耗红线**：老大二轮实测第五条「问了几句话的消耗 ≈ Trae 两轮工作的量，真用不起」。WB 初列「就地省钱」候选被老大纠正「**勿闭门造车 —— 上下文放大增成本但影响体验，关键是两端平衡，成熟方案大量存在，须充分参考**」。两路调研（sombrainc ／ aifrontierpost ／ particula 三源综述 ＋ DeepSeek 官方计价）后方案重排：
 
-- **A · INSERT 显式传本地时间**：`index.ts:108` 的 INSERT 改为四列（`session_id, source_event_seq, content, created_at`），`created_at` 用 `datetime('now', 'localtime')`（SQLite 原生 localtime modifier——⛔ 不改依赖表 DEFAULT，`CREATE TABLE IF NOT EXISTS` 对已存在的表改 DEFAULT 无效，已知坑）。表 DEFAULT 那行可同步改成 `datetime('now','localtime')` 语义（对新库有效，双保险），⚠️ 但别以为它能修旧库。
-- **B · 旧数据修正（评估后执行）**：`.dsh-home/larry-memory.db` 里已入库数据（含老大二轮实测的 8 条）时间戳仍是 UTC。本机时区固定 UTC+8 ⇒ `UPDATE memories SET created_at = datetime(created_at, '+8 hours')` 可一次性修正。⚠️ 执行前**先备份 db 文件**（cp 一份 `.bak-<ts>`），⚠️ 先 SELECT 抽样确认值确为 UTC 形态再 UPDATE。
-- **C · 全查其他面向用户的时间源**：grep 插件内全部 `datetime(` ／ `new Date` ／ `toISOString`，确认没有第三个时间源漏网（如召回文本里别处还有时间格式化）。
+- ⭐ **DeepSeek V4-Flash 缓存命中输入价 = 未命中的 1/30**（低谷 $0.05 vs $1.5/百万 token；工作日 9-12／14-18 点双价、周末全低谷）⇒ **ROI 第一是「让前缀命中缓存」而非「减少上下文」** —— 后者伤体验，前者免费
+- ⭐ **老大插话定位（WB 帧原文验证坐实）**：召回块位于 system prompt **第 4 行**（两行框架身份之后、几千 token 工具说明**之前**），每条带 `[created_at]` 时间戳 —— **新记忆写入即前缀变动 ⇒ 第 4 行往后全部缓存必 miss**。这是成熟方案里点名最狠的反模式（volatile prefix：动态值混进前缀 = 永久 cache miss，single highest-return fix）
 
-### 2 · 判据（J-e～J-f）
-
-| # | 判据 | 取证 |
-|---|---|---|
-| J-e | **新写一条记忆 ⇒ 召回块时间戳 = 本地时刻**（与墙钟差 <2s，形态本地） | `J-e/`：写记忆 → system/message 帧召回块原文 ＋ 墙钟对表 |
-| J-f | **旧数据修正结论明确**：已 UPDATE（前后抽样对照）或判定不修（附理由），二选一落盘 | `J-f/db-before-after.json`（抽样行前后值）＋ 备份文件在位证明 |
-
-### 3 · 边界（⚠️ 本单破 §12 禁区，明示授权范围）
-
-- ✅ **授权动**：`plugin-s4-memory/src/index.ts` 的**时间相关行**（INSERT 列 ／ created_at 生成 ／ DEFAULT 行）＋ `.dsh-home/larry-memory.db` 的数据修正（带备份）＋ 源插件同步落 `.dsh-home` 持久 profile 的实体副本（`.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-s4-memory/`——照 3.7.2 范式，⛔ 仍只此一件、改前备份）
-- ⛔ **仍不碰**：召回逻辑（SELECT 排序 ／ recallLimit ／ 双注入面——⑤ 待老大裁，判据修订流程）｜判据文件｜`docs/` `archive/` `HUMAN*.md`｜`backend/`
-- ⚠️ 时间源改动不得影响 3.6 J4「时间界」判据语义（该判据用两条 created_at 的**差值**，时区平移不改变量——但回归时顺带核一句）
-
-### 4 · 回报格式
-
-结论先行 → J-e/J-f 逐条证据（原文落盘、⛔ 不改写）→ 是否发现第三时间源 → 自曝。写完改顶部状态区。
-
----
-
-## 📤 DSH-3.9.1-c · token 经济性优化（WB 派发 · 2026-10-18 · Trae · 本机 Windows）
-
-### 0 · 背景（老大红线 ＋ 调研修正 ＋ 老大插话定位）
-
-老大二轮实测第五条：「问了几句话的消耗 ≈ Trae 两轮工作的量，真用不起」。WB 初列「就地省钱」候选被老大纠正「**勿闭门造车——上下文放大增成本但影响体验，关键是两端平衡，成熟方案大量存在，须充分参考**」。两路调研（sombrainc ／ aifrontierpost ／ particula 三源综述 ＋ DeepSeek 官方计价）后方案重排：
-
-- ⭐ **DeepSeek V4-Flash 缓存命中输入价 = 未命中的 1/30**（低谷 $0.05 vs $1.5/百万 token；工作日 9-12/14-18 点双价、周末全低谷）⇒ **ROI 第一是「让前缀命中缓存」而非「减少上下文」**——后者伤体验，前者免费
-- ⭐ **老大插话定位（WB 帧原文验证坐实）**：召回块位于 system prompt **第 4 行**（两行框架身份之后、几千 token 工具说明**之前**），每条带 `[created_at]` 时间戳——**新记忆写入即前缀变动 ⇒ 第 4 行往后全部缓存必 miss**。这是成熟方案里点名最狠的反模式（volatile prefix：动态值混进前缀 = 永久 cache miss，single highest-return fix）
-
-**成本四源诊断**（`391a/run` wireLog）：① 缓存必 miss（上述）② 消息历史线性累积（第 N 轮背全部前轮）③ 工具结果滞留（老大测试时模型整本 read 俄乌简报——几十 k token 一次进、之后每轮背着走）④ reasoningEffort=high 输出侧计费。
+**成本四源诊断**（`391a/run` wireLog）：① 缓存必 miss（上述）② 消息历史线性累积（第 N 轮背全部前轮）③ 工具结果滞留（老大测试时模型整本 read 俄乌简报 —— 几十 k token 一次进、之后每轮背着走）④ reasoningEffort=high 输出侧计费。
 
 ### 1 · 任务（四项）
 
-- **A · 缓存前缀修复（核心）**：① **召回块移除 `created_at` 时间戳**——时间戳是 debug 信息、对模型零价值却毒化前缀；可见性移居事件流面板（或保留 SQLite 内，⛔ 不进 prompt）；② **召回块移出稳定前缀区**——改到动态区（尾部 ／ 或仅走 context 面 synthetic 帧），保证系统提示词前 1k token 在无新记忆时 **byte-identical**；③ **全审计**：把一次真实请求的前 1k token 逐行过一遍，列出所有 volatile 元素（时间戳 ／ session id ／ 随机值），逐个处置。
+- **A · 缓存前缀修复（核心）**
+  - **A-① 召回块移除 `created_at` 时间戳**：`index.ts:203` 的 `` `- [${r.created_at}] ${r.content}` `` → `` `- ${r.content}` ``。时间戳是 debug 信息、对模型零价值却毒化前缀；可见性移居事件流面板（或保留 SQLite 内，⛔ 不进 prompt）。**⛔ 不要先做本地化再删 —— 直接删**（此条取代原 3.9.1-b 稿 A 项的 `datetime('now','localtime')` 方案）。
+  - **A-② 召回块移出稳定前缀区**：改到动态区（尾部 ／ 或仅走 context 面 synthetic 帧），保证系统提示词前 1k token 在无新记忆时 **byte-identical**。
+  - **A-③ 全审计**：把一次真实请求的前 1k token 逐行过一遍，列出所有 volatile 元素（时间戳 ／ session id ／ 随机值），逐个处置。
+  - **A-④（并入原 3.9.1-b 稿 B 项）存量 DB 数据修正**：`.dsh-home/larry-memory.db` 内已入库数据（含老大二轮实测的 8 条）仍是 UTC。时间戳不再进 prompt 后仍做，理由是**数据层正确性**（面板显示 ／ 将来查询），成本几分钟。顺序：① `cp` 备份 `.bak-<ts>` ② SELECT 抽样确认值确为 UTC 形态 ③ 本机时区固定 UTC+8 ⇒ `UPDATE memories SET created_at = datetime(created_at, '+8 hours')`。
+  - **A-⑤（并入原 3.9.1-b 稿 C 项）全查第三时间源**：grep 插件内全部 `datetime(` ／ `new Date` ／ `toISOString`，逐个判定「是否进 prompt」—— 进 prompt 的按 A-① 处置，不进 prompt 的只登记上报。
+  - ⚠️ **A-② 与 D 落在同一改动面**（注入位置 ／ 双面开关）：一次判、一次改，⛔ 别当两件事各改一遍。
 - **B · usage 计量（配套先行）**：查 DeepSeek API 的 `prompt_cache_hit_tokens`／`prompt_cache_miss_tokens` 是否被 DSH provider 层透传（grep 上游 adapter ／ 真调用抓 usage 字段）；若透传 ⇒ 事件流面板显示每轮「输入 token ＋ 缓存命中 ／ 未命中 ＋ 输出 token」；未透传 ⇒ 如实记「未定位」并给最小可行替代（请求大小日志）。**没有计量，A 的效果无法验证**。
-- **C · compaction 生效性核查**：`compaction-basic` ＋ `compaction-tool-result-pruner` 实际在不在跑（⛔ 不信 bundles 列表——3.4 只 disable 了手动入口 `command-compact`，自动档状态未知）；在跑则报阈值与实测触发证据；没跑则报默认配置与启用路径。⚠️ 只核查不改（改 compaction 策略属 DSH-2 域另有流程）。
-- **D · 双面注入去重**：`injectSection/injectContext` 现状双开 ⇒ 同一召回文本注入两次（system prompt 一份 ＋ user snapshot 一份）。关一个面（留哪个你判——留 section 则 prompt 内可读、留 context 则消息流内可读，README 写明），回归验证召回仍生效（nonce 仍逐字在帧内）。
+- **C · compaction 生效性核查**：`compaction-basic` ＋ `compaction-tool-result-pruner` 实际在不在跑（⛔ 不信 bundles 列表 —— 3.4 只 disable 了手动入口 `command-compact`，自动档状态未知）；在跑则报阈值与实测触发证据；没跑则报默认配置与启用路径。⚠️ 只核查不改（改 compaction 策略属 DSH-2 域另有流程）。
+- **D · 双面注入去重**：`injectSection`／`injectContext` 现状双开（`index.ts:65-66` 均 true）⇒ 同一召回文本注入两次（system prompt 一份 ＋ user snapshot 一份）。关一个面（留哪个你判 —— 留 section 则 prompt 内可读、留 context 则消息流内可读，README 写明）。⚠️ **若选「留 section」，须同时满足 A-② 的尾部动态区要求**，否则等于把 volatile 块留在前缀里、白关。回归验证召回仍生效（nonce 仍逐字在帧内）。
 
-### 2 · 判据（J-g～J-k）
+### 2 · 判据（J-e～J-k）
 
 | # | 判据 | 取证 |
 |---|---|---|
+| J-e | **召回块内不含时间戳**：召回块原文中无 `[YYYY-MM-DD HH:MM:SS]` 形态，且该信息去向明确（事件流面板可见 ／ 仅存 DB） | `J-e/recall-block.txt`（原文）＋ 正则 grep 无命中 ＋ 面板截图或去向说明 |
+| J-f | **存量数据修正结论明确**：已 UPDATE（前后抽样对照）或判定不修（附理由），二选一落盘 | `J-f/db-before-after.json`（抽样行前后值）＋ 备份文件在位证明 |
 | J-g | **前缀稳定可证**：连发两轮**不写新记忆**的对话 ⇒ 两次请求的 system prompt 前 1k token 逐字节相同（哈希一致） | `J-g/prefix-hash.json`（两轮请求前缀 sha256 对照） |
 | J-h | **计量可见**：事件流 ／ 落盘可见每轮输入 ＋ 缓存命中 ／ 未命中 ＋ 输出（或明确记录「未透传」＋ 替代方案） | `J-h/usage-*.json` ＋ 面板截图 |
 | J-i | **compaction 状态报告**：在跑（阈值＋触发证据）或未跑（默认配置＋启用路径），二选一落盘 | `J-i/compaction-report.md` |
 | J-k | **召回回归**：去重后新写一条记忆，召回块仍含该条逐字（nonce 同款手法） | `J-k/recall-regression.json` |
 
-### 3 · 边界（⚠️ 本单续 §14 授权，范围明示）
+> 原 3.9.1-b 稿的 J-e（「新写一条记忆 ⇒ 召回块时间戳 = 本地时刻」）**作废** —— 时间戳被移除后该判据失去对象，已由上行新 J-e 替代。
 
-- ✅ **授权动**：`plugin-s4-memory/src/index.ts` 的召回呈现相关行（时间戳移除 ／ 注入面顺序 ／ 双面开关）＋ `.dsh-home` 持久副本同步（照 §14 同法）＋ `dsh-console` 面板 ／ bridge 计量显示
-- ⛔ **不碰**：reasoningEffort（体验权衡——留老大拍，⛔ 本单不许动）｜工具集裁剪（25 个的能力面影响，同上）｜召回**语义**（SELECT 排序 ／ recallLimit ／ session 过滤——⑤-b 联动向量召回，DSH-4 流程）｜compaction **策略**（只核查）｜`docs/` `archive/` `HUMAN*.md` `backend/`
-- 附产品层备忘（不派活）：峰谷计费——工作日白天双价，重活（长会话 ／ 批处理）可排低谷，纯产品策略题
+### 3 · 边界（⚠️ 本单破 §12 禁区，明示授权范围）
+
+- ✅ **授权动**（两单并集）：`plugin-s4-memory/src/index.ts` 的**时间相关行**（INSERT 列 ／ `created_at` 生成 ／ DEFAULT 行）＋**召回呈现相关行**（时间戳移除 ／ 注入位置 ／ 双面开关）＋ `.dsh-home/larry-memory.db` 数据修正（带备份）＋ `.dsh-home` 持久 profile 实体副本同步（`.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-s4-memory/` —— 照 3.7.2 范式，⛔ 仍只此一件、改前备份）＋ `dsh-console` 面板 ／ bridge 计量显示
+- ⛔ **仍不碰**：reasoningEffort（体验权衡 —— 留老大拍，⛔ 本单不许动）｜工具集裁剪（25 个的能力面影响，同上）｜召回**语义**（SELECT 排序 ／ `recallLimit` ／ session 过滤 —— ⑤-b 联动向量召回，DSH-4 流程）｜compaction **策略**（只核查）｜判据文件｜`docs/` `archive/` `HUMAN*.md`｜`backend/`
+- ⛔ **不做全局上下文重排 ／ 排序分析**：老大 2026-10-18 明确 —— 「前部越稳定越省钱」本身是**相对**命题（尾部内容同样影响命中与切点），整体重排属**迁移完成后的长期优化**（老大 2026-10-18 定为长期项，归 `HUMAN_NOTE.md` 人类治理区，WB 不代笔）。**本单只做点状 volatile 消除，⛔ 不得顺手改造整段上下文的顺序或结构。**
+- ⚠️ 3.6 J4「时间界」判据**不受影响**：它用 DB 内两条 `created_at` 的**差值**，时区平移不改变量；本单删的是 **prompt 内的呈现**、数据层保留 —— 回归时核一句即可
+- 附产品层备忘（不派活）：峰谷计费 —— 工作日白天双价，重活（长会话 ／ 批处理）可排低谷，纯产品策略题
 
 ### 4 · 回报格式
 
-结论先行 → J-g～J-k 逐条证据（原文落盘、⛔ 不改写）→ 缓存前缀审计的 volatile 清单（含 A-③ 结果）→ 未闭合项 → 自曝。写完改顶部状态区。
+结论先行 → J-e～J-k 逐条证据（原文落盘、⛔ 不改写）→ 缓存前缀审计的 volatile 清单（含 A-③）→ 第三时间源清查登记（A-⑤）→ 未闭合项 → 自曝。写完改顶部状态区。
+
+---
 
 ## 已清理段落（按交流区规矩）
 
+- **2026-10-18 合单（WB · 老大拍板）**：原 **§14（3.9.1-b 时间戳 UTC 补修）＋ §15（3.9.1-c token 经济性）合并为一份派发稿** —— 两单在时间戳上方向相反（前者要本地化显示、后者要整个删除）且改同一文件同一行、同步同一份持久副本，分跑必有一单白做。合并后以「移除」为主线，§14 的存量数据修正／第三时间源清查降为 A-④／A-⑤，原 J-e 作废并重定义。**原 §14 单号停用**。回溯原文 `git log -p -- exchange/log-trae.md`。
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6:1249；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。
