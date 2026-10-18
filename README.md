@@ -94,7 +94,7 @@ LarryAgent/
 |---|---|
 | 路径 | **A-framework（全量 TS 化）**——现有 Python 后端核心（约 3.7–4.4k 行）译为 DSH 插件 / 服务形态；**DSH-6 验收前双轨可回退** |
 | 上游基线 | `dsh-v0.1.5-rc.2`（2026-09-15 拍定，原 `0.1.2-rc.1`）；只读源码在 `ref/dsh-bare/` |
-| 阶段 | DSH-1 事实校准 ✅ → DSH-2 代码形态 + 环境 ✅ → **DSH-3 核心能力 prototype**（开工前置已收口、主体待启动）→ DSH-4 差异化能力迁移 → DSH-5 形态适配 → DSH-6 测试 + 验收 |
+| 阶段 | DSH-1 事实校准 ✅ → DSH-2 代码形态 + 环境 ✅ → **DSH-3 核心能力 prototype ✅（2026-10-18 整段闭环 · 核心链路达 P4 等价；⚠️ 3.8 A 段协议依延后令移至 DSH-5 前）** → **DSH-4 差异化能力迁移**（待启动）→ DSH-5 形态适配 → DSH-6 测试 + 验收 |
 | 工程落位 | `harness/`（pnpm workspace：Cordis 插件 / 探针 / 测试）；参考件在 `ref/` |
 | 权威文档 | 决策稿 `docs/dsh/dsh-migration.md`（已定稿）；逐条承接依据 `docs/dsh/dsh-015-capability-mapping.md`；**进度一律以 `TODO.md` 为准** |
 

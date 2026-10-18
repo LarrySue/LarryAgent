@@ -757,11 +757,13 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 >
 > → **行事规则**：① 见到 `atomic-write: timed out waiting for the writer lock` → 移走该锁后重试（**同设备 rename，勿跨盘**——C:→D: 会 `EXDEV`）；② **不要用 `timeout` 强杀正在装依赖的 dsh**，它会留下锁；③ 锁仍是**异常终止的痕迹**，不是 DSH 缺陷，但也**不得再引用「锁已证伪」的旧说法**。
 
-#### DSH-3：核心能力 prototype
+#### DSH-3：核心能力 prototype ✅（**整段闭环 2026-10-18**；⚠️ 3.8 依延后令不在本段范围）
 
+> **本阶段已完成**：核心链路达 **P4 等价**（S0–S4 逐条勾对成立并复验）＋ 收口段三项全办结（CVM 产出回传核对／主观退出信号／调试体验台）⇒ **完成态快照冷存于 `archive/roadmap-history.md`**（「DSH-3.0」～「DSH-3.7.5」各段 ＋ 末段「**DSH-3.9 · 阶段收口**」；治理约定：完成一个归档一个）。⚠️ **本节与下方各判据节仍是验收基准的权威落点** —— 归档区只作完成态快照，⛔ 不改判据、不追现态。
+> ⛔ **两处不在本次闭环范围**：① **3.8 A 段协议** —— 整体延后至 **DSH-5 形态适配前**（老大 2026-10-18 裁；理由 = 属产品形态层、⛔ 非「核心链路 P4 等价」的必要条件）⇒ 重启登记 = `TODO.md`「DSH-5」段前置指针，其终验收「端到端审批闭环」随同排期；② **上游版本漂移复核** —— 老大 2026-10-18 转**自研线**、AI 不介入 ⇒ **锚点维持 `0.1.5-rc.2` 不动**，⛔ 漂移情报不作本稿结论、不进归档正文。
 > **任务清单与进度见 `TODO.md`「DSH-3」**；本节只放**验收基准**。接入对象：`compaction/`（→2.9.2）／`sandbox/`（→2.7.1 Linux 侧）／`interaction/`（→2.7.1 高危审批）／`session/`（→2.8.2）。
 
-**退出条件**：**核心链路（会话 + 记忆 + 工具）在 DSH 下达到 P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。
+**退出条件**：✅ **已达成（2026-10-18）** —— **核心链路（会话 + 记忆 + 工具）在 DSH 下达到 P4 等价**（不是"四个包跑通"——无交付通道的跑通不算）。**勾对依据**（WB 2026-10-18）：S0–S4 五步逐条对照下方骨架表 —— S0 消息往返＋落盘＋回读／S1 审批两路／S2 compaction 摘要注入＋近文保留／S3 沙箱三档／S4 记忆双写＋跨会话召回，**均已交付并逐项复验成立**（复验节 = 本稿 §3.1–§3.6 各节 ＋ `archive/roadmap-history.md` 对应段）。⚠️ **一条澄清（防误读）**：3.9.1-b 复验发现「compaction 阈值 `0.8 × contextWindow(1M) = 800k` vs 实测峰值 ~8.1k ⇒ **事实上恒不触发**」，**⛔ 不推翻 S2** —— S2 当时已弃「灌 200+ 轮」（"200+" 来源不明）、改用**注入大段填充文本、1 轮逼出 overflow** 验「触发时摘要注入＋近文保留」⇒ **判据成立**；「恒不触发」是**日常策略空白**（长会话无自动压缩兜底），非判据失效 ⇒ 已登记 `TODO.md`〈延后（低优先 · 待触发）〉段。
 
 **最小可验证切片 S0–S4（Trae，采纳）**：S0 = 一条消息的完整生命周期（客户端 → **`sdk`** JSON-RPC → session create → agent loop 挂 **1 个**自做工具 `read_file` → 真实 LLM 调用 → 回客户端 → session 落盘 → session-query 回读），一条链同时验证交付通道 / plugin mount / llm provider / session 持久化四个前置；其后逐层叠加、单独验收：
 
@@ -1070,11 +1072,11 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 
 **⑤ 顺手采得的其余场地事实（与 3.9 采数口径共用）**
 - **cgroup v2 齐备**：`memory.current` ／ `.peak` ／ `.events` ／ `.pressure` 均 readable；当前 `oom 0 ／ oom_kill 0`。
-- 路径映射（⚠️ **2026-09-22 后**：`~/larry-dsh-home` 已整删——本行为当时场地留痕）：`~/larry-dsh-home`（**无凭据**）／ `~/.dsh`（**有凭据**，键 `version` ／ `records` ／ `refs`）／ `~/larry-data/larry.db` = **57,344 B，mtime 2026-09-16 18:47**（3.9 待回传的唯一副本）。
+- 路径映射（⚠️ **2026-09-22 后**：`~/larry-dsh-home` 已整删——本行为当时场地留痕）：`~/larry-dsh-home`（**无凭据**）／ `~/.dsh`（**有凭据**，键 `version` ／ `records` ／ `refs`）／ `~/larry-data/larry.db` = **57,344 B，mtime 2026-09-16 18:47**（原记「3.9 待回传的唯一副本」⇒ ✅ **已于 2026-10-18 回传**，落点 `D:\Code\_cvm-inv\`，核对表 = `../production-env.md` §13）。
 - ⚠️ **裸跑 `node` / `dsh` 不可信**（非登录 shell 的 PATH 不含）⇒ 绝对路径 `~/node/bin/node`（v22.22.2）／ `~/harness/node_modules/.bin/dsh`。与 `test-env.md §6.2` 同族，**CVM 侧亦成立**。
 - `~/harness` 树**无 `.git`**（非受管副本，手工同步）。
 - 场地**非独占**：`~/claude-tp-evidence` ／ `~/qoder-evidence` ／ `~/claude-305` ／ `~/.dsh-015` 等**他方 AI 产物在库**；`~/harness/scripts/sandbox-probe/` 存 6 件**前人探针** —— ⚠️ 其中 `sandbox-denial-probe.mjs` 头注释自述「**本机 Windows**」、用 `USERPROFILE` ／ `C:\Windows\…` ⇒ **是 Windows 探针被搬到 Linux 机的**，勿当 CVM 器材直接跑。
-- ⚠️ **CVM 产出不得是唯一副本**（机器**已续费 · 一年 200 元 ⇒ 到期 2027-10-09 21:08:53**〔2026-10-09 更新〕；原时限 2026-10-09）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。
+- ⚠️ **CVM 产出不得是唯一副本**（机器**已续费 · 一年 200 元 ⇒ 到期 2027-10-09 21:08:53**〔2026-10-09 更新〕；原时限 2026-10-09）⇒ 由 3.9 的回传核对表兜住（含 `~/larry-data/larry.db`，该机独有的证据原件）。✅ **该表已于 2026-10-18 执行完毕**（CVM 侧 216 件逐个 sha256、按内容比对 ⇒ 补回 39 件、回传后 **216／216 全匹配、缺失 0**）⇒ **权威落点 = `../production-env.md` §13**；⚠️ 该表**只证「文件都在」、⛔ 不证「内容正确」**，且 ⛔ **不构成「可退机」判据**。
 - ⚠️ **启动 / 装载类观测的「假绿三连」**（2026-09-16 实测，逐条都有反例 —— 判「环境可用 / profile 可用」前必读）：
   - ① **`dsh --profile <p>` 在 profile 不存在时同样 `exit 0` ＋ 双流全空** —— dsh 会自动把 home 建成**空壳 profile**（`dependencies: {}`），CLI 再从**自身安装树**解析 bundles ⇒ **`exit 0` 永远不能单独当判据**（与 `--help` / `--dump-config` 同类，只是这次骗过的是 boot 探针本身）。
   - ② **boot / 启动探针必须保 stdin 打开** —— sdk app 是 stdio 服务，`stdio:'ignore'`（或 stdin 关闭）会得到「`exit 0` ＋ 双流全空」的假绿（实测栽过一次）。
@@ -1270,7 +1272,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 - ⭐ **0 token 的构造原理**（同 3.0 三态教训）：无 key 态下 session 照常建立、`user/message` 与 `turn/end`（reason=error）事件照常产生（3.0 实证：无 key 时 exit 0 + session + 12 条事件）⇒ 事件消费与落库**不需要 LLM 调用**。⚠️ **该假设 v1 只是推断（V16）⇒ J0 第一件事就是把它变成枚举事实**（事件清单不在列 ⇒ 停手回报，0 token 形态重设计）。
 - ⭐ **J5 并入 3.6 的理由**（裁定①）：注入面（`systemPrompt.context`）是整条管线**最易静默失效**的一跳（参考件哑坑②变体：provider 注册了但装配时没调到 ／ 被覆盖 ／ 被裁剪），且它 **0 token 可验** ⇒ 没有理由留到 key 块。
 - ⭐ **临时 home = 无 key 态的骨架，但不充分（V15）**：`mkdtemp` 只消掉凭据四层里的第 2（存储文件）／ 4（主目录 `.env`）层；**第 1 层（启动环境）与第 3 层（调用 cwd 下的 `.env`）不受临时 home 影响** ⇒ 必须 **J0 显式自证**（显式不注入 ／ 清除 `DEEPSEEK_API_KEY` ＋ 确认 cwd 无 `.env` ＋ 记三元组），否则「0 token 承诺失效 ＋ 三态混淆」。
-- **插件进临时 home 的手势（V17）**：`dsh plugin --profile sdk add <dir>`（先例 `harness/scripts/run-33b-remote-approval.mjs:204-221` ／ `:454`）；**副本须删 `.modules.yaml`**（381 `:100` ／ 33b `:159`；否则 Windows 上 1 s 即 `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`）。每个验收脚本头部加**姿势自证**一行（`dsh-migration.md:914` 规则：模拟的是哪条真实链路 —— 哪个 home ／ profile ／ 通道）。
+- **插件进临时 home 的手势（V17）**：`dsh plugin --profile sdk add <dir>`（先例 `harness/scripts/run-33b-remote-approval.mjs:204-221` ／ `:454`）；**副本须删 `.modules.yaml`**（381 `:100` ／ 33b `:159`；否则 Windows 上 1 s 即 `ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`）。每个验收脚本头部加**姿势自证**一行（本稿 §3.6〈执行范式与边界（防重复踩）〉的**姿势自证**条：模拟的是哪条真实链路 —— 哪个 home ／ profile ／ 通道）。
 - **key 纪律**：3.6.1 的 key 走 env 层注入（优先级最高、精确可控）；`.credentials.yaml` 的**值不进派发稿、不进日志、不进证据**。
 
 **2 · 判据（四问形态：作用层 ／ 计量口径 ／ 结果态可分 ／ 断言视图）**
@@ -1323,7 +1325,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
   - **双锚改向（V6）**：活臂 ③ 原写「日志有降级记录」⇒ **活臂不可能有降级，自相矛盾**。改为 —— **活臂：①不阻塞 ②真相源在 ③「不得出现降级行」**（反向日志哨兵）；**停臂：①不阻塞 ②真相源在 ③降级行在**。
   - **③ 写死（V6）**：通道（stderr 或插件日志文件）＋ **唯一匹配串**（须含本次失败特征，如 URL ／ errno）＋ 只允许出自失败路径（⛔ 启动期无条件打印一行 `chroma disabled` 不算）。
   - **① 加时间界（V7）**：无 key 态 turn 本就 error 终局 ⇒ 「走完到终局」**恒真**（插件拖几十秒也绿）。给**数量级时间界**（终局时刻 − prompt 起跑 < X s，X 取同日活臂同轮消耗同数量级；软阈值报警不写精确区间）；**或诚实收窄** —— 明写「本臂只覆盖 connection-refused 快失败，不测 hung-server」列为边界。
-  - **③ 的依据摆正（V8）**：`product-positioning.md` §2.4.2〈长期记忆闭环〉「降级」行原文只有「ChromaDB 不可用时静默降级，不阻塞对话」，**无「须留日志」字样** ⇒ 改写为「**我方判据要求**（纪律出处：`dsh-migration.md:814`『静默 fail-closed 会制造假绿』）＋ 标注『产品文档未明写、属口径引申』」。红线不变，权威来源摆对。
+  - **③ 的依据摆正（V8）**：`product-positioning.md` §2.4.2〈长期记忆闭环〉「降级」行原文只有「ChromaDB 不可用时静默降级，不阻塞对话」，**无「须留日志」字样** ⇒ 改写为「**我方判据要求**（纪律出处：本稿 §3.6〈各切片判据细则〉**S1 行**『静默 fail-closed 会制造假绿』）＋ 标注『产品文档未明写、属口径引申』」。红线不变，权威来源摆对。
 - **产品口径**：「静默」指**不弹给用户**，⛔ 不是**无日志**；观测点在日志，日志无记录即红。
 - **断言视图**：turn 终局事件 ／ 我们库 ／ 插件日志三处分别取证。
 - ⛔ **本块不验**：恢复后补偿补写（「定义不验」，见 §3 ／ §6-3）。
@@ -1331,7 +1333,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 **J5 召回注入面（v2 并入 3.6 · 0 token）**
 
 - **作用层（v2 上移 · V9）** = **装配产物**：召回注入块出现在 **J0 预检定死的帧**（`request/context` 或 `request/header`）原文里，且含目标 nonce。〔⚠️ **J0 实测：括注两候选均不成立**——定死帧为 **`system/message`**；3.6 J5 即按它验收通过（物证 `_trae-evidence/36/run-j5/findings.json`：「system/message 帧 ×1，原文含 nonce 逐字」）。判据正文系历史事实、⛔ 不回改；**DSH-4 向量召回复用本判据时断言 `system/message` 帧**。〕
-- ⛔ **不算的层**：① 「provider 注册成功」—— ⚠️ 参考件自己把注册包在 try/catch 里（`lib/index.js:2230`，失败只 `console.error`）⇒ **注册 API 不抛错 ≠ 注册生效**；② `text()` 返回值单独断言 —— 相对「模型实际收到的 system prompt」**同样是中间表示**（provider 算得对 ≠ 装配时调到了它：注册在无人读的路径 ／ 被后注册覆盖 ／ order 后被裁剪 —— 哑坑②变体）；**若因故只能调 `text()`**，须改为「观测**装配过程调用过该 provider**」（调用计数 ／ 入参留痕），⛔ 不许测试自己构造 context 调它（那样「装配真的调到了它」完全没验）；③ **WB 台账②（`system-prompt` 在 `--dump-config` 在位）只证装配存在，⛔ 不证运行时激活**（`--dump-config` 是已定假绿源，`dsh-migration.md:812`）。
+- ⛔ **不算的层**：① 「provider 注册成功」—— ⚠️ 参考件自己把注册包在 try/catch 里（`lib/index.js:2230`，失败只 `console.error`）⇒ **注册 API 不抛错 ≠ 注册生效**；② `text()` 返回值单独断言 —— 相对「模型实际收到的 system prompt」**同样是中间表示**（provider 算得对 ≠ 装配时调到了它：注册在无人读的路径 ／ 被后注册覆盖 ／ order 后被裁剪 —— 哑坑②变体）；**若因故只能调 `text()`**，须改为「观测**装配过程调用过该 provider**」（调用计数 ／ 入参留痕），⛔ 不许测试自己构造 context 调它（那样「装配真的调到了它」完全没验）；③ **WB 台账②（`system-prompt` 在 `--dump-config` 在位）只证装配存在，⛔ 不证运行时激活**（`--dump-config` 是已定假绿源，本稿 §3.6〈各切片判据细则〉**S0 ② 行**）。
 - **计量口径**：注入块含同一 nonce（逐字）；块为空字符串即红。
 - **v2 修补（V10）**：① **B 会话自身输入不得含 nonce**、⛔ 不复用 A 的会话（防「不召回也见到」）；② 参考件 `recallSync` 无命中时**兜底最近记忆**（`lib/index.js:1327-1333`）⇒ 小库任何 query 恒含最近条目 ⇒ **明写「本步不区分 query 命中 ／ 兜底命中」**（诚实边界，与 §5 同层；语义固定为兜底的对照臂属加强项，最小闭环不派）。
 - **结果态可分**：负向对照 = **空 memory 库**（DB 指向全新文件）⇒ 注入块**不含** nonce。
@@ -1541,7 +1543,7 @@ S4 实现位置（第 0 项终裁后确定）：**TS 插件挂 session 事件流
 | **3.6** S4 记忆最小闭环 | 双写 + 召回 + 降级 | `packages/core/session`（事件类型）；`dsh-session-persistence-sqlite`、`dsh-session-query-sqlite`、`dsh-session-projection` | ⭐ `Asher-2000/dsh-memory-connect`（SQLite FTS5 + 本地 embedding + `systemPrompt.context` 逐轮召回）；`aqsk-BLG/dsh-memory`（分层文件记忆 + 混合检索）、`chenzheshushi-commits/dsh-evolve`（零 token 确定性召回）、`agentscope-ai/ReMe` | ✅ 已落位 |
 | **3.7** Windows 方言修复件 | 方言件写法 + 开发 overlay | `dsh-sandbox-windows-acl`、`dsh-sandbox-local`、`dsh-pwsh-sandbox` | ⭐ **`WSL & Windows Interop` 整类 37 件**（社区专门做过）：`173787247/dsh-wsl-env`（WSL / 路径映射 / CRLF / git 注意事项注入 systemPrompt）、`lucifergzsz414/dsh-windows-native`（native-Windows PowerShell / 编码 / 文件系统 gotchas）、`173787247/dsh-wsl-path` / `-mnt` | ✅ 模板的 `dev/cordis.yml` 可参照 |
 | **3.8** A 段协议（通信面） | 跨网络宽面 + 审批中继 | ⭐ `dsh-api-remotes`（**"任何不依赖 React 的 `ctx.remote` 约定均可复用其 Client face"**）、`dsh-client-connection`（gateway 挂 `/api`；browser 半 = fetch/SSE）、`dsh-api-gateway` + `dsh-typert-*`（4 件）、`dsh-host-webserver` / `-frontend-static` / `-apiproxy`、`dsh-cordis-host-runner`、`dsh-api-session-controller`、`dsh-sdk-protocol`（transport / `onRequest`） | ⭐ `litestartup-com/dsh-api-gateway`（**REST + SSE 暴露运行中会话给第三方客户端 + API-key 鉴权** —— 与自做 driver 同题）、`Jiachi5533/dsh-remote-gateway`（source-filtered HTTP/SSE/WS 网关）、`BotonJ/dsh-remote-link`、`liguobao/deepseek-harness-remote`、`yabolee-kkk/dsh-streaming-mcp-bridge` | ✅ `dsh-reach` 的 `client/` 半边（`dsh.client.inject`）可参照 |
-| **3.9** 阶段收口 | 上游漂移 + 回传 | — | `MicroMilo/upstream-radar`（盯 release + 在一次性 runner 复测已发布产物，输出机器可读兼容矩阵）——升级 SOP / 漂移复核的方法参考 | — |
+| **3.9** 阶段收口 | 上游漂移 + 回传 | — | `MicroMilo/upstream-radar`（盯 release + 在一次性 runner 复测已发布产物，输出机器可读兼容矩阵）——升级 SOP / 漂移复核的方法参考 | — ⛔ **未借鉴、未落位（2026-10-18 阶段闭环时按「找不到就写无」规矩回填）**：回传核对表按「**内容 sha256 比对**」自做（⇒ `../production-env.md` §13）；**漂移复核已转老大自研线**（AI 不介入）⇒ 本阶段自始至终未用该件 |
 
 **社区名录索引（在 `ref/awesome-dsh-plugin.md` 内按分类名检索；"行"为该快照位置）**
 
