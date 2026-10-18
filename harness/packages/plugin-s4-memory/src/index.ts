@@ -3,10 +3,12 @@
  *
  * 姿态自证：dsh 0.1.5-rc.2 cordis 插件（--profile sdk 运行）。消费 `session/event`
  * 火线（`user/message`，排除 synthetic runtime snapshot）；SQLite 真相源 ＋
- * ChromaDB 派生向量索引双写；注入面双注册——
- *   - `systemPrompt.section`（→ 系统 prompt 正文 → `system/message` 帧，裁定断言帧）
- *   - `systemPrompt.context`（→ user-role snapshot → synthetic `user/message` 帧，官方语义面）
- * 双面同源文本，J5 实测两帧均可断言。
+ * ChromaDB 派生向量索引双写；注入面默认**只走 context 面**——
+ *   - `systemPrompt.context`（→ user-role snapshot → synthetic `user/message` 帧，动态区）
+ *   - `systemPrompt.section` **默认关闭**（DSH-3.9.1-b A-②/D：召回是 volatile 内容，
+ *     放进 system prompt 前缀会让「新记忆写入 ⇒ 第 4 行起全部缓存 miss」）
+ * ⚠️ 召回块**不含 created_at 时间戳**（debug 信息、对模型零价值却毒化前缀）；
+ *    时间信息只存 SQLite（数据层），⛔ 不进 prompt。
  *
  * 双写一致性模型：
  *   - SQLite = 真相源：每条真 `user/message` 落 memories 表（行 id 主键；
@@ -62,7 +64,7 @@ const DEFAULTS: Required<Pick<Config,
   modelCacheDir: 'D:/Code/_models',
   recallLimit: 8,
   collectionName: 'larry_memories',
-  injectSection: true,
+  injectSection: false,
   injectContext: true,
 }
 
@@ -108,7 +110,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     'INSERT OR IGNORE INTO memories(session_id, source_event_seq, content) VALUES(?,?,?)'
   )
   const selectRecent = db.prepare(
-    'SELECT id, content, created_at FROM memories ORDER BY id DESC LIMIT ?'
+    'SELECT id, content FROM memories ORDER BY id DESC LIMIT ?'
   )
   // cordis 4.0.2 effect 语义：execute 返回 disposer（fiber 卸载时回收）
   ctx.effect(() => () => { db.close() })
@@ -192,15 +194,15 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     void doubleWrite(String(info.lastInsertRowid), text)
   })
 
-  // ── 注入面（双面同源）──────────────────────────────────────────────────────
+  // ── 注入面（默认仅 context 面；section 面由 config 显式开启）────────────────
   const recallText = (): string => {
     const rows = selectRecent.all(cfg.recallLimit) as unknown as Array<{
       id: number
       content: string
-      created_at: string
     }>
     if (rows.length === 0) return '' // 空库 → 空贡献（不产生注入块）
-    const lines = rows.map((r) => `- [${r.created_at}] ${r.content.replace(/\n/g, ' ')}`)
+    // ⛔ 不带 created_at：时间戳是 debug 信息（对模型零价值），与内容一起进 prompt 会毒化前缀。
+    const lines = rows.map((r) => `- ${r.content.replace(/\n/g, ' ')}`)
     return `## LarryAgent 记忆召回（最近 ${rows.length} 条）\n${lines.join('\n')}`
   }
 

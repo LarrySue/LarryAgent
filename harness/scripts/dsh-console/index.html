@@ -101,6 +101,7 @@
   <span class="title">DSH 调试体验台</span>
   <span class="badge" id="connBadge">连接中…</span>
   <span class="meta" id="sessionMeta"></span>
+  <span class="meta" id="usageTotal" title="输入(未命中) | 缓存命中 | 输出"></span>
   <span class="grow"></span>
   <button id="stopBtn" class="danger" title="发协议 shutdown，等 dsh 自退并关闭本台">停止 bridge</button>
 </header>
@@ -153,6 +154,10 @@
   let count = 0
   let rounds = 0
   let stopped = false
+  const usageAgg = { input: 0, cache: 0, output: 0 }
+  const renderUsageTotal = () => {
+    $('usageTotal').textContent = `tok in ${usageAgg.input} | cache ${usageAgg.cache} | out ${usageAgg.output}`
+  }
   const approvalQueue = []
 
   const now = () => new Date().toTimeString().slice(0, 8)
@@ -299,7 +304,13 @@
         addEvent(ev, ev?.data?.source?.kind === 'plugin' ? 'synthetic' : '')
         const type = ev?.type
         if (type === 'user/message' && ev?.data?.source?.kind !== 'plugin') {
-          // 页面已乐观渲染用户消息；这里只补 system 注入帧的显式提示
+          // 页面已乐观渲染用户消息；这里不重复
+        } else if (type === 'user/message' && ev?.data?.source?.kind === 'plugin') {
+          // 召回注入走 context 面（synthetic user/message）；左侧显示便于肉眼验证
+          const t = textOf(ev)
+          if (t && /##\s*LarryAgent 记忆召回/.test(t)) {
+            addMessage('system', t, `召回注入（context 面 user/message #${ev.seq}）`)
+          }
         } else if (type === 'system/message') {
           const t = textOf(ev)
           if (t && /##\s*LarryAgent 记忆召回/.test(t)) {
@@ -307,7 +318,19 @@
           }
         } else if (type === 'assistant/message') {
           const t = textOf(ev)
-          if (t) addMessage('assistant', t, `assistant/message #${ev.seq}`)
+          const u = ev?.data?.usage
+          if (u) {
+            usageAgg.input += Number(u.inputTokens ?? 0)
+            usageAgg.cache += Number(u.cacheReadTokens ?? 0)
+            usageAgg.output += Number(u.outputTokens ?? 0)
+            renderUsageTotal()
+          }
+          if (t) {
+            const note = u
+              ? `assistant/message #${ev.seq} · in ${u.inputTokens}（未命中）/ cache ${u.cacheReadTokens ?? 0}（命中）/ out ${u.outputTokens}`
+              : `assistant/message #${ev.seq}`
+            addMessage('assistant', t, note)
+          }
         } else if (type === 'turn/end') {
           const kind = ev?.data?.reason?.kind ?? '(unknown)'
           addMessage('system', `回合结束：${kind}`, `turn/end #${ev.seq}`)

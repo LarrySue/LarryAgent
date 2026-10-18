@@ -36,6 +36,11 @@ node harness/scripts/dsh-console/bridge.mjs
   （remote 必须早于 answerer：后者在 `apply` 时 probe 替换口）。
 - **记忆插件**随 profile 复制；其 `dbPath` 固定为 `.dsh-home/larry-memory.db`
   ⇒ 记忆跨台持续（临时 home 删除不影响）。
+- **召回只走 context 面**（synthetic `user/message` 帧，动态区）；`injectSection` 默认关闭
+  ⇒ 召回这种 volatile 内容不进 system prompt 前缀（缓存命中友好）。召回块**不含时间戳**，
+  时间只存 SQLite（DSH-3.9.1-b A-①／A-②／D）。
+- **usage 计量**：每轮 `assistant/message.data.usage` 已在页面显示
+  （`in`＝未命中输入 ／ `cache`＝命中 ／ `out`＝输出，顶部有累计），并落盘 `<evidence>/usage.jsonl`。
 - **凭据只复制**：`.credentials.yaml` 复制到临时 home，由 dsh 自己读取；
   bridge ⛔ 不读值、⛔ 不注入 env、⛔ 不打印。
 - 审批链路 = 3.3-b 已验证形态的复用：dsh 侧 `approval/request` 出站 → bridge →

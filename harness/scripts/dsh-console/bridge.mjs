@@ -66,6 +66,7 @@ mkdirSync(evidence, { recursive: true })
 const frameFile = join(evidence, 'ws-frames.jsonl')
 const notifFile = join(evidence, 'notifications.jsonl')
 const approvalFile = join(evidence, 'approvals.jsonl')
+const usageFile = join(evidence, 'usage.jsonl')
 const save = (file, record) => {
   try { appendFileSync(file, `${JSON.stringify({ t: localIso(), ...record })}\n`) } catch { /* 取证失败不影响台 */ }
 }
@@ -144,7 +145,12 @@ const driver = new DshDriver({
     onNotification(method, params) {
       save(notifFile, { method, params })
       if (method === 'session.event') {
-        broadcast({ type: 'event', sessionId: params?.sessionId ?? null, event: params?.event ?? null })
+        // J-h：provider 层 usage 已随 assistant/message 事件透传（含 cacheReadTokens）⇒ 单独落盘便于核对
+        const ev = params?.event
+        if (ev?.type === 'assistant/message' && ev.data?.usage !== undefined) {
+          save(usageFile, { sessionId: params?.sessionId ?? null, seq: ev.seq ?? null, turn: ev.data.turn ?? null, usage: ev.data.usage })
+        }
+        broadcast({ type: 'event', sessionId: params?.sessionId ?? null, event: ev ?? null })
         return
       }
       broadcast({ type: 'notification', method, params })
