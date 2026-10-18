@@ -730,7 +730,7 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 | 旧（老大体验时那轮） | 仓库根 `D:\Code\LarryAgent` | ❌ `SetNamedSecurityInfoW failed (Win32 5)`（`#25`／`#48`） |
 | 新（3.9.1-a 返工后） | 安全区 `D:\Temp\DSH-Dev-Temp` | ✅ **两次均一次成功、无重试**（`tool/call #24→#25`／`#39→#40`，`isError=false`，输出逐字回显）；探针期间**零 `approval/asked` 帧**（信任区静默） |
 
-同机、同 dsh 版本、同 profile ⇒ **唯一变量 = cwd**。装置侧规避**已落地**：`harness/scripts/dsh-console/bridge.mjs:59` 缺省 cwd 已改为安全区（`:58` 注「⛔ 不暴露仓库根」，`--cwd` 可覆盖）。
+同机、同 dsh 版本、同 profile ⇒ **唯一变量 = cwd**。装置侧规避**已落地**：`harness/scripts/dsh-console/bridge.mjs` 的缺省 `--cwd` 已改为安全区（该常量上一行注「⛔ 不暴露仓库根」；`--cwd` 可显式覆盖）。⚠️ 归档时点的行号为 `:59`（`:58` = 注释行），**⛔ 勿再按行号定位** —— 按 `argOf('--cwd'` 这个常量表达式找。
 
 **边界（诚实清单）**
 
