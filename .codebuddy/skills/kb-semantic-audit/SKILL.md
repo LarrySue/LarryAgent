@@ -2,7 +2,7 @@
 name: kb-semantic-audit
 description: "用本地语义检索（knowledge engine）做两件事：① 字面不同但意思相近的跨文件查找（grep 换了三种说法仍无果时）；② **文档语义体检**——把『命中分布』当证据，反推文档哪里语义不合理（同一概念散落多处／正本被旁支压住／两处表述互相打架／该回答的段根本没有『问题语言』）。当用户说『哪些地方讨论过 X』『这个定义是不是有好几份』『查一下这两处说法冲不冲突』『文档语义上有没有毛病』时使用。Use when semantic (not keyword) lookup is needed, or when auditing documents for semantic defects via retrieval distribution."
 description_zh: "kb 语义检索 + 文档语义体检：⛔ 前置闸（先验索引健康，红则只出检索层）/ 探针查询法 / 五类语义病灶判据 / 反义陷阱（相似≠一致，向量只粗筛）/ 四类审计动作（口径一致性·矛盾候选·孤岛·漂移）/ 命中必须回读正本"
-version: 1.3.0
+version: 1.3.1
 allowed-tools: Read,Bash,Grep,Glob
 agent_created: true
 ---
@@ -55,17 +55,28 @@ python kb.py rebuild -p LarryAgent          # ④ 索引坏了／换模型时（
 ```bash
 cd "D:/AI Work/knowledge engine/LarryAgent/indexes"
 
-# ① 向量坍缩：文本不同但向量完全相同（>0 即不准做分布类结论）
-python -c "import numpy as np;X=np.load('index.npy');u,c=np.unique(X.view([('','float32')]*512),axis=0,return_counts=True);d=c[c>1];print('dup groups',len(d),'rows',int(d.sum()),'distinct',len(u))"
+# ① 向量坍缩：**分型**——A 类＝文本互异却 bit 级同向量（真坍缩，>0 才不准做分布类结论）；B 类＝组内 text 完全相同（语料重复，非引擎缺陷）
+python -c "import numpy as np,json;X=np.load('index.npy');ch=json.load(open('index.meta.json',encoding='utf-8'))['chunks'];u,inv,c=np.unique(np.ascontiguousarray(X).view([('','float32')]*X.shape[1]),axis=0,return_inverse=True,return_counts=True);rows=[np.where(inv==g)[0] for g in np.where(c>1)[0]];A=sum(1 for r in rows if len({ch[i]['text'] for i in r})>1);print('A真坍缩',A,'组 | B文本重复',len(rows)-A,'组 | dup总组',len(rows))"
 
-# ② 长面包屑：单个标题过长会把正文挤出嵌入窗口 ⇒ 其子孙块共用一个向量（这些区域改走 grep）
+# ② 长面包屑：**回归探测器**（引擎已有 PREFIX_BUDGET=120 硬截断 ⇒ 结构性恒 0，见下方判据）
 python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['chunks'];t=[c for c in ch if len(c['title'])>800];print('long-breadcrumb',len(t),sorted({c['file'] for c in t}))"
 
 # ③ 空块／碎片块：只有标题或 `---` 的占位块（它们会占用 top-k 名额）
 python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['chunks'];print('fragments',sum(1 for c in ch if len([l for l in c['text'].splitlines() if l.strip()])<=2),'/',len(ch))"
 ```
 
-**判据**：`dup rows > 0` 或 `long-breadcrumb > 0` ⇒ **索引不健康**（fragments 只作参考：占比 >5% 时 top-k 名额被明显挤占）。
+**判据**（v1.3.1 改，与引擎 `check_index` 同口径）：
+
+| 读数 | 怎么判 | 理由 |
+|---|---|---|
+| **A 真坍缩 > 0** | 🔴 索引不健康 ⇒ 只出检索层结论 | 文本各异却同向量 = 嵌入窗口被挤爆的硬症状 |
+| **B 文本重复 > 0** | ⚪ **不红**（语料属性） | 组内 `text` 完全相同 ⇒ 同一段被重复收进来，引擎没算错 |
+| `long-breadcrumb > 0` | 只证"**引擎被回退**"，⛔ 不证健康 | 引擎 `PREFIX_BUDGET=120`／`EMBED_BUDGET=540` 硬截断（`kb.py:44-45,192`）⇒ **结构性恒 0** |
+| `fragments` | 只作参考（>5% 时 top-k 名额被挤） | 必须抽验，见下条 |
+
+- ⚠️ **A 类命中后先分型再看要不要报警**：同一段的多语言翻译（如 README 英／俄 `## 📄 License` 与 `## 📄 Лицензия`，标题不同、正文逐字相同）**也是 A 类**（text 不同只因标题），但它是**语料近重复**、不是引擎缺陷。⇒ 先抽 1–2 组看 text 差异在哪，再决定是"修索引"还是"这本库本来就这样"。
+- ⚠️ **B 类虽不红，但有一条副作用值得记**：多语言 README 的同一段落被收 5 次 ⇒ 检索时同一段内容独占 5 个 top-k 名额（多样性受损）。属**语料侧选择**（要不要把多语言 README 排掉），不是引擎 bug。
+- ⚠️ **`long-breadcrumb` 恒绿不代表闸没问题**：它现在只能证明"没退回旧缺陷"。**别把它当"索引健康"的证据**——一个只见过绿的判据等于没验过，所以基线段保留了两组红／绿样例。
 
 - ⚠️ **fragments 不能只看比例，必须抽验**：按"字数"过滤碎片块会**误杀"短但实义"的结论行**（实发生过：一次修复把 19 行真结论当空块丢掉，后改按**形状**过滤——只丢分隔线／表框／围栏／纯标题行——才修回）。⇒ 看到 fragments 大幅下降，先抽 3–5 条被剔掉的块，确认里面有实义结论。
 
@@ -80,10 +91,12 @@ python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['c
 | 正本排不过旁支 | 坏掉的那一侧**根本排不上来** ⇒ 把"索引坏了"读成"正本不够自解释"，从而**去改一份没问题的文档** |
 | 命中过程稿而正本无结论 | 空块／碎片块**占着 top-k 名额** ⇒ 看起来"正本缺失"，其实是被占位块挤掉 |
 
-> ⚠️ **基线会变，⛔ 别当常量引用，每次体检现跑**。两次实测（同一天，修复前后各一次）：
-> - **修复前（闸红）**：`dup rows 200 / distinct 2476`（总 2648）、`long-breadcrumb 143`（全在 `archive/roadmap-history.md`，成因＝`:541` 一个 968 字符的 `####` 标题把正文挤出 512-token 窗）、`fragments 304/2648`。
-> - **修复后（闸绿，2026-10-19 复跑）**：`dup 0 / distinct 1814`（总 1814）、`long-breadcrumb 0`、`fragments 135/1814`（≈7.4%）。总块数下降＝主库排除了 `ref/*`。
-> ⇒ 这两组数字的用处：**证明这道闸真的会红、也真的能转绿**；判据只用"`>0` 即红"，与具体数值无关。
+> ⚠️ **基线会变，⛔ 别当常量引用，每次体检现跑**。三组实测（判据演变＋两个 profile）：
+> - **修复前（主库，旧粗判据下红）**：`dup rows 200 / distinct 2476`（总 2648）、`long-breadcrumb 143`（全在 `archive/roadmap-history.md`，成因＝`:541` 一个 968 字符的 `####` 标题把正文挤出 512-token 窗）、`fragments 304/2648`。
+> - **修复后（主库，2026-10-19 复跑）**：`A 0 / B 0 / 总 0`（总 1814）、`long-breadcrumb 0`、`fragments 135/1814`（≈7.4%）。总块数下降＝主库排除了 `ref/*`。
+> - **ref 库（2026-10-19 实测，2735 块）**：`A 1 / B 26 / 总 27`、`long-breadcrumb 0`、`fragments 172/2735`（≈6.3%）。⭐ **这一组就是"旧粗判据会假红"的实证**：按 `dup rows > 0` 判，ref 库 27 组全红；按 A 类判，只有 1 组、且是 README 英／俄 License 跨语言近重复（正文逐字相同）⇒ 并非引擎缺陷。
+> ⇒ 这三组的用处：**证明这道闸真的会红、也真的会转绿、还会在"语料天然重复"的库上假红**。判据用"A 类 `>0` 即红"，与具体数值无关。
+
 
 ### 4.1 出探针
 
