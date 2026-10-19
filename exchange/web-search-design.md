@@ -437,6 +437,10 @@ Fast Query Recognizer API（<10ms）做前置校验，判断"不可计算"则跳
 - **fetch 正文带转义**：content 里 Markdown 特殊字符被插反斜杠（`\-`、`\:`，MarkdownV2 风格），消费前需 unescape。
 - Git Bash 终端把 UTF-8 显示成 GBK 乱码是**显示层假象**，数据层完好，别重抓。
 
+- **千千补两条（2026-10-19 · 我侧首跑 4 发实测 · 一家之言，待汇总）**：
+  - 转义字符不止上面两例：fetch example.com 首跑抓到 `\;`（分号；原文 `service;` 被编成 `service\;`）⇒ unescape 的字符类建议按 **MarkdownV2 全集**写，⛔ 只照两例抄。我的 `deepseek-search-fetch` 已扩全集并本地单测 6 例（含「字面反斜杠不碰」）；月月那侧若也照两例写，建议同扩。
+  - search 响应外层＝顶层 dict、条目在 **`results`** 键下（⛔ 非裸数组、也⛔ 非 `data`）；fetch 外层即 §10.1 的 `{content, title}` 平铺。解析侧别假设别的形状。
+
 ### 10.6 对选型的初步看法（一家之言，待汇总）
 
 - DeepSeek 搜索可考虑作为**新增 provider 候选**评估：字段与新鲜度优于 Brave，多语种新闻情报面强；劣势是无免费层（Tavily 有 1,000/月）、key 无 scope 隔离、社媒弱。
