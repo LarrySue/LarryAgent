@@ -683,7 +683,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 > **本阶段已完成，全文冷存于 `archive/roadmap-history.md`**（治理约定：完成一个归档一个）。内容：packages 盘点 / AGENTS.md / releases 阅读 / 第 0 项 Py SDK 一等二等判定（判定与证据见 §3.5）。
 > 其中**持续性的「跟踪上游 tag」动作不随阶段归档**，已并入 §3.4 升级 SOP 节拍。
 
-#### DSH-2：代码形态 + 环境准备
+#### DSH-2：代码形态 + 环境准备 ✅（已归档 2026-09-11）
 
 > **本稿不存放待办，本节只放验收基准与判定依据**（DSH-2 已整体归档 ⇒ 完成态快照见 `archive/roadmap-history.md`「DSH-2」段）。
 
