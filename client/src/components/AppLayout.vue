@@ -352,7 +352,7 @@ function startNewChat() {
         </div>
         <div class="about-info">
           <p class="about-line"><span class="about-label">Creator &amp; Designer：</span><span class="about-value">Su Larry</span></p>
-          <p class="about-line"><span class="about-label">Crafted with：</span><span class="about-value">苏苏(WorkBuddy) · Trae · Claude · Marvis · Qoder</span></p>
+          <p class="about-line"><span class="about-label">Crafted with：</span><span class="about-value">小马(Marvis) · 千绪(Qoder) · 沈知砚(Trae) · 顾衡(Claude) · 苏星野(WorkBuddy) · 白月璃(ZCode)</span></p>
           <p class="about-line"><span class="about-label">AI Copilot：</span><span class="about-value">DeepSeek · GLM · Hunyuan · Qwen</span></p>
           <p class="about-note">All AI-generated code has been reviewed, integrated, and warranted by Su Larry.</p>
           <p class="about-note">Web Search Powered by Brave</p>
