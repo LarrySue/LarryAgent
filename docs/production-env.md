@@ -493,11 +493,15 @@ records:
 
 - **并存是设计、不是重复**：`dsh/dsh-migration.md` 回退条款明写"旧 Python 后端在 **DSH-6 验收通过前保持可用、可回退**" ⇒ **`config.yaml` 里的 Key 在此之前不得移除**（移除 = 现役后端直接起不来）。
 - **终态收敛为一处**：DSH-6 通过、backend 退役后，只剩 `.credentials.yaml`。
-- **取值口径**：两条轨**填同一把 Key** —— Key 按"**环境**"分（dev／wsl／cvm），不按"轨"分 ⇒ 本机两处都用 `larry-dev`。见 §12.5 与 `TODO.md` DSH-3 段（三环境三把专用 Key）。
+- **取值口径**：两条轨**填同一把 Key** —— Key 按"**环境**"分（dev／wsl／cvm），不按"轨"分 ⇒ 本机两处都用 `larry-dev`。见 §12.5；**三环境三把专用 Key** 的定案原文 ⇒ `archive/roadmap-history.md`「DSH-3.0」段（`TODO.md` 侧只余指针）。
 
 ⚠️ **`backend/config.yaml` 不止 LLM Key**：另有 `embedding.api_key` / `search.brave_api_key` / `server.api_key`。它们在终态的归属属**迁移映射**范畴（DSH-3/4 处理），本节只钉 LLM Key 一条。
 
 #### 附一：两个环境各有两个 DSH home —— 决定 `.credentials.yaml` 究竟写哪
+
+> ⭐ **通则（老大 2026-09-14 指令 · 跨环境有效 · 永久纪律）**：**同一环境内只用一个 DSH home，不再制造重叠环境**
+> ⚠️ **本节下方两表 ＝ 该指令之前的成因与处置留痕**（本机两处 ／ CVM 两处），⛔ 勿读成"允许多 home 并存"。现行单一 home 口径：**CVM** ＝ 裸跑默认 `~/.dsh`（凭据在此；旧 `~/larry-dsh-home` 已于 2026-09-22 整删，本体不复存在）｜**本机** ＝ 项目根 `.dsh-home`（client 由 Tauri 主进程硬编码注入；**手工跑须显式指同一处**，⛔ 勿靠默认回落 `~/.dsh`，见 §12.5 表首行）｜**WSL** ＝ DSH-3 期间不参与（见附三）。
+> 📌 **迁出来源**：原载 `TODO.md`「DSH-3 · 贯穿规则」段「⭐ 环境口径统一」条，2026-10-19 随该段迁出归位本节（该段此后只留指针、不重复正文）。
 
 `DSH_HOME` 解析优先级（`@deepseek-ai/dsh-home-paths` 包文档）：**显式配置 > `$DSH_HOME` > `~/.dsh`**
 
@@ -580,13 +584,15 @@ records:
 | 手工跑 `harness/scripts/*.mjs`（非测试） | **必须**：`DSH_HOME="$(pwd -W)/.dsh-home"` | 脚本本身不推导；未设即回落全局 `~/.dsh`（**无 `refs:` 段**） |
 | 跑 harness 测试（vitest / `run-real-api.mjs`） | **禁止** | `tests/isolated-setup.ts` 逐 worker 强制覆盖为临时 home + 正向白名单守卫；注入真实路径会触发 `sentinel-failfast` 判 FAIL |
 | client（Tauri）启动 | 无需人工介入 | `main.rs:291` 硬编码 `.env("DSH_HOME", <项目根>/.dsh-home)` |
-| CVM | 不注入（裸跑落 `~/.dsh`，凭据在此） | ⚠️ 但 `cvm-probes/*.sh` 脚本内**钉死了错 home**，须先改脚本 |
+| CVM | 不注入（裸跑落 `~/.dsh`，凭据在此） | ✅ **脚本已参数化**（2026-09-14 `b4b61ed`：`export DSH_HOME="${DSH_HOME:-$HOME/.dsh}"`；`explicit` 分支 2026-09-22 退役 `ba3e42e`）⇒ 详见附一 |
 
 #### 附三：WSL 在 DSH-3 期间不参与（老大 2026-09-14 拍定）
 
 ⇒ §12.5 表内 WSL 行"暂不填"的**依据**：**DSH-3 的判定链只在 CVM 上跑**（S0 已拍"CVM 单跑"），WSL 不承担 DSH-3 的任何一个判定环节 ⇒ 无需为其准备凭据。
 
-- **不采纳 Claude「WSL 当演练场、CVM 当判定场」的建议**，三条理由（沙箱探针 ABI 自适应 ⇒ 无需在 ABI 7 的 WSL 预演；WSL 与 CVM 差异不止 ABI ⇒ 预演结论不可外推、反造假安全感；一次性风险用 CVM 上 dry-run + 采数化解更便宜）见 `TODO.md` DSH-3 段。
+- ⛔ **不采纳 Claude「WSL 当演练场、CVM 当判定场」的建议**（老大 2026-09-14 拍定）—— 原载 `TODO.md`「DSH-3 · 贯穿规则」段，2026-10-19 随该段迁出归位本节：
+  - 🟡 **未采纳的建议（留痕，勿当既成事实）**：Claude 提「WSL 当**演练场**、CVM 当**判定场**」—— 脚本/范式/超时/日志先在 WSL 顺一遍（同 Linux），凡"拦住了/放行了"的判定**只在 CVM 出结论**。他的理由：CVM 10-09 到期、机会一次性，不先演练等于**脚本第一次跑就落在正式判定场**〔⚠️ **其中「CVM 10-09 到期」这一前提已失效** —— 该机已于 2026-10-09 续费一年 ⇒ 到期 **2027-10-09**（见 §1）；本行只作当时决策留痕，⛔ 勿当现态引用〕
+  - ⛔ **不采纳的三条理由（2026-09-14）**：① 沙箱探针本就 **ABI 自适应**（`landlock_probe.py` 自测 ABI 选掩码）⇒ 不需在 ABI 7 的 WSL 预演，**且预演结果按 ABI 边界本就不可作判定**；② WSL 与 CVM 的差异不止 ABI（`/mnt` 三重限制 / flock 未实测 / seccomp 不同）⇒ WSL 上"顺通了"**大部分不可外推**，反造"WSL 通了 CVM 也会通"的**假安全感**；③ 一次性风险有**更便宜的化解**——CVM 上先跑一次 **dry-run**（只打印路径 / ABI / 权限探针，不出判定）+ 3.0 采数，分钟级成本，无需先搭一个状态本身未明的 WSL 环境
 - ⚠️ 是"**DSH-3 期间不参与**"，**不是**"WSL 定位降级" —— `test-env.md` §1「WSL 长期担任核心测试环境」的定位**不变**；该文档 §10「WSL 具体承载哪类测试」在 DSH-3 期间**挂起**（状态仍是待定，勿读成已解决）。
 
 ---

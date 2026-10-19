@@ -70,7 +70,7 @@
 | C7 | 上云：**不支持绑定全部网卡** ⇒ 反代或显式白名单 | 〈通信面选型〉条 6 | §3.3 部署前提 |
 | C8 | 3.3-b 已实测的**结果词汇封闭**：`allowed-once` / `rejected` / `cancelled` / `unavailable`；**无 `allow-always`** | `dsh-migration.md`〈S1 三段收敛〉 | §5.3 |
 | C9 | **超时两路语义**：请求侧 `AbortSignal` ⇒ `cancelled`；答者侧自建计时器 ⇒ `unavailable`（官方无答者侧超时） | 同上 | §5.4 |
-| C10 | **对端消失 ⇒ fail-closed ＋ 必须留可观测日志**（静默 fail-closed ＝ 假绿源） | 同上 ＋ `TODO.md` 贯穿规则 | §5.4 ／ §5.6 ／ §12 |
+| C10 | **对端消失 ⇒ fail-closed ＋ 必须留可观测日志**（静默 fail-closed ＝ 假绿源） | 同上 ＋ `dsh-migration.md` §3.6〈负向对照矩阵〉（原写「`TODO.md` 贯穿规则」，2026-10-19 该段已迁出） | §5.4 ／ §5.6 ／ §12 |
 | C11 | **`approval/request` 是 3.3-b 的临时 method 名，3.8 定稿后可改名** | 同上〈未验〉条 | §5.1 定名（**沿用**） |
 | C12 | `onRequest` 是**替换语义**（"replacing any prior handler"），抢装会静默顶掉先装者 | `transport.d.ts` 原文 | §11.2 K2 |
 | **C13** | **应用启动形态 = 「`dsh --profile <name>` ＋ ordered patch files」** —— 上游明文："custom plugin composition remains **a profile plus ordered patch files, not another executable or inline application tree**"；且 `verify-application-entrypoints` "rejects a Node application path that bypasses `dsh`"。官方 Python SDK 即此范式（"the client launches `dsh --profile sdk` with an explicit Harness home"） | 上游 `docs/architecture.md`〈Application launch〉@ `dsh-v0.1.5-rc.2`（本版逐字复核） | §11.1 ／ K6 |
