@@ -429,6 +429,9 @@ Fast Query Recognizer API（<10ms）做前置校验，判断"不可计算"则跳
 ### 10.5 工程坑（调用侧必读）
 
 - **401 回显 key 尾巴**（千千 T4 发现，月月复现补记）：上游 401 的 message 形如 `Your api key: ****-xxxx is invalid`，xxxx＝**请求所发 key 的末 4 位**——真 key 失效（关停/轮换）时该尾巴会随错误响应进日志/对话。处置：响应体进对话前消毒（key 末 4 替换为 `****`）；401＝停火提醒老大，不贴原始 message。
+- **python `open()` 默认 GBK（Windows）**：读 key 文件、落盘响应、含中文 query 的 body 一律 `open(path, encoding='utf-8')`——否则中文 JSON 乱码或 UnicodeEncodeError（月月全部验证脚本带此参数才没炸；千千收件区已同步，其脚本为 python）。
+- **python requests/httpx 不读 Windows 系统代理**：挂代理须显式 `proxies={'https':'http://127.0.0.1:7890'}`；但见 §10.8——api.deepseek.com 直连可达，直连最省心。
+- **key 不进脚本源码**：脚本/skills 若被 git 或同步机制带走，源码里的 key 跟着走——脚本只留路径，key 从独立文件读。
 
 - **非 ASCII query 不能内联**：curl `-d '中文/西里尔/重音…'` 直接 400 invalid unicode——JSON body 落盘（UTF-8）后 `--data-binary @file`。
 - **fetch 正文带转义**：content 里 Markdown 特殊字符被插反斜杠（`\-`、`\:`，MarkdownV2 风格），消费前需 unescape。
@@ -440,6 +443,26 @@ Fast Query Recognizer API（<10ms）做前置校验，判断"不可计算"则跳
 - 若引入，routing 上适合接**通用/新闻/多语种**场景；health/finance 的隐私诉求（零追踪）仍指向 Brave，DeepSeek 的数据留存政策本文未调研，**引入前需补这一面**。
 
 ### 10.7 可复现命令（key 用 `<KEY>` 占位）
+
+```bash
+# search（中文/小语种一律走文件体）
+curl -x http://127.0.0.1:7890 -X POST https://api.deepseek.com/v1/tools/search \
+  -H "Authorization: Bearer <KEY>" -H "Content-Type: application/json" \
+  --data-binary @query.json   # {"query":"… after:2026-10-12","count":5,"need_content":true}
+# fetch
+curl -x http://127.0.0.1:7890 -X POST https://api.deepseek.com/v1/tools/fetch \
+  -H "Authorization: Bearer <KEY>" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+```
+
+### 10.8 配装实录（月月实践 · 2026-10-19 晚）——AI 岗位级搜索枪，与本稿 §四 平行的形态
+
+- **形态**：AI 岗位自配搜索枪 ＝ ①**用户级技能**（开火/收枪判据＋调用模板＋坑清单＋key 铁律，任何工作区可触发）＋ ②**本地 key 文件**（用户目录、不入任何 git，**老大手填**）。与本稿 §四 的 backend WebSearchTool 是平行形态：backend 走 config.yaml＋服务端路由，AI 岗位走 harness 技能＋本地 key，**共用同一上游接口**——讨论稿选型结论对两者同样适用。
+- **key 制度**：**专用 key**（爆炸半径隔离：search 出事不连坐 chat；独立账单可对账）＋ **老大手填**（授权链闭环，AI 不经手值）＋ **key 不经手铁律**（取用＝变量注入＋与 curl 同一条命令，永不回显；响应体进对话前按 §10.5 消毒）。
+- **网络策略**：**api.deepseek.com 国内直连可达（实测 200/0.3s）**——直连优先，代理 `127.0.0.1:7890` 备胎。§八 注意事项 4「海外服务需测延迟」对 DeepSeek 不成立（国内服务商）。
+- **临时 key 纪律**：测试/过渡 key 快用快关。本次实战（临时 key）：三次实测＋深查＋验收共 14 发成功请求 ≈ $0.01，全程闭环退役。
+- **Brave 处置**：老大 2026-10-19 裁「打算关停」（DS 效果更好）⇒ §二选型与 §六成本预估中 Brave 面待解冻汇总时正式修订；§3.2 的隐私差异化价值（health/finance 零追踪）若真关停需另行评估，结论暂留档。
+- **验收**：专用 key 直连试调 🟢 200 / 0.45s / 3 结果（首搜即命中 DeepSeek 自家搜索 API 上线报道，中英信源混合）。
 
 ```bash
 # search（中文/小语种一律走文件体）
