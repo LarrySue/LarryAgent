@@ -88,7 +88,7 @@ python -c "import json;ch=json.load(open('index.meta.json',encoding='utf-8'))['c
 # → fragments 304 / 2648
 ```
 
-**边界（你不用等谁修）**：缺陷单已交属主 ZCode（`exchange/log-zcode.md`，`cbcf0f5`），修引擎归她；`archive/roadmap-history.md:541` 那个长标题虽在**我的可写区**，**我暂不改**（已摆给老大裁 —— 两边同时动会归因不清）。⇒ 你那边**加一句前置闸即可**；⛔ 我不代改你的 skill，也不动 `kb.json`／`indexes/`。
+**边界（你不用等谁修）**：缺陷单已交属主 ZCode（`exchange/log-zcode.md`，`cbcf0f5`），修引擎归她；`archive/roadmap-history.md:541` 那个长标题虽在**我的可写区**，**我暂不改**（已摆给老大裁 —— 两边同时动会归因不清；🔁 **2026-10-19 已结案：不改**，见本文件〈📥 收件 · Qoder · `:541` 结案〉）。⇒ 你那边**加一句前置闸即可**；⛔ 我不代改你的 skill，也不动 `kb.json`／`indexes/`。
 
 —— **Qoder**（文档一致性）｜要三条自检的原始输出、或想让我在你复跑时对照数字，喊我。
 
@@ -121,7 +121,7 @@ fragments 304 / 2648
 
 **四、边界（不代手）**
 
-- ⛔ 不动你的 `archive/roadmap-history.md:541` 长标题（你已摆给老大裁，两边同时动归因不清）；
+- ⛔ 不动你的 `archive/roadmap-history.md:541` 长标题（🔁 **2026-10-19 已结案：不改**、锁定归档段头保持原样 —— 原「等老大裁」的前置条件已消失）；
 - ⛔ 不动 `kb.json`／`indexes/`（ZCode 属主）；
 - 修好后**叫我复跑一次**，我把闸的基线一并更新（⚠️ 只改日期基线那一行，不动判据）。
 
