@@ -390,5 +390,71 @@ Fast Query Recognizer API（<10ms）做前置校验，判断"不可计算"则跳
 
 ---
 
+## 十、增补 · 2026-10-19：DeepSeek Search/Fetch API 实测记录（月月/ZCode）
+
+> **状态**：讨论稿冻结期间的成果顺手留档。本节是实测记录＋一家之言，**未并入上方选型结论**；解冻后汇总归主持人千千裁。
+> 背景：本稿定稿于 08-29，当时 DeepSeek 搜索服务尚不存在（3.4 未采纳清单里也没有它）——它是 **08-29 之后新出现的候选**，故在此补记。§3.4 可留意。
+
+### 10.1 事件与接口
+
+- **2026-10-16 DeepSeek 官宣 Search/Fetch API 上线**（自研搜索引擎，宣称千亿级网页索引，多语言）。
+- **独立原生 JSON 接口**（非 chat `tools` 字段）：
+  - `POST https://api.deepseek.com/v1/tools/search`：字段 `query` / `count` / `need_content`；`after:YYYY-MM-DD` 运算符实测生效，**`site:` 不支持**（返回 0 结果）。
+  - `POST https://api.deepseek.com/v1/tools/fetch`：字段 `url`，返回 `{content, title}`。
+- **key 与 chat 共用（账户身份、无 scope 细分）**——泄露面＝全产品线，这与本文档其他 provider「独立 key 独立额度」的风险模型不同。
+
+### 10.2 计费
+
+| 项 | 值 |
+|---|---|
+| 单价 | **$0.75/千次成功请求**（按次不按 token） |
+| 限速 | search/fetch 各 5 QPS，超限 429 |
+| 免费额度 | 无（纯按量），但单价低于 Tavily 超量（$8/千）与 Brave（$4-5/千）之间偏下 |
+| 注意 | 2026-11-01 00:00（北京）起，经 DeepSeek Harness 等服务端工具调用**同价计费** |
+
+### 10.3 实测数据（10-17 初测 ＋ 10-19 复验，临时 key）
+
+- **速度**：search 亚秒级（实测 0.27–0.41s，六连发无波动）；fetch ~3.2s（含抓远端页面）。
+- **新鲜度**：索引 ≤3 天——`after:2026-10-10` 可搜到 10-16 发布页面；俄语查询命中**测试当天（10-19）**发布的 Mail.ru 国防部简报。
+- **返回字段**：`title / site_name / site_icon / authority / rerank_score / date / url / summary`，`need_content=true` 直附全文 content（省一次 fetch）——对 LLM 消费比 Brave 的标准 SERP 友好。
+- **多语种（EN/RU/UK/FR/DE 各 5 发全绿）**：信源不止英美大媒——乌克兰本地媒（Ukrinform/UNN/LB.ua/Українська правда/24 Канал/Espreso.tv）、俄地区媒（URA.RU）、德公共媒（Deutschlandfunk/ZDF/BR）、北欧 SVT、比卢 RTL；同一事件（泽连斯基秋季战果声明）在 EN/RU/UK 三语种各自独立命中，天然多源交叉印证。军事冲突类查询**无内容过滤迹象**。
+
+### 10.4 短板（实测实锤）
+
+1. **社媒弱**：Reddit 原生帖搜不到；但 Fediverse/论坛可达（feddit.org、lemmy.eco.br、arrse.co.uk）。社媒监听面仍需 Brave 或专门工具。
+2. **`site:` 运算符不支持**。
+3. **跨语种混入**：FR/DE 主题查询会混入日语/韩语结果（rerank 主题权重 > 语言精确）。
+4. **垃圾长尾**：duckduckgo.com 结果页 URL 被当普通网页返回过一次。
+
+### 10.5 工程坑（调用侧必读）
+
+- **401 回显 key 尾巴**（千千 T4 发现，月月复现补记）：上游 401 的 message 形如 `Your api key: ****-xxxx is invalid`，xxxx＝**请求所发 key 的末 4 位**——真 key 失效（关停/轮换）时该尾巴会随错误响应进日志/对话。处置：响应体进对话前消毒（key 末 4 替换为 `****`）；401＝停火提醒老大，不贴原始 message。
+
+- **非 ASCII query 不能内联**：curl `-d '中文/西里尔/重音…'` 直接 400 invalid unicode——JSON body 落盘（UTF-8）后 `--data-binary @file`。
+- **fetch 正文带转义**：content 里 Markdown 特殊字符被插反斜杠（`\-`、`\:`，MarkdownV2 风格），消费前需 unescape。
+- Git Bash 终端把 UTF-8 显示成 GBK 乱码是**显示层假象**，数据层完好，别重抓。
+
+### 10.6 对选型的初步看法（一家之言，待汇总）
+
+- DeepSeek 搜索可考虑作为**新增 provider 候选**评估：字段与新鲜度优于 Brave，多语种新闻情报面强；劣势是无免费层（Tavily 有 1,000/月）、key 无 scope 隔离、社媒弱。
+- 若引入，routing 上适合接**通用/新闻/多语种**场景；health/finance 的隐私诉求（零追踪）仍指向 Brave，DeepSeek 的数据留存政策本文未调研，**引入前需补这一面**。
+
+### 10.7 可复现命令（key 用 `<KEY>` 占位）
+
+```bash
+# search（中文/小语种一律走文件体）
+curl -x http://127.0.0.1:7890 -X POST https://api.deepseek.com/v1/tools/search \
+  -H "Authorization: Bearer <KEY>" -H "Content-Type: application/json" \
+  --data-binary @query.json   # {"query":"… after:2026-10-12","count":5,"need_content":true}
+# fetch
+curl -x http://127.0.0.1:7890 -X POST https://api.deepseek.com/v1/tools/fetch \
+  -H "Authorization: Bearer <KEY>" -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+```
+
+*—— 月月（ZCode）2026-10-19，临时 key 已用毕待老大关闭；完整实测过程与坑清单另存于月月记忆档案。*
+
+---
+
 *文档生成时间：2026-08-29*
 *综合来源：QoderWork 原始选型、通义千问定价与生态调研、DeepSeek 工程实现建议*
