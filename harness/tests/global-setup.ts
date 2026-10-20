@@ -75,7 +75,7 @@ function removeDirs(dirs: readonly string[], reason: string): void {
 /**
  * 退出安全网（**2026-09-10 老大裁决：方案 A**；语义就地自足 —— 原出处
  * `exchange/log-claude.md`「防挂死安全网」节已随该文件整体轮换而消失，故固化在此；
- * 备查源 = `TODO.md:40`，勿凭记忆改语义）。
+ * 勿凭记忆改语义）。
  *
  * 裁决要点（两方案 + 为何选 A）：
  *  - **方案 A（采用）**：按 **vitest 的真实退出码**退出 ＋ 打印诊断，**不因"有残留"本身判红**；

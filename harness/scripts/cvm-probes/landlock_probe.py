@@ -6,7 +6,7 @@ landlock_probe.py —— landlock **独立通道**探针（**重建件 v2**，20
 ## provenance（判据 P7）
 - v1 原件 `D:\\Temp\\Sys\\claude-wsl-probe\\landlock_probe.py` **已丢失**：WB 2026-10-08 五处核查
   全空（Windows Temp ／ WSL `~/claude-probe/` ／ 回收站 ／ git 全历史 ／ CVM 侧）；**正文从未入过库**，
-  历史里只剩一行**描述**（旧 `log-claude.md:55`）⇒ 本件是**重写**、不是恢复。
+  历史里只剩一行**描述**（原载交流区日志，该行已随日志清理而不可再查）⇒ 本件是**重写**、不是恢复。
 - ⛔ v1 的历史读数（「已升级为 ABI 自适应／新增 `--fs-mask` 负向开关 + `VERDICT=` 机读行／
   WSL ABI 7 回归通过」）**不用于逐字比对** —— 本件的一切读数只以本件自己的实跑输出为准。
 - 本件**不依赖 DSH 的任何 addon／包／模块**（纯 python3 stdlib ＋ ctypes 直调 syscall）。
@@ -90,7 +90,8 @@ UNDEFINED_PROBE_BIT = 1 << 30               # 负向对照用：任何现存 ABI
 #    ABI 4/5 两格见下方注释 —— **本表初稿把 IOCTL_DEV 记成 ABI 4，是错的**，2026-10-08 被本件的
 #    逐位探针在 CVM 上抓出（喂 bit15 给 ABI=4 的内核 ⇒ EINVAL），三处证据一致：
 #      ① CVM `/usr/include/linux/landlock.h`：`#define` 只到 `1ULL << 14`，且注「网络位 since ABI 4」；
-#      ② 仓内 `docs/dsh/dsh-migration.md:1053`：「ABI 4 与 5 的实际差距 = LL_FS_IOCTL_DEV 一位」；
+#      ② 仓内 `docs/dsh/dsh-migration.md`〈DSH-3.5 · S3 sandbox：CVM 前置核查实测回填〉
+#         「② landlock rung」条：「ABI 4 与 5 的实际差距 = LL_FS_IOCTL_DEV 一位」；
 #      ③ 本件实测（`_claude-evidence/35probe/cvm/`）。
 FS_BITS = (
     ('EXECUTE', 0, 1), ('WRITE_FILE', 1, 1), ('READ_FILE', 2, 1), ('READ_DIR', 3, 1),

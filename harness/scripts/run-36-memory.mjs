@@ -624,11 +624,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_seq ON memories(session_i
 
 // ══════════════════════════════════════════════════════════════════════════
 // Phase J6 · LLM 端到端召回（3.6.1 · 需 key · ≤10 次对话预算）
-// 判据权威 = dsh-migration.md:1340-1349：A 写入 → 全新 B 召回答答逐字含 nonce；
-// 负向空库同问：不含 nonce ＋ 非空回答 ＋ turn/end.reason.kind==='completed'（V11 防真空）。
-// 省预算：A 无 key 跑（写入靠 user/message 事件与模型无关，判据 :1342 允许「user message 直接陈述」）；
+// 判据权威 = docs/dsh/dsh-migration.md §3.6〈J6 LLM 端到端召回（3.6.1，需 key）〉：
+//   A 写入 → 全新 B 召回答答逐字含 nonce；负向空库同问：不含 nonce ＋ 非空回答 ＋
+//   turn/end.reason.kind==='completed'（V11 防真空）。
+// 省预算：A 无 key 跑（写入靠 user/message 事件与模型无关，〈J6〉计量口径允许「user message 直接陈述」）；
 // 真调用 = B 正向（≤2，含一次留痕重试）＋ B 负向 ×1。
-// key 纪律（:1348）：env 层注入；值经 S36_KEY_FILE 文件转 env，⛔ 不进稿/日志/证据/提交。
+// key 纪律（同〈J6〉「key 纪律」条）：env 层注入；值经 S36_KEY_FILE 文件转 env，⛔ 不进稿/日志/证据/提交。
 // ══════════════════════════════════════════════════════════════════════════
 async function phaseJ6() {
   const keyFile = process.env.S36_KEY_FILE ?? 'D:/Temp/s36-test.key'
@@ -646,7 +647,7 @@ async function phaseJ6() {
   obs('J6-key-mode', `key 经 ${keyFile} → child env 注入（老大测试 key，用完即关；⛔ 值不进稿/日志/证据/提交）`)
   let turns = 0 // 真调用对话计数（预算 ≤10）
 
-  // ── A 会话（无 key）：user message 直接陈述项目代号 → 插件消费落库（:1342 允许）──
+  // ── A 会话（无 key）：user message 直接陈述项目代号 → 插件消费落库（〈J6〉计量口径允许）──
   const nonce = `PING-${Math.random().toString(16).slice(2, 10)}` // V13：随机 ≥8 hex
   const sharedDb = join(OUT, 'larry-memory-j6.db')
   const tA = Date.now()

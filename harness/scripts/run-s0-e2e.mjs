@@ -35,8 +35,8 @@ if (unknown.length > 0) {
  * （`tests/real-api.ts:251`）—— 两处**默认不一致** ⇒ 不带 env 跑会**静默换源**。
  * 且两处源常处于**不同卷** ⇒ pnpm store 亦随之不同（store 按卷回落，见
  * `docs/local-env.md` §12）⇒ 记录出来的 `storeDir` / `virtualStoreDir` 会换值。
- * ⇒ 现统一到**项目口径**（`TODO.md` 贯穿规则：本机手工跑亦显式指 `.dsh-home`、
- *   勿靠默认回落 `~/.dsh`），并在日志里**标明来源**（env / 默认）。
+ * ⇒ 现统一到**项目口径**（本机手工跑亦显式指 `.dsh-home`、勿靠默认回落 `~/.dsh`，
+ *   见 `docs/production-env.md` §12.7 附一），并在日志里**标明来源**（env / 默认）。
  */
 const DEFAULT_PROFILE_HOME = resolve(repoDir, '.dsh-home', 'profiles')
 const profileHome = process.env.DSH_REAL_API_PROFILE_HOME ?? DEFAULT_PROFILE_HOME

@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **DSH-3.10 · 注释引用去行号化**（8 处 · 低优先） | Trae | 本机 Windows | 🔵 **已派发 · 待起跑**（稿见下方〈📤 派发〉节） | 2026-10-20 |
+| **DSH-3.10 · 注释引用去行号化**（8 处 · 低优先） | Trae | 本机 Windows | � **已交付 · 待 WB 复验**（回报见下方〈� 回报〉节；一处判据口径冲突见回报〈自曝〉①） | 2026-10-20 |
 
 ## 📤 派发 · DSH-3.10 注释引用去行号化（8 处 · 低优先 ／ WB 2026-10-20）
 
@@ -78,6 +78,114 @@
 - ⛔ 证据原文原样落盘，禁人工改写 ／ 意译。
 
 **诚实边界**：本块只消灭"会腐烂的引用形态"，**不证明**注释语义与文档一致（那是内容判断，不在本块靶子内）；也不覆盖 `ref/`（第三方）与 `archive/`（锁定件）内部的引用。
+
+---
+
+## 📥 回报 · DSH-3.10 注释引用去行号化（Trae 2026-10-20）
+
+**结论**：8 处**全部处理完**，J-a ～ J-h 均达判据；⚠️ 但有一处**判据内在冲突**（J-c vs J-g），见〈自曝〉①，请 WB 裁定口径。
+
+### 1 · 改动清单（四文件）
+
+| 处 | 文件 | 改法 |
+|---|---|---|
+| ①②③④ | `harness/scripts/run-36-memory.mjs`（Phase J6 段头注释块 ＋ :649 行内） | 全部改为 `§3.6〈J6 LLM 端到端召回（3.6.1，需 key）〉` 节锚 ＋ 条名（「计量口径」／「key 纪律」）；裸 `:1342` ／ `:1348` 一并清掉 |
+| ⑤ | `harness/scripts/cvm-probes/landlock_probe.py`（docstring 证据 ②） | 改为节锚 `〈DSH-3.5 · S3 sandbox：CVM 前置核查实测回填〉` ＋ 「② landlock rung」条 |
+| ⑥ | 同上（provenance 首段） | 就地自足：「原载交流区日志，该行已随日志清理而不可再查」 |
+| ⑦ | `harness/scripts/run-s0-e2e.mjs`（profile 源注释） | 删 `TODO.md` 段名引用，改指 `docs/production-env.md` §12.7 附一（实测该节 :503 通则逐字承载"本机手工跑须显式指同一处"口径） |
+| ⑧ | `harness/tests/global-setup.ts`（退出安全网注释） | 按建议**删掉**「备查源 = `TODO.md:40`，」半句；`勿凭记忆改语义` 保留 |
+
+`git diff --stat`：
+```
+ harness/scripts/cvm-probes/landlock_probe.py |  5 +++--
+ harness/scripts/run-36-memory.mjs            | 11 ++++++-----
+ harness/scripts/run-s0-e2e.mjs               |  4 ++--
+ harness/tests/global-setup.ts                |  2 +-
+ 4 files changed, 12 insertions(+), 10 deletions(-)
+```
+
+### 2 · 判据逐条（命令原文 ＋ 输出原文）
+
+⚠️ **通道声明**：本机 `bash` 实为 WSL，中文（全角括号）经 PowerShell→wsl 传参被 GBK 破坏 —— 实测首条命令 exit **127** 且正则变成乱码字节。⇒ 改用 `git grep`（同为正则匹配、直接读 UTF-8 工作树），⛔ 未做人工改写，也**不是**放宽容差。
+
+**J-a**
+```
+git grep -n -E 'dsh-migration\.md:[0-9]|（:[0-9]{3,}' -- harness/scripts/run-36-memory.mjs
+（无输出）
+exit=1
+```
+
+**J-b**
+```
+git grep -n 'dsh-migration.md:[0-9]' -- harness/scripts/cvm-probes/landlock_probe.py
+（无输出）
+exit=1
+```
+
+**J-c**
+```
+git grep -n 'log-claude' -- harness/scripts/cvm-probes/landlock_probe.py
+（无输出）
+exit=1
+```
+
+**J-d**
+```
+git grep -n 'TODO.md' -- harness/scripts/run-s0-e2e.mjs
+（无输出）
+exit=1
+```
+
+**J-e**
+```
+git grep -n 'TODO.md:' -- harness/tests/global-setup.ts
+（无输出）
+exit=1
+```
+
+**J-f**（锚点实存）
+```
+git grep -c '^\*\*J6 LLM 端到端召回' -- docs/dsh/dsh-migration.md
+docs/dsh/dsh-migration.md:1
+git grep -c '^\*\*② landlock rung' -- docs/dsh/dsh-migration.md
+docs/dsh/dsh-migration.md:1
+git grep -c '^#### 附一' -- docs/production-env.md
+docs/production-env.md:2
+```
+（附一 = 2：`#### 附一：…` 与 `#### 附一之补：…` 两条，均 ≥1）
+
+**J-g**
+```
+git diff -U0 -- <四文件> | Select-String '^[+-][^+-]' | Select-String '^[+-]\s*(//|#|\*)' -NotMatch
+-  历史里只剩一行**描述**（旧 `log-claude.md:55`）⇒ 本件是**重写**、不是恢复。
++  历史里只剩一行**描述**（原载交流区日志，该行已随日志清理而不可再查）⇒ 本件是**重写**、不是恢复。
+```
+⇒ 仅此 2 行"非注释"命中，成因见〈自曝〉①。四文件其余改动行 100% 落在 `//` ／ ` *` ／ `#` 行首。
+
+**J-h**（全仓复扫）
+```
+git grep -n -E '\.md:[0-9]' -- harness/scripts harness/tests backend
+backend/memory/engine.py:62:    史料 `archive/qoder-work-historical-record.md:16478` 区；结论落点 `docs/product-positioning.md` 2.4.2。
+harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/README.md:108` 原文「For each accepted session/prompt, text and durable content references enter one user message **verbatim**」；' +
+```
+保留理由（**同意 WB 预判**，未照抄式敷衍）：
+- `run-34-compaction.mjs:287` → `dsh-sdk-jsonrpc-server/README.md` 属 `ref/` **第三方上游件**，随上游版本锚定；本仓文档怎么涨都不影响它，改成节锚反而没有稳定落点。
+- `backend/memory/engine.py:62` → `archive/qoder-work-historical-record.md` 属 **archive 锁定件**，不再增行 ⇒ 行号不会漂。
+
+**顺手语法检查（不算判据）**：`node --check` 两文件 exit 0；`python -c "ast.parse(...)"` → `py-ast-ok`。未跑任何脚本／测试。
+
+### 3 · 未闭合项
+
+**无**（8/8 处理完）。唯一待裁定项是 J-g 的口径（见下）。
+
+### 4 · 自曝
+
+**① 判据内在冲突：J-c 与 J-g 在 Python 上字面互斥。**
+`landlock_probe.py:9` 位于模块 **docstring 正文**（缩进 3 空格，**不是** `#` 行首）。J-c 强制要求改这一句（去 `log-claude.md:55`），J-g 又要求"非注释行零改动"且把 Python 注释限定为"行首 `#`" ⇒ 两条不可能同时字面满足。
+我的处置：按 J-c 执行（它点名了该行），J-g 的命中如实上报，**不掩盖、不为了绿而改回**。
+建议口径（供 WB 定）：J-g 的括号补一句"Python **docstring 正文**视同注释"——docstring 是文档性文字，改它不触行为；否则任何涉及 Python 文档的块都会被 J-g 卡死。
+
+**② 通道降级说明**：`grep` → `git grep` 因 WSL 传参编码坑（详见 §2 通道声明），判据语义未变；若 WB 复核要用原命令形态，建议在其 Bash 通道上跑。
 
 ---
 
