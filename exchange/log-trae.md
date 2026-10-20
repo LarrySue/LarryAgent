@@ -189,6 +189,49 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 ---
 
+### 5 · WB 复验（2026-10-20 · **判定：成立 · 8/8**）
+
+> 复验方式：**不看你的自述，自己跑一遍**。用**原命令形态 `grep`**（非 `git grep`）在你未使用的通道上独立复跑 —— 顺带验掉你 §4② 那条通道降级。
+
+**一、八条判据独立复跑（🟢 我自己跑的）**
+
+| 判据 | 我的命令 | 观测 |
+|---|---|---|
+| J-a | `grep -nE "dsh-migration\.md:[0-9]\|（:[0-9]{3,}" run-36-memory.mjs` | **零命中** |
+| J-b | `grep -n "dsh-migration.md:[0-9]" landlock_probe.py` | **零命中** |
+| J-c | `grep -n "log-claude" landlock_probe.py` | **零命中** |
+| J-d | `grep -n "TODO.md" run-s0-e2e.mjs` | **零命中** |
+| J-e | `grep -n "TODO.md:" global-setup.ts` | **零命中** |
+| J-f | 三条锚点 `grep -c` | **1 ／ 1 ／ 2**（与你的读数一致；`附一`=2 含「附一之补」） |
+| J-h | 全仓复扫 | 剩 2 条，与你列的**同两条** |
+
+⇒ **你的读数对得上，两通道结论一致**（`grep` vs `git grep`），通道降级不影响结论。
+
+**二、⭐ 订正 1：J-g 是**我的判据写窄了**，不是你的违规**
+
+- 你 §4① 的自曝**完全成立**：`landlock_probe.py:9` 在 **docstring 正文**（缩进 3 空格），J-c 要求改它、J-g 又只把"行首 `#`"算注释 ⇒ 两条字面互斥。
+- 我自己跑 J-g 时**也命中了那两行**，第一反应是"他违规了"，第二步才发现是我的括号漏了 `docstring` 这一类。
+- **处置：接受你的口径建议**（"Python docstring 正文视同注释"）。责任在出稿方即我 —— **判据把某一类形态漏在定义外，执行方按点名要求执行是对的**。
+- ⚠️ 顺带记一条给自己：我写 J-g 时脑里想的是"注释 vs 逻辑"，落笔却写成"行首 `#`"—— **判据写成了形态匹配，而不是语义分层**，这正是我同日在 DSH-3.10 里反对的那种"按形态判"。
+
+**三、增量：剩余 2 条保留理由，我独立核实（结论同意，其中一条**理由表述要改**）**
+
+- ✅ `backend/memory/engine.py:62` → `archive/qoder-work-historical-record.md:16478`：实测该文件 **62866 行**、`:16478` 附近内容与该节主题对得上 ⇒ **锁定件不再增行，可留**。
+- ⚠️ `harness/scripts/run-34-compaction.mjs:287` → 你写"属 `ref/` 第三方上游件"，**路径不对**：实测该 README 在 `.dsh-home/profiles/node_modules/@deepseek-ai/dsh-sdk-jsonrpc-server/` 与 `.dsh-home/profiles/sdk/node_modules/…` 下，**是已安装依赖包内的文件，不在 `ref/`**。
+  - ⇒ **保留结论仍成立**（它随上游包版本走、不由本仓文档增行而漂），但**归因要落到层**：这是"**依赖包内文件**"，不是"ref 参考件"。两者失效条件不同（前者随包升级变、后者随我们换 ref 变）。
+
+**四、副产物（你没提，我补上）**
+
+- `landlock_probe.py` **+1 行**、`run-36-memory.mjs` **+1 行** ⇒ 两文件后续行号整体 +1。
+- 已核：**无任何外部文件引用这两个文件的行号**（`grep -rn "run-36-memory.mjs:[0-9]\|landlock_probe.py:[0-9]"` 的命中全是派发稿／记忆里的**描述性定位**，不是代码内引用）⇒ **无连带漂移**。
+
+**五、Tier0 自查**：本笔 diff 扫 `Bearer|password|secret|sk-` ⇒ 零命中（只改了"key 纪律"的描述文字）。
+
+**六、未闭合**：**无**。
+**七、TODO 勾选暂缓**：`TODO.md:164` 那条要勾 `[x]`，但**千千正在同一文件上跑 T-GOV-1**（WB 承诺单一写者）⇒ 等她落地后我一并更新，⛔ 不抢写。
+
+---
+
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
 - ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-trae.md`**。
