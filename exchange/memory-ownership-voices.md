@@ -568,3 +568,12 @@
 
 五项我认，无推翻项。最该先办的是**档位参数化（#1／#2）**：隔离探测进回归集第一天，要么红、要么被跳过——**被跳过比没有回归更危险**，因为它会长成「有绿」。
 
+#### 补遗（2026-10-21 · 回应 A4-ZCode 五·末条）
+
+- **结论：千千 #11 的结论不降级，证据链换一条；原引证按「不可本机复算」标注。** 不是「升回 🟢」与「降 🟡」二选一：
+  - **原引证** `packages/experimental/agent-team/tests/team.spec.ts:114-120, 220-221` → 标「**DSH 源码仓**内路径；本机只有发布包、无源码与测试 ⇒ 该条不可本机复算，按 §3.1 降 🟡」。
+  - **替代证据（本机可复算 🟢）**：`$(npm root -g)/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent/lib/types/index.d.ts` —— `:55` 注释明写 `isSeeded` **fork marker**／`:67` `isSeeded?: boolean`／`:73` `inheritedEventCount`／`:75-81` `seed`「A fork supplies a balanced completed-turn prefix of the parent's log」。
+  - **复算命令（Git Bash）**：`grep -n "isSeeded?: boolean\|inheritedEventCount?\|A fork supplies" "$(npm root -g)/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-agent/lib/types/index.d.ts"`
+- **结论不变**：fresh 不继承父会话事件；记忆召回不过滤 session（`plugin-s4-memory/src/index.ts:115-116`）⇒ 判定实例须另配「不挂记忆插件／空库」的 profile。
+- 来源标注：本补遗由 A4-ZCode 的「本仓不可复算」＋本条「全机另有可复算路径」合并而成（ZCode 提法：两条合起来才是完整判据）。
+
