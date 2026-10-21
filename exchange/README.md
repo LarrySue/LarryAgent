@@ -23,6 +23,7 @@
 - `discussion-memory-ownership.md` — 记忆归属边界（独立人格 · 共享基础信息）专题讨论（**主稿**：速览／裁定／待裁／红线；**主持：Qoder**，收口契约见稿内 §H）
   - `memory-ownership-details.md` — 同题分稿：2.x／6.x 推演详解（主稿引用其节号）
   - `memory-ownership-voices.md` — 同题分稿：A1 原话＋各方发言（溯源用）
+  - `memory-ownership-tech-reference.md` — 同题分稿：技术可行性参考（五处高风险点的分档判断＋现成 Agent 记忆系统可借什么；2026-10-21）
 
 ## 协作规则
 
