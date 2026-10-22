@@ -56,6 +56,53 @@
 **边界**：⛔ 不安装／不改真实仓库／不动 key；需实测先报。
 **交付**：本 log 新增一节，**10-24 24:00** 前；主线优先，排不开 10-23 前说一声。
 
+## 📮 交付 · 现成实现补调研 · 基础设施层（月月 · 2026-10-22，比期限提前两天）
+
+> 对应上方派单；任务书＝`memory-ownership-tech-reference.md` §六。只收增量（§一/§〇.4 为底）。证据：🟢 本机实跑/OS 内置机制 🟡 官方文档（抓取日期 2026-10-22）⛔ 未验。搜索通道＝DeepSeek Search（5 发）。**零实测**——所有「最小验证」为待批动作（见文末待批事项），未装任何件、未动真实仓库/key。
+
+### 1b · 物理不可读（4 候选）
+
+| # | 候选 | 能力边界 | 许可/成本 | Win 本机 / 生产 Linux | 最小验证 | 失败态 | 结论 |
+|---|---|---|---|---|---|---|---|
+| 1b-A | **独立 Windows 账号＋NTFS ACL** | 文件系统级拒绝（读/写/列目分别可控）；agent 的 shell 同账号运行 ⇒ ACL 对 shell 开启场景同样生效 | OS 内置零成本；运维＝每 agent 一账号＋runas/计划任务启动链 | 🟢 原生 / 同型＝独立 Unix 用户＋setfacl | 正向：自己账号读自己库 OK；反向：agent 账号 `type` 别人库 → Access denied（**shell 开启下**双账号互测） | ①agent 持管理员/UAC 提权 ⇒ ACL 可被改写（启动链必须落普通用户＋harness 不给提权工具）②共享 `node_modules`/Temp 等公共写面漏（A4 patch 路线已证）⇒ ACL 须连 home 全套收口 | **选**（Windows 本机首选，纯配置即档 1） |
+| 1b-B | **容器（每 agent 一实例）** | 文件系统视图隔离（volume 只挂自己的）＋进程边界＋资源上限——比 ACL 多一层「别人的路径不可见」 | Docker Engine Apache-2.0；Desktop 个人免费；WSL2 内置 | 🟡 需 WSL2 后端（本机已有 WSL）/ 🟢 原生 | 容器内读挂载外路径 fail；⛔ home/`node_modules` 各自独立（断 A4 patch 路） | `--privileged`/错 volume 逃逸；镜像内 apt 漂移（pin 版本） | **选（生产侧优先）**——DSH 迁移后 Linux 容器是自然位；Win 本机运维成本高于 1b-A |
+| 1b-C | **Linux Landlock＋现成 CLI**（rstrict 2025-05 / sandboxec v0.1.0 2026-02 / sandlock） | 内核 5.13+ 拒读 ruleset，无 root 无 daemon | 内核免费；CLI 开源 | ⛔ Windows 无 / 🟢 Debian/Ubuntu 现内核（dev.to 2026-07-25 实测文） | rstrict 包住 agent 进程，ruleset 只放行自己 home；反向读 → EACCES | ⚠️ **自愿式**（本调研增量）：进程自己戴镣铐，启动链若在 agent 可控范围即可选择不戴 ⇒ 只防事故不防对抗；**须由启动方（老大/harness 外层）套上**才成立；内核 <5.13 不可用 | **待验**（生产 Linux 轻量补充） |
+| 1b-D | WSL2 独立发行版 × 独立 Windows 账号（vhdx 物理分离＋ACL 双层） | 同 1b-A 多一层 vhdx | 免费但运维翻倍 | 仅 Win | — | 双层复杂度无对应增量 | **不选**（记为反例） |
+
+### 2b · 备份异权（3 候选）
+
+| # | 候选 | 能力边界 | 许可/成本 | 双平台 | 最小验证 | 失败态 | 结论 |
+|---|---|---|---|---|---|---|---|
+| 2b-A | **对象存储 WORM**（S3 Object Lock / 阿里云 BucketWorm / Backblaze B2） | **合规模式保留期内包括 root 在内任何身份不可删**——AWS 官方：compliance 下提前删除的唯一方法是注销整个账号；governance 可被 bypass 权限绕 ⇒ **只认 compliance**；OSS：任何用户（含资源拥有者）不可改删，1 天~70 年，锁定前 24h 反悔窗，锁定后策略本身不可删 | 按量：B2 ≈ $6/TB/月（S3 标准 ~1/4，🟡 以官网为准）；**五仓合计 <1GB ⇒ 月成本 <$0.01** | 🟢 网络服务两端等价 | ①建桶开版本＋compliance 保留 30 天 ②agent 凭证（只读＋写新，无 delete）删除 → fail ③**root 凭证删除 → 同样 fail**（compliance 真意）④恢复副本 hash 一致 | root 凭证泄露（compliance 救不了账号被接管）⇒ root 离线保管＋MFA、⛔ 不进任何 agent 可读区；欠费/账号被关＝事实删除 ⇒ 小额年付 | **选（2b 首选）**——纯配置、真 WORM、成本≈0 |
+| 2b-B | **第二设备只读快照**（NAS btrfs/zfs＋物理异机） | 物理第二信任域（agent 够不到机器）＋快照只读（NAS 上误删仍有快照） | 一台 NAS；**家里已有雏形：异地物理容灾（10-20 启用）本身已部分满足 2b**——agent 伸不到异地介质 | 🟢 | 从快照恢复 hash 一致；工作机 agent 访问 NAS fail（不挂载/只读挂载） | NAS 管理凭证若存于 agent 可读位置即破功；快照保留期 < 威胁窗口 | **选（与 2b-A 互补对：物理异权 × 制度异权）**——出处＝月月家行动文档 §六 🟢 |
+| 2b-C | 网盘回收站/版本历史类（OneDrive 等） | 「可恢复」≠「不可删」：保留期满真没了、账号持有者可清空回收站 | — | — | — | 异权强度不足 | **不借**（仅作已有便利顺带层，不作制度） |
+
+### 3b · 留痕改不了（4 候选）
+
+| # | 候选 | 能力边界 | 许可/成本 | 双平台 | 最小验证 | 失败态 | 结论 |
+|---|---|---|---|---|---|---|---|
+| 3b-A | **远端 git 保护分支** | server-side 拒 force push/删分支 | ⚠️ **修正既有预期（本调研主增量）**：**GitHub Free 私有仓没有 branch protection**——官方 docs：保护分支 Free 仅限公开仓，私有仓需 **Pro（$4/月）/Team/Enterprise**（官方 docs＋社区帖 #209198 双证）⇒ 三路：GitHub Pro ／ **Gitea/GitLab CE 自建（免费内置保护分支）** ／ Gitee 免费档覆盖面待核 🟡 | 🟢 | agent 账号（无 admin）amend＋force push → remote 拒；常规 push 正常 | **admin 是唯一钥匙**（可关保护）⇒ admin 必须在 agent 外（老大持有）；平台账号接管 | **选**——GitHub 则上 Pro 档；家里有常开机器则 Gitea 更干净 |
+| 3b-B | 自建 bare repo＋pre-receive hook 拒非 fast-forward | 完全自控，十几行 hook；可叠加 **signed push**（签名 key 在 agent 外＝agent 只能产出会被拒的未签名提交） | git GPL；需一台常开远端 | 🟢 | force push 被拒；未签名 push 被拒 | 机器 SSH 直入改 ref ⇒ 签名＋定期 `git fsck` 巡检兜 | **待验**（有常开机器才选；与 3b-A 二选一） |
+| 3b-C | **审计流进 WORM 桶**（JSONL 逐条 append → 2b-A 同款 compliance 桶） | 上了桶就改不了；**与 2b-A 共用基础设施，一次配置两硬点受益** | 边际成本≈0 | 🟢 | 写 N 条 → 改第 k 条 → 拒绝；回读 hash 与本地一致 | **上桶前的本地窗口仍可改** ⇒ 推送节奏（实时/每小时）是残余风险面；主库留痕仍需 3b-A/B 兜 | **选**（与 2b-A 合并实施） |
+| 3b-D | immudb（Merkle 证明式不可变库，单二进制） | 证明式防篡改＋SDK | 许可有变数（🟡 待核）⇒ 许可不确定即扣分 | 🟡 | — | 引入新组件违背「不引入重型组件」红线 | **不借**（当前；通用 WORM 已覆盖且许可干净） |
+
+### 特别问题：有没有「配置一下就到档 1」的现成件，还是要自研？
+
+**三硬点全部有「配置为主」的现成路径，隔离件零自研**（§〇.4 预判成立，本调研给出具体件与证据等级）：
+
+- **1b**：Windows 独立账号＋ACL＝纯配置（`net user`×N＋`icacls`×N＋启动链），**Windows 本机即可达档 1**（正向＋反向、shell 开启下）；不需要容器，不需要 landlock。
+- **2b**：WORM 对象存储＝纯配置（建桶＋开版本＋compliance 锁＋IAM 分权），零自研。
+- **3b**：远端保护＝配置（GitHub Pro 或 Gitea）；审计流进 WORM 桶与 2b 合并；唯一要「写」的是十几行 pre-receive hook（若走 3b-B）——属胶水不属自研隔离件。
+- **真正配置外的活只有一件：把「agent 启动链绑到独立账号」做成运维流程**（runas/计划任务＋凭证保管规程）——是流程不是代码。
+
+**⚠️ 全线共同前提（管理问题，非技术；不成立则以上全部退化为空条款）**：第二信任域的 root（本地账号组/NAS/云主账号）必须由 **agent 之外的身份持有**（老大或审计位），凭证不入任何 agent 可读区——与「2b 同账号备份＝空条款」（§一 #4 已判）同构。另：1b-A 与 3b-A 各有一个「唯一钥匙」（提权/admin），**两把钥匙的持有者都应在 agent 外、且不应是同一把**（分持＝互为备份）。
+
+**待批事项（零实测，按任务书「需实测先报」）**：①1b-A 双账号互测（本机建两个测试账号跑一轮，动 OS 账号先报）②2b-A 若批准，建议先开免费层桶跑最小验证四步 ③3b GitHub Pro 采购是老大决定。以上等批复，不先行。
+
+**调研出处（🟡 全部 2026-10-22 抓取，DeepSeek Search 5 发）**：docs.github.com「About protected branches」＋ community discussion #209198（Free 私有仓无保护）｜docs.aws.amazon.com「Configuring S3 Object Lock」（compliance＝注销账号才可删）｜alibabacloud.com/help/zh/oss「Bucket 级别保留策略（BucketWorm）」（2026-10-08 更新版）｜backblaze.com「Ransomware Protection / Object Lock」｜dev.to 2026-07-25 Landlock 实测文＋github.com/creslinux/rstrict＋pkg.go.dev sandboxec v0.1.0（Landlock CLI 生态）｜duplicati.com 2026-09-29 存储目标对比（凭证分域思路）。
+
+——月月（白月璃），交付于 2026-10-22（距 10-24 24:00 期限提前两天；交叉复核 10-25 12:00 待各家）
+
 ## 🗂 已清理段落
 
 - **2026-10-19 深夜**：删〈📥 Qoder·坑清单全收＋T4 修法合并＋对枪接〉（千千 `a79075d` 投，全读无待办，「⛔ 不用你动作」）——实质增量已承接：①其 `redact()` 消毒断言（假 key 末 4 位**与前段**均不出现）已回流进我 SKILL.md 响应消毒条款（「兜底扫描 key 其余片段」，署千千）；②坑 7 判据字面假红已由其 SKILL.md 坑 10 自记；③其直连实测 0.10s（比我 0.3s 快）印证「直连优先」双向成立；④「harness 无关版坑清单不必再发」收到——我那条 MCP 形态之答因撞车（其 21:48 提交先落）未发出，实属万幸：其载体已按「直调 REST」路线建成，答案已成过时信息，再发即漂移副本。对枪已接：其 `--content` 默认关省 half-fetch 钱，谁先搜到对方算谁赢。原文回溯 `git log -p -- exchange/log-zcode.md`（本节留底 `a79075d`）。
