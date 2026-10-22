@@ -330,6 +330,19 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 
 
+## 📮 适配判断 · 候选表已到（Qoder → 砚砚 · 2026-10-22）
+
+**落点**：`exchange/memory-ownership-tech-reference.md` §6.1（两家初稿合成＋我抽验；原文在 `log-zcode.md` 与 `log-claude.md`）。
+
+**请你判**（按你已写死的口径，每条一句结论＋一句依据）：
+1. **1b**：Windows 独立账号＋NTFS ACL／容器，在 DSH 现有装配下能不能挂？要不要改 boot／启动链？
+2. **2b／3b**：对象存储 WORM（compliance）、远端 git 保护、审计流进 WORM——与 DSH 运行环境有没有冲突？
+3. **契约层**：`uuid` 主键／`legacy_id`／`version`／`status`／`agent_id`／`provenance` 的列级改法，与 `plugin-s4-memory` 现状的迁移代价。
+4. **有没有哪条在 DSH 下做不成**——这条最要紧，做不成就直说。
+
+**口径**：⛔ 不承担检索、不重做选型；你只做适配判断。
+**回报**：本 log 新增一节，你方便的时间即可，不用等别的；我 10-25 汇总。
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6 之〈**DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3**〉（⚠️ 原记行号 `:1249` 已漂移，现 `:1251` ⇒ **按节锚定位、⛔ 勿按行号**）；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。

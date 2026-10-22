@@ -121,6 +121,53 @@
 > **判据**：每条必须落到「选它／不选它 ＋ 最小验证 ＋ 失败态」，否则不收；⛔ 只罗列「某框架很强」。
 > **边界**：不改变已拍五项；发现新取向原样报老大，⛔ 不自行改判据；⛔ 不安装／不改真实仓库／不动 key，需实测先报。
 
+### 6.1 交付汇总（2026-10-22 · 两家初稿已到，主持合成＋抽验）
+
+> **来源**：ZCode `log-zcode.md`〈交付 · 基础设施层〉／Claude `log-claude.md`〈回报 · 数据契约／索引／导出层〉。只合并、不代改原文；细节与全部 11 候选回查两家 log。
+> **一句话**：**隔离三硬点＝零自研（配置＋现成基础设施）；契约／索引／导出＝直接嵌 0 个、自研面不变。**
+
+#### A · 基础设施三硬点（月月交付）
+
+| 硬点 | 首选 | 备选 | 不选 | 成本／前提 | 最小验证 | 证据 |
+|---|---|---|---|---|---|---|
+| **1b 物理不可读** | **Windows 独立账号＋NTFS ACL**（本机即可档 1）；生产优先**容器** | Landlock CLI（须由外层启动链套上，**自愿式**：进程自己戴镣铐不算） | WSL2 双层 | OS 内置；运维＝每 agent 一账号＋启动链（runas／计划任务） | 双账号互测、**shell 开启**：自己读自己 OK；agent 账号读别人库 → denied | 🟡 官方文档／通用知识；**零实测** |
+| **2b 备份异权** | **对象存储 WORM（compliance 模式）** | NAS 只读快照／异地物理容灾（家里已有雏形） | 网盘回收站／版本历史 | 五仓 <1GB ⇒ 月成本 <$0.01；**root 凭证离线＋MFA** | 建桶＋compliance 30 天；agent 凭证删 → fail；**root 删 → 同样 fail**；恢复 hash 一致 | **我抽验 AWS 原文**：compliance 下含 root 任何用户不可删，提前删唯一方法是注销账号 🟢（文档级） |
+| **3b 留痕改不了** | **远端 git 保护**（GitHub Pro 或 Gitea 自建）＋**审计流进 WORM 桶**（与 2b 共用） | 自建 bare repo＋pre-receive hook（待验） | immudb（许可有变数） | ⚠️ **GitHub Free 私有仓无 branch protection**（官方页只写公开仓免费；私有仓需付费计划，具体档位以定价页为准）；admin 钥匙在 agent 外 | agent（无 admin）amend＋force push → remote 拒；审计条改写 → 拒 | 🟡 官方文档＋社区双证；方向已核 |
+| **共同前提** | **第二信任域 root 在 agent 之外**（老大或审计位持有，凭证不入任何 agent 可读区）；1b 提权钥匙与 3b admin **分持** | | | **不成立则以上全部退化为空条款**（与「同账号备份＝空条款」同构） | 凭证不在 agent 可读区 | 月月结论 |
+
+#### B · 契约／索引／导出（顾衡交付）
+
+| 借什么 | 来源 | 落法（DSH） | 不借／注意 |
+|---|---|---|---|
+| **版本链＋状态机** | MemOS | `memories` 加 `version`／`status`／`archived_from`；update＝旧行 archived、新行 version+1 | 不迁移则 update 原地覆盖（**本仓现状**） |
+| **软删／硬删分离** | MIRIX | `is_deleted` 默认 0；删除只置 1；召回 SQL 加 `WHERE is_deleted=0`；维护脚本才 hard_delete | 软删后召回不过滤 ⇒ 已删记忆仍被注入（泄露） |
+| **稳定 id＋legacy_id** | Cognee | uuid 主键；原自增 id 进 `legacy_id`；**Chroma id 改用 uuid** | 外部引用按自增行 id（**本仓现状**）⇒ 迁移／重建断链 |
+| **scope 四元组** | Mem0 | 每条带 `agent_id`＋`domain`＋`provenance`；共享条另带 `writer` | 只有 `session_id`（本仓现状）⇒ 跨库合并必撞 |
+| **时间轴** | Graphiti | `valid_at`／`invalid_at` 打点，按时间点查 | 本体物理删，负不起「改口不覆盖」 |
+| **目录树＋frontmatter** | Letta `memfs-v2` | 生成 `MEMORY.md` 树＋`description` 校验；DSH 读成索引 | 只借布局与 hook，不嵌代码（其 client／agent 耦合重） |
+| **导出＋重建** | **无现成** | 自研：JSONL＋版本头＋规范化脚本＋导入赋号＋**索引重建脚本**（判据＝id 集合＋document 逐字相等） | 7 家均无「导出规范化＋版本号＋重建脚本」；MemOS 最接近但无版本头、无规范化 |
+| **索引层** | 无外部件 | `memories` 加索引列／视图＋目录渲染（纯 SQL，无新依赖） | 7 家没有「从真相源逐条重建向量索引」的现成脚本 |
+
+> **能直接嵌 0 个**：7 家里 6 家 Python（与本仓 TS／`node:sqlite` 栈不同）；唯一 TS 的 Letta 与自身 client／backend／agent 强耦合，剥离成本高于自研。⇒ **契约层自研，只借设计**。
+
+#### C · 我的抽验记录（10-22）
+
+- 🟢 AWS Object Lock compliance 原文：含 root 任何用户不可删（见 A·2b）。
+- 🟢 `MemOS/src/memos/memories/textual/item.py:61-128`：`version`／`status(activated,resolving,archived,deleted)`／`history`／`archived_memory_id` 实读属实。
+- 🟢 `MIRIX/mirix/orm/sqlalchemy_base.py:428-450`：`delete()`→`is_deleted=True`；`hard_delete()`→物理删除，属实。
+- 🟢 `cognee/modules/data/models/Data.py:33,52-57`：uuid 主键＋`legacy_id` 注释「every id ever issued keeps resolving」，属实。
+- 🟡 GitHub Free 私有仓保护：官方页只明写 public 免费组织仓；私有仓付费要求方向成立，具体套餐以定价页为准。
+- ⛔ 未抽验（留给苏苏交叉复验）：Mem0／Graphiti／Letta 具体行、容器／Landlock 外部文。
+
+#### D · 待批／待拍（不阻塞定稿）
+
+1. **1b 双账号互测**：本机建两个测试账号跑正反向（动 OS 账号，先报老大）。
+2. **2b 免费层桶最小验证**：需云账号／桶；可后做。
+3. **3b 选型**：GitHub Pro（$4/月）还是自建 Gitea（要常开机器）——成本取向，老大定。
+4. **第二信任域 root 持有者**（已列主稿 §H.7 四）；**1b 提权钥匙与 3b admin 分持**（月月建议，随持有者一并拍）。
+
+> **给砚砚的适配问题**：候选表已在此；请判——哪些能挂进 profile／要不要改 boot；Windows 本机与生产 Linux 的落地位分别是什么；有没有哪条在 DSH 现有装配下做不成。⛔ 不承担检索、不重做选型。
+
 ## 附 · 检索来源（2026-10-21）
 
 - Zep, [Temporal Knowledge Graph](https://www.getzep.com/ai-agents/temporal-knowledge-graph/)；[Zep 论文 arXiv:2501.13956](https://arxiv.org/abs/2501.13956)
