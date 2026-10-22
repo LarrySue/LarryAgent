@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.10 · 注释引用去行号化**（8 处 · 低优先） | Trae | 本机 Windows | � **已交付 · 待 WB 复验**（回报见下方〈� 回报〉节；一处判据口径冲突见回报〈自曝〉①） | 2026-10-20 |
-| **现成实现补调研 · 适配判断**（任务书＝`memory-ownership-tech-reference.md` §六） | Trae | 本机 Windows（只判不检索） | ⏳ **等输入**：月月／顾衡候选表（初稿 10-24）；判定口径已在本 log 下方写死 | 2026-10-22 |
+| **现成实现补调研 · 适配判断**（任务书＝`memory-ownership-tech-reference.md` §六） | Trae | 本机 Windows（只判不检索） | ✅ **已交付**（回报见下方〈📥 回报 · 适配判断〉）；待验三条等老大批 | 2026-10-22 |
 
 ## 📤 派发 · DSH-3.10 注释引用去行号化（8 处 · 低优先 ／ WB 2026-10-20）
 
@@ -342,6 +342,54 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 **口径**：⛔ 不承担检索、不重做选型；你只做适配判断。
 **回报**：本 log 新增一节，你方便的时间即可，不用等别的；我 10-25 汇总。
+
+## 📥 回报 · 适配判断（Trae · 2026-10-22）
+
+> **判的对象**：`memory-ownership-tech-reference.md` §6.1（两家合成）＋ `log-zcode.md`／`log-claude.md` 原文。⛔ 不检索、不重做选型；只答「能不能挂进 profile／要不要改 boot／在哪儿落地」。分级照旧：🟢 我实跑或实读／🟡 结构推断／⛔ 未验。
+
+**总答一句**：**候选表里没有一条需要改 DSH 的 boot 代码**——`--profile` ＋ bundle ＋ patch 是官方扩展点，够用。真正要动的是**谁起进程、home 放哪、凭证谁拿**这三件装配事；做不成的有四条，见四。
+
+### 一、1b（独立账号＋ACL ／ 容器）：能挂，但落点不是「建账号＋icacls」两步
+
+- **能，DSH 本体零改动；要改的是三处装配**：① **一 agent 一 DSH_HOME**——现在全机共用 `~/.dsh`，`sessions/`／`storages/` 按 home 共享，而插件吃的正是 `session/event` 的 `user/message` ⇒ **只分账号不分 home，B 仍读得到 A 的会话流水（＝记忆原料）**；② **profile 装配按账号各做一次**（bundles ＋ `node_modules` 各装一轮，跨平台不可复制）；③ **记忆库挪出共享路径**——现生产 `dbPath=D:/Code/LarryAgent/.dsh-home/larry-memory.db`（`.dsh-home/profiles/sdk/cordis.patch.yml` 实读 🟢），是**同机任何账号都够得到的仓内路径**，这本身就是 1b 的反例（`.dsh-home/` 已 gitignore 🟢）。
+- **⚠️ 一条硬限制**：1b-A 能给的只是「**别的 agent 读不到我的库**」，给不了「**我改不动自己的 profile／容器定义**」（D-7 档 1 的判据）。依据：插件与配置就落 `profiles/node_modules` ＋ `cordis.patch.yml`，**同一账号可写可改**，我今天刚构造过「插行即激活／不插行不激活」（🟢）。要满足 D-7 得把 `profiles/` 对 agent 降只读——**而 DSH 运行期会写 `profiles/<name>/cordis.yml`（`--dump-config` 必写，实测 223 B 重写 🟢）** ⇒ 只读 profiles 会不会把启动搞坏 **⛔ 未验**，要单独立一条实测再谈。
+- **容器（1b-B）**：能挂，boot 入口照旧，但 **home 与 node_modules 要在 Linux 侧重新装配**（Windows 的 pnpm 树搬不过去）；容器内 `windows-acl` 沙箱 provider 不适用，走 Linux 那一档 🟡（未在容器里跑过）。
+- **落地位**：本机＝独立账号＋ACL（三步装配见上）；生产 Linux＝一 agent 一容器 ＋ 一 volume。
+
+### 二、2b／3b（WORM ／ 远端保护 ／ 审计上桶）：技术零冲突，位置冲突
+
+- **三件都不在 DSH 里，也⛔ 不能做成 DSH 插件**：插件要拿桶凭证／admin key，就得写进 `cordis.patch.yml`，而那份文件 agent 可读可改（今天实测）⇒ 一上线即空条款，agent 还能把那行推送配置删掉。**推送与保护动作必须落宿主机侧（另一账号的计划任务／外部脚本）**，DSH 只负责产出。
+- **3b 覆盖不到记忆库**：远端 git 保护只管仓里东西，而 `dbPath` 指向 `.dsh-home/`，该目录 **已 gitignore** 🟢 ⇒ 「留痕改不了」对记忆本体不成立；记忆侧的不可篡改只能靠审计流进 WORM（3b-C）。建议把这句写进 3b 的适用范围，别让「3b 已选」被读成「记忆留痕已闭环」。
+- **审计流（3b-C）**：可做，但形态只能是「本地 append-only ＋ 外部进程定时上桶」；DSH 侧能加的是**每条审计记录带 `session_id`＋`source_event_seq`**（现表已有这两列 🟢），便于事后与记忆行对齐。
+
+### 三、契约层：列级改法与迁移代价（对着 `plugin-s4-memory/src/index.ts` 现状）
+
+现状实读 🟢：`memories(id INTEGER PK AUTOINCREMENT, session_id, source_event_seq, content, created_at)` ＋ 唯一索引 `(session_id, source_event_seq)`；召回 `ORDER BY id DESC LIMIT 8`；Chroma id ＝ `String(rowid)`；**全文件无 update／delete 路径**。
+
+| 改法 | 代价 | 坑（我这边必须提的） |
+|---|---|---|
+| 加 `agent_id／domain／provenance／version／status／is_deleted` | **低**：`ALTER TABLE ADD COLUMN` ＋ 老行填空；与现有幂等**不冲突**（`INSERT OR IGNORE` 靠唯一索引，不靠 PK） | 加了列**没有写入方**——现在只有 insert ＋ select，版本链／软删全要新写代码，不是改完 schema 就完事 |
+| `id` 换 uuid ＋ `legacy_id` | **高**，全项唯一贵的一步 | ⚠️ **召回是 `ORDER BY id DESC`——id 如今兼作时间序**；换 uuid 后这行直接失去排序含义，必须同时引入显式排序键（`created_at` 带偏移 ＋ 平票键）。另：Chroma id 绑行号 ⇒ 存量向量全成孤儿，得全量重建（重建脚本仍缺）。换 PK 在 SQLite 上是「建新表→`INSERT SELECT`→`DROP`→`RENAME`」，脚本可控，但**`legacy_id` 必须在同一事务里填完**，否则外部引用断链 |
+| `created_at` 带偏移 | **中**：新行好办，历史行**补不出真实偏移** | 导出规范化必须留「偏移未知」这一态，否则「导出→导入→再导出逐字节相等」在历史行上会**假红**——与顾衡的规范化判据直接相关 |
+
+- **一句总评**：**加列≈零风险；换 PK ＝ 全表重建 ＋ 召回换排序键 ＋ 索引全量重建。**「契约先于索引」在代码上就落在这——Chroma id 与召回排序都绑在自增行号上，契约不定，重建脚本写出来也会跟着变。
+
+### 四、哪条在 DSH 下做不成（最要紧）
+
+1. **Landlock CLI**：Windows 上做不成（平台没有）；Linux 能做，但它是「自愿式」，必须由**外层启动链**套住 `dsh`——那已不属 DSH 能力，是运维包装 ⛔ 未验。
+2. **拿「不挂记忆插件」当隔离**：做不成（今天实测可绕过）。
+3. **只靠 1b-A 的 ACL 达成「agent 改不动自己的 profile」**：做不成／至少未验——profiles 可写是 DSH 运行期事实（`--dump-config` 必写），要收紧得单独立项实测。
+4. **WORM／远端保护由 DSH 插件承担**：做不成——凭证必进 agent 可读配置。
+5. **远端 git 保护覆盖记忆库**：做不成——库不在 git 里。
+
+**能做且零 boot 改动的**：全部契约层改动（列级）＋ `MEMORY.md` 目录树（Letta 布局，纯插件）。⚠️ 但目录树若走 `systemPrompt.section` 会打爆前缀缓存（插件 `injectSection` 默认关就是为此 🟢），应走 context 面或按需工具读。
+
+### 五、待验三条（都要动环境，先报老大）
+
+1. **profiles 只读会不会破坏启动**：临时 home ＋ 对当前账号 `/deny` 写权，跑 `--help` 与正常 boot 各一次——改 ACL 要提权，**没批我不动**。
+2. **容器内 DSH 首启**：Linux 侧装 bundles ＋ 跑一次 `--help`（验证「一 agent 一容器」的装配成本真值）。
+3. **双账号互测**（月月已列为待批）：正向读自己 OK／反向读别人 denied，**shell 开启下**。
+
 
 ## 已清理段落（按交流区规矩）
 
