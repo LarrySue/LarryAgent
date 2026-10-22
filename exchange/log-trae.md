@@ -10,6 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **DSH-3.10 · 注释引用去行号化**（8 处 · 低优先） | Trae | 本机 Windows | � **已交付 · 待 WB 复验**（回报见下方〈� 回报〉节；一处判据口径冲突见回报〈自曝〉①） | 2026-10-20 |
+| **现成实现补调研 · 适配判断**（任务书＝`memory-ownership-tech-reference.md` §六） | Trae | 本机 Windows（只判不检索） | ⏳ **等输入**：月月／顾衡候选表（初稿 10-24）；判定口径已在本 log 下方写死 | 2026-10-22 |
 
 ## 📤 派发 · DSH-3.10 注释引用去行号化（8 处 · 低优先 ／ WB 2026-10-20）
 
@@ -308,6 +309,26 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 - **真实 home 同构性**：`icacls ~/.dsh/profiles/node_modules` = 当前账号**继承 FullControl** ⇒ 可写（临时 home 的结论可外推到真实 home 的 ACL 面）。
 - **现场核对**：真实 home `profiles/sdk/{cordis.patch.yml,cordis.yml}` 跑前／跑后 sha256 全等；临时 home 已删；入口全程 `--help`（零模型调用、不联网、不用 key）。
 - **复算判据**（最小集）：两跑 rc ＋ 报错原文；`cordis.yml` 223 B；patch marker；marker 文件内容 `fired at 2026-10-22T02:42:51.951Z`；icacls 行 `LARRY-BOOK-H14A\SuLarry:(I)(OI)(CI)(F)`；真实 home hash 前后一致、临时 home 已删。
+
+## 📥 接单 · 现成实现补调研（Trae 块：只做适配判断 · 2026-10-22）
+
+**任务书**：`exchange/memory-ownership-tech-reference.md` §六（Qoder 10-22 派发）。我的块＝**候选表出来后的适配判断**，每条一句「能不能挂进 profile／要不要改 boot」；**不承担检索**（⇒ 本条不需要搜索工具）。⚠️ 该派发只落了月月／顾衡的 log，没落本 log——我按老大转达去 §六 读到的，此处补记一句，⛔ 不作争议。
+
+**状态**：⏳ **等输入**。月月（1b／2b／3b 基础设施）与顾衡（契约／索引／导出）今天才接到派发、表未出 ⇒ 现在没有可判断的对象，不预判、不抢跑。
+
+**判定口径（先写死，免得表到了现定标准；依据全部是我实跑／实读的 DSH 事实）**：
+
+| 候选形态 | 一句话判断 | 依据 |
+|---|---|---|
+| **进程内 cordis 插件**（`dsh plugin --profile <p> add` ⇒ `dependencies` ＋ `dsh.profile.bundles`） | **能挂，零改 boot**；但只到「**配置约定**」档——插件落**跨 profile 共享的** `profiles/node_modules`，插行落 `cordis.patch.yml`，**同一权限主体随手可加可撤** | 本机 `profiles/sdk/package.json` 实读；10-22 C 组实跑（fake 插件插行即激活／不插行不激活） |
+| **自带 bundle 层**（`package.json` 的 `dsh.bundle.patch`） | 同上，仍属 profile 层；⛔ 不能当结构隔离用 | `plugin-015-preset-probe` 包结构实读 |
+| **外部进程／sidecar**（服务本体跑在 agent 之外） | **能接，成本＝一个瘦客户端插件 ＋ 一次 profile 配置**，⛔ 不改 boot；**隔离强度只由外部进程的身份决定**——身份没变＝档 0 换门牌 | D-7 档 1 判据（agent 改不动自己的 profile／容器定义） |
+| **要求改 dsh 自身 boot／fork launcher** | **默认不选**：`--profile` ＋ patch 层已是官方扩展点，改 boot ＝ 自维护分叉；只有 1b 找不到替代时才考虑 | `dsh --help` 实跑（扩展点＝bundle＋patch） |
+| **Windows native 依赖**（koffi／node-pty 类） | 能装，但 `add` 要先过 pnpm 11 `allowBuilds` 闸（否则 exit 1）；⛔ 不因此判「不可用」 | `docs/local-env.md` §8.4 第 3 条（文档，我未复跑） |
+
+**每条候选我只出五格**：① 属哪一层（进程内／外部进程／宿主配置）② 要不要 agent 之外的身份（定档位）③ 会不会改 boot（定维护成本）④ 最小验证 ⑤ 失败态。表到了按这个格式逐条填，⛔ 不写框架综述。
+
+
 
 ## 已清理段落（按交流区规矩）
 
