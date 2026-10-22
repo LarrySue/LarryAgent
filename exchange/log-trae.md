@@ -347,12 +347,17 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 > **判的对象**：`memory-ownership-tech-reference.md` §6.1（两家合成）＋ `log-zcode.md`／`log-claude.md` 原文。⛔ 不检索、不重做选型；只答「能不能挂进 profile／要不要改 boot／在哪儿落地」。分级照旧：🟢 我实跑或实读／🟡 结构推断／⛔ 未验。
 
-**总答一句**：**候选表里没有一条需要改 DSH 的 boot 代码**——`--profile` ＋ bundle ＋ patch 是官方扩展点，够用。真正要动的是**谁起进程、home 放哪、凭证谁拿**这三件装配事；做不成的有四条，见四。
+**总答一句**：**候选表里没有一条需要改 DSH 的 boot 代码**——`--profile` ＋ bundle ＋ patch 是官方扩展点，够用。真正要动的是**谁起进程、home 放哪、凭证谁拿**这三件装配事；做不成的有五条，见四。
 
 ### 一、1b（独立账号＋ACL ／ 容器）：能挂，但落点不是「建账号＋icacls」两步
 
 - **能，DSH 本体零改动；要改的是三处装配**：① **一 agent 一 DSH_HOME**——现在全机共用 `~/.dsh`，`sessions/`／`storages/` 按 home 共享，而插件吃的正是 `session/event` 的 `user/message` ⇒ **只分账号不分 home，B 仍读得到 A 的会话流水（＝记忆原料）**；② **profile 装配按账号各做一次**（bundles ＋ `node_modules` 各装一轮，跨平台不可复制）；③ **记忆库挪出共享路径**——现生产 `dbPath=D:/Code/LarryAgent/.dsh-home/larry-memory.db`（`.dsh-home/profiles/sdk/cordis.patch.yml` 实读 🟢），是**同机任何账号都够得到的仓内路径**，这本身就是 1b 的反例（`.dsh-home/` 已 gitignore 🟢）。
-- **⚠️ 一条硬限制**：1b-A 能给的只是「**别的 agent 读不到我的库**」，给不了「**我改不动自己的 profile／容器定义**」（D-7 档 1 的判据）。依据：插件与配置就落 `profiles/node_modules` ＋ `cordis.patch.yml`，**同一账号可写可改**，我今天刚构造过「插行即激活／不插行不激活」（🟢）。要满足 D-7 得把 `profiles/` 对 agent 降只读——**而 DSH 运行期会写 `profiles/<name>/cordis.yml`（`--dump-config` 必写，实测 223 B 重写 🟢）** ⇒ 只读 profiles 会不会把启动搞坏 **⛔ 未验**，要单独立一条实测再谈。
+- **⚠️ 一条硬限制（10-22 实测，比写这条时的判断更硬）**：1b-A 给的是「**别的 agent 读不到我的库**」，给不了「**我改不动自己的 profile**」（D-7 档 1）。四轮临时 home 实测（真实 `~/.dsh` 零改动、跑完全删）：
+  - ① `profiles` 整目录 deny 写 → **启动即挂**（`failed to read profile manifest … EPERM`，连读都失败）。
+  - ② 只 deny `(WD,AD)` 于 `profiles` 整目录 → 启动挂在 `fs.writeFileUtf8` 写 `cordis.yml` ⇒ **DSH 每次启动都重写 `cordis.yml`**，profiles 不能整体只读。
+  - ③ 点名 `cordis.patch.yml`＋`package.json`＋`node_modules` deny `(WD,AD)`、放行 `cordis.yml` → **启动 rc=0**；改 patch、改插件代码均 **DENIED**。
+  - ④ 再加 deny `(D)` 封删面 → **启动又挂**（`EPERM: open '<package.json>'`／`open '<cordis.patch.yml>'`）⇒ **DSH 读这两个配置时要 DELETE 权限**，一拒就既删不了、也读不了。
+  - ⇒ **NTFS ACL 没法同时做到「DSH 读得到」与「agent 删不掉」** ⇒ D-7 的「agent 改不动自己的 profile」在 Windows ACL 路线上**做不成**（为何读配置要 DELETE，我没查证；现象可复现）。要这一条只能走**容器＋只读挂载**（Linux 侧无此怪癖，**⛔ 未验**）。⚠️ 这不影响 1b-A 的原用途（跨账号互不可读），只砍掉它被顺带当成 D-7 保障的余地。
 - **容器（1b-B）**：能挂，boot 入口照旧，但 **home 与 node_modules 要在 Linux 侧重新装配**（Windows 的 pnpm 树搬不过去）；容器内 `windows-acl` 沙箱 provider 不适用，走 Linux 那一档 🟡（未在容器里跑过）。
 - **落地位**：本机＝独立账号＋ACL（三步装配见上）；生产 Linux＝一 agent 一容器 ＋ 一 volume。
 
@@ -378,16 +383,16 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 1. **Landlock CLI**：Windows 上做不成（平台没有）；Linux 能做，但它是「自愿式」，必须由**外层启动链**套住 `dsh`——那已不属 DSH 能力，是运维包装 ⛔ 未验。
 2. **拿「不挂记忆插件」当隔离**：做不成（今天实测可绕过）。
-3. **只靠 1b-A 的 ACL 达成「agent 改不动自己的 profile」**：做不成／至少未验——profiles 可写是 DSH 运行期事实（`--dump-config` 必写），要收紧得单独立项实测。
+3. **只靠 1b-A 的 ACL 达成「agent 改不动自己的 profile」**：**做不成**（10-22 四轮实测）——`(WD,AD)` 封写可行（启动 rc=0、改 patch／改插件均 DENIED），但一加 `(D)` 封删就连读都 EPERM；DSH 读配置要 DELETE 权限，于是「读得到」与「删不掉」二选一。要这条只能靠容器＋只读挂载（⛔ 未验）。
 4. **WORM／远端保护由 DSH 插件承担**：做不成——凭证必进 agent 可读配置。
 5. **远端 git 保护覆盖记忆库**：做不成——库不在 git 里。
 
 **能做且零 boot 改动的**：全部契约层改动（列级）＋ `MEMORY.md` 目录树（Letta 布局，纯插件）。⚠️ 但目录树若走 `systemPrompt.section` 会打爆前缀缓存（插件 `injectSection` 默认关就是为此 🟢），应走 context 面或按需工具读。
 
-### 五、待验三条（都要动环境，先报老大）
+### 五、待验（都要动环境，先报老大）
 
-1. **profiles 只读会不会破坏启动**：临时 home ＋ 对当前账号 `/deny` 写权，跑 `--help` 与正常 boot 各一次——改 ACL 要提权，**没批我不动**。
-2. **容器内 DSH 首启**：Linux 侧装 bundles ＋ 跑一次 `--help`（验证「一 agent 一容器」的装配成本真值）。
+1. ~~**profiles 只读会不会破坏启动**~~ → **10-22 已跑，结论见一·⚠️**（整体只读挂、点名封写行、封删即挂）。不再列。
+2. **容器内 DSH 首启**：Linux 侧装 bundles ＋ 跑一次 `--help`（验证「一 agent 一容器」的装配成本真值，也是 §一 那条「只能靠容器」的验证入口）。
 3. **双账号互测**（月月已列为待批）：正向读自己 OK／反向读别人 denied，**shell 开启下**。
 
 
