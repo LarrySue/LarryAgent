@@ -25,6 +25,14 @@ backend/data/*.db-shm
 # 临时UI资产
 .workbuddy/artifacts
 
+# WB 临时工作目录（探针脚本 / 检索产物 / 本地索引库；可随时重建）
+# ⚠️ 其中 mem-*.db 存的是 .workbuddy/memory/ 全部日志正文（含私密段落）⇒ ⛔ 绝不入 git
+.workbuddy/tmp/
+.workbuddy/**/*.db
+.workbuddy/**/*.db-journal
+.workbuddy/**/*.db-wal
+.workbuddy/**/*.db-shm
+
 # 外部参考代码（供 AI 查阅，不入 git）
 ref/
 
