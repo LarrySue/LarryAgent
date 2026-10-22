@@ -274,6 +274,31 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 - **一处互冲**：D-7 档 1 本身不依赖第二信任域，真正的条件是「agent 改不了自己的 profile／容器定义」——建议把这句从依赖声明改成可验判据。
 - **待老大裁**：无。以上均属事实／判据补丁，是否采纳由千千汇总、老大定。
 
+## 📮 实跑派发 · A4 两条升格与共享依赖树（Qoder → 砚砚 · 2026-10-22）
+
+**背景**：你在截图里提的两条自降 ＋ 共享 `node_modules` 一条，老大已点头「那就跑」。A／B 两条我已在临时 DSH_HOME 实跑（结果见下）；剩 C 需要一次运行时验证，交给你。**目标是可复算结论，不是必须全绿**——做不到就停在那一档、如实标 🟡。
+
+**我已实测（🟢，临时 home，零改真实）**：
+- **A**：`DSH_HOME=D:/tmp/... dsh --profile probe --help` → rc=0，输出 app help ⇒ `--profile` 是官方启动形态。**负向对照**：`--profile nonexistent --help` 当前版本 rc=1 报 "profile does not exist"（⚠️ 与 `docs/dsh/dsh-migration.md:1083` 记的「exit 0 建空壳」不同，别照抄旧判据）。
+- **B**：往临时 profile 的 `cordis.yml` 追加标记 → 跑 `--dump-config` → **246 B 回到 223 B、标记消失**；`cordis.patch.yml` 的标记保留 ⇒ 「dump 每次覆盖 cordis.yml、用户层落 patch」成立。
+- **C 的一半**：临时 home 跑 `--help` 后自动 heal 出 `profiles/node_modules`（实体目录、含 `@deepseek-ai/*` 等、**无 `*s4-memory*`**），对其写入测试成功；真实 `~/.dsh/profiles/node_modules/@larryagent/` 存在（含 `plugin-sandbox-dialect`）。**⇒ 共享依赖层确实存在且可写；「塞回记忆插件后是否真被加载」未验。**
+- 真实 home 核对：跑前／跑后 `sdk/cordis.patch.yml`、`sdk/cordis.yml` 的 sha256 一致；临时 home 已删。
+
+**请你做（C 的运行时一段）**：
+1. 临时 `DSH_HOME`（⛔ 不碰真实；跑前／跑后各记一次真实 home 关键文件 hash）。
+2. 在临时 home 的共享 `profiles/node_modules` 放一个**最小 fake 插件**（activate 时写一个 marker 文件；不必是记忆插件），在 `cordis.patch.yml` 里挂它。
+3. 用你已知的**零模型调用**方式启动一次（若必须起 app，选不调模型的入口，15s 内收掉），检查 marker 是否出现。
+   - 出现 ⇒ 判定实例的「不挂插件」可被「共享依赖树 ＋ patch」绕过，结构保证必须靠 1b；把这一句写进你的 A4 勘误。
+   - 未出现 ⇒ 记录失败态与原因（插件格式／解析路径／未激活），同样算结论。
+4. 顺便用 `icacls` 只读取证：真实 home 的 `profiles/node_modules` 对当前账号是否可写（临时 home 可写 ≠ 真实同构）。
+5. 边界：不联网、不用 key（若入口必须 key，停手问我）；不装卸真实插件；跑完删临时 home。
+
+**回报**：结果写你的 log；同时把 A4-Trae 一·④ 里那两条标注按实跑改成 🟢（或说明为何仍 🟡），并在 A4 加一行「10-22 实跑依据」。**不要动主稿**；我按你的回报更新 §H.7 二·4 和结论。
+
+**复算判据**（最小集）：A／B 的 rc、`cordis.yml` 223 B、patch marker 保留；C 的 marker 路径与内容、`icacls` 输出行、临时 home 清理记录、真实 home hash 前后一致。
+
+**附**：你的 A4 与回报目前还在工作树未提交，我这笔只新增本段、不代提交——你提交时一并带上。
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6 之〈**DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3**〉（⚠️ 原记行号 `:1249` 已漂移，现 `:1251` ⇒ **按节锚定位、⛔ 勿按行号**）；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。
