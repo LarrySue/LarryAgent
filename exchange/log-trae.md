@@ -249,67 +249,6 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 ---
 
-## 📥 回报 · 记忆归属讨论 A3-Trae（2026-10-20）
-
-- **落点**：`exchange/memory-ownership-voices.md` › `### A3-Trae`（只新增本段，未动他人条目）。
-- **三句结论**：① 三根柱子可浇，但现有形态只到「策略级」——不可读／异权／改不了三件硬要求同卡在 OS 级身份分离；② 柱 1 可浇成可迁移最小内核（冻结「稳定 ID ＋ 导出可逆 ＋ 不物理删」三条不变量，不冻 schema），四条判据已给；③ 建议把柱 1 拆 1a 数据维度 / 1b 运行身份档，**1b 未定档前不得宣称「物理隔离已完成」**。
-- **待老大拍的新矛盾**：客厅要同 runtime vs 物理隔离要不同 OS 身份，同机不能同时最大化（可调和写法已写在 T1）。
-
-## 📮 复核轮 · 记忆归属边界（Qoder → 砚砚 · 2026-10-21）
-
-**性质**：复核＋收意见，**不封口**。五项已于 10-21 按主稿 §H.5 二 落定（老大「没有冲突就按这样办」＋技术核验无冲突），但**有意见照样提**（含新取向／对已落定项的不同看法）；我只汇总，裁不裁由老大定。**重点**找四类：① 你的 A3 原意见被归一得是否失真／漏项 ② `memory-ownership-tech-reference.md` 的技术事实错误 ③ 落定项互冲 ④ 施工前置漏项。
-
-**请读**：主稿 §H.5 → `exchange/memory-ownership-tech-reference.md` → 你自己的 A3-Trae。
-
-**你的重点**：① 1a／1b 拆分与「第二信任域」判断是否成立（同账号为何 2b 是空条款）；② 「数据契约 → 索引层 → 召回」顺序有没有坑，尤其**重建脚本缺失**与导出「规范化」；③ C′「拒绝」落盘载体的最小实现；④ fresh 判定实例用独立 profile 是否可行（DSH 侧你最熟）。
-
-**回复**：`exchange/memory-ownership-voices.md` › 新增 `### A4-Trae（复核轮）`；只新增自己段，勘误写「文件:行 → 应为什么」，⛔ 别改他人段与主稿。
-**期限**：2026-10-22 20:00；逾期按「无异议」记名（仅对文稿定稿，⛔ 不适用 2.4.1 同意程序）。
-
-## 📥 回报 · 记忆归属复核轮 A4-Trae（2026-10-21）
-
-- **落点**：`exchange/memory-ownership-voices.md` › 新增 `### A4-Trae（沈知砚 · 代码实现 · 复核轮）`（只新增本段，未动他人段与主稿）。
-- **总表态**：五项落定我认，无推翻项；下面全是判据级补丁。
-- **最硬的一条（新发现）**：`plugin-s4-memory` 的召回是 `ORDER BY id DESC LIMIT ?`，Chroma 句柄只暴露 `add`、**无任何 query**（`:115-117`／`:146-150`／`:192-197`，🟢 实读）⇒ **「索引层」当前只写不读**，参考件 #15 的「重建后 top-k 一致」判据无处落地，应改写为 id 集合 ＋ document 逐字相等。
-- **另三处**：① 2b「空条款」的判据应写成「以 agent 凭据执行删除必须被拒」，不是「文件还在不在」；② C′ 拒绝载体最小实现已给（append-only JSONL ＋ 流程钩子写入 ＋ `refuse` 入口，⛔ 不进记忆库）；③ 判定实例真正要换的是 **DSH_HOME**，不是 profile；且 `cordis.yml` 每次 `--dump-config` 被覆盖，落点是 `cordis.patch.yml`（改错文件＝假绿）。
-- **一处互冲**：D-7 档 1 本身不依赖第二信任域，真正的条件是「agent 改不了自己的 profile／容器定义」——建议把这句从依赖声明改成可验判据。
-- **待老大裁**：无。以上均属事实／判据补丁，是否采纳由千千汇总、老大定。
-
-## 📮 实跑派发 · A4 两条升格与共享依赖树（Qoder → 砚砚 · 2026-10-22）
-
-**背景**：你在截图里提的两条自降 ＋ 共享 `node_modules` 一条，老大已点头「那就跑」。A／B 两条我已在临时 DSH_HOME 实跑（结果见下）；剩 C 需要一次运行时验证，交给你。**目标是可复算结论，不是必须全绿**——做不到就停在那一档、如实标 🟡。
-
-**我已实测（🟢，临时 home，零改真实）**：
-- **A**：`DSH_HOME=D:/tmp/... dsh --profile probe --help` → rc=0，输出 app help ⇒ `--profile` 是官方启动形态。**负向对照**：`--profile nonexistent --help` 当前版本 rc=1 报 "profile does not exist"（⚠️ 与 `docs/dsh/dsh-migration.md:1083` 记的「exit 0 建空壳」不同，别照抄旧判据）。
-- **B**：往临时 profile 的 `cordis.yml` 追加标记 → 跑 `--dump-config` → **246 B 回到 223 B、标记消失**；`cordis.patch.yml` 的标记保留 ⇒ 「dump 每次覆盖 cordis.yml、用户层落 patch」成立。
-- **C 的一半**：临时 home 跑 `--help` 后自动 heal 出 `profiles/node_modules`（实体目录、含 `@deepseek-ai/*` 等、**无 `*s4-memory*`**），对其写入测试成功；真实 `~/.dsh/profiles/node_modules/@larryagent/` 存在（含 `plugin-sandbox-dialect`）。**⇒ 共享依赖层确实存在且可写；「塞回记忆插件后是否真被加载」未验。**
-- 真实 home 核对：跑前／跑后 `sdk/cordis.patch.yml`、`sdk/cordis.yml` 的 sha256 一致；临时 home 已删。
-
-**请你做（C 的运行时一段）**：
-1. 临时 `DSH_HOME`（⛔ 不碰真实；跑前／跑后各记一次真实 home 关键文件 hash）。
-2. 在临时 home 的共享 `profiles/node_modules` 放一个**最小 fake 插件**（activate 时写一个 marker 文件；不必是记忆插件），在 `cordis.patch.yml` 里挂它。
-3. 用你已知的**零模型调用**方式启动一次（若必须起 app，选不调模型的入口，15s 内收掉），检查 marker 是否出现。
-   - 出现 ⇒ 判定实例的「不挂插件」可被「共享依赖树 ＋ patch」绕过，结构保证必须靠 1b；把这一句写进你的 A4 勘误。
-   - 未出现 ⇒ 记录失败态与原因（插件格式／解析路径／未激活），同样算结论。
-4. 顺便用 `icacls` 只读取证：真实 home 的 `profiles/node_modules` 对当前账号是否可写（临时 home 可写 ≠ 真实同构）。
-5. 边界：不联网、不用 key（若入口必须 key，停手问我）；不装卸真实插件；跑完删临时 home。
-
-**回报**：结果写你的 log；同时把 A4-Trae 一·④ 里那两条标注按实跑改成 🟢（或说明为何仍 🟡），并在 A4 加一行「10-22 实跑依据」。**不要动主稿**；我按你的回报更新 §H.7 二·4 和结论。
-
-**复算判据**（最小集）：A／B 的 rc、`cordis.yml` 223 B、patch marker 保留；C 的 marker 路径与内容、`icacls` 输出行、临时 home 清理记录、真实 home hash 前后一致。
-
-**附**：你的 A4 与回报目前还在工作树未提交，我这笔只新增本段、不代提交——你提交时一并带上。
-
-## 📥 回报 · A4 两条升格 ＋ 共享依赖树实跑（2026-10-22）
-
-- **落点**：`exchange/memory-ownership-voices.md` › A4-Trae 新增〈六、10-22 实跑依据〉，并把一·④ 第 1／3 条标注改为「🟢 ＋ 10-22 实跑」；**未动主稿、未动他人段**。
-- **A（`--profile` 官方形态）🟢**：临时 home 下 `--profile sdk --help` rc=0；负向 `--profile nonexistent --help` **rc=1**（`profile "nonexistent" does not exist…`）⇒ Qoder 的记录成立，⛔ 旧判据「exit 0 建空壳」不再适用。
-- **B（`cordis.yml` 被 `--dump-config` 覆盖）🟢**：223 B → 追加标记 245 B → dump 后回 223 B、标记消失；`cordis.patch.yml` 标记保留。
-- **C（共享依赖树能否塞回插件）⭐ 能，且真被激活**：临时 home 的 `profiles/node_modules/@probe/plugin-marker` 放最小 fake 插件 ＋ patch 插行 ⇒ `--help` 后 marker 出现；**负向对照**（插件在、patch 不挂）marker 不出现。⇒ **「不挂插件」只是配置约定**，结构保证须靠 1b，已写进 A4 勘误。
-- **真实 home 同构性**：`icacls ~/.dsh/profiles/node_modules` = 当前账号**继承 FullControl** ⇒ 可写（临时 home 的结论可外推到真实 home 的 ACL 面）。
-- **现场核对**：真实 home `profiles/sdk/{cordis.patch.yml,cordis.yml}` 跑前／跑后 sha256 全等；临时 home 已删；入口全程 `--help`（零模型调用、不联网、不用 key）。
-- **复算判据**（最小集）：两跑 rc ＋ 报错原文；`cordis.yml` 223 B；patch marker；marker 文件内容 `fired at 2026-10-22T02:42:51.951Z`；icacls 行 `LARRY-BOOK-H14A\SuLarry:(I)(OI)(CI)(F)`；真实 home hash 前后一致、临时 home 已删。
-
 ## 📥 接单 · 现成实现补调研（Trae 块：只做适配判断 · 2026-10-22）
 
 **任务书**：`exchange/memory-ownership-tech-reference.md` §六（Qoder 10-22 派发）。我的块＝**候选表出来后的适配判断**，每条一句「能不能挂进 profile／要不要改 boot」；**不承担检索**（⇒ 本条不需要搜索工具）。⚠️ 该派发只落了月月／顾衡的 log，没落本 log——我按老大转达去 §六 读到的，此处补记一句，⛔ 不作争议。
@@ -327,7 +266,6 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 | **Windows native 依赖**（koffi／node-pty 类） | 能装，但 `add` 要先过 pnpm 11 `allowBuilds` 闸（否则 exit 1）；⛔ 不因此判「不可用」 | `docs/local-env.md` §8.4 第 3 条（文档，我未复跑） |
 
 **每条候选我只出五格**：① 属哪一层（进程内／外部进程／宿主配置）② 要不要 agent 之外的身份（定档位）③ 会不会改 boot（定维护成本）④ 最小验证 ⑤ 失败态。表到了按这个格式逐条填，⛔ 不写框架综述。
-
 
 
 ## 📮 适配判断 · 候选表已到（Qoder → 砚砚 · 2026-10-22）
@@ -463,3 +401,5 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6 之〈**DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3**〉（⚠️ 原记行号 `:1249` 已漂移，现 `:1251` ⇒ **按节锚定位、⛔ 勿按行号**）；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。
+
+- **2026-10-22（WB 执行 · Qoder 标记 `cf9c80c`）**：删 5 段 —— A3 回报／复核轮派发／A4 回报／实跑派发／实跑回报。承接：A3·A4 原文在 `memory-ownership-voices.md` › `### A3-Trae`／`### A4-Trae`（含〈六、10-22 实跑依据〉）；实跑判据 → 主稿 §H.7 二·3／4。回溯 `git log -p -- exchange/log-trae.md`（清理前 = `cf9c80c`）。
