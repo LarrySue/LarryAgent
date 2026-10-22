@@ -130,7 +130,7 @@
 
 | 硬点 | 首选 | 备选 | 不选 | 成本／前提 | 最小验证 | 证据 |
 |---|---|---|---|---|---|---|
-| **1b 物理不可读** | **Windows 独立账号＋NTFS ACL**（本机即可档 1）；生产优先**容器** | Landlock CLI（须由外层启动链套上，**自愿式**：进程自己戴镣铐不算） | WSL2 双层 | OS 内置；运维＝每 agent 一账号＋启动链（runas／计划任务） | 双账号互测、**shell 开启**：自己读自己 OK；agent 账号读别人库 → denied | 🟡 官方文档／通用知识；**零实测** |
+| **1b 物理不可读** | **Windows 独立账号＋NTFS ACL**（本机即可 **1b 自身档 1**；⚠️ 此「档 1」⛔ **非 D-7 档 1**）；生产优先**容器** | Landlock CLI（须由外层启动链套上，**自愿式**：进程自己戴镣铐不算） | WSL2 双层 | OS 内置；运维＝每 agent 一账号＋启动链（runas／计划任务） | 双账号互测、**shell 开启**：自己读自己 OK；agent 账号读别人库 → denied | 🟡 官方文档／通用知识；**零实测** |
 | **2b 备份异权** | **对象存储 WORM（compliance 模式）** | NAS 只读快照／异地物理容灾（家里已有雏形） | 网盘回收站／版本历史 | 五仓 <1GB ⇒ 月成本 <$0.01；**root 凭证离线＋MFA** | 建桶＋compliance 30 天；agent 凭证删 → fail；**root 删 → 同样 fail**；恢复 hash 一致 | **我抽验 AWS 原文**：compliance 下含 root 任何用户不可删，提前删唯一方法是注销账号 🟢（文档级） |
 | **3b 留痕改不了** | **远端 git 保护**（GitHub Pro 或 Gitea 自建）＋**审计流进 WORM 桶**（与 2b 共用） | 自建 bare repo＋pre-receive hook（待验） | immudb（许可有变数） | ⚠️ **GitHub Free 私有仓无 branch protection**（官方页只写公开仓免费；私有仓需付费计划，具体档位以定价页为准）；admin 钥匙在 agent 外 | agent（无 admin）amend＋force push → remote 拒；审计条改写 → 拒 | 🟡 官方文档＋社区双证；方向已核 |
 | **共同前提** | **第二信任域 root 在 agent 之外**（老大或审计位持有，凭证不入任何 agent 可读区）；1b 提权钥匙与 3b admin **分持** | | | **不成立则以上全部退化为空条款**（与「同账号备份＝空条款」同构） | 凭证不在 agent 可读区 | 月月结论 |
@@ -139,7 +139,8 @@
 
 | 借什么 | 来源 | 落法（DSH） | 不借／注意 |
 |---|---|---|---|
-| **版本链＋状态机** | MemOS | `memories` 加 `version`／`status`／`archived_from`；update＝旧行 archived、新行 version+1 | 不迁移则 update 原地覆盖（**本仓现状**） |
+| **版本链＋状态机** | MemOS | `memories` 加 `version`／`status`／`archived_from`；update＝旧行 archived、新行 version+1；**补借**：`update_type`（conflict／duplicate／extract／unrelated／feedback）＋`timespec`（按版本选时间点） | 不迁移则 update 原地覆盖（**本仓现状**） |
+| **删除留痕（history）** | Mem0 | 删除前 `add_history(old_memory=prev_value, event="DELETE", is_deleted=1, actor_id/role)` ⇒ **删除前全文永久可查** | ⚠️ **10-22 苏苏订正＋我复核**：不是「不留底」，恰是可借的**删除留痕参照**；仍不嵌代码（Python 栈） |
 | **软删／硬删分离** | MIRIX | `is_deleted` 默认 0；删除只置 1；召回 SQL 加 `WHERE is_deleted=0`；维护脚本才 hard_delete | 软删后召回不过滤 ⇒ 已删记忆仍被注入（泄露） |
 | **稳定 id＋legacy_id** | Cognee | uuid 主键；原自增 id 进 `legacy_id`；**Chroma id 改用 uuid** | 外部引用按自增行 id（**本仓现状**）⇒ 迁移／重建断链 |
 | **scope 四元组** | Mem0 | 每条带 `agent_id`＋`domain`＋`provenance`；共享条另带 `writer` | 只有 `session_id`（本仓现状）⇒ 跨库合并必撞 |
@@ -149,6 +150,7 @@
 | **索引层** | 无外部件 | `memories` 加索引列／视图＋目录渲染（纯 SQL，无新依赖） | 7 家没有「从真相源逐条重建向量索引」的现成脚本 |
 
 > **能直接嵌 0 个**：7 家里 6 家 Python（与本仓 TS／`node:sqlite` 栈不同）；唯一 TS 的 Letta 与自身 client／backend／agent 强耦合，剥离成本高于自研。⇒ **契约层自研，只借设计**。
+> ⚠️ **出处可复算性（苏苏 10-22 复验）**：月月交付的「调研出处」只到站点名＋标题，缺完整 URL／检索式／页面级抓取时间 ⇒ 按板上「第四样：怎么复算」，这些决策依据暂标「**待复算**」，已请其补；补齐前按 🟡 看待。
 
 #### C · 我的抽验记录（10-22）
 
@@ -156,6 +158,8 @@
 - 🟢 `MemOS/src/memos/memories/textual/item.py:61-128`：`version`／`status(activated,resolving,archived,deleted)`／`history`／`archived_memory_id` 实读属实。
 - 🟢 `MIRIX/mirix/orm/sqlalchemy_base.py:428-450`：`delete()`→`is_deleted=True`；`hard_delete()`→物理删除，属实。
 - 🟢 `cognee/modules/data/models/Data.py:33,52-57`：uuid 主键＋`legacy_id` 注释「every id ever issued keeps resolving」，属实。
+- 🟢 **苏苏独立复验（10-22）**：MIRIX／Cognee／MemOS 三项与我抽验一致；Mem0 订正已由我复核（见下）。
+- 🟢 **Mem0 删除留痕（我复核）**：`_delete_memory` 取 `prev_value = payload["data"]`，删向量后 `add_history(old_memory=prev_value, event="DELETE", is_deleted=1)` ⇒ **删除前全文进 history**；「删除不留底」不成立，反是可借的删除留痕。
 - 🟡 GitHub Free 私有仓保护：官方页只明写 public 免费组织仓；私有仓付费要求方向成立，具体套餐以定价页为准。
 - ⛔ 未抽验（留给苏苏交叉复验）：Mem0／Graphiti／Letta 具体行、容器／Landlock 外部文。
 
@@ -185,7 +189,7 @@
 **两处现状修正**：
 
 - **1b-A 的适用范围**：只保证「跨 agent 不可读」；❌ 不能顺带当 D-7 档 1 保障。生产侧还需「一 agent 一 DSH_HOME」——否则 `sessions/`／`storages/` 共享，B 仍读得到 A 的会话流水（记忆原料）。
-- **双写现状**（我复核 🟢）：生产 patch 只配 `dbPath`、**未配 `chromaUrl`** ⇒ 双写未启用；从生产插件目录 import `@huggingface/transformers`／`chromadb` 均 **ERR_MODULE_NOT_FOUND**（依赖在 `harness/node_modules`，插件实体复制到 profile 后够不着）⇒ 配了也起不来。⇒ 文案改为「**没在写＋想启也启不了＋读路径也没有**」。
+- **双写现状**（我复核 🟢）：生产 patch 只配 `dbPath`、**未配 `chromaUrl`** ⇒ 双写未启用；从生产插件目录 import `@huggingface/transformers`／`chromadb` 均 **ERR_MODULE_NOT_FOUND**（依赖在 `harness/node_modules`，插件实体复制到 profile 后够不着）⇒ 配了也起不来。苏苏独立复核 `index.ts:140` `if (!cfg.chromaUrl) return null`＋全机配置对 `chromaUrl` 零命中 🟢。⇒ 文案改为「**没在写＋想启也启不了＋读路径也没有**」。
 
 **契约层代价**（摘要）：加列（`agent_id`／`domain`／`provenance`／`version`／`status`／`is_deleted`）低风险，但**没有写入方**；换 uuid 主键高成本（召回 `ORDER BY id DESC` 兼作时间序，须引入显式排序键；Chroma id 绑行号 ⇒ 存量向量全孤儿；`legacy_id` 须同事务填完）；`created_at` 历史行补不出真实偏移，导出规范化要留「偏移未知」态。⇒ **「契约先于索引」在代码上成立**。
 
