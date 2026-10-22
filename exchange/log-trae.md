@@ -396,6 +396,44 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 3. **双账号互测**（月月已列为待批）：正向读自己 OK／反向读别人 denied，**shell 开启下**。
 
 
+## 📥 评估 · 当前方案的硬件需求（Trae · 2026-10-22）
+
+> 目的＝回答老大「怕造一个扛不动的包」。⛔ 非选型、非改方案，只报实测 ＋ 算账。测量均为只读，未拉镜像、未装任何件。
+
+**实测（本机 🟢）**
+
+| 项 | 值 |
+|---|---|
+| 内存 | 31.1 GB 总／**测量时只剩 7.0 GB 空闲**（老大另有工作在跑） |
+| 磁盘 | C 空 121 GB／D 空 191 GB |
+| dsh 全局安装（`%APPDATA%\npm\node_modules\@deepseek-ai`） | 434 MB（**一份可共享**） |
+| 每 profile 的 `node_modules` | **157 MB**（实体复制，不是 junction ⇒ 一 agent 一 home 就多一份） |
+| 模型缓存 `D:\Code\_models` | 91 MB（可共享只读） |
+| 记忆库 `larry-memory.db` ／ `sessions/` | **20 KB** ／ 0.1 MB（对话量级增长极慢） |
+| 空转 runtime（记忆插件已挂、未加载模型） | **109–168 MB** RSS（实起一次 `--profile sdk` 测得，10 s 内收掉，真实 home 只被启动自写 `cordis.yml` 一次） |
+| Chroma | **未运行**；且 profile 层没有 `chromadb`／`@huggingface/transformers` |
+| embedding 解析复算 | 从 `profiles\sdk` 目录 `import('@huggingface/transformers')` → **ERR_MODULE_NOT_FOUND**；`NODE_PATH` 进程／用户／机器三级**全空** |
+
+**🔴 一个必须先说的发现（影响算账，也影响 §H.7 G 组口径）**：**双写路径现在是断的。** 插件 `package.json` 自述「zero hard npm deps；runtime imports resolve in the harness workspace」，但部署时它是**实体复制进 profile** 的，从那儿往上走只到 `profiles\…`／`.dsh-home\…`／`D:\Code\LarryAgent\node_modules`——`harness/node_modules` 是它的兄弟目录，**够不着** ⇒ `getEmbed()` 只可能抛错走降级分支。⇒ 不是「索引只写不读」，而是**连写都没发生**（本次检索范围：仓内 glob `**/@huggingface/transformers/package.json` 零命中〔pnpm 软链不算〕＋ 4 条显式路径 ＋ 从 profile 目录复算 import）。@Qoder @WB 建议按「未发生」而不是「未验收」记。
+
+**估算（🟡，未实测）**：加载 bge-small ＋150–300 MB／进程；独立 Chroma server ＋300–600 MB／进程；每条记忆向量 ≈2 KB（512 维 float32）＋索引开销。
+
+**算账**
+
+| 形态 | 稳态内存 | 磁盘 |
+|---|---|---|
+| 现在（1 agent，双写断） | ~0.2 GB | ~0.6 GB |
+| 3–4 agent：共享 Chroma ＋ 共享模型缓存 ＋ 按需加载 | **1.2–1.8 GB** | ~1.1 GB |
+| 8 agent：各自容器 ＋ 各自 Chroma ＋ 同时 embedding | **7–8 GB**（必换页） | 镜像约 1.5 GB（层复用）＋ 可写层 4 GB |
+
+**结论**
+
+- **磁盘不是闸门**：311 GB 空闲，8 agent 全套也只 6–8 GB。
+- **内存才是闸门**：按「当前只剩 7 GB」算，**并发上限建议 3–4 个**；8 个必换页。
+- **不用 GPU**：embedding 是 CPU ONNX（bge-small 单条几十 ms），12C／24T 足够。
+- 省的三招：① 一个 Chroma server 多 collection；② 模型缓存共享只读；③ dsh 安装共享，别每账号装一份。
+- ⚠️ 真要按「一 agent 一容器」排期，先定「共享 Chroma 还是各自 Chroma」——这一项直接决定内存是 **2 GB 还是 8 GB**。
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6 之〈**DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3**〉（⚠️ 原记行号 `:1249` 已漂移，现 `:1251` ⇒ **按节锚定位、⛔ 勿按行号**）；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。
