@@ -168,6 +168,31 @@
 
 > **给砚砚的适配问题**：候选表已在此；请判——哪些能挂进 profile／要不要改 boot；Windows 本机与生产 Linux 的落地位分别是什么；有没有哪条在 DSH 现有装配下做不成。⛔ 不承担检索、不重做选型。
 
+### 6.2 适配判断（砚砚 · 2026-10-22）与两处事实修正
+
+> 对象：§6.1 候选表在 DSH 现有装配下的适配性。原文见 `log-trae.md`〈回报 · 适配判断〉。⛔ 未跑新测试（容器首启、双账号互测待机器空）。
+
+**总答**：候选表里**没有一条需要改 DSH boot 代码**；`--profile`＋bundle＋patch 够用。要动的是「谁起进程、home 放哪、凭证谁拿」三件装配。
+
+**五条做不成**：
+
+1. **Landlock CLI**：Windows 无；Linux 须外层启动链套住 `dsh`，属运维包装（⛔ 未验）。
+2. **「不挂记忆插件」当隔离**：做不成（已实测可绕过，见主稿 §H.7 二·3）。
+3. **只靠 1b-A ACL 达「agent 改不动自己的 profile」：做不成**——`(WD,AD)` 封写可行（启动 rc=0、改 patch／插件 DENIED）；一加 `(D)` 封删，DSH 读 `package.json`／`cordis.patch.yml` 即 EPERM ⇒ **读得到与删不掉二选一**。此条只能容器＋只读挂载（⛔ 未验）。
+4. **WORM／远端保护做成 DSH 插件**：做不成——凭证必进 agent 可读配置；推送与保护须落宿主机侧外部进程。
+5. **远端 git 保护覆盖记忆库**：做不成——`dbPath` 在 `.dsh-home/`（gitignore），不在 git 里。
+
+**两处现状修正**：
+
+- **1b-A 的适用范围**：只保证「跨 agent 不可读」；❌ 不能顺带当 D-7 档 1 保障。生产侧还需「一 agent 一 DSH_HOME」——否则 `sessions/`／`storages/` 共享，B 仍读得到 A 的会话流水（记忆原料）。
+- **双写现状**（我复核 🟢）：生产 patch 只配 `dbPath`、**未配 `chromaUrl`** ⇒ 双写未启用；从生产插件目录 import `@huggingface/transformers`／`chromadb` 均 **ERR_MODULE_NOT_FOUND**（依赖在 `harness/node_modules`，插件实体复制到 profile 后够不着）⇒ 配了也起不来。⇒ 文案改为「**没在写＋想启也启不了＋读路径也没有**」。
+
+**契约层代价**（摘要）：加列（`agent_id`／`domain`／`provenance`／`version`／`status`／`is_deleted`）低风险，但**没有写入方**；换 uuid 主键高成本（召回 `ORDER BY id DESC` 兼作时间序，须引入显式排序键；Chroma id 绑行号 ⇒ 存量向量全孤儿；`legacy_id` 须同事务填完）；`created_at` 历史行补不出真实偏移，导出规范化要留「偏移未知」态。⇒ **「契约先于索引」在代码上成立**。
+
+**能用且零 boot 改动**：契约层列改动；`MEMORY.md` 目录树（Letta 布局，纯插件；⚠️ 走 context 面／按需工具，⛔ 走 `systemPrompt.section`，以免打爆前缀缓存）。
+
+**待机器空再跑**：① 容器内 DSH 首启（验证「一 agent 一容器」装配成本）；② 双账号互测（shell 开启下正反向）。
+
 ## 附 · 检索来源（2026-10-21）
 
 - Zep, [Temporal Knowledge Graph](https://www.getzep.com/ai-agents/temporal-knowledge-graph/)；[Zep 论文 arXiv:2501.13956](https://arxiv.org/abs/2501.13956)
