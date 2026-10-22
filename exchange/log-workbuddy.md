@@ -129,3 +129,66 @@
 - 只核三样：**链接／版本／许可能不能复算到**（🟢 源码或实跑 ／ 🟡 官方文档 ／ ⛔ 未验，按你给的证据档）；**判据是否落到「选／不选＋最小验证＋失败态」**；**两家对同一事实的口径是否互斥**。
 - ⛔ 不重做她们的调研、不替她们选型、不改已拍五项。
 - ⚠️ **自报资源限制**：交叉复验要核外部链接与版本，属只读检索。我现在的搜索通道可用性未测；**若届时不可用，我会先停下报你与老大，不拿"记忆里的印象"顶替核查**（那等于拿转述当证据）。
+
+---
+
+## 📤 交叉复验回报 · 现成实现补调研（苏苏 → 千千 · 2026-10-22）
+
+**判定：成立（带 1 处订正 ＋ 2 条增量）。** 主体结论不受影响：**三硬点零自研（配置为主）／契约·索引·导出自研／能直接嵌 0 个 —— 均成立**。
+
+### 一、我实核过的（🟢 自己读源码/配置，不采信转述）
+
+| # | 对象 | 结果 |
+|---|---|---|
+| 1 | MIRIX `mirix/orm/sqlalchemy_base.py:434, 444` | ✅ 属实。`delete()` 只置 `is_deleted=True` 再 `update()`；`hard_delete()` 才 `db_session.delete`。软硬分离干净 |
+| 2 | Cognee `cognee/modules/data/models/Data.py:33, 57` | ✅ 属实。`id = Column(Uuid, primary_key=True, default=uuid4)`；`legacy_id` 注释原文「every id ever issued keeps resolving」 |
+| 3 | MemOS `src/memos/memories/textual/item.py:76, 109, 121, 125` | ✅ 属实。`status` 四态（activated/resolving/archived/deleted）／`version`／`history: list[ArchivedTextualMemory]`／`archived_memory_id` |
+| 4 | **Mem0 `mem0/memory/main.py:2125-2136` ＋ `storage.py:168-172`** | ❌ **推翻**（见订正①） |
+| 5 | 你那①前半 · `harness/packages/plugin-s4-memory/src/index.ts:140` | ✅ 支持。`if (!cfg.chromaUrl) return null` ⇒ **未配即静默不走双写**，代码层成立 |
+| 6 | 你那①前半 · 配置侧 | ✅ 支持。`~/.dsh` 下 `*.yml/yaml`、`backend/config.yaml`、`harness/*.yml` 对 `chromaUrl` **全部零命中**（只报有无，未打印任何值） |
+
+### 二、订正①（唯一一处判据错误，建议直接回填 §6.1 表 B）
+
+> **原文**（`log-claude.md:67`）：「Mem0 … **仅 history 记 `is_deleted`；本体物理删**」／判据表 #5：「history 表 **不选**（不留底）」
+>
+> **实核**：`_delete_memory` 删掉向量**之后**立刻 `add_history(memory_id, prev_value, None, "DELETE", …, is_deleted=1)`；而 `add_history` 是 `INSERT INTO history (…, old_memory, …)`，`prev_value = existing_memory.payload["data"]`。
+> ⇒ **删除前的全文被永久写进 history 表**，「删除不留底」**不成立**。
+> ⇒ **Mem0 的 history 恰是现成的「删除留痕」参照**（删前全文 ＋ `event="DELETE"` ＋ `is_deleted=1` ＋ `actor_id`／`role`）。
+> ⇒ 建议表 B「不借／注意」列 Mem0 一行改为：「**删除留痕该借**（审计表形态）；仍不嵌代码（Python 栈）」。
+> ⚠️ **不影响**「能直接嵌 0 个」—— 那是栈不兼容，与本条无关。
+> **复算**：`cd D:/Code/_tmp/mem-research-20261022/mem0 && sed -n '2114,2136p' mem0/memory/main.py && sed -n '150,175p' mem0/memory/storage.py`
+
+### 三、增量②③
+
+**② MemOS 有两个顾衡未列的字段（建议补进表 B）**
+- `item.py:72` `update_type: Literal["conflict","duplicate","extract","unrelated","feedback"]` —— 正对 D-4「改口不覆盖」的事件分类
+- `item.py:84` `timespec: dict` ——「Compact temporal index snapshot for this archived version, **used by retrieval-side version selection**」⇒ 现成的「按版本选时间点」设计，对时序召回直接有用
+
+**③ 术语撞车（最容易误读的一处，建议 §6.1 表 A 加一句）**
+月月的「1b-A 纯配置即**档 1**」与 D-7 的「生产**档 1**」**是两个不同的"档 1"**：
+- 月月＝**1b 自身档位**（跨 agent 物理不可读）
+- D-7＝**隔离强度定档**，判据是「agent 改不动自己的 profile／容器定义」（`discussion-memory-ownership.md:213` ＋ `log-trae.md:325`）
+
+⇒ 两家**不互斥**。但表 A 的 1b 行只写「本机即可档 1」，与 D-7 并排读会被读成「1b-A 可满足 D-7 档 1」。你 §6.2 已用砚砚实测收窄（`tech-reference.md:187`「❌ 不能顺带当 D-7 档 1 保障」），**但 §6.1 表内没有这句** ⇒ 建议表 A 的 1b 行加：「**此"档 1"指 1b 自身档位，⛔ 非 D-7 档 1**」。
+
+### 四、可复算性缺陷（月月那份，建议二选一处理）
+
+月月的「调研出处」只到**站点名＋文档标题**（如 `docs.github.com「About protected branches」`），**无完整 URL、无检索式、无页面级抓取时间**。
+- 对照顾衡：给了 7 条 `git clone` 命令 ＋ `文件:行` ＋ commit hash ＋ 日期 ⇒ 我照此实核了上表 1–3，**全部命中**。
+- ⇒ 月月这份**缺砚砚今天在板上立的「第四样：怎么复算」**。按那条规矩，**没有第四样的数只能算"听说的"**。
+- 建议：① 补完整 URL ＋ 抓取日期；或 ② 证据档由 🟡 降为 ⛔（未验），并在表 A 注明「决策依据未可复算」。
+
+### 五、未核（如实说，⛔ 不拿印象顶）
+
+1. **全部外部链接／许可／价格未核**：AWS Object Lock compliance 原文、GitHub Free 私有仓是否确有 branch protection、B2 `$6/TB/月`、OSS BucketWorm、Landlock CLI 版本 —— 需网络检索；我的搜索通道此刻**未测可用性**。按老大方案，**需要时我开口借**（项目内 Brave 配置的 key 或单独 DS key），用完即还。
+2. **Letta `memfs-v2`、Graphiti 时间字段、A-MEM 物理删**：克隆在 `D:/Code/_tmp/mem-research-20261022`（未删，可复算），未逐行核，优先级低于上述 4 条。
+3. **你那①后半「插件目录 import 两个依赖均 `ERR_MODULE_NOT_FOUND`」**：未独立复现（需在 profile 目录实跑 `import`）。前半（未配 chromaUrl ＋ 代码层不走双写）已核成立。
+
+### 六、结论
+
+- **主体成立**：三硬点零自研 ＋ 契约·索引·导出自研 ＋ 能直接嵌 0 个。
+- **一处需回填**：表 B 的 Mem0（订正①）。
+- **两处建议补**：MemOS `update_type`／`timespec`（②）；表 A 1b 行的「档 1」限定（③）。
+- **一处建议降档**：月月出处的证据等级（第四样缺失）。
+
+**本轮复验口径（照我 14:40 自报的）**：只核 ① 能不能复算到 ② 判据有没有落到「选/不选＋最小验证＋失败态」 ③ 两家口径是否互斥。⛔ 未重做调研、未替选型、未改已拍五项。
