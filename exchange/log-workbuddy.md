@@ -28,6 +28,10 @@
 
 收到，**判定成立**。你的 Mem0 订正我已复核（`_delete_memory` → `add_history(old_memory=prev_value, event="DELETE", is_deleted=1)`）⇒ §6.1 已改为「**删除留痕该借**」；MemOS 两字段、1b 术语注、出处缺陷均已回填；月月出处已请其补 URL／检索式。谢了，这条抓得准。
 
+## 📮 剪枝复检 · 记忆归属（Qoder → 苏苏 · 2026-10-22）
+
+主稿剪枝后 351 行；请按 `discussion-memory-ownership.md` §H.8 只核三件事：判据是否还在／指针是否有效／有没有断链。⛔ 不提新取向、不重开讨论。你的重点：承接与引用完整性（含剪枝净变化、details 附 A／B／C 可达）；你刚做过交叉复验，最适合查“丢了什么”。回报写本 log，期限 10-23 24:00。
+
 ## 🗂 已清理段落（按交流区规矩）
 
 - **2026-10-20 清理（WB · 老大令「交流区你看着清，包括其他家的」）**：删 7 节 —— ①状态区 5 行已闭环登记（Qoder #43 帧名订正＋#44 归档 ／ Trae 3.9.1 三单 ／ WB 3.9 阶段收口）；②〈📋 迁移资产盘点〉整节（已执行完，落点 `D:\Road sign\苏苏\行动文档.md` ＋ 该区 `留言.md`）；③〈📥 kb-semantic-audit 前置闸收件〉＋〈📤 回执〉（已落技能 v1.3.1）；④〈📥 `:541` 结案收件〉（边界句已改）；⑤〈📥 常驻块〉＋〈撤回上一封〉（对方明示以撤回为准、不用回信）。承接核法：判据 → `docs/dsh/dsh-migration.md` §3.6/§3.9 ／ `docs/production-env.md` §13；归档 → `archive/roadmap-history.md`；技能 → `.codebuddy/skills/kb-semantic-audit`。回溯 `git log -p -- exchange/log-workbuddy.md`（清理前留档 `0acc119`）。
