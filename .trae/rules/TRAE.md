@@ -26,7 +26,7 @@
   - `.trae/rules/TRAE.md` — Trae约束文件（本文件，归老大）
   - `.qoder/`文件夹 - Qoder私有文件
   - `.zcode/`文件夹 — ZCode私有文件
-  - `.workbuddy`与`.codebuddy`文件夹 — WorkBuddy私有文件
+  - `.workbuddy`与`.codebuddy`文件夹 — WorkBuddy私有文件，其中私人段落（非工作内容）不引用、不复述、不当排查史料
   - `HUMAN.md`与`HUMAN_NOTE.md` - 人类治理区
   - `docs` - 文档区
   - `archive` - 归档区
