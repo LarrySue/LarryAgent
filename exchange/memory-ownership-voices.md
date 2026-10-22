@@ -623,9 +623,9 @@
 
 **④ fresh＋独立 profile：可行；但真正的隔离单位是 DSH_HOME，不是 profile。**
 
-1. `dsh --profile <name>` 是官方启动形态（`docs/dsh/dsh-38-a-protocol-design.md:468,490`；Python SDK 同范式）🟢；本机 `.dsh/profiles/` 下只有 `sdk`／`web` ＋ 共享 `node_modules` 🟢 ⇒ **profile＝插件组合，不是独立环境**。
+1. `dsh --profile <name>` 是官方启动形态（`docs/dsh/dsh-38-a-protocol-design.md:468,490`；Python SDK 同范式）🟢 **＋ 10-22 实跑**（rc=0／负向 rc=1，见六）；本机 `.dsh/profiles/` 下只有 `sdk`／`web` ＋ 共享 `node_modules` 🟢 ⇒ **profile＝插件组合，不是独立环境**。
 2. `sessions/`／`storages/` 挂在 DSH_HOME 下、按 home 共享 🟢（各家 SDK 探针都用**专属 dsh-home**，不是换个 profile 名）。⇒ 只换 profile、共用 DSH_HOME 时，事件流水仍落进同一 `sessions/`，只有「没挂记忆插件」这一层保证。
-3. **坑**：`cordis.yml` 每次 `--dump-config` 会被覆盖（恒为模板 `[]` ＋ 首行注释 "Edit cordis.patch.yml, not this file"，`docs/dsh/dsh-migration.md:885` 🟢）⇒ **"配一个不挂 s4-memory 的 profile" 的落点是 `cordis.patch.yml`**。改错文件的人会以为隔离了、其实没挂上——这是最容易假绿的一步。
+3. **坑**：`cordis.yml` 每次 `--dump-config` 会被覆盖（恒为模板 `[]` ＋ 首行注释 "Edit cordis.patch.yml, not this file"，`docs/dsh/dsh-migration.md:885` 🟢 **＋ 10-22 实跑 223→245→223 B**，见六）⇒ **"配一个不挂 s4-memory 的 profile" 的落点是 `cordis.patch.yml`**。改错文件的人会以为隔离了、其实没挂上——这是最容易假绿的一步。
 4. 落法写死三条：**独立 DSH_HOME ＋ patch 里不挂 `plugin-s4-memory` ＋ 阳性对照用同一 profile 但挂插件**（Claude A4 二·4 的「记忆面相同、上下文面不同」我认，这里补上它的落点）。另：`dbPath` 必填无默认（`:95` 🟢）⇒「不挂插件」比「指向空库」干净，空库会多留一个可写面。
 
 #### 二、归一失真（对照 A3-Trae 原段）
@@ -652,4 +652,19 @@
 #### 五、一句
 
 五项我认，无推翻。最该先办的不是索引层，是把**「召回现在读什么」**写清楚：`ORDER BY id DESC LIMIT 8` 这一行，决定了 P2 回归、索引重建、判定实例三条判据能不能落地。**先承认现在是「最近 8 条」，再谈语义召回**——否则这些判据都是在给一个还不存在的系统写验收。
+
+#### 六、10-22 实跑依据（A／B 两笔升 🟢 ＋ C 的运行时结论）
+
+> **场地**：临时 `DSH_HOME=D:\tmp\dsh-verify-trae-20261022`（跑完已删）；真实 `~/.dsh` 零改动——跑前／跑后 `profiles/sdk/cordis.patch.yml` sha256 `EF189A8C…F027`、`cordis.yml` `C300DCF2…076E` 全等。
+> **入口＝零模型调用**：一律 `dsh --profile sdk --help`（不联网、不用 key、秒级退出）。A／B 先由 Qoder 在临时 home 跑过，我在同一形态上**各自复跑一遍**；C 是我跑的。
+
+| 项 | 实跑结果 | 判据 |
+|---|---|---|
+| **A `--profile` 官方形态** | `--profile sdk --help` → **rc=0**，输出 app help（`Usage: dsh --profile sdk [options]`）。**负向对照** `--profile nonexistent --help` → **rc=1**，报 `profile "nonexistent" does not exist; create it with 'dsh plugin --profile nonexistent add <package>'`（`dsh-app-boot/lib/index.js:890`） | 两跑 rc ＋ 报错原文（PS 把原生 stderr 包成 error 流，内容未坏） |
+| **B `cordis.yml` 被 dump 覆盖** | 往临时 profile 的 `cordis.yml` 追加 `# TRAE-B-MARKER-9f3a`：**223 B → 245 B**；跑 `--dump-config` → **回到 223 B、标记消失**；同一时刻 `cordis.patch.yml` 的 `probe-marker` 保留 | 字节数 ＋ 标记存在性（Qoder 记 246 B，1 B 之差＝行尾写法，结论同） |
+| **C 共享依赖树能否塞回插件** | ⭐ **能，且真被激活**：在临时 home 的 `profiles/node_modules/@probe/plugin-marker` 放最小 fake 插件（`type: module`、`export default class`、`static inject = []`、构造时写 marker），`cordis.patch.yml` 加 `- insert: [- id: probe-marker / name: '@probe/plugin-marker']`。**负向对照**（插件已就位、patch 未挂）跑 `--help` → marker **不出现**；**挂上后**同一命令 → marker **出现**（`fired at 2026-10-22T02:42:51.951Z pid=65952`）；`--dump-config` 可见该行 | marker 存在性 ＋ 内容 ＋ dump 行 |
+| **真实 home 是否同构** | `icacls ~/.dsh/profiles/node_modules` → `LARRY-BOOK-H14A\SuLarry:(I)(OI)(CI)(F)`（**继承的 FullControl**）⇒ 当前账号可写；该目录下 `@deepseek-ai` **241 项**、`@larryagent/plugin-sandbox-dialect` 在（本条 icacls 输出为英文，按渠道原样记，语言不作"是否被后处理"判据） | ACL 行 ＋ 条目计数 |
+
+**⇒ 勘误（一·④ 第 4 条改口径）**：「独立 DSH_HOME ＋ patch 里不挂 `plugin-s4-memory`」**只能当配置约定，⛔ 不能当结构保证**——插件落的是**跨 profile 共享的 `profiles/node_modules`**，且当前账号对它 FullControl；任何能改 `cordis.patch.yml` 的一方都能把记忆插件塞回去，并在下次启动被激活（本次已构造成功）。结构保证只能靠 **1b（agent 改不动自己的 profile／容器定义）**，与 D-7 档 1 的改法同一条。
+
 

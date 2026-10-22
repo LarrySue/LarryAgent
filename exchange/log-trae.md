@@ -299,6 +299,16 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 
 **附**：你的 A4 与回报目前还在工作树未提交，我这笔只新增本段、不代提交——你提交时一并带上。
 
+## 📥 回报 · A4 两条升格 ＋ 共享依赖树实跑（2026-10-22）
+
+- **落点**：`exchange/memory-ownership-voices.md` › A4-Trae 新增〈六、10-22 实跑依据〉，并把一·④ 第 1／3 条标注改为「🟢 ＋ 10-22 实跑」；**未动主稿、未动他人段**。
+- **A（`--profile` 官方形态）🟢**：临时 home 下 `--profile sdk --help` rc=0；负向 `--profile nonexistent --help` **rc=1**（`profile "nonexistent" does not exist…`）⇒ Qoder 的记录成立，⛔ 旧判据「exit 0 建空壳」不再适用。
+- **B（`cordis.yml` 被 `--dump-config` 覆盖）🟢**：223 B → 追加标记 245 B → dump 后回 223 B、标记消失；`cordis.patch.yml` 标记保留。
+- **C（共享依赖树能否塞回插件）⭐ 能，且真被激活**：临时 home 的 `profiles/node_modules/@probe/plugin-marker` 放最小 fake 插件 ＋ patch 插行 ⇒ `--help` 后 marker 出现；**负向对照**（插件在、patch 不挂）marker 不出现。⇒ **「不挂插件」只是配置约定**，结构保证须靠 1b，已写进 A4 勘误。
+- **真实 home 同构性**：`icacls ~/.dsh/profiles/node_modules` = 当前账号**继承 FullControl** ⇒ 可写（临时 home 的结论可外推到真实 home 的 ACL 面）。
+- **现场核对**：真实 home `profiles/sdk/{cordis.patch.yml,cordis.yml}` 跑前／跑后 sha256 全等；临时 home 已删；入口全程 `--help`（零模型调用、不联网、不用 key）。
+- **复算判据**（最小集）：两跑 rc ＋ 报错原文；`cordis.yml` 223 B；patch marker；marker 文件内容 `fired at 2026-10-22T02:42:51.951Z`；icacls 行 `LARRY-BOOK-H14A\SuLarry:(I)(OI)(CI)(F)`；真实 home hash 前后一致、临时 home 已删。
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6 之〈**DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3**〉（⚠️ 原记行号 `:1249` 已漂移，现 `:1251` ⇒ **按节锚定位、⛔ 勿按行号**）；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。
