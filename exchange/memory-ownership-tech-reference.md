@@ -19,7 +19,7 @@
 | # | 待拍项 | 判断 | 档 | 关键依赖／缺口 | 最小验证 |
 |---|---|---|---|---|---|
 | 1 | **柱 1a 数据归属** | 一人一库、写入只落自己的库 | 🟢 | 现有 `plugin-s4-memory` 的 `dbPath` 已由挂载侧钉死 | 哨兵：写到别人的库必须 fail |
-| 2 | **柱 1b 物理不可读** | 做得到，但要换运行边界 | 🟡 | Linux：landlock 拒读 ruleset（内核能力已证，需自写 profile）／独立用户＋ACL／容器；Windows 本机难，只能到策略级 | 正向读自己成功＋反向读别人 fail，**shell 开启**下跑 |
+| 2 | **柱 1b 物理不可读** | 做得到，但要换运行边界 | 🟡 | Linux：landlock 拒读 ruleset（内核能力已证，需自写 profile）／独立用户＋ACL／容器；**Windows 无 landlock；独立用户＋NTFS ACL／容器可达档 1，运维成本高一档** | 正向读自己成功＋反向读别人 fail，**shell 开启**下跑 |
 | 3 | **柱 2a 备份＋恢复** | 做得到 | 🟢 | 快照＋恢复脚本＋演练；`D:\Road sign\` 已有全量备份 | 隔离副本恢复，核心层 hash 逐字一致 |
 | 4 | **柱 2b 异权** | 做得到，但需**第二信任域** | 🟡 | 同一 Windows 账号下她可删备份＝**空条款**；需异账号／异机／远端存储 | 用 agent 身份删备份必须 fail |
 | 5 | **柱 3a 留痕落点** | 做得到 | 🟢 | git＋只增文件；审计位不放在被进入者的库 | 写一条留痕后，删改必须留下可查痕迹 |
@@ -28,19 +28,25 @@
 | 8 | **C′ 三步判定** | 做得到，但质量有限 | 🟡 | 依赖公开表态历史＋多会话复问；**拒绝须先有落盘载体**（现无） | 同题三问跨会话一致；带内注入反例能被问源步抓住 |
 | 9 | **C′ 诊断需同意** | 流程可做，无需新技术 | 🟢 | 诊断动作本身可审计 | 未获同意时诊断调用必须被拒 |
 | 10 | **D-4 见证** | 做得到 | 🟢 | 知情／无催促／本人作出三项都能从事件日志算 | 故意缺项的模拟合并，见证必须判「不通过」 |
-| 11 | **D-4 判定实例** | **可以做到，但 fresh 只是半件** | 🟢 | ✅ 已核：`fresh` 的实现＝换 provider（`fork`→fork／否则 `spawn`），`isSeeded` 有断言（`agent-team/tests/team.spec.ts:114-120, 220-221`）；🔴 但记忆召回不过滤 session（`plugin-s4-memory/src/index.ts:115-117`）⇒ 同 `dbPath`＝同池。判定实例须**换 profile 且不挂记忆插件／指向空库** | 判定实例读不到自己的长期记忆库；换一个同源实例作对照 |
+| 11 | **D-4 判定实例** | **可以做到，但 fresh 只是半件** | 🟢 | ✅ 已核：`fresh` 的实现＝换 provider（`fork`→fork／否则 `spawn`），`isSeeded` 有断言〔⚠️ 原引证在 **DSH 源码仓**内，本机不可复算；改用发布包类型契约 🟢，见复核修订〕；🔴 但记忆召回不过滤 session（`plugin-s4-memory/src/index.ts:115-116`）⇒ 同 `dbPath`＝同池。判定实例须**独立 DSH_HOME ＋ profile 不挂记忆插件／指向空库**（只换 profile 共用 home 不够）；⚠️「不挂插件」属配置约定，结构保证须 1b 兜底（共享 `node_modules` 可写） | 判定实例读不到自己的长期记忆库；对照实例「**记忆面相同、上下文面不同**」 |
 | 12 | **D-8 结构可识别** | 最容易，几乎纯设计 | 🟢 | schema 约定＋门牌（ID＋标题）＋备份；⛔ 门牌不含路径/条目数 | 非当事方只凭门牌＋备份走通「识别→挂载→导出」 |
-| 13 | **索引层优先于召回层** | 做得到，且成本低于向量召回 | 🟢 | 一份可查的索引（checkpoint／memory directory）＋指针语义 | 新会话只凭索引回答「我在哪、等谁、下一步」 |
+| 13 | **索引层优先于召回层** | 做得到，且成本低于向量召回 | 🟢 | 一份可查的索引（checkpoint／memory directory）＋指针语义；⚠️ **现状：Chroma 只写不读（句柄无 `query`），召回＝`ORDER BY id DESC LIMIT ?` ⇒ 索引层尚无消费方**；顺序应为 **契约 →（定义消费关系）→ 索引 → 召回** | 新会话只凭索引回答「我在哪、等谁、下一步」 |
 | 14 | **稳定 ID／版本／tombstone** | 做得到 | 🟢 | schema 迁移＋**第一次导入是赋号**；原平台 ID 进 provenance | 旧 ID 迁移后仍解析到同一条；改＝新增版本、删＝打标 |
-| 15 | **导出／迁移** | 做得到 | 🟢 | JSONL＋版本头＋规范化规则；**重建脚本目前缺失**（已核） | 导出→导入空库→再导出，规范化后逐字节相等 |
+| 15 | **导出／迁移** | 做得到 | 🟢 | JSONL＋版本头＋规范化规则；**重建脚本目前缺失**（已核）。**规范化脚本＋版本号必须先于判据存在**；`created_at` 写 `localtime` 且无时区标记（`index.ts:113`）⇒ 规范化第一条＝**时间带显式偏移**；重建脚本 ⛔ 建在自增行 id 上（索引主键依赖契约），**进入住闸** | 导出→导入空库→再导出，规范化后逐字节相等；**索引重建（补）＝ Chroma id 集合 ＝ SQLite id 集合，且逐条 document 与 content 逐字相等**（top-k 判据当前无可执行路径） |
 | 16 | **「自愿」的直接观测** | 不可观测 | ⛔ | 只能三项留痕替代 | — |
 | 17 | **悄悄替换的事后发现** | 事后也发现不了 | ⛔ | 只能靠稳定 ID＋「换代必须留痕」压缩 | — |
 | 18 | **「她当时没被改过」** | 不可证 | ⛔ | 所以「先切共享区写权限」在一切判定之前 | — |
 
 > **D-4 的取证过程（10-21 实核，供复算）**：
-> - `fresh`／`fork` **不是两套沙箱**，只是起 teammate 时选哪个 subagent provider：`provider: options.provider ?? (context === 'fork' ? 'fork' : 'spawn')`（`packages/experimental/agent-team/tests/team.spec.ts:114-120`）。测试断言 `fork` 的 `header.isSeeded === true`、`fresh === false`（同文件 `:220-221`）⇒ **fresh 只证明「父会话事件没被 fork 进来」**。
-> - 记忆插件的召回是 `SELECT id, content, created_at FROM memories ORDER BY id DESC LIMIT ?`（`harness/packages/plugin-s4-memory/src/index.ts:115-117`）——**没有 `WHERE session_id`**；`session_id` 只用于写入去重（唯一索引 `(session_id, source_event_seq)`）。⇒ 只要挂同一个 `dbPath`，fresh 出来的实例**照样召回同一池记忆**。
-> - 落法：判定实例用**独立 profile**（不挂 `plugin-s4-memory`）或把 `dbPath` 指向空库；这一步在 DSH 里是配置动作（🟢），但**不是 `context: 'fresh'` 自带的**。
+> - `fresh`／`fork` **不是两套沙箱**，只是起 teammate 时选哪个 subagent provider：`provider: options.provider ?? (context === 'fork' ? 'fork' : 'spawn')`（**DSH 源码仓**内 `packages/experimental/agent-team/tests/team.spec.ts:114-120`；⚠️ 本机不可复算，见上方复核修订）。测试断言 `fork` 的 `header.isSeeded === true`、`fresh === false`（同文件 `:220-221`）⇒ **fresh 只证明「父会话事件没被 fork 进来」**。
+> - 记忆插件的召回是 `SELECT id, content, created_at FROM memories ORDER BY id DESC LIMIT ?`（`harness/packages/plugin-s4-memory/src/index.ts:115-116`）——**没有 `WHERE session_id`**；`session_id` 只用于写入去重（唯一索引 `(session_id, source_event_seq)`）。⇒ 只要挂同一个 `dbPath`，fresh 出来的实例**照样召回同一池记忆**。
+> - 落法：判定实例用**独立 DSH_HOME ＋ profile 不挂 `plugin-s4-memory`**（只换 profile、共用 home 不够），或把 `dbPath` 指向空库（空库会多留一个可写面，不如不挂）；这一步在 DSH 里是配置动作（🟢），但**不是 `context: 'fresh'` 自带的**。
+
+> **⚠️ 2026-10-22 复核修订（A4 三家；细节与出处见主稿 §H.7）**：
+> - **#11 证据链**：`agent-team/tests/team.spec.ts` 是 **DSH 源码仓**内路径，本机只有发布包、无源码与测试 ⇒ **该条不可本机复算，按 §3.1 降 🟡**；结论改由发布包类型契约支撑 🟢（`dsh-agent/lib/types/index.d.ts:55,67,73,75-81`；复算命令见 A4-Claude 补遗）。另：判定实例真正要换的是 **DSH_HOME**，不是 profile 名；「不挂插件」属配置约定（共享 `node_modules` 是跨 profile 可写面），结构保证须 1b 兜底。
+> - **#15 索引重建判据**：T2 原「重建后 top-k 文本集合一致」**不可执行**（Chroma 句柄无 `query`）⇒ 改为「**id 集合 ＋ document 逐字相等**」；重建脚本 ⛔ 建在自增行 id 上，且**进入住闸**。
+> - **#13 现状**：Chroma 只写不读 ⇒ 「索引层优先」当前**没有消费方**；顺序＝契约 →（定义消费关系）→ 索引 → 召回。
+> - **档位复核（A4-Claude 一）**：真打折 #1／#3／#12；限状态 #9／#11／#15；#2 首日必红（探测期望值须按档参数化）；#10 会被放宽（消息类型白名单）。判据：🟢 成立＝**能构造失败态**，不是「有路径」。
 
 > **一句话**：需求层没有「不可能」，但「物理隔离」四个字必须按档写——砚砚的 1a／1b 拆分不是保守，是准确。**1b、2b、3b 三件同卡在「第二信任域」上**：不是写多少代码的问题，是有没有第二个能对 `agent` 说「不」的身份/机器。
 
