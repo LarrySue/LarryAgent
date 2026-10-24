@@ -8,6 +8,6 @@
 | `move-in-plan.md` | **一次性事务** | 试住、入住闸、入住批次、技术前置、验收；执行完归档 |
 | `tech-reference.md` | **技术依据**（立项附件） | 高风险点分档、现成系统可借什么、DSH 适配判断；⛔ 非需求结论 |
 
-**史料**：讨论过程的推演详解与讨论原话在 `archive/memory-ownership/`（收口时归档）——可引作史料，⛔ 不作现行依据。
+**史料**：讨论过程的推演详解与讨论原话在 `archive/memory-ownership/`（已归档）——可引作史料，⛔ 不作现行依据。
 
 **维护**：Qoder（与 `docs/README.md` 同口径；改动先读 `requirements.md` §0 的边界）。

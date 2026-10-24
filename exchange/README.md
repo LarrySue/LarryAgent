@@ -20,10 +20,7 @@
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；**待 DSH 迁移完成后重新制定**）
 - `web-search-design.md` — 网络搜索技术选型与设计规格（**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
-- `discussion-memory-ownership.md` — 记忆归属边界（独立人格 · 共享基础信息）专题讨论（**主稿**：速览／裁定／待裁／红线；**主持：Qoder**，收口契约见稿内 §H）
-  - `memory-ownership-details.md` — 同题分稿：2.x／6.x 推演详解（主稿引用其节号）
-  - `memory-ownership-voices.md` — 同题分稿：A1 原话＋各方发言（溯源用）
-  - `memory-ownership-tech-reference.md` — 同题分稿：技术可行性参考（五处高风险点的分档判断＋现成 Agent 记忆系统可借什么；2026-10-21）
+> **已收口（2026-10-24）**：记忆归属边界专题（原四册）定稿移入 `../docs/la-space/`；讨论史料（详解／原话）在 `../archive/memory-ownership/`，可引作出处、⛔ 不作现行依据。
 
 ## 协作规则
 
