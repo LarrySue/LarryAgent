@@ -139,6 +139,28 @@
 | **3b 留痕改不了** | **远端 git 保护**（GitHub Pro 或 Gitea 自建）＋**审计流进 WORM 桶**（与 2b 共用） | 自建 bare repo＋pre-receive hook（待验） | immudb（许可有变数） | ⚠️ **GitHub Free 私有仓无 branch protection**（官方页只写公开仓免费；私有仓需付费计划，具体档位以定价页为准）；admin 钥匙在 agent 外 | agent（无 admin）amend＋force push → remote 拒；审计条改写 → 拒 | 🟡 官方文档＋社区双证；方向已核 |
 | **共同前提** | **第二信任域 root 在 agent 之外**（老大或审计位持有，凭证不入任何 agent 可读区）；1b 提权钥匙与 3b admin **分持** | | | **不成立则以上全部退化为空条款**（与「同账号备份＝空条款」同构） | 凭证不在 agent 可读区 | 已核 |
 
+#### 候选失败态与验证边界（2026-10-22 调研，2026-10-28 承接）
+
+只补候选边界，不改变上表选型结论。以下均为机制分析／待验设计，**未实跑攻击或恢复验证**；来源索引见 §七。原候选编号仅用于对照，不另开待批事项。
+
+| 原编号／候选 | 失败态或不选理由 | 验证补充／约束 |
+|---|---|---|
+| 1b-A 独立账号＋ACL | ① agent 持管理员／UAC 提权可改 ACL；② 共享 `node_modules`／Temp 等公共写面漏 | 启动链必须落普通用户，harness 不给提权工具；ACL 须连 home 全套收口。双账号、shell 开启下自己读成功／跨账号读拒绝；自身 profile 封删的限制另见 §6.3 |
+| 1b-B 每 agent 一容器 | `--privileged`／错 volume 暴露隔离外资源；镜像内 apt 漂移 | home／`node_modules` 各自独立、镜像 pin 版本；容器读挂载外路径应失败。原候选另含进程边界、资源上限；Windows 要 WSL2 后端，运维成本高于原生 ACL |
+| 1b-C Landlock CLI | 启动链若在 agent 可控范围即可选择不戴「镣铐」；内核 <5.13 不可用 | 无需 root、无需 daemon；外层启动方套 ruleset，反向读应 EACCES；Windows 无此路径。原候选族为 rstrict／sandboxec／sandlock，第三件仅保留候选名，无独立来源，不据此推荐 |
+| 1b-D WSL2 独立发行版＋独立账号 | 双层复杂度无对应增量 | vhdx 物理分离＋ACL，原评估运维翻倍；不选 |
+| 2b-A 对象存储 WORM | root 凭证泄露（compliance 救不了账号被接管）；欠费／账号被关可导致数据不可用或事实删除 | 原最小验证还要求建桶开启版本，agent 凭证只读＋写新、无 delete；该凭证删除失败只证权限拒绝，须结合主表 root 同样删不了的验证，不能单独证明 compliance。root 离线保管＋MFA，不进任何 agent 可读区；不能把保留期内的对象保护外推为账号生命周期保证。小额年付仅为原建议，不是防护证明 |
+| 2b-B NAS 只读快照 | NAS 管理凭证若在 agent 可读位置即破功；快照保留期 < 威胁窗口 | btrfs／zfs 异机快照；工作机不挂载／只读挂载，agent 不能管理 NAS；恢复 hash 一致。原建议与 2b-A 构成「物理异权 × 制度异权」互补对，保留建议、不改变主表备选定位；已有异地容灾雏形不等于本次已验收 |
+| 2b-C 网盘回收站／版本历史 | 保留期满真删除、账号持有者可清空回收站；异权强度不足 | 只作便利恢复层，不作为不可删的制度保证 |
+| 3b-A 远端 git 保护分支 | admin 可关保护；平台账号接管 | admin 在 agent 外；拒强推／删分支的同时，常规 push 应成功。原调研另列 GitLab CE 自建（免费内置保护分支），本轮未独立核实，不改变主表选型；Gitee 免费档覆盖面未核，不补作推荐 |
+| 3b-B bare repo＋pre-receive hook | 机器 SSH 直入改 ref，可绕过接收钩子 | signed push 为设计选项（见下），不是失败态；需要常开远端，仍为待验备选 |
+| 3b-C 审计流进 WORM 桶 | **上桶前的本地窗口仍可改** | 推送节奏（实时／每小时）是残余风险面；本地留痕仍需 3b-A／B 兜底。原设想为 JSONL 逐条 append，入桶后改第 k 条应拒、回读 hash 一致，与 2b-A 共用基础设施 |
+| 3b-D immudb | 许可有变数未核；引入新组件违背当前轻量取向 | Merkle 证明式库不因此自动满足异权；当前不借 |
+
+**3b-B 口径订正**：`signed push` 签的是推送请求（push certificate），**不等于签名 commit**；本机 `git push -h` 可见 `--signed` 的说明为 `GPG sign the push`。签名钥匙在 agent 外的设想，须由外部推送环节签名，并由服务端检查、拒绝未签名／不受信的推送；原调研将其写成「拒未签名提交」不准确。原提「签名＋定期 `git fsck` 巡检兜」也不能当 SSH 直改 ref 已被防住：`fsck` 不提供 ref 历史不可改保证。这里保留风险与待验设计，不升级为已实现保障。
+
+**2b-A 保留策略细节**：原调研对 OSS BucketWorm 记录为 1 天～70 年、锁定前 24h 反悔窗、锁定后策略本身不可删；当时指南标注 2026-10-08 更新，现仅 API 参考页复得（§七）。这些是未重新独立核实的历史转录，不能跨云套用；AWS compliance 与 governance 的差别仍按各自文档核对，governance 可被 bypass 权限绕过。
+
 ### 6.2 契约／索引／导出：直接嵌 0 个、自研面不变
 
 | 借什么 | 来源 | 落法（DSH） | 不借／注意 |
@@ -155,6 +177,36 @@
 
 > **能直接嵌 0 个**：7 家里 6 家 Python（与本仓 TS／`node:sqlite` 栈不同）；唯一 TS 的 Letta 与自身 client／backend／agent 强耦合，剥离成本高于自研。⇒ **契约层自研，只借设计**。
 > **抽验记录**（均只读原文／源码，未实跑 ⇒ 证据 🟡）：AWS Object Lock compliance 原文（含 root 不可删）；MemOS `textual/item.py:61-128` 的 `version`／`status`／`history`／`archived_memory_id`；MIRIX `sqlalchemy_base.py:428-450` 软删／硬删；Cognee `Data.py:33,52-57` uuid＋`legacy_id`；Mem0 删除留痕（`_delete_memory` → `add_history`）。另：GitHub Free 私有仓保护 🟡（官方页未直陈，社区帖实证方向）。
+
+#### 抽验记录 · 版本与源码复查入口
+
+**范围与证据**：2026-10-22 七家浅克隆调研的取证附件；2026-10-28 本机只读核对七仓 commit、版本声明、LICENSE 与下列文件定位。版本是该 commit 内声明值，**未核发布状态**；日期统一为 Git commit 的 `%cI`（原时区），**不是版本发布时间**。未运行任何框架；MemOS dump/load、MIRIX 查询层过滤等运行时行为仍未验。七家以外未扩面，LangGraph checkpoint 未验，不作推荐。
+
+| 框架 | 源仓库 | 声明版本 | commit | 提交日期（原时区） | 许可 |
+|---|---|---|---|---|---|
+| Letta Code（不是 Letta 服务端版本） | https://github.com/letta-ai/letta-code | 0.34.20 | `035bb8c` | 2026-10-21T22:24:18-07:00 | Apache-2.0；品牌资产除外（LICENSE:192-198） |
+| Mem0 | https://github.com/mem0ai/mem0 | 2.2.1 | `2c81af3` | 2026-10-20T21:16:17-04:00 | Apache-2.0 |
+| Graphiti | https://github.com/getzep/graphiti | 0.31.2 | `8e320f8` | 2026-10-21T02:47:23Z | Apache-2.0 |
+| MemOS | https://github.com/MemTensor/MemOS | 2.0.33 | `a7367d0` | 2026-09-22T09:51:03+08:00 | Apache-2.0 |
+| MIRIX | https://github.com/Mirix-AI/MIRIX | 0.1.0 | `8cb06a6` | 2026-08-20T21:59:50+08:00 | Apache-2.0 |
+| A-MEM | https://github.com/agiresearch/A-mem | 0.0.1 | `ceffb86` | 2025-12-12T16:15:29-05:00 | MIT |
+| Cognee | https://github.com/topoteretes/cognee | 1.6.5 | `37f788b` | 2026-10-16T22:07:34+02:00 | Apache-2.0 |
+
+**复查坐标**（路径均相对各仓根；下列行号绑定上表 commit，不随本文件编辑漂移）：
+
+- **Letta Code**：`package.json:3` 版本；`src/agent/memory-filesystem.ts:29-64,312-454` 目录与树渲染；`src/agent/memory-git-hooks.ts:85-161` 校验与拒绝；`src/agent/memory-format.ts:4-20` 格式识别；`src/memory-frontmatter.ts:27-39,63-110` 字段检查。
+- **Mem0**：`mem0/memory/storage.py:102-126` 的 `old_memory/new_memory/event/is_deleted` history；`mem0/memory/main.py:2114-2142` 完整删除函数。**本体物理删不等于 history 不留底**，采用上方已订正的「删除留痕」行，不恢复原调研的错误否定。
+- **Graphiti**：`graphiti_core/nodes.py:98,322` 节点时间；`graphiti_core/edges.py:49-54,263-284` 边的 `valid_at/invalid_at/created_at`；`graphiti_core/graphiti.py:2174-2225` 的 `remove_episode`／物理删。
+- **MemOS**：`src/memos/memories/textual/item.py:49-128` 的 `ArchivedTextualMemory`、`TextualMemoryMetadata.version/history/status`；`src/memos/memories/textual/tree.py:439-458,460-476` load／dump；`src/memos/mem_cube/general.py:62-67,104-107` schema 检查与空目录前提。原调研另记 `export_graph` 是导出、不是索引重建。
+- **MIRIX**：`mirix/orm/sqlalchemy_base.py:428-450` 软／硬删；`mirix/orm/base.py:27` 的 `is_deleted`；`mirix/orm/episodic_memory.py:32-50` 的 `agent_id`。
+- **A-MEM**：`agentic_memory/memory_system.py:398-413` 删除；`agentic_memory/retrievers.py:85-91` 的 `collection.delete`。原调研为全局 dict＋Chroma 研究原型，无版本／导出，不选。
+- **Cognee**：`cognee/modules/data/models/Data.py:12-15,33,52-57` 的稳定 UUID 注释及 `legacy_id`；`cognee/infrastructure/databases/relational/sqlalchemy/SqlAlchemyAdapter.py:401-448,450-493` 关系删除、引用计数与删文件。原调研记录 Alembic 迁移不等于导出；ECL 重跑是重抽取，不等于逐条重建。
+
+**原逐框架表的补充字段**：Letta 以 agent 目录＋块路径定位、memory 仓 `git commit` 留版本，未另设 tombstone，删除依 git 历史；Mem0 为 uuid＋四元 scope，history 是旁路审计、不是本体版本链；Graphiti 用 uuid；MemOS 用 uuid＋`memory_type`，状态枚举为 `activated/resolving/archived/deleted`；MIRIX 为 uuid＋`agent_id`，`last_modify` 是时间戳／操作记录，不等于版本链；A-MEM 用 `memory_id`，删除同时清 collection 与内存 dict；Cognee 无版本链。以上为源码调研记录，不能外推为运行验收。
+
+**复算载体**：本机克隆父目录 `D:/Code/_tmp/mem-research-20261022`，子目录依次为 `letta-code`／`mem0`／`graphiti`／`MemOS`／`MIRIX`／`A-mem`／`cognee`（2026-10-28 实见）。读取示例：`git -C "D:/Code/_tmp/mem-research-20261022/letta-code" show 035bb8c:package.json`。原 `clone --depth 1` 只取当时分支顶端，不锁版本；复查须同时用源仓库＋commit＋文件三件定位，不能拿今天的默认分支替代。克隆目录可退役，以上仓库和版本坐标自持，不以临时路径存活为前提。
+
+**两处订正，不改借用结论**：① Letta 原记日期 `2026-10-18` 不符该 commit；已补声明版本 0.34.20，日期按上表，不猜原日期来历。② memfs-v2 普通文件要求 `name`＋`description`，但 `MEMORY.md` **禁止 frontmatter**；「缺 description 应拒」的负向验证须选普通记忆文件，不能套到 `MEMORY.md`。只借布局／校验设计，不嵌其 client／agent 代码。四条 LA 失败态已在主表〈不借／注意〉列，不重复造第二份。
 
 ### 6.3 适配判断（DSH 现有装配）
 
@@ -200,7 +252,7 @@
 | Backblaze Object Lock | https://www.backblaze.com/docs/cloud-storage-object-lock | 🟢 compliance 保留设置任何用户不可移除（只可延长） |
 | 阿里云 BucketWorm | https://help.aliyun.com/en/oss/developer-reference/get-bucket-worm | 🟢 API 参考页实达；⚠️ 原《Bucket 级别保留策略》用户指南页未复得（404／超时）——**待补** |
 | dev.to · Landlock 实测文 | https://dev.to/lyraalishaikh/linux-landlock-lsm-practical-application-sandboxing-without-root-or-complex-profiles-2do4 | 🟢 日期 2026-07-25 吻合 |
-| rstrict | https://github.com/creslinux/rstrict | 🟢 MIT、Landlock LSM、内核 5.13+（TCP 规则 5.19+） |
+| rstrict | https://github.com/creslinux/rstrict | 🟢 MIT、Landlock LSM、内核 5.13+（TCP 规则 5.19+）；原调研标注日期 `2025-05`，日期含义及真实性未独立复核，不当作已核发布时间 |
 | sandboxec | https://pkg.go.dev/go.dw1.io/sandboxec@v0.1.0 | 🟢 v0.1.0、2026-02 吻合 |
 | Duplicati 存储目标对比 | https://duplicati.com/articles/choosing-a-backup-storage-target-s3-azure-backblaze-b2-sftp-or-your-own-nas | 🟢 日期 2026-09-29 吻合 |
 

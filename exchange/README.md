@@ -20,6 +20,8 @@
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构方案（云/端边界、配置、隔离、打包、落地顺序；**待 DSH 迁移完成后重新制定**）
 - `web-search-design.md` — 网络搜索技术选型与设计规格（**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
+- `discussion-terminology.md` — 术语表（跨 AI 用词约定）｜**未展开讨论**，停在草案骨架，WB 已撇出待接手
+
 > **已收口（2026-10-24）**：记忆归属边界专题（原四册）定稿移入 `../docs/la-space/`；讨论史料（详解／原话）在 `../archive/memory-ownership/`，可引作出处、⛔ 不作现行依据。
 
 ## 协作规则
