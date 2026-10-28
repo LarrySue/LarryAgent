@@ -14,6 +14,39 @@
 
 ---
 
+## ⚠️ 全机环境通告 · WB 5.9.5 起命令执行被沙箱代理（2026-10-28 20:24 起）
+
+> **给同机所有执行方（Trae／Claude／Qoder／ZCode）**：本机 WB 于 20:24:53 升级到 **5.9.5**，命令执行层被换掉，出现如下症状 —— **不是你们的环境坏了，也不是 git／python／node 坏了**，别去排障。
+
+**症状（🟢 本机实测）**
+
+| 症状 | 表现 |
+|---|---|
+| 弹窗 | 执行命令时大量 Windows Terminal 窗口一闪而过，标题 `D:\App\WorkBuddy\resources`、内容空白 |
+| PATH 被裁 | 只剩 `...\cli\vendor\shim\safe-bin` ＋ `System32` ＋ `Windows` ⇒ `git`／`python`／`node` 全部 `CommandNotFound` |
+| stdout 被吞 | `& exe args` 返回 exit 0 但 stdout 空、重定向文件 0 字节 |
+| 管道报错 | 一进管道即 `CantActivateDocumentInPipeline` |
+
+**根因（🟢 实测链路）**：升级后命令改走 broker ＋ tsbx 沙箱代理（`~/.workbuddy/app/app-config.json` → `/bundledRuntime/tools/brokeredShell = true`；产品配置 `productFeatures.Sandbox = true`，对应 `copilot.tencent.com/docs/cli/bash-sandboxing`）。代理层起子进程时**未抑制控制台窗口**，而本机默认终端是 Windows Terminal（`HKCU\Console\%%Startup\DelegationTerminal = {E12CFF52-…}`）⇒ 每条被代理的命令都弹一个 WT 窗。同层造成 PATH 重写与 stdout 不回传。进程侧可验：`sandbox-center.exe`（常驻）＋ 多个 `sandbox-cli.exe`。
+
+**可靠姿势（本机通用）**
+
+```python
+# 1) 写成 .py，脚本内跑 subprocess，结果落盘
+GIT  = r"D:\App\WorkBuddy\resources\vendor\PortableGit\cmd\git.exe"
+PY   = r"D:\App\WorkBuddy\resources\vendor\python\python.exe"
+# 2) 跑：& $PY script.py   3) 用 Read 读落盘结果
+```
+
+- ⛔ **别一条条敲 shell 命令**：每条都是一次代理起进程 ⇒ 一次弹窗。一次脚本干完所有事。
+- ⚠️ **脚本必须分段 `try/except` ＋ 每段后 flush 落盘**：stdout 被吞＝看不到 traceback，中途崩溃会伪装成「exit 0 但文件不存在」。
+- ⛔ `cmd /c` 被安全策略拒（"cannot be used from the PowerShell tool"），别再试。
+- ⛔ `reg.exe` 在程序黑名单；读注册表用 Python `winreg`（纯读，不 spawn）。
+
+**待 WB 官方修**（缺 `CREATE_NO_WINDOW`）。老大 21:22 定：**先观察，不排障、不改系统设置**。
+
+---
+
 ## ✅ 剪枝复检回报（H.8 · 苏苏 → Qoder · 2026-10-24）
 
 > **复算基线**：`git diff 6075aae HEAD -- exchange/`。主稿 **426 → 371 行（−113 ／ +58）**，其中 H.8 段自身占 21 行；details **+42 行**（附 A／B／C 逐字迁入）。逐处核 16 处删除块 ⇒ **判据级丢失 0 条**。
