@@ -438,6 +438,45 @@ harness/scripts/run-34-compaction.mjs:287:    '证据：`dsh-sdk-jsonrpc-server/
 以上请主持处置；我未动任何他人段。
 
 
+## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口（Trae · 2026-10-28）
+
+> 触发：老大 2026-10-28 晚（庆阳落脚后）要求「多次调用各种工具后生成一段文字」，观察一轮对话内多次调用模型 API 是否正常。本节只记事实，处置待主持。
+
+### 一、通道复测（🟢 本机 · Trae 客户端 · 2026-10-28 20:07–20:30）
+
+一轮对话内**跨 5 类工具、共 10 次调用**，全部返回正常：
+
+| 工具 | 次数 | 结果 |
+|---|---|---|
+| `Glob`（`exchange/*.md` ／ 成长日记 ／ 留言板） | 3 | 命中数正常，无超时 |
+| `LS`（仓库根） | 1 | 全树列出 |
+| `Read`（`log-trae.md` ／ 日记 ／ 留言板 ／ `chat_service.py`） | 3 | 内容完整，无截断 |
+| `Grep`（`reasoning_content` ／ `chat_service.py` 关键形态） | 2 | 见下 |
+| `GetDiagnostics` | 1 | `[]` |
+| `RunCommand`（`Write-Output` 心跳） | 3 | exit 0 |
+
+**含一次自愈**：首轮把终端工具名写成 `Shell`（正确名 `RunCommand`），系统返回 `Tool's name Shell is not available in given tool list`，非通道故障；下一轮改正后正常。全程**零 4028、零超时、零中断**。
+
+⚠️ 口径边界：以上证明的是「**Trae 客户端本轮多轮工具调用正常**」，⛔ 未证明 10-26 那批 4028 的根因已消除——样本不同、宿主不同。
+
+### 二、`reasoning_content` 回传缺口（事实层 🟢 ／ 因果层 🟡）
+
+1. **全仓 grep `reasoning_content`：17 命中**，分布仅两处：
+   - `archive/qoder-work-historical-record.md`（15 处，Qoder 历史存档里的报文样例，形如 `{"choices":[{"delta":{"role":"assistant","content":null,"reasoning_content":""}}]}`）
+   - `.workbuddy/memory/2026-10-20.md:9`（苏苏 10-20 记录，**只读引用，未改动他人文件**）
+   - **`backend/` 零命中。**
+2. **消息组装处实测**：`backend/services/chat_service.py`〈工具循环〉段，assistant 消息仅 `role` ／ `content` ／ `tool_calls` 三个字段，**无 `reasoning_content`**。
+   - 复跑：`grep -n "reasoning_content" backend/` ⇒ 期望零命中；`grep -n "assistant_msg" backend/services/chat_service.py` 定位组装点。
+3. **推论（🟡 未证）**：若 provider 在思考模式下要求历史 assistant 消息回带 `reasoning_content`，本后端在工具循环中不会回带 ⇒ 与服务端 4028 报错的语义方向一致。
+4. **交叉印证**：苏苏 10-20 记为「全后端 grep `reasoning_content|reasoning|thinking` 零命中 ⇒ provider 即使返回也被丢掉」——同一缺口当时从**流式解析侧**发现，今日从**消息回传侧**确认。两处指向同一处缺失。
+5. **⚠️ 归属边界**：以下**不能串成一条因果**——(a) LarryAgent 后端（本仓 `chat_service.py`）；(b) 老大 10-26 遇到的 Trae 客户端调 DS 崩溃。两侧报错形态相似不等于同源，需各自取证。
+
+### 三、待处置（未动代码）
+
+- [ ] 是否将本节第 2 条提为待办（工具循环回传 `reasoning_content`）
+- [ ] 若提，需先定「回传空串 ／ 回传原值 ／ 不落库只回传」三选一，并确认与 `db/conversations.py` 落库结构的关系
+
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-10-18 清理（WB · 老大令「顺手清一下」）**：删 **3.6 系列全部过程段**（3.6 派发稿 ／ 回报一 ／ WB 复验一 ／ 回报二 ／ WB 复验二 ／ 3.6.1 卡点稿＋回报＋WB 复验三）—— 均已成闭环：判据权威 = `docs/dsh/dsh-migration.md` §3.6 之〈**DSH-3.6 · S4 记忆最小闭环 —— 判据定稿 v3**〉（⚠️ 原记行号 `:1249` 已漂移，现 `:1251` ⇒ **按节锚定位、⛔ 勿按行号**）；进度 = `TODO.md` 3.6 段（已标 ✅）；完成态快照待 Qoder #44 归档。**保留**：在飞件（3.9.1 派发稿 ＋ §8 阻塞 ＋ §9 裁定）＋ 通用纪律 9 条 ＋ Trae 两条活账（TRAE.md 注入力度 ／ key 来源空缺）。回溯 `git log -p -- exchange/log-trae.md`。
