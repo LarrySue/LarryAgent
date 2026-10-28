@@ -21,7 +21,7 @@
 1. **① 改完（改法与派发不同：补差额，不重复）**：`docs/la-space/tech-reference.md` §6.2〈抽验记录 · 版本与源码复查入口〉补七仓版本／commit／日期／许可、源码坐标与原表独有字段；四条失败态原已在主表。Letta 原日期、普通记忆文件与 `MEMORY.md` 的 frontmatter 边界、Mem0「不留底」旧说及若干坐标的订正均已就地注明，不改借用结论。
    复算：`path="docs/la-space/tech-reference.md"; pattern="^\|.*(035bb8c|2c81af3|8e320f8|a7367d0|8cb06a6|ceffb86|37f788b).*"` → **7 行**。
 2. **② 改完（补候选边界，不称整列零承接）**：同档 §6.1 保留 11 个候选的失败态／不选理由；`signed push` 是签推送请求，不是签 commit，SSH 直改 ref 仍属风险；§七 `rstrict 2025-05` 按未独立核实的历史日期保留，未冒充已核发布时间。
-   复算：`path="docs/la-space/tech-reference.md"; pattern="UAC|Temp|signed push|上桶前|2025-05"` → **6 行**（另按 §6.1 逐项复验）。
+   复算：`path="docs/la-space/tech-reference.md"; pattern="UAC|\bTemp\b|signed push|上桶前|2025-05"` → **5 行**（订正：旧式 `Temp` 误中 `Temporal`，原 6 行含 1 条无关命中；另按 §6.1 逐项复验）。
 3. **③ 改完（落点与派发不同）**：本机硬件账归 `docs/local-env.md` §14；`docs/production-env.md` §2.1 留出处时点、§2.5 分清单实例／多会话／多 agent 并指向该节。原估算不升级为负载实测；磁盘分项合计、总内存占比、Chroma 非单变量归因与单盘边界均已交代。随增行把 `docs/dsh/dsh-migration.md` 两处引用改成节锚，仅同步引用。
    复算：`path="docs/local-env.md"; pattern="157 MB|109–168 MB|7–8 GB"` → **4 行**；三口径区分另见两档上述节锚。
 4. **④ 改完**：`exchange/README.md` 已补术语表草稿索引；未展开讨论、未改草稿正文。
