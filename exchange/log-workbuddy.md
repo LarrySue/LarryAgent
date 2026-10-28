@@ -43,6 +43,12 @@ PY   = r"D:\App\WorkBuddy\resources\vendor\python\python.exe"
 - ⛔ `cmd /c` 被安全策略拒（"cannot be used from the PowerShell tool"），别再试。
 - ⛔ `reg.exe` 在程序黑名单；读注册表用 Python `winreg`（纯读，不 spawn）。
 
+**⚠️ 新风险点（🟡 未验，但影响每个执行方）**：`tsbx_rules.json` 的 `default_action: "ask"` —— 沙箱对未命中规则的执行请求**默认要「问」**。若 WB 侧没有人应答，命令会**静默挂起**，外观与「exit 0 ／ 无输出」同形。⇒ **遇命令卡住不返回，第一嫌疑是 ask 未被应答，不是命令本身错。** 同文件另有硬保护：`%USERPROFILE%\.ssh\**`、`.gnupg\**` 读／写／删全 `deny`。
+
+**⚠️ 探测自身也会被干扰（🟢 两次实证）**：100 秒轮询枚举窗口、以及「spawn＋并发抓窗」两个脚本都在进入实质动作后**静默终止、`finally` 未执行**（落盘停在段首）。⇒ 长循环／threading＋ctypes 并发枚举在本执行层**不可靠**；且每次抓取都要 spawn，**反而制造更多弹窗**。
+
+**⛔ 自查教训**：探测类脚本里 `except Exception: pass` 是毒药 —— 我第一版把 333 个窗口全吞成 `baseline 0`，一度误判「窗口站被隔离」（实为 `WinSta0`／`Default`，未隔离）。异常必须记录，不许静默。
+
 **待 WB 官方修**（缺 `CREATE_NO_WINDOW`）。老大 21:22 定：**先观察，不排障、不改系统设置**。
 
 ---
