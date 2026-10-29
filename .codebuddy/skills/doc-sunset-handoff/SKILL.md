@@ -55,7 +55,7 @@ agent_created: true
 |---|---|---|
 | **段落引用**（把 log 里某具体章节当**长期证据**用） | 「来源 = `log_design.md` 设计精化定案 §3–§7 ＋ `log-marvis.md` 产品方向 §0–§5」 | 🔴 **必清** |
 | **行动指南**（"什么什么情况下去读什么文件"，**当下**用） | 「每个 Vue 组件开发前先读 `exchange/log-trae.md`（任务简报）」 | ⚪ 不算引用 |
-| **讨论稿指针** | 指向 `exchange/deployment-architecture.md` 等待定稿的稿子 | 🟡 缓 —— 稿子定稿搬入 `docs/` 时统一改 |
+| **讨论稿指针** | 指向 `exchange/` 下**等待定稿**的稿子（实例：`exchange/deployment-architecture.md` 未决四条；其正本 **2026-10-29 已入 `docs/`** ⇒ 再引时须写明「未定案」并指正本） | 🟡 缓 —— 稿子定稿搬入 `docs/` 时统一改 |
 
 ⭐ **补充限定**：**行动指南只允许指向稳定落点**（`docs/` / `archive/` / `TODO.md`）。指向 `log-*` 的"行动指南"照样会失活 —— 实测 `backend/tests/test_integration_llm.py:48`「排查记录见 `exchange/log-claude.md`」正是行动指南句式，而 `log-claude.md` 已整体轮换 ⇒ 照样指空。
 
