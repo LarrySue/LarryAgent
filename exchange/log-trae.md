@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | 🆕 **待起跑**（WB 2026-10-29 派发，见下方〈📮 派发 · dev 上锁 ＋ 配发钥匙〉；⚠️ 同日 11:00 老大定「调试页不得阻碍产品设计」后**范围追加 J5＝删除 chat.html**，因尚未起跑故并入本块、不另开） | 2026-10-29 |
+| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | 🟢 **已起跑**（WB 2026-10-29 **11:32 放行**｜同日 11:00 老大定「调试页不得阻碍产品设计」后**范围追加 J5＝删除 chat.html**｜11:32 追加 **P5 测试隔离断言** —— 因 `config.yaml` 已填真 key，忘带 `LARRY_CONFIG` 会**撞真库＋真 key**） | 2026-10-29 |
 | — | — | — | **当前无在飞块**（2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接，原段按活日志规矩清理；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5，原段同日清除**）。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置** | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -118,6 +118,20 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
   - J2 红（`/health` 也被拦）⇒ **立即停手回报**，⛔ **不得自行放宽 `auth.py` 的拦截范围** —— 那是在改安全边界，须 WB 重新定。
   - `.env.local` 未被忽略 ⇒ **停手回报**，⛔ 不得改为「先写进去再说」。
 
+- **P5 · 测试隔离断言（Tier 0 硬前置，程序性强制｜2026-10-29 11:32 追加）**
+
+  ⚠️ **背景变了**：`backend/config.yaml` 的 `server.api_key` **已经填了真 key**（老大 11:20）。所以「忘带 `LARRY_CONFIG` 直接起服务」现在会同时撞上**真实数据库**和**真 key**。
+
+  ⛔ **起 `uvicorn` 之前，必须先跑这条断言**：
+
+  ```
+  cd backend && LARRY_CONFIG=<你建的临时yaml绝对路径> python -c "from config import load_config; print(load_config().database.path)"
+  ```
+
+  - 输出路径必须在**你为本次建的临时目录**下 → 通过，方可起服务。
+  - **若输出指向 `backend/data/larry.db`（或任何 `backend/` 下的路径）⇒ 立即停手回报**，⛔ 不许「改一下再试」。
+  - **为什么单列一条**：这种局面下的症状是「`/api/` 返回 401，看起来像鉴权生效了」—— **最坏的一种假绿**。你实际测的是真库 ＋ 真 key，而结论会写成"已验证"。
+
 ### 3 · 交付物
 
 | 类型 | 路径 | 说明 |
@@ -164,8 +178,8 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 
 - **构建链**：`client` = Vite ＋ Vue3 ＋ TS。`npm run build` = `vue-tsc --noEmit && vite build` ⇒ **类型不通过就构建失败**。
 - **node 版本以你通道实测为准**；对不上先报差异再动手（同机不同通道会读到不同版本，别当成工程坏了）。
-- **后端启动**：`cd backend && uvicorn main:app --port 8001`（用 8001 避开 dev 占用的 8000）。
-- **临时 yaml**：**只写 `server:` 段**，其余走 dataclass 默认值（`config.py:168` 起）。`database.path` 相对**配置文件所在目录**解析（`config.py:150-152`）⇒ 放临时目录即天然隔离。
+- **后端启动（⛔ 必须带 `LARRY_CONFIG`，理由见 P5）**：`cd backend && LARRY_CONFIG=<临时yaml绝对路径> uvicorn main:app --port 8001`（用 8001 避开 dev 占用的 8000；⛔ **不加 `--reload`**，避免反复重启重复初始化库）。
+- **临时 yaml**：**只写 `server:` 段**，其余走 dataclass 默认值（`config.py:168` 起）。`database.path` 默认值 `data/larry.db` 相对**配置文件所在目录**解析（`config.py:150-152`）⇒ 临时 yaml 放临时目录，库就落在 `<临时目录>/data/larry.db`，天然隔离。⚠️ **这个推论必须用 P5 的断言证明一次**，⛔ 不能只靠推理。
   - ⛔ 临时 yaml、临时库**都别建在 `backend/` 下**，会污染真实库。
   - ⛔ 临时 yaml **不要复制真 `config.yaml`**（里面有真 LLM key，复制＝把凭据摊到未保护的位置）。
 - **`VITE_API_KEY` 注入方式**：跑测试时用**环境变量注入**（`VITE_API_KEY=<TESTKEY> npm run test:unit`），⛔ **不要新建 `client/.env.local`** —— 那个文件归老大填（见上方移交契约：你建了他必覆盖，双作者文件＝排查噩梦）。
@@ -173,7 +187,7 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 
 ### 6 · 回报格式
 
-- 结论先行 → J1–J5 逐条**读数 ＋ 命令原文** → 未闭合单列 → **自曝**（跑歪／判据要订正／发现矛盾，直接写；「成因未知」是可接受的结论，⛔ 别为叙事完整编一个）。
+- 结论先行 → **P5 断言读数** ＋ J1–J5 逐条**读数 ＋ 命令原文** → 未闭合单列 → **自曝**（跑歪／判据要订正／发现矛盾，直接写；「成因未知」是可接受的结论，⛔ 别为叙事完整编一个）。
 - ⛔ **不得回显任何 key 值**（`<TESTKEY>` 之外的都不许出现在回报里）；只报"已注入／长度／是否含空格"。
 - ⛔ 不得手工改写／意译工具输出；注明每条证据取自哪条通道。
 
