@@ -192,10 +192,18 @@
 - 🔵 **dev 环境 `server.api_key` 上锁 ＋ 客户端配发钥匙**（✅ **已派发** → `exchange/log-trae.md`〈📮 派发 · dev 上锁 ＋ 配发钥匙〉｜2026-10-29 · 老大 10:55 拍板甲案）
   - **决策源在别处**：`HUMAN_NOTE.md`〈上云硬前置〉① 是这条立项依据（⛔ 该文件归老大，WB 未动）；**token 机制升级亦由老大自记 `HUMAN`**，⛔ 不在本项。
   - **范围**：只做 **dev**（本机回环）。⛔ 不覆盖产线 —— 产线必须走「设置页 ＋ 运行期注入」，另项。
-  - **判据**：见派发稿 J1 后端两态（401／200）／ J2 `/health` 不受影响（Tauri 壳启动依赖它）／ J3 客户端 **全量** fetch 带证 ＋ 空 key 时不带 ／ J4 SSE 回归 ／ J5 `chat.html` 可输 key。
+  - **判据**：见派发稿 J1 后端两态（401／200）／ J2 `/health` 不受影响（Tauri 壳启动依赖它）／ J3 客户端 **全量** fetch 带证 ＋ 空 key 时不带 ／ J4 SSE 回归 ／ J5 `chat.html` **预期退场**（填 key 后访问应 401，⛔ 不改造它）。
   - **待老大做（⛔ 非 AI，凭据不入任何 AI 通道）**：生成真 key → 填 `backend/config.yaml` 的 `server.api_key` ＋ 新建 `client/.env.local` 填 `VITE_API_KEY`（两处均已 gitignore，`git check-ignore` 实测）。
   - **执行顺序**：代码先落地（此时 key 仍空、透传不破）→ 老大填 key → WB 复验（J6）。
   - **三环境口径**：key 按环境分（dev／wsl／cvm），⛔ 不共用；本项只落 dev。⚠️ **CVM 是否下一个落点待定** —— 取决于 CVM 上跑的是 harness 探针还是 `backend/`（若是后者，它是公网机、`server.api_key` 为空即全开，属更高优先级）。
+
+- 🔵 **`client/chat.html` 退役**（⚠️ 与上条配套｜老大 2026-10-29 定原则：**前端只许一个出口，不管套不套壳、套几层，对外是一个整体**）
+  - **事实**：391 行、`<title>LarryAgent - Test Chat</title>`、自述「开发调试阶段快速验证后端 /api/chat」。功能被 SPA **完全覆盖**（`ChatView.vue` ／ `ChatInput.vue` ／ `MessageList.vue` ／ `ToolCallCard.vue` ／ `ModelSelector.vue` ／ `RoleSelector.vue`），且自带**第二套 `fetch` ＋ 第二套 SSE 解析**（`consumeSSEStream`／`parseSSE` 与 `api.ts` 内实现各一份）。
+  - **为什么不能靠"配钥匙"共存**：给它配钥匙 ＝ 维护两套 UI 的鉴权，将来设置页也要做两遍 —— 这正是「一个出口」原则要防的事。
+  - **动作**：删 `client/chat.html` ＋ 摘掉 `backend/main.py:162-165` 的同源托管 ＋ 同步 `README.md:44` 结构图一行 ／ `backend/main.py:7`／`:14` 两处说明。
+  - **前置**：老大确认「零构建调试入口」可以不要（`npm run dev` 可替代）。⚠️ 若仍要这个便利 ⇒ 退路 = 保留但 **永不配钥匙**（设 key 后天然 401，不修不补）。
+  - **触发**：本段上锁落地、SPA 实测可用之后。
+  - ⚠️ **同一原则下的第三处出口（本轮不动）**：`client/src-tauri/src/main.rs:143` 的 `health_get()` 手写 `TcpStream` HTTP。它**不是业务出口**、跨语言无法共用代码，但契约受约束 —— `/health` **必须永不鉴权**（已写入派发稿 J2 判据）。若将来加 HTTPS／反代，这段手写解析须重估。
 
 - [ ] **DSH-3.7.5 · `(b)` 已闭环 ｜ `(c)` 待裁**（**老大 2026-09-17 裁：两项单开**；WB 同日立项并放入本顺序）—— 来源 = 3.7.3 未闭合项 6
   - ✅ **`(b)` 已完成并闭环（2026-09-22）** —— CVM 012 代参照 profile（含 `acp` 扩围）已删、`explicit` 分支已退役，WB 现场独立取证**判定成立**。⏩ **完成态快照（派发实况 ／ 复验判定 ／ 派发前重测前提）已归档 ⇒ `archive/roadmap-history.md` 的 `##### DSH-3.7.5`**；派发稿 ＋ 回报原文已清理（2026-09-22；回溯走 git 史）。

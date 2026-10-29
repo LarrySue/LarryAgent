@@ -82,12 +82,13 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 - 优先跑现有单测；若现无覆盖，可用临时实例实跑 `/api/chat` 观察分块。
 - ⚠️ 临时 yaml 无 `models` 段 ⇒ 真 LLM 调用起不来。**若因此拿不到流，可退为「代码审查 ＋ 保留原 `headers` 结构」**，但**必须在回报里如实标「未跑」**，⛔ 不得写成"已验证"。
 
-**J5 · `chat.html` 可输入 key**
+**J5 · `chat.html` —— ⛔ 不改造，只验「预期退场」**
 
-- ⛔ 它**不经过 Vite 构建**（是后端同源托管的静态页，`client/chat.html`），拿不到 `import.meta.env`。
-- 做法：页面上加一个 key 输入框，存 `localStorage`，后续请求带上；刷新后不丢。
-- 判据：`git grep -c "Bearer" client/chat.html` 应有**拼接表达式**，但**无字面 token**；搜索「`sk-`」「长随机串」零命中。
-- ⛔ 禁止：把 key 写死在 HTML 里、从 `window.__API_KEY__` 之类由后端注入（那等于把 key 印在页面源码上）。
+- ⛔ **本块不碰 `client/chat.html`。** 老大 2026-10-29 定原则：**前端只许一个出口，不管套不套壳、套几层，对外是一个整体**。
+- 事实：`client/chat.html`（391 行，`<title>LarryAgent - Test Chat</title>`）是**第二套 UI ＋ 第二套 `fetch` ＋ 第二套 SSE 解析**（`consumeSSEStream`／`parseSSE` 与 `api.ts` 内实现各一份），而功能已被 SPA 完全覆盖（`ChatView.vue` ／ `ChatInput.vue` ／ `MessageList.vue` ／ `ToolCallCard.vue` ／ `ModelSelector.vue` ／ `RoleSelector.vue`）⇒ 它是**重复出口，处置方式是退场，不是配钥匙**。
+- 判据：改完 ＋ 老大填 key 之后，打开 `http://127.0.0.1:8000/chat.html` → **401**。这是**预期结果，⛔ 不是缺陷**（临时调试页随鉴权自然退场）。
+- ⛔ 禁止"为了让它还能用"而给它加 header ／ 加输入框 ／ 由后端注入 key —— 那是把重复出口焊死。
+- **退役动作另立**（登记在 `TODO.md`），⛔ 不在本块、⛔ 本块不删它。
 
 **J6 · 真实链路（WB 做，⛔ 不在你的交付范围）**
 
@@ -109,7 +110,6 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 |---|---|---|
 | 改 | `client/src/api.ts` | 15 处 `await fetch(` ＋ `streamChat` 统一带 header |
 | 改 | `client/src/env.d.ts` | 声明 `ImportMetaEnv.VITE_API_KEY`（`build` 会跑 `vue-tsc --noEmit`，类型必须过） |
-| 改 | `client/chat.html` | key 输入框 ＋ `localStorage` ＋ 请求带 header |
 | 新增 | `client/.env.example` | **只放占位** `VITE_API_KEY=`（可进 git，⛔ 无真值） |
 | 新增 | 单测文件（路径自定） | 须能被 `npm run test:unit` 拾到 |
 
@@ -146,7 +146,7 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 
 ### 7 · 禁区
 
-- ⛔ 不改 `backend/config.yaml`、`auth.py`、`client/.env.local`
+- ⛔ 不改 `backend/config.yaml`、`auth.py`、`client/.env.local`、**`client/chat.html`**（重复出口，处置权在老大，⛔ 本块不碰）
 - ⛔ 不动 `API_BASE = "/api"` 的相对路径（改它是产线设置页的活）
 - ⛔ 不把 key 值写进任何受版本控制的文件、注释、日志、测试夹具
 - ⛔ 不升级依赖树、不引入新包（`axios` / `reqwest` 之类一律不加）
