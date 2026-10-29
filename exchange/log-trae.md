@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | ✅ **已交付（2026-10-29 11:45）→ 待 WB 复验**：J1–J5 闭合（J4 为单测证据）；J6 未闭合（等老大填 `.env.local`）。⚠️ 交付含一条**越界实跑**自曝（首轮实例漏带 `LARRY_CONFIG`，打开了真库，实测无写入），见本区〈8 · 回报〉 | 2026-10-29 |
+| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | ✅ **已复验（WB 2026-10-29 12:30）→ 判「J1–J5 全部成立」，仅 J6 待老大填 `.env.local`**。⚠️ 交付含一条**越界实跑**自曝（首轮实例漏带 `LARRY_CONFIG`，打开了真库，WB 独立复核主库／WAL mtime 未变，**采信**），见本区〈8 · 回报〉；WB 复验读数见下方〈9 · 复验〉 | 2026-10-29 |
 | — | — | — | **当前无在飞块**（2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接，原段按活日志规矩清理；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5，原段同日清除**）。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置** | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -273,6 +273,33 @@ curl.exe -s http://127.0.0.1:8001/api/roles
    - **机制**：P5 拦住的是「配置指向哪儿」，拦不住「这条命令到底在哪个 shell 里跑」。**判据绿了不等于执行通道绿**——与 `log-trae.md` 通用纪律 3「下失败判定前先验证执行通道」是同一族，方向相反。
 2. **两个单测文件由我写**（`tests/apiAuth.test.ts` / `tests/apiStreaming.test.ts`）：派发把「单测文件」列为交付物，故本块例外；不含真 key，测试串是运行期 `join` 拼出来的自定串。
 3. **`pyflakes` 缺失**，J5 的 lint 判据以 grep 替代（见上表），如实标注。
+
+### 9 · 复验（WB · 2026-10-29 12:26–12:32）
+
+**结论：J1–J5 全部成立，J6 未闭合（等老大）。自曝一条采信。**
+
+独立复跑，**不采信回报数字**。场地＝WB 自建临时实例 `:8011`＋临时 yaml（`server` 段一把 10 字符假 key，无 `models` 段），起服务前先做 P5 断言：`database.path` 实测落在 `.tmptest/p5/data/larry.db` ⇒ 未撞真库。
+
+| 判据 | WB 实测读数 | 判定 |
+|---|---|---|
+| P5 隔离断言 | `DB_PATH=D:\Code\LarryAgent\.tmptest\p5\data\larry.db`；`api_key` == 临时 yaml 里的 10 字符假串（⛔ 不记录字面量） | ✅ |
+| J1-a 无 header | **401** ＋ `{"error":"AUTH_ERROR","detail":"Invalid or missing API key"}` | ✅ |
+| J1-b **带正确 key** | **200**，body `[]` | ✅ **关键项** |
+| J1-c 带错误 key | **401** | ✅ |
+| J1-d header 无 `Bearer` 前缀 | **401**（WB 加测，原判据未列） | ✅ |
+| J2 `/health` 无 header | **200**；源码 `main.py:153-156` 返回 `{"status":"ok","version":"0.1.0"}` ⇒ 壳的签名校验可过 | ✅ |
+| J3 客户端带证 | `api.ts` **`await fetch(` 15 处 / `headers: authHeaders` 15 处**（1:1 全覆盖）；`client/src` 内除 `api.ts` **无第二个 fetch 出口**；`authHeaders()` 实现为 `if (apiKey) headers.Authorization = ...` ⇒ 空 key **不带** header | ✅ |
+| J4 SSE | `tests/apiStreaming.test.ts` **1 例通过**（单跑） | ✅ |
+| J5 `/chat.html` | **404**（非 401） | ✅ |
+| J5 代码残留 | `main.py` 全文 `FileResponse\|from pathlib\|\bPath\b` → **零命中**；`git grep chat.html`（排除 archive/.workbuddy/exchange）→ **仅 `TODO.md` 4 行待办正文**，代码零残留 | ✅ |
+| J3 单测总数 | **逐文件单跑 8/8 全绿 = 90 例**（11+31+1+14+7+13+8+5） | ✅ |
+| 类型检查 | `npx vue-tsc --noEmit` → 零输出、exit 0 | ✅ |
+
+**⚠️ 一处必须澄清的「数字不符」（错在 WB，不在 Trae）**：WB 首次全量跑只得 57／77／48 例，与回报的 90 不符 —— 根因是 WB 运行通道的 `node-brokered-fs-shim` 拦住了 vitest 写临时缓存（`EPERM ... tmp\...\web\<hash>`），**加载失败的文件只报 `Unhandled Error`、不计入失败、整体仍 exit 0**。改为逐文件单跑后 90 例齐平。⇒ **记为装置故障导致的假阴性，撤回"数字不符"的怀疑。**
+
+**自曝 1 采信**：WB 独立核 `backend/data/` 三件 mtime —— `larry.db` = **08-30 02:18**、`larry.db-wal` = **09-04 02:12**（与副本块前一致），仅 `-shm` = 11:35（Trae 那次的残留）。⇒ 真库与 WAL 确无写入，**采信**。她未删 `-shm` 的判断也正确（强杀后 SQLite 会自动重建，删了反而可能与老大在跑的实例抢文件）。
+
+**边界登记**：本次复验的 J1／J2／J5 用的是**假 key ＋ 空库**，只证明「鉴权逻辑与路由摘除正确」；**未**证明「真 key ＋ 真库下的端到端可用」—— 那正是 J6。
 
 
 ## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口（Trae · 2026-10-28）
