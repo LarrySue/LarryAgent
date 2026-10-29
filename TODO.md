@@ -194,7 +194,9 @@
   - **范围**：只做 **dev**（本机回环）。⛔ 不覆盖产线 —— 产线必须走「设置页 ＋ 运行期注入」，另项。
   - **判据**：见派发稿 J1 后端两态（401／200）／ J2 `/health` 不受影响（Tauri 壳启动依赖它）／ J3 客户端 **全量** fetch 带证 ＋ 空 key 时不带 ／ J4 SSE 回归 ／ J5 **`chat.html` 本块删除**（不只是"不改造"—— 见下条）。
   - **待老大做（⛔ 非 AI，凭据不入任何 AI 通道）**：生成真 key → 填 `backend/config.yaml` 的 `server.api_key` ＋ 新建 `client/.env.local` 填 `VITE_API_KEY`（两处均已 gitignore，`git check-ignore` 实测）。
-  - **执行顺序**：代码先落地（此时 key 仍空、透传不破）→ 老大填 key → WB 复验（J6）。
+  - ⚠️ **已踩过的坑（2026-10-29 11:20，实测留痕）**：`api_key:` 后的引号**必须成对**。只写尾部一个 `"` 时 YAML 不把它当引号、而是算进值里 ⇒ 实测该值变成 **44 字符、末位是 `"`**，后果是客户端发的 Bearer **恒不匹配 → 永远 401**，且症状（“长度对、字也对”）完全不指向格式问题。`.env.local` 同理，或干脆不加引号。
+    - **自查判据（比数引号可靠）**：`不看原文有没有引号，看 yaml 解析后的值` —— 成对引号解析时会被剥离，落单的才会留在值里。等价命令：解析后检查每个字符串值是否 `startswith/endswith('"')`，命中即污染。
+  - **执行顺序（⚠️ 实际已偏离，记录在案）**：原设计＝代码先落地（key 仍空、透传不破）→ 老大填 key → WB 复验（J6）。**实况**：老大 11:20 已先填 `config.yaml`，早于 Trae 落地 ⇒ **现在起 backend 即 `/api/` 全 401**（WB 11:19 实测后端当前未运行，故尚未暴露）。待 Trae 落地后再补 `client/.env.local`。
   - **三环境口径**：key 按环境分（dev／wsl／cvm），⛔ 不共用；本项只落 dev。⚠️ **CVM 是否下一个落点待定** —— 取决于 CVM 上跑的是 harness 探针还是 `backend/`（若是后者，它是公网机、`server.api_key` 为空即全开，属更高优先级）。
 
 - 🔵 **`client/chat.html` 退役**（✅ **已并入上条派发 J5**，同一块落地｜2026-10-29 · 老大 11:00 定原则）
@@ -207,6 +209,17 @@
   - **判据（三条）**：`git grep "chat\.html"` 只剩 `exchange/` 历史表述 ／ `curl /chat.html` → **404**（⚠️ 非 401，401 说明路由没摘干净）／ `cd backend && python -c "import main"` 无 ImportError。
   - ✅ **前置已消解**：原「待老大确认零构建调试入口可否不要」——**老大 2026-10-29 11:00 已裁：不考虑兼容，直接删**。原退路（保留但永不配钥匙）**作废**，⛔ 不再留"看情况保留"的口子。
   - ⚠️ **同一原则下的第三处出口（本轮不动）**：`client/src-tauri/src/main.rs:143` 的 `health_get()` 手写 `TcpStream` HTTP。它**不是业务出口**、跨语言无法共用代码，但契约受约束 —— `/health` **必须永不鉴权**（已写入派发稿 J2 判据）。若将来加 HTTPS／反代，这段手写解析须重估。
+
+- 🔵 **`backend/config.example.yaml` 与实例键集合同构**（2026-10-29 · 老大提「怕开发和实际脱离」后实测查出｜**不阻塞任何在飞块**）
+  - **实况（WB 实测，脚本按键路径集合比对）**：`config.yaml` 51 个键路径 vs `example` 43 个 ⇒ 缺 11 个：
+    - **`search` 整段缺失**：`provider` / `brave_api_key` / `max_results` / `max_retries` / `timeout`
+    - **`roles.science`**：`color` / `label` / `system_prompt`
+    - **`tools.enabled_tools`**
+  - **为什么不紧急**：代码有默认值兜底 —— `SearchConfig` 全字段有默认（`config.py:72-78`：`provider="brave"`／`timeout=8.0`／`max_retries=2`／`max_results=5`）；`ToolsConfig.enabled_tools` 默认空列表 ＝ **全部启用**（`config.py:66-68` 注释明写"保持向后兼容"）⇒ **功能不坏**。
+  - **但问题是真的**：模板失信的后果是「照 example 配出来的环境，不知道存在 search 段、不知道有 science 角色」，这正是"开发与实际脱离"的形状。模板的价值是把可配项全摆出来。
+  - **动作方向**：⛔ **往 example 补，不从 yaml 删** —— `science.system_prompt` 是真实内容，删了就真没了。补时值用空占位 ＋ 注释注明默认值。
+  - **执行方**：配置模板属代码区 ⇒ 归 Trae，随下次派发一并。
+  - ⚠️ **`server` 段两边本来就对齐**（`host`／`port`／`api_key` 三键齐全，`example` 里是 `api_key: ""` 占位）⇒ 填 key 未破坏同构，**本条与上锁块无关，别混**。
 
 - [ ] **DSH-3.7.5 · `(b)` 已闭环 ｜ `(c)` 待裁**（**老大 2026-09-17 裁：两项单开**；WB 同日立项并放入本顺序）—— 来源 = 3.7.3 未闭合项 6
   - ✅ **`(b)` 已完成并闭环（2026-09-22）** —— CVM 012 代参照 profile（含 `acp` 扩围）已删、`explicit` 分支已退役，WB 现场独立取证**判定成立**。⏩ **完成态快照（派发实况 ／ 复验判定 ／ 派发前重测前提）已归档 ⇒ `archive/roadmap-history.md` 的 `##### DSH-3.7.5`**；派发稿 ＋ 回报原文已清理（2026-09-22；回溯走 git 史）。
