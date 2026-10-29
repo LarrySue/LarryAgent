@@ -189,19 +189,19 @@
 
 ### 待派发
 
-- 🟢 **dev 环境 `server.api_key` 上锁 ＋ 客户端配发钥匙**（✅ **已派发** → `exchange/log-trae.md`〈📮 派发 · dev 上锁 ＋ 配发钥匙〉｜2026-10-29 · 老大 10:55 拍板甲案）
-  - **进度**：**J1–J5 已交付并复验成立**（WB 2026-10-29 12:30 独立复跑，读数见 `log-trae.md`〈9 · 复验〉）；**仅剩 J6（真 key 端到端）待老大建 `.env.local`**。
+- ✅ **dev 环境 `server.api_key` 上锁 ＋ 客户端配发钥匙**（**已闭环 2026-10-29 12:42**｜派发稿 `exchange/log-trae.md`〈📮 派发 · dev 上锁 ＋ 配发钥匙〉｜老大 10:55 拍板甲案｜⚠️ **待归档，归 Qoder**）
+  - **进度**：**J1–J6 全部成立**。J1–J5 由 WB 12:30 独立复跑（读数见 `log-trae.md`〈9 · 复验〉）；J6 于老大 12:32 建好 `client/.env.local` 后由 WB 验通（见〈10 · J6 闭环〉）——「`.env.local` → Vite env → 浏览器模块 → `authHeaders()` → `Bearer` → 后端比较」整链通。
   - **决策源在别处**：`HUMAN_NOTE.md`〈上云硬前置〉① 是这条立项依据（⛔ 该文件归老大，WB 未动）；**token 机制升级亦由老大自记 `HUMAN`**，⛔ 不在本项。
   - **范围**：只做 **dev**（本机回环）。⛔ 不覆盖产线 —— 产线必须走「设置页 ＋ 运行期注入」，另项。
   - **判据**：见派发稿 J1 后端两态（401／200）／ J2 `/health` 不受影响（Tauri 壳启动依赖它）／ J3 客户端 **全量** fetch 带证 ＋ 空 key 时不带 ／ J4 SSE 回归 ／ J5 **`chat.html` 本块删除**（不只是"不改造"—— 见下条）。
-  - **待老大做（⛔ 非 AI，凭据不入任何 AI 通道）**：生成真 key → 填 `backend/config.yaml` 的 `server.api_key` ＋ 新建 `client/.env.local` 填 `VITE_API_KEY`（两处均已 gitignore，`git check-ignore` 实测）。
+  - ✅ **老大侧已完成（2026-10-29 12:32）**：`backend/config.yaml` 的 `server.api_key`（43 字符）＋ `client/.env.local` 的 `VITE_API_KEY`（43 字符）**两处实测完全相等**、无引号残留、字符集合规；`.env.local` 被 `.gitignore:14` 忽略。⛔ 值不经任何 AI 通道，WB 只校「是否同值」不读数。
   - ⚠️ **已踩过的坑（2026-10-29 11:20，实测留痕）**：`api_key:` 后的引号**必须成对**。只写尾部一个 `"` 时 YAML 不把它当引号、而是算进值里 ⇒ 实测该值变成 **44 字符、末位是 `"`**，后果是客户端发的 Bearer **恒不匹配 → 永远 401**，且症状（“长度对、字也对”）完全不指向格式问题。`.env.local` 同理，或干脆不加引号。
     - **自查判据（比数引号可靠）**：`不看原文有没有引号，看 yaml 解析后的值` —— 成对引号解析时会被剥离，落单的才会留在值里。等价命令：解析后检查每个字符串值是否 `startswith/endswith('"')`，命中即污染。
   - **执行顺序（两段缝，⛔ 不在中间插「等填完再继续」）**：
     - **缝 1（Trae）**：代码落地 ＋ 建 `client/.env.example`（**唯一交接物**，须自解释到老大只看它就够填），J1–J5 自闭环。
     - **缝 2（老大 ＋ WB）**：老大照 example 自建 `client/.env.local` 填 `VITE_API_KEY` **并重启 `npm run dev`** → WB 用 `curl` 验后端 401／200 两态 ＋ 真机可用。
     - ⛔ **不能让 Trae「先建 `.env.local` 等老大填、再继续」**：① 该文件已被 gitignore，是老大私产，他一填就覆盖 Trae 建的 ⇒ 双作者文件，事后无法追溯谁改坏的；② Trae 跑测试用**环境变量注入**（`VITE_API_KEY=<TESTKEY> npm run test:unit`），根本不需要该文件存在；③ 更根本的 —— 真 key **不经任何 AI 通道**（Tier 0），Trae 等的是一个他不能看的东西，这个等待点在协作上永远解不开。
-    - ⚠️ **顺序偏离的后果已落地（2026-10-29 12:30 更新）**：代码已到位，`api.ts` 现在会读 `import.meta.env.VITE_API_KEY`；**但 `.env.local` 还没建** ⇒ 客户端仍**不带** header ⇒ **现在起 backend，`/api/` 全 401、SPA 不能聊天**（直到 J6 完成）。要临时用 dev：把 `config.yaml` 的 `server.api_key` 改回 `""` 或注释掉那一行。
+    - ✅ **顺序偏离已消解（2026-10-29 12:42）**：老大 12:32 建好 `.env.local`，偏差闭合。⚠️ 留档教训——**中间那段时间 dev 是断的**（起 backend 即 `/api/` 全 401），若当时要用 dev，需把 `config.yaml` 的 `server.api_key` 临时改回 `""`。
   - **三环境口径**：key 按环境分（dev／wsl／cvm），⛔ 不共用；本项只落 dev。⚠️ **CVM 是否下一个落点待定** —— 取决于 CVM 上跑的是 harness 探针还是 `backend/`（若是后者，它是公网机、`server.api_key` 为空即全开，属更高优先级）。
   - 📤 **待 Qoder 回写（Qoder 归属，⛔ WB 只暴露不直接改）**：`exchange/deployment-architecture.md` 三处已因本块落地而过期 ——
     - `:139` 「**现态 key 确实为空** ⇒ `/api/` 全透传」→ 改「dev 已设 43 字符 key；空 key 透传仅描述代码分支，不再是现态」
