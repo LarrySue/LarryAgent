@@ -209,10 +209,15 @@
     - **唯一会把它变成阻塞的路径**：有人把 `backend/` 搬上云机、或反代过去。**该动作现在不会自动发生** —— `make dev` 在本机、`uvicorn` 默认绑 `127.0.0.1`、且 `config.server.host` **三个键无任何消费点**（改 yaml 不放也不收）⇒ 不存在「手滑就对外」的路径。
     - ⚠️ **要把 🟡 变 🟢 需一条 ssh 只读探针**（未跑，需老大批出站）：`ss -lntp | grep -E ':8000|:3000'` ＋ `ls ~/harness/ ~/.dsh/`。**不探不影响推进**，仅影响该判定的证据等级。
     - 💡 **可选结构性解法（未裁决，⛔ 非待办）**：`auth.py` 空 key 时不再无条件透传，改为「仅放行回环来源，非回环 403」（约 10 行，不动客户端）⇒ 把「靠记性记得上云设 key」换成「忘了也无害」。⚠️ 边界：经 Nginx 同机反代时 `request.client.host` 即回环，此补丁失效，**替代不了上云 checklist**。老大未拍，暂不立项。
-  - 📤 **待 Qoder 回写（Qoder 归属，⛔ WB 只暴露不直接改）**：`exchange/deployment-architecture.md` 三处已因本块落地而过期 ——
-    - `:139` 「**现态 key 确实为空** ⇒ `/api/` 全透传」→ 改「dev 已设 43 字符 key；空 key 透传仅描述代码分支，不再是现态」
-    - `:148` 「现态前端（`client/src/api.ts` 与 `chat.html`）**尚无任何 Bearer 注入通道**」→ 改「`api.ts` 15/15 已带证（空 key 时自动不带）；`chat.html` **已删除**」
-    - `:149` 「⚠️ **待裁**：是否现在就把 `server.api_key` 填上」→ 已裁：2026-10-29 10:55 老大拍板甲案（dev 今日上锁 ＋ 配发钥匙）
+  - 📤 **已派发 Qoder（WB 2026-10-29 13:59 · 老大拍 B 案）** → `exchange/log-qoder.md`〈📮 派发 · 云部署架构稿定稿拆分（B 案）〉
+    - ⭐ **派发依据不是「整理文档」，而是该稿自述的定稿条件已成立 11 天**：`exchange/deployment-architecture.md:3` 自述「状态：方案（**待DSH迁移完成后重新制定**）」，而本文件 `:22` 载「DSH-3 ✅ 整段闭环并归档（2026-10-18）」⇒ 触发条件达成、无人回来处理。**这才是 B 案的真实动因**，⛔ 别读成"顺手美化文档"。
+    - **B 案＝三层拆分**（⛔ 非二分）：① 已落地事实＋已定原则 → `docs/`（鉴权机制定性／Bearer 与 TLS 是一对硬前置／前端一个出口／`chat.html` 退役／`/health` 永不鉴权／安全观）；② 已定但未实施的目标态 → `docs/`（逐条标「未实施」）；③ 真未决（原 §七 四条）→ 留 `exchange/`。
+    - **需改的过期面（WB 逐行实测，⛔ 别只按"三处"理解）**：
+      - **四处现文为假**：`:98` §4.1 表 `server.api_key` 开发测试列＝「空」／`:139` 「现态 key 确实为空 ⇒ `/api/` 全透传」／`:147` 「**`/chat.html` 同源托管**…设与不设对本机行为无差别」（**两句皆假**：文件已删＋设 key 后不带证即全 401）／`:148` 「⚠️ 待裁」＋「`api.ts` 与 `chat.html` 尚无任何 Bearer 注入通道」。
+      - **三处不算假但缺新事实**（⛔ 别当过期改）：`§4.2`（API Key 构建期注入**已落** ↔ `API_BASE` 可配置**仍未做**，是两个平行改造）／`§6.1` 改进点 2（构建期已落／运行期设置页未做）／`§八` 落地顺序 1（dev 侧已完成，剩 HTTPS／Nginx／云侧 key／上云禁用工具）。
+    - ⚠️ **订正本条目旧写法**：旧版写「`:149` 待裁」⇒ 实测为 **`:148`**（`:149` 是表的空行）。行号以 `exchange/deployment-architecture.md` 现文为准。
+    - **引用完整性（升格必改，`docs/README.md:20` 明文要求）**：活跃引用 5 处 —— `docs/product-positioning.md:425`／`:518`（草案引用，须改指正式落点）／`docs/README.md:20`（例外二拿本文件当例子，须改口径）／`exchange/README.md:21`（索引条目）／`.codebuddy/skills/doc-sunset-handoff/SKILL.md:58`（skill 举例，⛔ 非 Qoder 区，WB 自改）。
+    - ⛔ **WB 不做的两件**：① `HUMAN_NOTE.md:66` 有「统一架构方案见 `exchange/deployment-architecture.md`」，本件后失准 —— 人类治理区，**只报老大**；② `docs/` 我无改权。
 
 - ✅ **`client/chat.html` 退役**（**已闭环 2026-10-29 12:30**｜并入上条派发 J5，同一块落地｜2026-10-29 · 老大 11:00 定原则）
   - **闭环读数（WB 复验）**：文件已删；`main.py` 的 `FileResponse`／`from pathlib`／`Path` **零残留**；`/chat.html` → **404**；`git grep chat.html`（排除 archive/.workbuddy/exchange）仅剩本 TODO 待办正文，代码零残留；`README.md` 结构图 `tests/` 已改 `└──` 收尾。
