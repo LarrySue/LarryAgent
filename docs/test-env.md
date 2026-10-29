@@ -260,7 +260,7 @@ wsl.exe -d Ubuntu-24.04 --cd <显式目录> -- bash -c "echo $b64 | base64 -d > 
 |---|---|---|
 | **甲（最彻底）** | `/etc/wsl.conf` → `[automount] enabled = false` | WSL **看不见 Windows 盘** ⇒ 写路径直接消失。代价：WSL 内需自带仓库副本（`~/work/LarryAgent`，与 §10 已倾向一致）；需要时手动 `mount -t drvfs C: /mnt/c -o ro` 按需**只读**挂载 |
 | **乙（一行，保读）** | `/etc/wsl.conf` → `[automount] options = "ro"` | 只读挂载 ⇒ **杀写、留读**（`cp` 仓库进 WSL 仍是读操作，可用）。⬛ 该选项是否被当前 WSL 接受**未实测** |
-| **丙（不做）** | 保持现状 | 理由：单用户单机、需 AI **主动**执行 `wsl.exe`、系统 ACL 仍拦系统路径；与 HUMAN 原则 4「明确安全边界，而非控制安全边界」一致 |
+| **丙（不做）** | 保持现状 | 理由：单用户单机、需 AI **主动**执行 `wsl.exe`、系统 ACL 仍拦系统路径；与 `HUMAN.md`〈本项目需要坚持的原则〉「明确安全边界，而非控制安全边界」条一致 |
 | **✗ 在 WSL 内加 Docker** | — | **位置错**：逃逸发生在「宿主进程 spawn `wsl.exe`」这条边界上，写入由 WSL 侧代劳 ⇒ 在 WSL 里再套一层是**在被突破通道的内侧加围栏**，AI 照样能用 `-v /mnt/c:…` 把 Windows 盘挂回容器，且容器仍须挂 `/mnt` 才读得到仓库。**它解决的是"容器内工作负载的隔离"，不是"AI 通道"** ⇒ 对本口子无效；另会给 landlock 判定引入额外 seccomp / mount ns 干扰层 |
 
 - 🟢 **现状基线（2026-09-12 只读复核）**：`/etc/wsl.conf` 仅 4 行（`[boot] systemd=true` + `[user] default=sularry`），**无 `[automount]` 段** ⇒ automount 按默认**全开且可写**（这正是本写路径的由来）。⇒ 收口**方案甲 / 乙都只需新增一段**，不涉及改动既有配置（风险限于新增项本身）。
