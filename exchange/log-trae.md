@@ -102,9 +102,11 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 - ⛔ **禁止留替代品**：不许新建 `debug.html`／`test.html`／"最小验证页"，不许"临时保一份放本地"，不许给它加输入框或由后端注入 key。要手工验接口 → `curl`。
 - ⚠️ 若你判断删除会连带破坏别处（如有测试引用它），**停手回报**，⛔ **不自行补一个假页面顶上**。
 
-**J6 · 真实链路（WB 做，⛔ 不在你的交付范围）**
+**J6 · 真实链路（老大 ＋ WB，⛔ 不在你的交付范围）**
 
-- 老大填真 key 后，WB 从 `client/.env.local` 读值（**不回显**）用 `curl` 验 401／200 两态，并核 SPA 真机可用。
+- **前置（老大做）**：照你交的 `client/.env.example` 自建 `client/.env.local`、填 `VITE_API_KEY`、**重启 `npm run dev`**。
+- **然后（WB 做）**：`curl` 验后端两态（无 header → 401 ／ 带 Bearer → 200），并核 SPA 真机可正常对话。
+- ⚠️ 本块收尾时若老大尚未填，J6 记为**未闭合**（≠ 失败），⛔ 不影响你 J1–J5 的交付判定。
 - 本节仅作闭环登记，你无需执行。
 
 ### 2 · 判据前置（不满足则实验根本没跑起来）
@@ -122,13 +124,29 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 |---|---|---|
 | 改 | `client/src/api.ts` | 15 处 `await fetch(` ＋ `streamChat` 统一带 header |
 | 改 | `client/src/env.d.ts` | 声明 `ImportMetaEnv.VITE_API_KEY`（`build` 会跑 `vue-tsc --noEmit`，类型必须过） |
-| 新增 | `client/.env.example` | **只放占位** `VITE_API_KEY=`（可进 git，⛔ 无真值） |
+| 新增 | `client/.env.example` | **唯一交接物**：只放空占位 `VITE_API_KEY=`（可进 git，⛔ 无真值），且须自解释到「老大只看它就够填」—— 四条要求见上方移交契约 |
 | 新增 | 单测文件（路径自定） | 须能被 `npm run test:unit` 拾到 |
 | **删** | `client/chat.html` | 退役重复出口（J5） |
 | 改 | `backend/main.py` | 摘 `/chat.html` 路由 ＋ `_CHAT_HTML` 常量 ＋ 三处注释（J5） |
 | 改 | `README.md:44` | 结构图删 `chat.html` 一行，树形符号收尾（J5） |
 
 **⛔ 不得改**：`backend/config.yaml`（老大填）、`backend/middleware/auth.py`（安全边界，归 WB 重定）、`client/.env.local`（老大填）。
+
+> **⚠️ 移交契约（本块唯一交接物 ＝ `client/.env.example`）**
+>
+> 本块有两段缝，⛔ **不要在中间插「等老大填完再继续」**：
+> - **缝 1（你）**：代码落地，J1–J5 自闭环，交 `client/.env.example`。
+> - **缝 2（老大 ＋ WB）**：真 key 实跑 —— 老大照你的 `example` 自建 `.env.local` 填值 → **重启 `npm run dev`** → WB 用 `curl` 验后端 401／200 两态 ＋ 真机。
+>
+> ⛔ **你为什么不能「先建好 `.env.local` 等老大填、再继续」**：
+> 1. 该文件已被 gitignore，是**老大的私产**。你建了他必然覆盖，事后**双方都以为是对方写的** —— 这种"双作者文件"是排查噩梦，且会把"谁改坏的"变成无法追溯的问题。
+> 2. 你**不需要**它存在：单测用 `VITE_API_KEY=<TESTKEY> npm run test:unit` 环境变量注入即可（见下方场地器材）。
+> 3. 更根本的：真 key **不经任何 AI 通道**（Tier 0）。你"等老大填完再继续"，等的是一个**你不能看的东西** —— 这个等待点在协作上永远解不开。
+>
+> ⇒ 所以 `client/.env.example` 必须**自解释到"别人只看它就够"**，它是唯一的接口：
+> - 一行 `VITE_API_KEY=`（**空值**）
+> - 注释写全四件事：① 复制为 `client/.env.local`；② 值＝`backend/config.yaml` 里 `server.api_key` 的**同一把**；③ **⛔ 引号要么成对要么干脆不加**（单边引号会被 YAML／dotenv 当成值的一部分，实测后果是 Bearer 恒不匹配 → 永远 401）；④ 填完或改完**必须重启 `npm run dev`**，Vite 只在启动时读 env 文件。
+> - **判据**：`git grep -c "VITE_API_KEY" client/.env.example` 恰为 1，且该文件注释里同时出现「重启」与「引号」两处字样（证明四件事真写进去了，不是空模板）。
 
 ### 4 · 参考件四要素
 
@@ -150,7 +168,7 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 - **临时 yaml**：**只写 `server:` 段**，其余走 dataclass 默认值（`config.py:168` 起）。`database.path` 相对**配置文件所在目录**解析（`config.py:150-152`）⇒ 放临时目录即天然隔离。
   - ⛔ 临时 yaml、临时库**都别建在 `backend/` 下**，会污染真实库。
   - ⛔ 临时 yaml **不要复制真 `config.yaml`**（里面有真 LLM key，复制＝把凭据摊到未保护的位置）。
-- **`VITE_API_KEY` 注入方式**：跑测试时用**环境变量注入**（`VITE_API_KEY=<TESTKEY> npm run test:unit`），⛔ **不要新建 `client/.env.local`** —— 那个文件归老大填，你建了之后会被他覆盖，双方都以为是对方写的。
+- **`VITE_API_KEY` 注入方式**：跑测试时用**环境变量注入**（`VITE_API_KEY=<TESTKEY> npm run test:unit`），⛔ **不要新建 `client/.env.local`** —— 那个文件归老大填（见上方移交契约：你建了他必覆盖，双作者文件＝排查噩梦）。
 - **已知假绿坑**：临时实例返回 200 未必说明鉴权通过 —— 必须**同时**验「无 header → 401」，只验 200 等于没验（key 为空时也是 200）。
 
 ### 6 · 回报格式
