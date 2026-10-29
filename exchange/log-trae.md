@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **dev 上锁 ＋ 配发钥匙**（`server.api_key` 甲案） | Trae | 本机 Windows | 🆕 **待起跑**（WB 2026-10-29 派发，见下方〈📮 派发 · dev 上锁 ＋ 配发钥匙〉） | 2026-10-29 |
+| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | 🆕 **待起跑**（WB 2026-10-29 派发，见下方〈📮 派发 · dev 上锁 ＋ 配发钥匙〉；⚠️ 同日 11:00 老大定「调试页不得阻碍产品设计」后**范围追加 J5＝删除 chat.html**，因尚未起跑故并入本块、不另开） | 2026-10-29 |
 | — | — | — | **当前无在飞块**（2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接，原段按活日志规矩清理；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5，原段同日清除**）。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置** | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -82,17 +82,29 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 - 优先跑现有单测；若现无覆盖，可用临时实例实跑 `/api/chat` 观察分块。
 - ⚠️ 临时 yaml 无 `models` 段 ⇒ 真 LLM 调用起不来。**若因此拿不到流，可退为「代码审查 ＋ 保留原 `headers` 结构」**，但**必须在回报里如实标「未跑」**，⛔ 不得写成"已验证"。
 
-**J5 · `chat.html` —— ⛔ 不改造，只验「预期退场」**
+**J5 · `client/chat.html` —— 本块删除（⛔ 不是保留，⛔ 不是给它配钥匙）**
 
-- ⛔ **本块不碰 `client/chat.html`。** 老大 2026-10-29 定原则：**前端只许一个出口，不管套不套壳、套几层，对外是一个整体**。
-- 事实：`client/chat.html`（391 行，`<title>LarryAgent - Test Chat</title>`）是**第二套 UI ＋ 第二套 `fetch` ＋ 第二套 SSE 解析**（`consumeSSEStream`／`parseSSE` 与 `api.ts` 内实现各一份），而功能已被 SPA 完全覆盖（`ChatView.vue` ／ `ChatInput.vue` ／ `MessageList.vue` ／ `ToolCallCard.vue` ／ `ModelSelector.vue` ／ `RoleSelector.vue`）⇒ 它是**重复出口，处置方式是退场，不是配钥匙**。
-- 判据：改完 ＋ 老大填 key 之后，打开 `http://127.0.0.1:8000/chat.html` → **401**。这是**预期结果，⛔ 不是缺陷**（临时调试页随鉴权自然退场）。
-- ⛔ 禁止"为了让它还能用"而给它加 header ／ 加输入框 ／ 由后端注入 key —— 那是把重复出口焊死。
-- **退役动作另立**（登记在 `TODO.md`），⛔ 不在本块、⛔ 本块不删它。
+- **原则（老大 2026-10-29 定，两条）**：
+  1. **调试／测试页面永远不应该成为产品设计和技术操作的阻碍，考虑都不应该考虑。** 产品变动后调试页不能用＝正常情况，重做即可；⛔ 没有为兼容测试 Demo 而妥协产品设计的道理。
+  2. **前端只许一个出口**，不管套不套壳、套几层，对外是一个整体。
+- 事实：`client/chat.html`（391 行，`<title>LarryAgent - Test Chat</title>`）＝ **第二套 UI ＋ 第二套 `fetch` ＋ 第二套 SSE 解析**（`consumeSSEStream`／`parseSSE` 与 `api.ts` 内实现各一份），功能已被 SPA 完全覆盖（`ChatView.vue` ／ `ChatInput.vue` ／ `MessageList.vue` ／ `ToolCallCard.vue` ／ `ModelSelector.vue` ／ `RoleSelector.vue`）⇒ 重复出口，处置＝**退场**。
+- **动作（五处，缺一即未闭合）**：
+  1. 删 `client/chat.html`。
+  2. `backend/main.py`：删 `:164` 的 `_CHAT_HTML` 常量 ＋ `:167-172` 的 `@app.get("/chat.html", ...)` 路由（连 `include_in_schema=False` 一起）。
+  3. `backend/main.py` **连带 import（⚠️ 最易漏，WB 已实测确认）**：`Path`（`:20`）与 `FileResponse`（`:23`）在全文件**只**被 chat.html 那两行使用 ⇒ 删掉 `from pathlib import Path` **整行**；`from fastapi.responses import FileResponse, JSONResponse` **改为** `from fastapi.responses import JSONResponse`。⛔ 不许留 unused import，⛔ 也不许因为"怕报错"就把整个 import 段删了。
+  4. `backend/main.py` 注释三处同步：`:7` 「- 同源托管测试页面（/chat.html）」／ `:14` 「测试页：http://127.0.0.1:8000/chat.html」／ `:88` 「（测试页通过下方 /chat.html 路由托管）」。⛔ 不要留"将来可恢复"的空壳注释。
+  5. `README.md:44`：删结构图里 `│   └── chat.html            # 单文件调试页…` 一行。⚠️ 删后 `:43` 的 `│   ├── tests/` 成为 `client/` 下最后一项，**树形符号须改成 `│   └── tests/`**（不改就出现"分支不闭合"的结构图）。
+- **判据**：
+  - `git grep -n "chat\.html" -- . ':!archive' ':!.workbuddy'` → 只剩 `exchange/` 下的历史表述（讨论稿留痕，⛔ 不在你改动范围；回报里贴出残留清单即可）。
+  - 起服务后 `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8001/chat.html` → **404**（⚠️ 不是 401 —— 路由已不存在，401 说明没删干净）。
+  - `cd backend && python -c "import main"` → 无 ImportError（防"删常量但忘了删引用"）。
+  - `cd backend && python -m pyflakes main.py`（若无 pyflakes 则跳过并注明）→ 无 unused import 告警。
+- ⛔ **禁止留替代品**：不许新建 `debug.html`／`test.html`／"最小验证页"，不许"临时保一份放本地"，不许给它加输入框或由后端注入 key。要手工验接口 → `curl`。
+- ⚠️ 若你判断删除会连带破坏别处（如有测试引用它），**停手回报**，⛔ **不自行补一个假页面顶上**。
 
 **J6 · 真实链路（WB 做，⛔ 不在你的交付范围）**
 
-- 老大填真 key 后，WB 从 `client/.env.local` 读值（**不回显**）用 `curl` 验 401／200 两态，并核 `chat.html` 与 SPA 真机可用。
+- 老大填真 key 后，WB 从 `client/.env.local` 读值（**不回显**）用 `curl` 验 401／200 两态，并核 SPA 真机可用。
 - 本节仅作闭环登记，你无需执行。
 
 ### 2 · 判据前置（不满足则实验根本没跑起来）
@@ -112,6 +124,9 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 | 改 | `client/src/env.d.ts` | 声明 `ImportMetaEnv.VITE_API_KEY`（`build` 会跑 `vue-tsc --noEmit`，类型必须过） |
 | 新增 | `client/.env.example` | **只放占位** `VITE_API_KEY=`（可进 git，⛔ 无真值） |
 | 新增 | 单测文件（路径自定） | 须能被 `npm run test:unit` 拾到 |
+| **删** | `client/chat.html` | 退役重复出口（J5） |
+| 改 | `backend/main.py` | 摘 `/chat.html` 路由 ＋ `_CHAT_HTML` 常量 ＋ 三处注释（J5） |
+| 改 | `README.md:44` | 结构图删 `chat.html` 一行，树形符号收尾（J5） |
 
 **⛔ 不得改**：`backend/config.yaml`（老大填）、`backend/middleware/auth.py`（安全边界，归 WB 重定）、`client/.env.local`（老大填）。
 
@@ -146,7 +161,8 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 
 ### 7 · 禁区
 
-- ⛔ 不改 `backend/config.yaml`、`auth.py`、`client/.env.local`、**`client/chat.html`**（重复出口，处置权在老大，⛔ 本块不碰）
+- ⛔ 不改 `backend/config.yaml`、`auth.py`、`client/.env.local`
+- ✅ **`client/chat.html` 本块要删**（J5），但 ⛔ **不许留任何替代页**、⛔ 不许为它做兼容
 - ⛔ 不动 `API_BASE = "/api"` 的相对路径（改它是产线设置页的活）
 - ⛔ 不把 key 值写进任何受版本控制的文件、注释、日志、测试夹具
 - ⛔ 不升级依赖树、不引入新包（`axios` / `reqwest` 之类一律不加）
