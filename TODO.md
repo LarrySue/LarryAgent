@@ -217,12 +217,22 @@
       - **三处不算假但缺新事实**（⛔ 别当过期改）：`§4.2`（API Key 构建期注入**已落** ↔ `API_BASE` 可配置**仍未做**，是两个平行改造）／`§6.1` 改进点 2（构建期已落／运行期设置页未做）／`§八` 落地顺序 1（dev 侧已完成，剩 HTTPS／Nginx／云侧 key／上云禁用工具）。
     - ⚠️ **订正本条目旧写法**：旧版写「`:149` 待裁」⇒ 实测为 **`:148`**（`:149` 是表的空行）。行号以 `exchange/deployment-architecture.md` 现文为准。
     - **引用完整性（升格必改，`docs/README.md:20` 明文要求）**：活跃引用 5 处 —— `docs/product-positioning.md:425`／`:518`（草案引用，须改指正式落点）／`docs/README.md:20`（例外二拿本文件当例子，须改口径）／`exchange/README.md:21`（索引条目）／`.codebuddy/skills/doc-sunset-handoff/SKILL.md:58`（skill 举例，⛔ 非 Qoder 区，WB 自改）。
-    - ⛔ **WB 不做的两件**：① `HUMAN_NOTE.md:66` 有「统一架构方案见 `exchange/deployment-architecture.md`」，本件后失准 —— 人类治理区，**只报老大**；② `docs/` 我无改权。
+    - ⛔ **WB 不做的两件**：① `HUMAN_NOTE.md`〈部署调试试运行〉段有「统一架构方案见 `exchange/deployment-architecture.md`」，本件后失准 —— 人类治理区，**只报老大**；② `docs/` 我无改权。
+    - ⭐ **同日 14:09 追加 J8「引用形式统一」**（老大原话「现有的序号引用问题一并派给千千」，**并入本块**不另开）：
+      - **起因**：老大同日插入 `HUMAN.md` 新第 9 条 ⇒ 原第 9 条顺延为 10。**这次插入实证了「按编号引用 HUMAN 会静默漂移」**——不报错，只会指错人。
+      - **规范依据（既有明文，非新定）**：`docs/ai-governance.md:134`「引用 `HUMAN.md`／`HUMAN_NOTE.md` 一律**文件＋锚串**」＋ `.qoder/skills/doc-consistency-audit/SKILL.md:61`「⛔ 不带 `:NN` 行号——这两份老大常改」。
+      - **`docs/` 内 5 处（归 Qoder）**：`product-positioning.md:205`（原则 2，⚠️ **裸引用无 `HUMAN.md` 前缀**）／`:395`（原则 4）／`:472`（原则 2）／`ai-governance.md:83`（原则 7）／`test-env.md:263`（原则 4）。**五处都已内联原句**，删编号零信息损失（WB 倾向此解）。
+      - ⚠️ **WB 自曝一处漏检**：第一遍检索式带了 `HUMAN.md` 前缀 ⇒ 抓不到 `:205` 的裸引用。**判据必须是不带文件前缀的 `原则 *[0-9]`**，否则漏掉的那处不会出现在"零命中"读数里。
+      - ⛔ **边界**：`.zcode/ZCODE.md:22` 是 `ai-governance.md:83` 的**同源镜像句**，属 ZCode 私有区 ⇒ **只报不改**；`archive/` **17 处**（`qoder-work-historical-record.md` 16 ／ `roadmap-history.md` 1）属归档留档 ⇒ **不改**。
+      - **判据**：`git grep -n "原则 *[0-9]" -- docs/` → **零命中**（⚠️ 勿写 `[0-9]\+`：Grep 工具走 ripgrep，`\+` 是**字面加号** ⇒ 恒零命中即假绿。若她选"锚串仍带编号"的中间解，此判据不成立，须在回报里说明理由）。
+      - ✅ **WB 自区已顺手改毕**：`TODO.md` 与 `exchange/log-qoder.md` 原有的 `HUMAN_NOTE.md:66` 式行号引用，已改为 `HUMAN_NOTE.md`〈部署调试试运行〉段锚串。
 
 - ✅ **`client/chat.html` 退役**（**已闭环 2026-10-29 12:30**｜并入上条派发 J5，同一块落地｜2026-10-29 · 老大 11:00 定原则）
   - **闭环读数（WB 复验）**：文件已删；`main.py` 的 `FileResponse`／`from pathlib`／`Path` **零残留**；`/chat.html` → **404**；`git grep chat.html`（排除 archive/.workbuddy/exchange）仅剩本 TODO 待办正文，代码零残留；`README.md` 结构图 `tests/` 已改 `└──` 收尾。
   - **原则（老大 2026-10-29 原话，两条同日）**：
     1. **调试／测试页面永远不应该成为产品设计和技术操作的阻碍，考虑都不应该考虑。** 产品变动后调试页不能用＝正常情况，重做即可；⛔ **没有为兼容测试 Demo 而妥协产品设计的道理**。
+       - ⭐ **已成文（2026-10-29 14:06）**：`HUMAN.md`〈本项目需要坚持的原则〉**第 9 条**，由老大亲笔写入（WB 只提建议、未改该文件）。成文版比口头版更硬，多了两条可判定要求：**「须放在能整体删除的位置」「不进构建产物、不注册路由、不共用产品出口」**——`chat.html` 违反的正是后两条。
+       - ⚠️ 该条成文导致 **HUMAN 原第 9 条顺延为第 10 条** ⇒ 派生 J8（引用形式统一，见上条派发）。
     2. **前端只许一个出口**，不管套不套壳、套几层，对外是一个整体。
   - **事实**：391 行、`<title>LarryAgent - Test Chat</title>`、自述「开发调试阶段快速验证后端 /api/chat」。功能被 SPA **完全覆盖**（`ChatView.vue` ／ `ChatInput.vue` ／ `MessageList.vue` ／ `ToolCallCard.vue` ／ `ModelSelector.vue` ／ `RoleSelector.vue`），且自带**第二套 `fetch` ＋ 第二套 SSE 解析**（`consumeSSEStream`／`parseSSE` 与 `api.ts` 内实现各一份）。
   - **为什么不能靠"配钥匙"共存**：给它配钥匙 ＝ 维护两套 UI 的鉴权，将来设置页也要做两遍 —— 这正是「一个出口」原则要防的事。
