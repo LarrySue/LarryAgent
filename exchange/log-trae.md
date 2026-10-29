@@ -27,6 +27,27 @@
 
 ---
 
+## ✅ 交付 · `config.example.yaml` 补齐至与实例键集合同构（Trae · 2026-10-29）
+
+> 触发：老大口头「顺手补上」（非正式派发）；来源条目 = `TODO.md`〈待派发〉🔵 `config.example.yaml` 与实例键集合同构（**TODO 归 WB，我未改其状态**）。
+> ⚠️ 开工前先实测复核过「是不是已经解决了」：**没有**——`git log` 该文件最后改动仍是 `8e26920`（09-10），键比对只缺不多，缺口 **11** 个。
+
+**改法（⛔ 只往 example 补，未从 `config.yaml` 删任何键）**：补 `roles.science`（`label`／`color`／`system_prompt`，原文照抄）＋ `tools.enabled_tools`（三值全列 ＋ 注释注明「留空 / 不写 = 全部启用」＋ 可用值清单）＋ `search` 整段（`brave_api_key` 空占位，其余键按 `config.py:71-78` 的默认值写并注明）。⛔ 模板内**零真值**：`git diff` 逐行核过，只新增键与注释。
+
+**读数（本机 · Trae 通道 · 实跑）**
+
+```
+yaml_keys=69 example_keys=69 equal=True
+only_in_yaml=[]        only_in_example=[]
+LOAD_OK roles=code,default,finance,health,science enabled_tools=file_ops,shell,web_search search_provider=brave brave_key_len=0
+```
+
+- 比对法：递归收集两文件全部键路径（含容器节点）后集合相减；⛔ 未打印任何值（`brave_key_len=0` 即模板空值的佐证）。
+- 第二条把 `LARRY_CONFIG` 指向 **example** 跑 `load_config()` ⇒ 模板本身能被 `Config` 完整解析（`science` 角色、`enabled_tools`、`search` 均落到 dataclass）。
+- ⚠️ 键路径计数 69 ≠ TODO 记的 51：TODO 那组是 WB 脚本口径（不含容器节点），本次口径含容器；**缺口数（11）两边一致**。
+
+---
+
 ## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口（Trae · 2026-10-28）
 
 > 触发：老大 2026-10-28 晚（庆阳落脚后）要求「多次调用各种工具后生成一段文字」，观察一轮对话内多次调用模型 API 是否正常。本节只记事实，处置待主持。

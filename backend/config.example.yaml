@@ -103,10 +103,22 @@ roles:
     color: "#FBBF24"
     system_prompt: "你是 Larry 的金融助手，关注投资理财、财务规划等话题。"
 
+  science:
+    label: "科学"
+    color: "#A78BFA"
+    system_prompt: "你是 Larry 的科学助手。你关注最新的科学发现、技术进展和研究动态，帮助用户了解前沿知识。能与用户讨论科学问题，提供数据和文献支持。尤其是擅长数学、物理、地理。"
+
 # ============================================================
 # 工具安全配置
 # ============================================================
 tools:
+  # 配置驱动启用：列出的工具名才会被注册（留空 / 不写 = 全部启用）
+  # 可用值：file_ops / shell / web_search
+  enabled_tools:
+    - "file_ops"
+    - "shell"
+    - "web_search"
+
   # Shell 工具白名单：仅允许来自这些 IP 的请求执行 Shell 命令
   # 单人使用建议只保留 127.0.0.1
   shell_allowed_ips:
@@ -121,6 +133,18 @@ tools:
 
   # Function calling 最大轮次（防死循环）
   function_calling_max_iterations: 10
+
+# ============================================================
+# 网络搜索配置（web_search 工具）
+# Brave 免费层 key 申请：https://api.search.brave.com/app/keys
+# ⚠️ key 只在此文件（已被 .gitignore 保护、不入库）里保存；本模板保持空值
+# ============================================================
+search:
+  provider: "brave"     # 当前仅支持 brave，将来可换 searxng（VPS 自托管）；默认 brave
+  brave_api_key: ""     # 必填，不填则 web_search 工具不可用
+  timeout: 8.0          # 单次搜索硬超时（秒），默认 8.0
+  max_retries: 2        # 失败/限流后的指数退避重试次数，默认 2
+  max_results: 5        # 默认返回结果条数，默认 5
 
 # ============================================================
 # LLM 调用配置
