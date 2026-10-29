@@ -202,7 +202,13 @@
     - **缝 2（老大 ＋ WB）**：老大照 example 自建 `client/.env.local` 填 `VITE_API_KEY` **并重启 `npm run dev`** → WB 用 `curl` 验后端 401／200 两态 ＋ 真机可用。
     - ⛔ **不能让 Trae「先建 `.env.local` 等老大填、再继续」**：① 该文件已被 gitignore，是老大私产，他一填就覆盖 Trae 建的 ⇒ 双作者文件，事后无法追溯谁改坏的；② Trae 跑测试用**环境变量注入**（`VITE_API_KEY=<TESTKEY> npm run test:unit`），根本不需要该文件存在；③ 更根本的 —— 真 key **不经任何 AI 通道**（Tier 0），Trae 等的是一个他不能看的东西，这个等待点在协作上永远解不开。
     - ✅ **顺序偏离已消解（2026-10-29 12:42）**：老大 12:32 建好 `.env.local`，偏差闭合。⚠️ 留档教训——**中间那段时间 dev 是断的**（起 backend 即 `/api/` 全 401），若当时要用 dev，需把 `config.yaml` 的 `server.api_key` 临时改回 `""`。
-  - **三环境口径**：key 按环境分（dev／wsl／cvm），⛔ 不共用；本项只落 dev。⚠️ **CVM 是否下一个落点待定** —— 取决于 CVM 上跑的是 harness 探针还是 `backend/`（若是后者，它是公网机、`server.api_key` 为空即全开，属更高优先级）。
+  - **三环境口径**：key 按环境分（dev／wsl／cvm），⛔ 不共用；本项只落 dev。
+  - ✅ **CVM 判定已钉死（老大 2026-10-29 12:50 认可「记一笔」）**：**CVM 不是下一个落点，只在「上云」那一刻成为落点。** 它不在当前这条线上，**不阻塞**。
+    - **依据（🟡 文档推定，⛔ 非实测）**：① `docs/production-env.md` §12.7 表载 `backend`（现役）凭据载体为 `backend/config.yaml`、跑在**本机**；② 云机跑的是 DSH／harness 探针（`~/harness/*.mjs`、`~/.dsh/profiles/`），即 S0 环境裁定「CVM 单跑」；③ 上云未做 —— 本文件〈部署调试〉段「本地 `host/` → 上云 server」未勾，退出条件未达成。
+    - **推论**：云机上**没有 `/api/` 这个面** ⇒ 那把 key 空着**没有暴露面**，不是隐患。今日给本机上锁＝把本机做对，与云机无关。
+    - **唯一会把它变成阻塞的路径**：有人把 `backend/` 搬上云机、或反代过去。**该动作现在不会自动发生** —— `make dev` 在本机、`uvicorn` 默认绑 `127.0.0.1`、且 `config.server.host` **三个键无任何消费点**（改 yaml 不放也不收）⇒ 不存在「手滑就对外」的路径。
+    - ⚠️ **要把 🟡 变 🟢 需一条 ssh 只读探针**（未跑，需老大批出站）：`ss -lntp | grep -E ':8000|:3000'` ＋ `ls ~/harness/ ~/.dsh/`。**不探不影响推进**，仅影响该判定的证据等级。
+    - 💡 **可选结构性解法（未裁决，⛔ 非待办）**：`auth.py` 空 key 时不再无条件透传，改为「仅放行回环来源，非回环 403」（约 10 行，不动客户端）⇒ 把「靠记性记得上云设 key」换成「忘了也无害」。⚠️ 边界：经 Nginx 同机反代时 `request.client.host` 即回环，此补丁失效，**替代不了上云 checklist**。老大未拍，暂不立项。
   - 📤 **待 Qoder 回写（Qoder 归属，⛔ WB 只暴露不直接改）**：`exchange/deployment-architecture.md` 三处已因本块落地而过期 ——
     - `:139` 「**现态 key 确实为空** ⇒ `/api/` 全透传」→ 改「dev 已设 43 字符 key；空 key 透传仅描述代码分支，不再是现态」
     - `:148` 「现态前端（`client/src/api.ts` 与 `chat.html`）**尚无任何 Bearer 注入通道**」→ 改「`api.ts` 15/15 已带证（空 key 时自动不带）；`chat.html` **已删除**」
