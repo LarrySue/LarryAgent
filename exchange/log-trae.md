@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | 🟢 **已起跑**（WB 2026-10-29 **11:32 放行**｜同日 11:00 老大定「调试页不得阻碍产品设计」后**范围追加 J5＝删除 chat.html**｜11:32 追加 **P5 测试隔离断言** —— 因 `config.yaml` 已填真 key，忘带 `LARRY_CONFIG` 会**撞真库＋真 key**） | 2026-10-29 |
+| **dev 上锁 ＋ 配发钥匙 ＋ `chat.html` 退役**（`server.api_key` 甲案） | Trae | 本机 Windows | ✅ **已交付（2026-10-29 11:45）→ 待 WB 复验**：J1–J5 闭合（J4 为单测证据）；J6 未闭合（等老大填 `.env.local`）。⚠️ 交付含一条**越界实跑**自曝（首轮实例漏带 `LARRY_CONFIG`，打开了真库，实测无写入），见本区〈8 · 回报〉 | 2026-10-29 |
 | — | — | — | **当前无在飞块**（2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接，原段按活日志规矩清理；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5，原段同日清除**）。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置** | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -200,6 +200,79 @@ LARRY_CONFIG=<临时yaml> uvicorn main:app --port 8001   （cwd = backend/）
 - ⛔ 不升级依赖树、不引入新包（`axios` / `reqwest` 之类一律不加）
 - ⛔ 不做设置页、不做 Tauri 打包改动、不做 prod profile
 - ⛔ 不顺手修与本块无关的代码（看到了就**写进回报**，别动手）
+
+
+### 8 · 回报（Trae · 2026-10-29 11:45）
+
+**结论先行**：**J1–J5 全部闭合**（J4 为单测证据，非真 LLM 链路）；**J6 未闭合**（等老大填 `.env.local`）。
+正确的说法是「**钥匙配发通道已就绪，锁待老大扣上**」——⛔ 不是「鉴权已启用」。
+⚠️ 过程中有**一次越界实跑**（首轮实例打开了真库），已停手核对，详见〈自曝 1〉。
+
+**P5 断言读数**（与实例**同一条命令内**执行，起 `uvicorn` 之前）
+
+```
+PS> $env:LARRY_CONFIG='D:\Temp\Sys\larry-auth-probe-20261029-113533\config.yaml'
+PS> python -c "from config import load_config; c=load_config(); print('DB_PATH=' + c.database.path); print('API_KEY_LEN=' + str(len(c.server.api_key)))"
+LARRY_CONFIG=[D:\Temp\Sys\larry-auth-probe-20261029-113533\config.yaml]
+DB_PATH=D:\Temp\Sys\larry-auth-probe-20261029-113533\data\larry.db
+API_KEY_LEN=14
+```
+
+→ 库落在临时目录，**不在** `backend/` 下；key 为临时 yaml 里的自定测试串（长度 14）。
+
+**J1 后端两态**（临时实例 `:8001`，cwd=`backend`，⛔ 未加 `--reload`）
+
+| 动作 | 期望 | 实测 |
+|---|---|---|
+| `GET /api/roles` 无 header | 401 | **401** |
+| 同上 ＋ `-H "Authorization: Bearer <测试串>"` | 200 | **200** |
+| 同上 ＋ header 值错误 | 401 | **401** |
+| 401 响应体 | `{error, detail}` 两字段 | `{"error":"AUTH_ERROR","detail":"Invalid or missing API key"}` |
+
+命令原文（PowerShell，`curl.exe` 避 PS 别名）：
+
+```
+curl.exe -s -o NUL -w '%{http_code}' http://127.0.0.1:8001/api/roles
+curl.exe -s -o NUL -w '%{http_code}' -H "Authorization: Bearer <TESTKEY>" http://127.0.0.1:8001/api/roles
+curl.exe -s -o NUL -w '%{http_code}' -H "Authorization: Bearer wrong-key" http://127.0.0.1:8001/api/roles
+curl.exe -s http://127.0.0.1:8001/api/roles
+```
+
+**J2 `/health` 不受 key 影响**：同一实例，无 header → **200**，body `{"status":"ok","version":"0.1.0"}`（含 `version` 字段 ⇒ Tauri `health_get()` 的签名校验可过）。
+
+**J3 客户端带证（单测，硬证据）**：`cd client && npm run test:unit` → **8 文件 / 90 用例全绿**（新增 `tests/apiAuth.test.ts` 31 例：**15 个导出函数 × 有 key／无 key 两态**，含「函数清单恰为 15」的防漏测断言）。
+另跑 `npm run build`（`vue-tsc --noEmit && vite build`）→ **通过**，`env.d.ts` 的 `VITE_API_KEY` 声明在类型层可用。
+
+**J4 SSE 流式行为不变**：新增 `tests/apiStreaming.test.ts` 1 例——假 body 第一块给出完整事件、后续再给 `done`，断言「只读过 1 块」时首个事件已产出（改成整包缓冲必挂）；`api.test.ts` / `useChatStream.test.ts` 原有 SSE 用例同步通过。
+⚠️ **未跑真 LLM 链路**（临时 yaml 无 `models` 段），按派发允许退为「单测 ＋ 保留原 header 结构」，如实标注。
+
+**J5 `chat.html` 退役**（五处全做）
+
+| 项 | 读数 |
+|---|---|
+| `client/chat.html` | 已删（391 行） |
+| `backend/main.py` | 摘 `_CHAT_HTML` ＋ `/chat.html` 路由 ＋ `include_in_schema=False`；`from pathlib import Path` 整行删；`FileResponse` 从 import 中摘除；`:7`／`:14`／`:88` 三处注释同步（`:88` 改为「服务前端与 API 同源部署（Vite dev proxy / Tauri 壳）」） |
+| `README.md` | 结构图删 `chat.html` 行，`tests/` 改 `└──` 收尾 |
+| `git grep -n "chat\.html" -- . ':!archive' ':!.workbuddy' ':!exchange'` | 仅剩 **`TODO.md:195/206/212/213`**（WB 的待办正文，⛔ 不在我改动范围）；代码零残留 |
+| `curl.exe -s -o NUL -w '%{http_code}' http://127.0.0.1:8001/chat.html` | **404**（非 401） |
+| `cd backend && python -c "import main"` | 输出 `IMPORT_OK`，无 ImportError |
+| `python -m pyflakes main.py` | **未安装（`No module named pyflakes`）⇒ 跳过**；替代自证：`main.py` 全文 grep `Path|FileResponse` → **零命中** |
+
+**`.env.example`（唯一交接物）判据**：`VITE_API_KEY` 恰好 **1 行**（空值）；注释同时含「重启」与「引号」字样，并写明「复制为 `client/.env.local`」「值＝`server.api_key` 同一把」。
+
+**P2 佐证**（凭据纪律物理保证）：`git check-ignore -v client/.env.local` → `.gitignore:14:*.env.local	client/.env.local` ✅
+
+**未闭合（≠ 失败）**
+- **J6 真实链路**：老大照 `.env.example` 建 `client/.env.local` ＋ 填值 ＋ **重启 `npm run dev`** → WB `curl` 两态 ＋ 真机。
+- 真 LLM 流式链路未跑（见 J4）。
+
+**自曝**
+
+1. **首轮实例漏带 `LARRY_CONFIG`，打开了真库**（这是本块最该记的一条）。第一次起 `uvicorn` 时，`$env:LARRY_CONFIG` 是在**上一条命令所在终端**设的，实际起服务落在了**另一个终端** ⇒ 读到真 `backend/config.yaml`、开了 `backend/data/larry.db`。日志：`Database initialized: D:\Code\LarryAgent\backend\data\larry.db`。**已立即 StopCommand**（未对该实例发过任何请求），随后把「断言 ＋ 起服务」并进**同一条命令**重跑（即上方 P5 读数）。
+   - **现场核对**：`larry.db` mtime 仍 `2026/8/30 2:18:18`、`larry.db-wal` 仍 `2026/9/4 2:12:09` ⇒ 主库与 WAL **无写入**；唯一变化是 `larry.db-shm` 的 mtime 变成 `11:35:39`（SQLite 打开时创建的共享内存索引壳，进程被强杀后残留）。**未删除**该文件——怕与老大可能在跑的 dev 实例抢文件；下次正常打开时 SQLite 自行重建。
+   - **机制**：P5 拦住的是「配置指向哪儿」，拦不住「这条命令到底在哪个 shell 里跑」。**判据绿了不等于执行通道绿**——与 `log-trae.md` 通用纪律 3「下失败判定前先验证执行通道」是同一族，方向相反。
+2. **两个单测文件由我写**（`tests/apiAuth.test.ts` / `tests/apiStreaming.test.ts`）：派发把「单测文件」列为交付物，故本块例外；不含真 key，测试串是运行期 `join` 拼出来的自定串。
+3. **`pyflakes` 缺失**，J5 的 lint 判据以 grep 替代（见上表），如实标注。
 
 
 ## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口（Trae · 2026-10-28）

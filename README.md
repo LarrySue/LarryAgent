@@ -40,8 +40,7 @@ LarryAgent/
 ├── client/                  # PC 客户端（Vue 3 + Vite + TypeScript，Tauri 壳）
 │   ├── src/                 # 前端源码（components / views / stores / composables）
 │   ├── src-tauri/           # Tauri 配置 + Rust 入口
-│   ├── tests/               # 前端测试（Vitest）
-│   └── chat.html            # 单文件调试页，由后端同源托管于 /chat.html
+│   └── tests/               # 前端测试（Vitest）
 ├── mobile/                  # 手机端（HTML5 Web App，规划中）
 ├── docs/                    # 定案区：活跃权威文档（见 docs/README.md）
 ├── archive/                 # 冷存区：历史路线图 + 事故复盘报告（见 archive/README.md）

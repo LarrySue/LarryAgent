@@ -1,5 +1,19 @@
 const API_BASE = "/api";
 
+/**
+ * 统一请求头：注入 `Authorization: Bearer <VITE_API_KEY>`。
+ *
+ * WHY 在函数内读 env 而非模块级常量：Vite 只在启动时读 env 文件，值运行期不会变；
+ * 按调用读取是为了单测能用 vi.stubEnv 切换「有 key / 无 key」两态。
+ * 退化行为：key 为空时不发 Authorization（后端空 key 时本就完全透传）。
+ */
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { ...extra };
+  const apiKey = import.meta.env.VITE_API_KEY;
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+  return headers;
+}
+
 async function handleResponse(res: Response) {
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
@@ -51,14 +65,16 @@ export async function listConversations(
   if (opts?.archived !== undefined) params.set("archived", String(opts.archived));
   if (opts?.trash) params.set("trash", "true");
   const qs = params.toString();
-  const res = await fetch(`${API_BASE}/conversations${qs ? `?${qs}` : ""}`);
+  const res = await fetch(`${API_BASE}/conversations${qs ? `?${qs}` : ""}`, {
+    headers: authHeaders(),
+  });
   return handleResponse(res);
 }
 
 export async function createConversation(title?: string): Promise<Conversation> {
   const res = await fetch(`${API_BASE}/conversations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ title: title || "" }),
   });
   return handleResponse(res);
@@ -70,7 +86,7 @@ export async function renameConversation(
 ): Promise<Conversation> {
   const res = await fetch(`${API_BASE}/conversations/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ title }),
   });
   return handleResponse(res);
@@ -80,6 +96,7 @@ export async function deleteConversation(id: number): Promise<void> {
   // 软删除：进回收站（deleted_at 置当前时间），消息保留
   const res = await fetch(`${API_BASE}/conversations/${id}`, {
     method: "DELETE",
+    headers: authHeaders(),
   });
   return handleResponse(res);
 }
@@ -98,7 +115,7 @@ export async function archiveConversationExtract(
 ): Promise<ArchiveExtractResult> {
   const res = await fetch(`${API_BASE}/memory/archive`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ conversation_id: id }),
   });
   return handleResponse(res);
@@ -116,7 +133,7 @@ export async function confirmArchive(
 ): Promise<{ memory_id: number; conversation_id: number; status: string }> {
   const res = await fetch(`${API_BASE}/memory/archive/confirm`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       conversation_id: req.conversation_id,
       summary: req.summary,
@@ -130,6 +147,7 @@ export async function confirmArchive(
 export async function archiveSessionOnly(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/conversations/${id}/archive`, {
     method: "POST",
+    headers: authHeaders(),
   });
   return handleResponse(res);
 }
@@ -138,13 +156,16 @@ export async function archiveSessionOnly(id: number): Promise<void> {
 export async function unarchiveConversation(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/conversations/${id}/unarchive`, {
     method: "POST",
+    headers: authHeaders(),
   });
   return handleResponse(res);
 }
 
 /** 回收站列表：GET /api/conversations/trash（备用，页面延后） */
 export async function listTrash(): Promise<Conversation[]> {
-  const res = await fetch(`${API_BASE}/conversations/trash`);
+  const res = await fetch(`${API_BASE}/conversations/trash`, {
+    headers: authHeaders(),
+  });
   return handleResponse(res);
 }
 
@@ -152,6 +173,7 @@ export async function listTrash(): Promise<Conversation[]> {
 export async function restoreConversation(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/conversations/${id}/restore`, {
     method: "POST",
+    headers: authHeaders(),
   });
   return handleResponse(res);
 }
@@ -160,6 +182,7 @@ export async function restoreConversation(id: number): Promise<void> {
 export async function purgeConversation(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/conversations/${id}/purge`, {
     method: "POST",
+    headers: authHeaders(),
   });
   return handleResponse(res);
 }
@@ -167,7 +190,9 @@ export async function purgeConversation(id: number): Promise<void> {
 export async function getConversationMessages(
   id: number
 ): Promise<ConversationMessage[]> {
-  const res = await fetch(`${API_BASE}/conversations/${id}/messages`);
+  const res = await fetch(`${API_BASE}/conversations/${id}/messages`, {
+    headers: authHeaders(),
+  });
   return handleResponse(res);
 }
 
@@ -181,14 +206,18 @@ export interface RoleInfo {
 
 /** 角色清单：GET /api/roles（后端 config.yaml roles 段下发） */
 export async function listRoles(): Promise<RoleInfo[]> {
-  const res = await fetch(`${API_BASE}/roles`);
+  const res = await fetch(`${API_BASE}/roles`, {
+    headers: authHeaders(),
+  });
   return handleResponse(res);
 }
 
 // === Models API ===
 
 export async function listModels(): Promise<string[]> {
-  const res = await fetch(`${API_BASE}/models`);
+  const res = await fetch(`${API_BASE}/models`, {
+    headers: authHeaders(),
+  });
   return handleResponse(res);
 }
 
@@ -217,10 +246,10 @@ export async function* streamChat(
 
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
-    headers: {
+    headers: authHeaders({
       "Content-Type": "application/json",
       Accept: "text/event-stream",
-    },
+    }),
     body: JSON.stringify(body),
     signal,
   });
