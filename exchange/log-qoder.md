@@ -9,7 +9,7 @@
 ## 📮 在飞任务（状态区）
 
 **✅ WB 2026-10-29 派发的〈云部署架构稿定稿拆分（B 案）〉已办结**（含同日 14:09 追加的 J8）⇒ 交付读数与判据见下方〈交付 · 云部署架构稿定稿拆分（B 案）〉节，**待 WB 复验**。派发稿正文按本区规则清退（回溯 `git log -p -- exchange/log-qoder.md`）。
-**⚠️ 该节另有 7 条「未闭合」需他人处置**（老大 2 条／WB 2 条／ZCode 1 条·由老大转交／Trae 1 条／判据订正 1 条）——⛔ 均只报不改，逐条带可粘文案。
+**⚠️ 该节另有 6 条「未闭合」需他人处置**（老大 1 条·已办✅／WB 2 条／ZCode 1 条·由老大转交／Trae 1 条／判据订正 1 条）——⛔ 均只报不改，逐条带可粘文案。（第 7 条〈路径形态口径〉已由老大 2026-10-29 裁「按乙」结案 ⇒ `docs/README.md`〈书写约定〉加例外条。）
 **🟢 #10（`server.api_key` 设不设）已随老大 10-29 10:55 裁甲案 ＋ 落地闭环 ⇒ 本区已销账**（依据落 `docs/deployment-architecture.md` §5.2）。
 
 **docs 承接补件 ①②③④ —— 已复验成立并入库（`334d7ef`，WB 代提交 ／ 2026-10-28 22:30）；WB 已据此清掉三处挂起段。**
@@ -22,7 +22,7 @@
 
 > **结论：定稿完成，J1–J8 全部闭合**（J5 五处中 1 处非我区 ⇒ 只报；J6 一条**判据要订正**，见〈未闭合〉）。
 > 复算统一 `git grep -n "<pattern>" -- <path>`（仓根执行）；本区实物以 `ae5ee5c` 为迁出前基准。
-> **交付面 7 项**：新建 `docs/deployment-architecture.md`（定案正本）／`exchange/deployment-architecture.md` 收缩为未决四条＋指针／`docs/README.md` 文件索引第 9 条＋例外二口径／`docs/product-positioning.md` **五处一趟改完**（J5×2＋J8×3）／`docs/ai-governance.md`·`docs/test-env.md` 各一处（J8）／`TODO.md` 一块归档＋两条活账落位＋一处悬空表述收口／本区 #10 销账。
+> **交付面 8 项**：新建 `docs/deployment-architecture.md`（定案正本）／`exchange/deployment-architecture.md` 收缩为未决四条＋指针／`docs/README.md` 文件索引第 9 条＋例外二口径／`docs/product-positioning.md` **五处一趟改完**（J5×2＋J8×3）／`docs/ai-governance.md`·`docs/test-env.md` 各一处（J8）／`TODO.md` 一块归档＋两条活账落位＋一处悬空表述收口／本区 #10 销账／**`docs/README.md`〈书写约定〉＋`docs/dsh/README.md` 规则 4：`../` 形态例外（老大裁乙）**。
 
 ### J1 · 四处「现文为假」⇒ **已改，非删**
 
@@ -95,18 +95,18 @@
 - **内容仍指对人**：docs 五处原引 **2／4／4／7／2**；老大 10-29 14:06 插入新第 9 条（DEMO 不得阻碍产品设计）、原 9 顺延为 10 ⇒ **无一处引 9 或 10**，改后不产生指错人（HUMAN.md 实物已通读核对，非采信派发稿自述）。
 - **边界守住**：`archive/` **原 17 处一字未改**（`git grep -c "原则 *[0-9]" -- archive/` → `qoder-work-historical-record.md` 16 ＋ `roadmap-history.md` 1）；⚠️ **但该式现在读数是 18**——多出的 1 处是**随 J7 归档整块搬入的 WB 派发登记原文**（`roadmap-history.md` 新段内「`docs/` 内 5 处（归 Qoder）：…（原则 2…」那句，描述的正是本次任务），⛔ 不是我改写了史料、也不是漏改。**复算请按 18 读**，别把归档动作本身记成越界。另：`.zcode/ZCODE.md:22` 只报（见下）；原 `TODO.md:224` 那条登记（随块冷存 ⇒ `archive/roadmap-history.md`〈2026-10-29 办结〉）属 **WB 自区的任务描述**，⛔ 不在我 J8 范围、我未改其一字。
 - **product-positioning 五处一趟改完**（J5×2 ＋ J8×3 同文件），⛔ 未分两趟；§4 变更记录补**一行**登记（署名 Qoder），正文／档位／编号零改动。
+- **追加 · 路径形态口径（老大 2026-10-29 裁「按乙」）**：`../` 向上跳形态**不算违反**〈书写约定〉⇒ 改了**两处口径**（`docs/README.md` 加例外条：`../` 同样可用／同一档内保持一种形态／⛔ 不逐处改、⛔ 巡检不再报；`docs/dsh/README.md` 规则 4 加指针），**正文 70 处 `../` 零改动**。⚠️ **原报数字订正**：「33 处 `../HUMAN.md`」是错的——33 是 `product-positioning.md` 里 `../` 引用的**命中行数**、且不限于 HUMAN；实测 `../HUMAN.md` **8 处**（同档 `../HUMAN_NOTE.md` 13／`../TODO.md` 14），`docs/` 全域 `../xxx.md` 共 **70 处／6 档**（`grep -ro '\.\./[A-Za-z0-9_/.-]*\.md' docs/ \| wc -l`）。⚠️ 老大裁时看的正是那个错数，已当面订正、结论不变（纯形态零功能）。
 
 ---
 
 ### 未闭合项（单列 · 全部只报不改）
 
-1. **待老大改**（人类治理区）：`HUMAN_NOTE.md:66`〈部署调试试运行〉「统一架构方案见 **`exchange/deployment-architecture.md`**…（**待 DSH 迁移完成后重新制定**）」两处失准。建议文案：「统一架构方案**已定稿** ⇒ `docs/deployment-architecture.md`（2026-10-29 B 案三层拆分）；未决四条留 `exchange/deployment-architecture.md`（未定案）」。
+1. **待老大改**（人类治理区）：`HUMAN_NOTE.md:66`〈部署调试试运行〉「统一架构方案见 **`exchange/deployment-architecture.md`**…（**待 DSH 迁移完成后重新制定**）」两处失准。建议文案：「统一架构方案**已定稿** ⇒ `docs/deployment-architecture.md`（2026-10-29 B 案三层拆分）；未决四条留 `exchange/deployment-architecture.md`（未定案）」。【老大注：已改✅】
 2. **待 WB 自改**（`.codebuddy/` 非我区）：`doc-sunset-handoff/SKILL.md:58`。建议文案：`| **讨论稿指针** | 指向 `exchange/` 下等待定稿的稿子（实例：`exchange/deployment-architecture.md` 未决四条，其正本 2026-10-29 已入 `docs/`） | 🟡 缓 —— 定稿搬入 docs 时统一改 |`。
 3. **待老大转交 ZCode**：`.zcode/ZCODE.md:22` 与 `docs/ai-governance.md:83` **同源镜像现两形**（我改 docs 侧、⛔ 不能代改他侧）。可粘文案：把「`HUMAN.md` 原则 7 类小矛盾」替换为「`HUMAN.md`〈本项目需要坚持的原则〉「简单小型矛盾」那类小矛盾」。
 4. **待 Trae 自判**（他人 log 结论正文，⛔ 我不改）：`exchange/log-trae.md:256` 复验读数写「仅剩 `TODO.md:195/206/212/213`」——该块 2026-10-29 已冷存，四个坐标现指向他处。属**当时读数**，若要加注可参照 `docs/dsh/dsh-34-ref-research.md:163` 的表后补注形态。
-5. **待老大定口径**（只报矛盾、⛔ 不附方案）：docs 内引根目录文件有**两套形态**——`product-positioning.md` 用 `../HUMAN.md`（该档 `../` 共 33 处），`ai-governance.md`／`test-env.md` 用 `HUMAN.md`（零 `../`）；而 `docs/README.md`〈书写约定〉明文「一律写**仓库根相对**形态、不写 `./` 前缀」。⚠️ 按字面判，`../` 形态不合该约定；纠正需动 33 处正文引用串，**超出 J8 授权面** ⇒ 停下等裁，不自行统一。
-6. **J6-1 判据本身待订正**（见 J6 节，已给收窄后的检测式）。
-7. **待 WB 自改（其 own 在飞表借了我已退役的节名）**：`exchange/log-workbuddy.md:13` 的〈在飞任务〉行写「`exchange/log-qoder.md`〈📮 派发 · 云部署架构稿定稿拆分（B 案）〉」——**该节已随办结清退**，指针现落空。建议文案：把地址改成「`docs/deployment-architecture.md`（定稿正本）＋ 本档〈交付 · 云部署架构稿定稿拆分（B 案）〉节 ＋ 过程原文 `git log -p -- exchange/log-qoder.md`」。⛔ 我不改他人 `log-*` 正文。
+5. **J6-1 判据本身待订正**（见 J6 节，已给收窄后的检测式）。
+6. **待 WB 自改（其 own 在飞表借了我已退役的节名）**：`exchange/log-workbuddy.md:13` 的〈在飞任务〉行写「`exchange/log-qoder.md`〈📮 派发 · 云部署架构稿定稿拆分（B 案）〉」——**该节已随办结清退**，指针现落空。建议文案：把地址改成「`docs/deployment-architecture.md`（定稿正本）＋ 本档〈交付 · 云部署架构稿定稿拆分（B 案）〉节 ＋ 过程原文 `git log -p -- exchange/log-qoder.md`」。⛔ 我不改他人 `log-*` 正文。
 
 ### 自曝
 
