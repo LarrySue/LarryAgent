@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `harness/packages/plugin-s4-memory/src/index.ts` | 🔵 **已派（WB 2026-10-30 21:40）** ⇒ 见〈📮 派发 · 测试场地隔离 · 工程化〉。判据 V1–V4 **全取外部证据**（真库 sha256/mtime、进程退出码、磁盘实存），⛔ 不收自报。⚠️ 与 P0② 是前后关系：本单不过，② 不许开工 | 2026-10-30 |
+| **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `harness/packages/plugin-s4-memory/src/index.ts` ＋ `harness/scripts/run-36-memory.mjs`（iso 相） | 🟢 **已交付（Trae 2026-10-30 22:02，`ff9392c`）** ⇒ 见〈✅ 交付 · 测试场地隔离 · 工程化〉。V1–V4 ＋ V4-b 五臂全绿，待阿衡独立复验（按派发稿单发）。⚠️ 与 P0② 是前后关系：复验通过后 ② 才开工 | 2026-10-30 |
 | — | — | — | **（上一块已清零）** 2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接，原段按活日志规矩清理；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5，原段同日清除**。⚠️ **另一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置** | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -100,6 +100,63 @@
 ### 八、与 P0② 的关系
 
 W1+W2 是 **P0② 的硬前置**：② 要造 20+ 条库验语义命中，**场地不隔离 ⇒ 直接写进真库**（10-30 已发生一次）。本单交付后 ② 才能开工。跳过 ＝ 拿脏库当证据。
+
+---
+
+## ✅ 交付 · 测试场地隔离 · 工程化（Trae · 2026-10-30 22:02）
+
+> 提交 `ff9392c`（author `Trae <dancingfire@live.cn>`，`-c user.name` 单次签名）。
+> ⚠️ 该提交 subject 首行带一个 UTF-8 BOM（PowerShell 5.1 写提交消息临时文件所致，`git log` 首字符可见 `﻿`）。已提交内容无影响；按「不擅自改写历史」未 amend，留痕于此。
+> 改动面 = 2 个文件：`plugin-s4-memory/src/index.ts`（新增 home／dbPath 解析＋断言＋豁免；旧 `new DatabaseSync(cfg.dbPath)` 改为解析后的路径）＋ `run-36-memory.mjs`（新增 `iso` 相）。证据目录（仓外）：`D:\Code\_trae-evidence\36\run-iso\`（`findings.json` ＋ 各臂 stderr 原文 ＋ 真库指纹）。
+
+### 一、W1 · 当前 home 从哪儿拿（实测依据，非照抄）
+
+| 候选 | 实测 | 结论 |
+|---|---|---|
+| `ctx` 上的 home 服务 | 在 `dsh/lib` 里检索 `provide('home'`／`provide('paths'`：**零命中** | 上游没有 home 服务可读 |
+| `@deepseek-ai/dsh-home-paths`（上游正本解析器） | 在 `harness/packages/plugin-s4-memory` 下 `import()` ⇒ `ERR_MODULE_NOT_FOUND`；harness 工作区顶层亦无此包 | 要它就得加依赖，⛔ 本单禁 |
+| `process.env.DSH_HOME` | dsh 自身解析 home 也走这条（`profile-boot`:117 调 `resolveDshHome()`） | **主来源** |
+
+⇒ 本地复刻上游同一口径（`dsh-home-paths:resolveDshHome`）：**`$DSH_HOME`（trim 后非空）＞ `os.homedir()/.dsh`**；**空白视同未设**（否则 `resolve('')` = cwd，是上游文档点名的坑）。⛔ 没有把 `os.homedir()` 当主来源——它只在 env 未设时按上游默认值兜底。
+
+配置侧支持两形态：相对路径（按当前 home 解析）、`${DSH_HOME}` 占位（先替换再解析）；绝对路径原样只做 `resolve` 归一。
+
+### 二、W2 · 断言（fail，不是 warn）＋ 显式豁免
+
+- 解析后的绝对路径**不落在当前 home 之内** ⇒ `stderr` 写一行断言（`[S36-MEMORY] dbPath outside home (denied): dbPath=<解析后绝对路径> home=<当前home>`）**并 `throw`**（进程退出码 1，不是降级继续）。
+- 豁免通道 `allowOutsideHome: true` ⇒ 放行，但**每次启动**在 `stderr` 打审计行（`… (allowed by config.allowOutsideHome): dbPath=… home=…`，含解析后绝对路径）。⛔ 静默通过不存在。
+- **W2 那条冲突（WB 自己标为 B 级推论）实测结果**：装置现配置 `dbPath = D:/Code/LarryAgent/.dsh-home/larry-memory.db` **落在 home 之内**（home 就是 `.dsh-home`），所以生产部署不触发断言；豁免通道保留（V3 臂证明它可用且有痕）。附加回归臂 V4-b 专验这一点。
+
+### 三、V1–V4 逐条读数（本机 · 2026-10-30 21:57 一轮，`S36_PHASE=iso`）
+
+**前置｜其余 dsh 进程已排除**：用 PowerShell `Get-CimInstance Win32_Process -Filter "Name='node.exe'"` 取**全部 node 进程命令行**，过滤「除本进程外、命令行含 `bin.js` 且含 `--profile`」项 ⇒ **跑前 ×0**、**跑后 ×0**（`ISO-procs-before.json`／`ISO-procs-after.json` 原文在证据目录）。即：真库在本轮内的所有变化只可能来自被执行的臂。
+
+| # | 读数（原文摘要） | 判 |
+|---|---|---|
+| **V1** | 临时 home ＋ 装置原配置（`dbPath`＝真库绝对路径）裸起：`exit=1`、`ms=1621`、stderr 含断言行；真库 `sha256=16089de3…fa7446`／`mtime=2026-10-30T07:01:18.815Z`／`size=24576` **跑前跑后逐项相同**；临时 home 内**未生成任何库文件**（断言在 `new DatabaseSync` 之前） | 🟢 |
+| **V2** | `dbPath` 指另一个临时目录、不豁免：`exit=1`、`signal=null`、`ms=1421`；stderr 首行即断言（`dbPath=D:\Temp\…\larry-memory.db home=D:\Temp\…`）；该另一 home 的库文件**未被创建** | 🟢 |
+| **V3** | 同上 ＋ `allowOutsideHome: true`：进程 `code=0`、`forced=false`、`killCalled=false`、`shutdown.ok=true`；stderr 有审计行且**含解析后绝对路径与当前 home**；库实体真实出现在该外部路径（`size=16384`）；协议侧 `initialize` 成功、`prompt` 受理 | 🟢 |
+| **V4** | `dbPath: 'larry-memory-rel.db'`（相对）：磁盘实存 `<当前 home>/larry-memory-rel.db`（`size=16384`），库内 1 行且含本轮 nonce；仓库 `.dsh-home` 下**未出现**同名库 | 🟢 |
+| **V4-b**（附加回归，非派发判据） | `dbPath` = home 内**绝对路径**（＝生产形态）：会话正常、库实体 `size=16384` | 🟢 |
+
+整轮收尾真库指纹复读：`sha256`／`mtime` 与 V1 跑前完全一致（`ISO-real-db-final.json`）。
+
+### 四、过程观察（事实，供裁定）
+
+1. **SDK 通道会吞掉失败原因**：`DeepSeekHarness.run()` 在子进程因断言退出时，抛出的文案是 `cannot create effect on inactive context`——**既无退出码也无 stderr 尾部**。若按最初的写法只用 SDK 通道判 V1「失败是否由断言引起」，会得到「失败了但说不清为什么」的假读数（我第一跑就是这么红的，判据本身把它拦下了）。⇒ V1/V2/V3 改走**裸起 + `dsh-driver`**，直接取 `stderr` 原文与退出码。
+2. 断言触发时 dsh 的行为是 **fail-loud**：stderr 一行断言 ＋ 退出码 1，不重试、不静默继续。
+3. 复算方式：`cd harness && $env:S36_PHASE='iso'; node scripts/run-36-memory.mjs`（退出码 0=全绿／1=有红／2=前置缺失）。该脚本**不设 key、不联网调用模型**（`DEEPSEEK_API_KEY` 在 child env 显式删除）。
+
+### 五、边界遵守
+
+⛔ 未动 `.dsh-home/`（`cordis.patch.yml:27` 那一行**没改**，留 WB／老大在装置侧处置：改成相对路径或 `${DSH_HOME}/larry-memory.db` 都能被本单支持）；⛔ 未动 `recallLimit`／召回 SQL；⛔ 未改哨兵臂设计；⛔ 未引入新依赖（只用 `node:os`／`node:path`）。
+
+### 六、`git status` 收尾读数
+
+```
+（本次提交后）M exchange/discussion-ai-constraints.md
+```
+该文件是**他人并发改动**（苏星野讨论稿 v3），**未暂存、未提交**——本单提交只含上列 2 个文件（`git diff --cached` 核过）。
 
 ---
 
