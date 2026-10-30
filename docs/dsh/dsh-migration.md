@@ -559,7 +559,7 @@ git -C ref/dsh-bare --work-tree=ref/dsh-wt checkout <tag> -- packages/compaction
 
 **WB 倾向（已被定型结论取代，保留作推演痕迹）**：Typert/Gateway 为主；"前端怎么来"从"必然自做"降级为"取决于官方资产可复用性"。
 
-> ✅ **定型后修正（见「定型结论」）**：上述倾向谈的是**直连前提下的 L1 整段**。改为中转子，Gateway 的适用位置**从 A 段收窄到 B 段**（服务 ↔ DSH 同机），且**待验** `larry` profile 下能否起 HTTP。
+> ✅ **定型后修正（见「定型结论」）**：上述倾向谈的是**直连前提下的 L1 整段**。改为中转子，Gateway 的适用位置**从 A 段收窄到 B 段**（服务 ↔ DSH 同机）；原问题“`larry` profile 下能否起 HTTP”**已实测**（2026-09-10，CVM，`0.1.2-rc.1`），结论为不能脱离 `dsh-web-app` 独立起 HTTP，见下方〈B 段 Gateway 路线实测判定〉。
 
 **实测动作的优先级已随定型下调**：原「web surface 开箱实测」中，**①②③（dist 来源与可替换性 / token 获取 / 页面能力面）价值下降**——中转后我们不承载官方 shell；**④（`--trusted-host` 能否放开非 loopback / 反代可行性）已实测（2026-09-11）：反代可行 → 重估触发线 T2 判「命中」，见 `../production-env.md` §7.1**。
 

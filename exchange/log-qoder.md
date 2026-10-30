@@ -9,7 +9,6 @@
 ## 📮 在飞任务（状态区）
 
 > 🔵 **WB 2026-10-30 派发 2 件**（文档腐化收口 · 摘牌子）⇒ 见下方〈📮 派发 · 文档腐化收口〉节：**J1** `product-positioning.md:249` ⏳待讨论→已定（指 la-space）／ **J2** `requirements.md:225` §9 待裁 7 → 已定「甲」。⛔ 不改结论、不动 §9 其余六条。
-> 📌 **自派（2026-10-30，老大令）：〈文档腐化清理〉待新会话执行** ⇒ 见下方〈📌 自派 · 文档腐化清理〉节。基线：⏳ 线已清（5 处全非活腐化）、状态词粗计 **15 档 73 处**待逐条判性。J1／J2 已于 `d968410` 办结，⛔ 别重做。
 
 **✅〈全量存档清单与判据〉（WB 2026-10-29 16:40 派发，16:58 追加 §5 升格）—— WB 2026-10-29 22:35 复验成立（十项判据逐条独立复算，无订正）**：
 - **越界面硬证**（不是抽查，是整档 diff）：以 WB 上次提交 `9144203` 为基线，`requirements.md` **全文删除行只有 2 条** —— §2:53〈待想清楚〉行被扩写、`四条红线`→`五条红线` ⇒ **§0–§4／§6／§7 既有两条／§8 一处未动**，与 J6「新条在其下生长」一致。
@@ -97,49 +96,121 @@
 
 ---
 
-## 📌 自派 · 文档腐化清理（Qoder 自下 2026-10-30；老大另开会话执行）
+## 交付 · 文档腐化清理（2026-10-30，Qoder）
 
-> **给执行会话**：你不继承上一个会话的上下文，这份单子是唯一前提 —— 先读它再动手，**单里的数字一律先重跑再信**。
-> **背景**：文档腐化 ＝ ① 结论已落、牌子还立着 ② 指针指着已经不在的地方。WB 派的两件摘牌子（J1／J2，`d968410`）是真腐化的两个样本 ⇒ ⛔ 已办，别重做。
+**已决未摘牌 5 ／ 指针失效 5 ／ 待决、待验或未证成保留 38；另排除非活项 31。** 前两类已作最小修正，正文未重写，未替老大裁新结论。按位置计数，不是独立议题数：能力树标题与第5条是同源两处，扫描稿与索引也是同源两处。
 
-### 1 · 目标
+### 范围与复算口径
 
-`docs/` 全域（⛔ 不含 `archive/`）状态牌逐条判性，**只改两类**：
+基线 `02fab89`。`docs/` 24份 Markdown：六状态词命中15档73行，沙漏5行，其中2行重叠，合并76行；Grep与Python逐档扫描互证。逐段回读另补3处未被原式覆盖的状态入口：mapping:261标题、dsh/README:5索引、deployment:47未决表格行，共79行＝5＋5＋38＋31。补入项仍是状态牌，不扩成全仓链接普查。指针只核状态牌所在完整语义段；B类不代表该段的未决状态可以摘除。
 
-- **🔺 已决未摘牌** ⇒ 摘牌 ＋ 指向正本 ＋ 原讨论正文保留（照 J1 的改法）。
-- **🔻 指针失效** ⇒ 改指实存处；指向 `HUMAN_NOTE` 的属**同步钩子**，⛔ 不当死链清（保留 `HUMAN_NOTE` 字面）。
-- **✅ 真待决** ⇒ 只登记、不动。
+清单行号均为**基线行号**；本轮docs只原位换行及表末追加，原行号未漂移。A＝已决未摘牌（已修），B＝指针失效（已修），C＝按单保留，E＝历史／图例／流程／非活状态（排除、不改）。新增变更记录只落既有表（deployment §九）；其余六档不新造变更表。
 
-### 2 · 命门（本单最容易出的错）
+可复跑基线命中数（Git Bash，三行依次输出73／5／76）：
 
-牌子写的命题与"已决"的命题**必须是同一个**。J1 实例：整块「记忆归属边界」已定，而其中的「会话层」只到〈仅记录〉—— 写成"整块已定"就是造结论。**判不准 ⇒ 归 ✅**。
+```bash
+git grep -n -E '待裁|待讨论|待定|未定|待验|待确认' 02fab89 -- ':(glob)docs/**/*.md' | wc -l
+git grep -n $'\u23f3' 02fab89 -- ':(glob)docs/**/*.md' | wc -l
+git grep -n -E $'待裁|待讨论|待定|未定|待验|待确认|\u23f3' 02fab89 -- ':(glob)docs/**/*.md' | wc -l
+```
 
-### 3 · 基线（2026-10-30 实测；执行前重跑）
+### 逐条清单
 
-- `grep -rn "⏳" docs --include=*.md` ⇒ **5 处，全非活腐化**（3 处产品档变更记录历史行／1 处 dsh-015 状态图例／1 处 production-env 有效期）⇒ ⏳ 这条线已清，本单重心在其余状态词。
-- 状态词粗计 `待裁|待讨论|待定|未定|待验|待确认` ⇒ **15 档 73 处**（product-positioning 20／requirements 8／move-in-plan 7／test-env 6／deployment 5／dsh-migration 5／tech-reference 4，其余 ≤3）。**粗计 ≠ 腐化**，逐条判。
-- **已知假红源**：变更记录表内历史行／状态图例／日期与有效期／"待验"作流程状态的真待办 ⇒ 别当牌子摘。
+| 基线位置 | 原状态关键词 | 判性 | 处置与依据 |
+|---|---|---|---|
+| `docs/README.md:20` | 未定案身份 | E | 保留引用规则，非待办；例外二与所列讨论稿实存。 |
+| `docs/README.md:21` | 未决四条／未定案 | E | 保留同名稿读法，非待办；docs与exchange双稿仍在。 |
+| `docs/README.md:38` | 未决四条不在本档 | C | 保留索引状态；exchange/deployment-architecture.md §一四条尚未定。 |
+| `docs/ai-governance.md:18` | 尚未定稿 | E | 保留挂起规则的条件举例，非具体状态牌。 |
+| `docs/ai-governance.md:104` | 治理原则＋待讨论；未进read-first | C | 保留未证成断言；本档§5第4条未给完成标记，未以内容类别掩盖后半任务。 |
+| `docs/ai-governance.md:311` | UI设计继任待定 | C | 保留；exchange/log_design.md仍为设计稿，审计岗继任不等于UI岗继任。 |
+| `docs/deployment-architecture.md:5` | 原§七四条／未定案 | C | 保留；原节号已明确是历史，现稿§一四条仍在。 |
+| `docs/deployment-architecture.md:47` | 分层问题属未决；exchange/ §七.2 | B | 修为exchange/deployment-architecture.md〈记忆系统分层〉；未决不变。 |
+| `docs/deployment-architecture.md:55` | 未定案；未决§七.1 | B | 修为exchange/deployment-architecture.md〈本地工具下沉的实现路径〉；A/B/C原文不动。 |
+| `docs/deployment-architecture.md:235` | 实现路径未定案；未决§七.1 | B | 同:55修题名指针；单独立项与未定案状态不变。 |
+| `docs/deployment-architecture.md:249` | 实现路径未定案 | C | 保留；本档§二、§七第4条及头注指定交流稿均可达。 |
+| `docs/deployment-architecture.md:258` | §5.2待裁（已裁甲案） | E | 保留10-29变更历史行；不是活待裁。 |
+| `docs/dsh/README.md:5` | 待与两表合并后定稿 | A | 撤合并前置，保留扫描素材身份；依据mapping §9第6项（老大09-15不合并）。 |
+| `docs/dsh/dsh-015-capability-mapping.md:19` | 旧口径待定 | E | 保留旧统计口径引述；本档§0已明确由新口径取代。 |
+| `docs/dsh/dsh-015-capability-mapping.md:261` | 建议，待老大裁定 | A | 改已应用、暂缓见第4条；本节:265的09-17回填为落点，候选正文原样。 |
+| `docs/dsh/dsh-015-capability-mapping.md:273` | 待定；仍待老大首肯 | A | 摘首肯牌、指product-positioning.md §2.3.5；仅设计参照已应用，不称主动触达已实现。 |
+| `docs/dsh/dsh-015-capability-mapping.md:285` | 未落沙漏 | E | 保留状态符号图例，非待办。 |
+| `docs/dsh/dsh-015-notes-scan.md:4` | 尚未定稿；待两表产出后合并 | A | 撤合并前置，不升格定案；mapping §9第6项记老大09-15不合并，inventory表A/B已产出。 |
+| `docs/dsh/dsh-38-a-protocol-design.md:239` | 出稿时未定 | E | 保留设计沿革；同档§4.4已写v1.0补定，不是假待办。 |
+| `docs/dsh/dsh-38-a-protocol-design.md:574` | Gateway运行时待验 | C | 按证据门槛保留；已有015/sdk/Windows短窗口实测，未见docs完整回流，详见自曝。 |
+| `docs/dsh/dsh-migration.md:65` | 推断列入待验证 | E | 保留来源等级图例与验证纪律，非具体任务。 |
+| `docs/dsh/dsh-migration.md:221` | 只能列入待验证 | E | 保留通用证据纪律，非具体任务。 |
+| `docs/dsh/dsh-migration.md:553` | 整体替换dist仍待验 | C | 保留；本档L3直连与production-env §7.1反代实测都不等于替换dist已验。 |
+| `docs/dsh/dsh-migration.md:562` | 待验larry profile能否起HTTP | A | 补该次已实测及结论；同档〈B段Gateway路线实测判定〉为012/CVM/09-10证据，不外推015。 |
+| `docs/dsh/dsh-migration.md:1031` | 从待定转入已接受＋长期观察 | E | 保留已裁沿革；长期观察不因英文摘要获准而结束。 |
+| `docs/dsh/dsh-pysdk-probe-qoder.md:296` | 未定义的私有桥 | E | 保留判据原文；未定义不是待定，亦属固定时点实证。 |
+| `docs/la-space/move-in-plan.md:5` | 已定／待验／待裁 | E | 保留体例图例；长期规矩指requirements.md实存。 |
+| `docs/la-space/move-in-plan.md:44` | 外部救援权限／触发／演练待验 | C | 保留；本档§5与§6仍有救援和恢复演练门槛。 |
+| `docs/la-space/move-in-plan.md:51` | 容器＋只读挂载待验 | C | 保留；tech-reference §6.3仍未验，ACL失败不证容器成功。 |
+| `docs/la-space/move-in-plan.md:57` | 技术前置与候选待验证 | C | 保留；全量存档要求已定，不代表契约与恢复演练已完成。 |
+| `docs/la-space/move-in-plan.md:71` | 待裁／待验／待复算 | C | 保留活清单标题；:73、:74分别登记，不按独立事项重复报数。 |
+| `docs/la-space/move-in-plan.md:73` | 持有者／异源判定／生产档待裁 | C | 保留；与requirements §9第1–3条对应，档位已定不等于具体形态已选。 |
+| `docs/la-space/move-in-plan.md:74` | 首启／互测／轮转／救援／备份待验 | C | 保留五组验证；tech-reference §6.3及local-env环境说明未证其通过。 |
+| `docs/la-space/requirements.md:6` | 每条标已定／待裁／仅记录 | E | 保留体例说明，非具体待办。 |
+| `docs/la-space/requirements.md:179` | 容器＋只读挂载待验 | C | 保留；tech-reference §6.3同题未验，不能由ACL失败摘牌。 |
+| `docs/la-space/requirements.md:218` | 待裁：编号不重排 | C | 保留第1–6条真未决；第7条已裁甲，既有J2不重做。 |
+| `docs/la-space/requirements.md:223` | 参与索引写入方／权限过滤未定 | C | 保留；门牌可脱敏只定局部，日记机制不替代索引方案。 |
+| `docs/la-space/requirements.md:224` | 单机权威／同步副本未定 | C | 保留；异盘备份要求不等于多机布局已选。 |
+| `docs/la-space/requirements.md:231` | 待验／待复算见搬家方案§5 | C | 保留；move-in-plan §5有完整清单及出处待补。 |
+| `docs/la-space/requirements.md:240` | 台账增补待裁7、8 | E | 保留10-29变更历史；后续重编号另有记录。 |
+| `docs/la-space/requirements.md:244` | 待裁7结案为甲 | E | 保留J2交付历史行，已明确结案。 |
+| `docs/la-space/tech-reference.md:139` | bare repo＋hook待验 | C | 保留；本档:144明示未实跑攻击或恢复验证。 |
+| `docs/la-space/tech-reference.md:144` | 机制分析／待验设计 | C | 保留证据边界；§6.3及§七可达，未做实测。 |
+| `docs/la-space/tech-reference.md:156` | signed push待验备选 | C | 保留；下文概念订正不等于远端保护验证。 |
+| `docs/la-space/tech-reference.md:160` | 保留风险与待验设计 | C | 保留；签名请求不同于commit签名，亦未保证ref不可改。 |
+| `docs/local-env.md:446` | --force必要性未定 | C | 保留；缺中间复扫，组合有效不证必要性。 |
+| `docs/local-env.md:574` | 触发机制未定；旁侧TODO指针 | B | 仅修同引文块:573，指archive/roadmap-history.md〈DSH-3.7.4〉完成态快照；不是现行规范。 |
+| `docs/local-env.md:660` | 触发机制至今未定 | E | 保留未知事实；§12.8已关闭调查，不把结案改成查明，也不重开任务。 |
+| `docs/product-positioning.md:35` | 产品未定型 | E | 保留经济性规则的适用条件，非待办。 |
+| `docs/product-positioning.md:60` | compaction策略待定 | C | 保留；TODO〈延后〉明确待定是切压策略，不是阈值数字。 |
+| `docs/product-positioning.md:201` | 多模态具体方案未定 | C | 保留；占位已定不等于处理链路与注入方案已选。 |
+| `docs/product-positioning.md:218` | 触达通道空白待定 | C | 保留；上游schedule不提供PC通知或Web Push通道。 |
+| `docs/product-positioning.md:253` | recallSync是否采纳待定 | C | 保留原讨论；跨会话层未成结论，TODO的向量召回归档条仍在。 |
+| `docs/product-positioning.md:294` | source_role软／硬隔离未定 | C | 保留；角色画像与跨AI归属不是同题；HUMAN_NOTE〈多场景 AI 架构〉同步钩子原样。 |
+| `docs/product-positioning.md:340` | 多provider计划未定案 | C | 保留；exchange/web-search-design.md §10.8的岗位配装不等于产品路由定案。 |
+| `docs/product-positioning.md:355` | MCP反向暴露未定 | C | 保留；接入占位已定，反向暴露是另一个决定。 |
+| `docs/product-positioning.md:565` | 原待裁定项 | E | 保留§4历史行，已记裁定。 |
+| `docs/product-positioning.md:569` | MCP待裁进位 | E | 保留第三轮历史；终轮及§2.5.3已承接。 |
+| `docs/product-positioning.md:570` | 接入占位／暴露未定 | E | 保留终轮变更记录，正文仍分两题。 |
+| `docs/product-positioning.md:576` | 静默陷阱待裁 | E | 保留10-13历史；:580已记后来消解。 |
+| `docs/product-positioning.md:580` | 待裁字样属当时状态 | E | 保留历史读法注，非活待办。 |
+| `docs/product-positioning.md:586` | 产品未定型 | E | 保留变更记录中的条件句。 |
+| `docs/product-positioning.md:587` | 唯一清单待裁 | E | 保留同日早先记录；:588及正文已注明保持原样。 |
+| `docs/product-positioning.md:588` | 原待裁标注 | E | 保留已裁动作记录，不重开。 |
+| `docs/product-positioning.md:590` | 沙漏回填口 | E | 保留旧回填口的历史描述，正文§1.2已回填。 |
+| `docs/product-positioning.md:592` | 新增待讨论块 | E | 保留10-18开题历史；:595已记J1摘牌。 |
+| `docs/product-positioning.md:595` | 待讨论摘牌 | E | 保留既有J1变更记录，非活待办。 |
+| `docs/product-positioning.md:657` | MCP留痕待裁定 | E | 保留§5.3第三轮追溯；不把它改成§5.4终轮。 |
+| `docs/product-positioning.md:681` | 接入已定／暴露未定 | E | 保留终轮追溯，正文§2.5.3已区分。 |
+| `docs/production-env.md:27` | 有效期沙漏 | E | 保留有效期标记，非状态牌；文载已续至2027-10-09，不复验云资产。 |
+| `docs/production-env.md:222` | 同名待裁段已结案 | B | 仅修同列表条:220为test-env.md §6.2；接受未知的结案和历史叙述原样。 |
+| `docs/production-env.md:245` | typert注册后挂路由待验 | C | 保留；旧012的404与新版短窗口无监听均未证该触发条件，不能写已证否。 |
+| `docs/production-env.md:600` | WSL具体承载仍待定 | C | 保留；test-env §10同题挂起，DSH-3期间排除不等于长期定位已定。 |
+| `docs/test-env.md:131` | 两通道为何不同未定位 | C | 保留成因边界；§10仍未定位，统一PATH纪律不等于成因已知。 |
+| `docs/test-env.md:166` | 宿主代理启用时复用待验 | C | 保留；镜像网络与无监听端口都不能证明代理复用。 |
+| `docs/test-env.md:243` | 执行范式脚本落点待定 | C | 保留；§10仍待指定，散文范式不等于脚本已落地。 |
+| `docs/test-env.md:292` | WSL具体承载待定 | C | 保留；production-env §12.7附三明确只收阶段安排。 |
+| `docs/test-env.md:293` | 裸node两通道成因未定位 | C | 同:131保留；按命中位置登记，不冒作另一个问题。 |
+| `docs/test-env.md:295` | 固化脚本落盘位置待指定 | C | 同:243保留；本档§8.3仅给范式及共同坑。 |
 
-### 4 · 判据
+### 自曝与未外推范围
 
-- 每条 🔺 必附"已决"的**落点**（docs 某档某节，或老大原话 ＋ 日期）；**拿不出落点 ⇒ 退回 ✅**。
-- `git diff --stat`：删除行只应落在"状态行 ＋ 承接句"，⛔ 不许整段消失。
-- 收尾三数：**🔺 x ／ 🔻 y ／ ✅ z**，附逐条清单（文件:行号 · 现文关键词 · 判性 · 处置）。
-- 自曝一句：**哪些我判了 ✅ 没敢动、为什么**。
+C类里我没有擅动的是：同一AI跨会话策略／角色source_role强度／参与索引／生产隔离形态／代理复用／固化脚本落点等；缺的是同命题的定案或验收，不能拿邻近能力、日记存在或阶段闭环替它们作答。`ai-governance.md:104`初审曾只看前半“待讨论”类别，复核发现后半仍有read-first补入断言；已改判C，不把未证完成说成无问题，也未进入私有约束补证。
 
-### 5 · 禁区
+**Gateway须单独交底**：旧larry／012／CVM的那次待验有docs同题实测，已摘牌；015／sdk／Windows的J6另有历史交付：启动短窗口无新增监听、启动日志无gateway行（`git show 53162ed:exchange/log-trae.md`，J6-b／J6-d及〈诚实边界〉第5条；独立复验见`git show cd98c0c:exchange/log-workbuddy.md`的J6-b）。它不是“从未测过”，也不能推出懒启动、其他profile／CVM或完整可启用性已验。本轮docs定向检索`零监听|新增监听|J6-bootlog|J6-live-probe|2\.7 s|gateway|Gateway`未见该局部读数完整回流；按自派单A类落点门槛保留C，未借本单补写运行时结论。后续若处理该回流，应先分开“局部已测”与“完整可用性仍待复核”。
 
-- ⛔ `TODO.md`（WB 侧）／别家私有区（`.workbuddy` `.claude` `.trae` `.zcode`）／`archive/`／变更记录历史行。
-- ⛔ 替老大裁新的；⛔ 改文风；⛔ 重写文档。
-- ⛔ 把本单扩成"全仓交叉引用普查"—— 指针类只查**状态牌所在段**。
+英文触发机制、/dev/shm成因的调查关闭不等于机制查明；没有改成已知，也没有重开已关闭调查。`HUMAN_NOTE`同步钩子原样；`TODO.md`、archive、私有区、产品代码与既有变更历史均未改。无网络或运行时测试，以上是文献核证，不是重跑历史实验。
 
-### 6 · 交付
+### 复验与收尾
 
-改动落 `docs/`（有变更记录表的档才追加）；本区加回报段（结论先行 ＋ 三数 ＋ 清单 ＋ 自曝）；一个可验证单元一提交，Qoder 署名。**办结后本段自删**（活日志规矩）。
+独立复核已通过：只读核验上述7档、10处修改及1行变更记录，未发现偷换命题、误改历史、讨论正文丢失或新指针错位；该通道未验日志，日志另由主审作下列机械复验。
 
-### 7 · 规模闸
-
-🔺 判出 **＞ 8 条**、或碰到需老大裁的口径冲突 ⇒ **停在清单**，写回本区等老大，⛔ 一口气改完。
+复验口径：79行逐行对应、零漏项／重复；编辑白名单逐字比对基线，docs仅10个状态／指针行替换＋1行既有变更表追加，原讨论正文与原始实测表不动。检测器先以漏行、重复行、异物行、正文删失、重复编辑锚五类反例自证；另核日志节序、表格列数及`git diff --check`。自派单的禁区与命题边界已在本报告承接；办结删原单及其待执行面板行，既有J1/J2派发、交付与未结项不动。临时JSON／脚本只供本轮复验，提交前全部删除、不入库；任务原文由git留底。
 
 ---
 
@@ -165,6 +236,4 @@
 
 ## 🗂 已清理段落
 
-- **2026-10-29（WB · 22:35）**：删〈📮 交付 · 全量存档清单与判据〉**63 行**（Qoder 交付正文：J1 对照表／J2–J10 读数／四处张力处置／待裁／未闭合／自曝）。判据 ＝ ① 结论已落**稳定落点**：`docs/la-space/requirements.md` §7「全量存档」条组 `:190–202` ＋ §5 第 5 条 `:132` ＋ §2:53 脱敏半句 ＋ §9 已定「增补」与〈待裁 7〉`:225`；② 两条未闭合已处置（**容量上限**按老大 16:26 判已知并接受、不落条款 ⇒ 不承接；**可读域**已进 §9 待裁 7）；③ 四处张力处置已体现在正文（甲=§7 ③ 末「留底≠展示」／乙=沿用 §6:156／丙=§7 末待裁条／丁=六类各自写「谁写」）；④ 复验读数已并入本区状态区。复算：`git log -p -- exchange/log-qoder.md`。
-- **2026-10-29（WB）**：删〈交付 · 云部署架构稿定稿拆分（B 案）〉**99 行** ＋〈交付 · docs 承接补件〉**14 行**（共 119 行，含两节间分隔）。判据 ＝ ① B 案结论已落**稳定落点**：`docs/deployment-architecture.md`（258 行，定稿正本）＋ `docs/README.md` 索引第 9 条 ＋ `docs/product-positioning.md` 五处 ＋ `TODO.md` 归档块（提交 `b738b1c`／`4c6d5b1`／`c07f1fd`）；② 该节 6 条未闭合已逐条分流（4 条消解、2 条转 #56）；③ docs 承接补件④条已入 `334d7ef`。复算：`git log -p -- exchange/log-qoder.md`。
-- **2026-10-29（Qoder）**：〈📮 派发 · 云部署架构稿定稿拆分（B 案）〉整节退役 ⇒ 换成本档〈交付〉节（判据逐条带复算式，正文无丢失）；#10 销账 ⇒ 依据写进〈未结项〉沿革行；本段按"只留最近一条"规矩覆盖原 2026-10-24 登记（记忆归属四册收口）。复算：`git log -p -- exchange/log-qoder.md` 可见退役前全文。
+- 2026-10-30：办结删除〈自派 · 文档腐化清理〉及其待执行面板行，结果与79行清单已交付；旧清理登记收为本条。复算：`git log -p -- exchange/log-qoder.md`。
