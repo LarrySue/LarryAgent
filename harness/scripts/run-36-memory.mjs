@@ -15,16 +15,18 @@
  *     ＋ 每臂独立 config（dbPath / chromaUrl 臂控）。
  *   - profile：sdk（0.1.5-rc.2 基线）。
  *
- * Phase：`S36_PHASE` ∈ { j0, j1j2, j3, j4, j5 }（缺省 j0）。
+ * Phase：`S36_PHASE` ∈ { j0, j1j2, j3, j4, j5, j6, iso }（缺省 j0）。
  * ⛔ key 纪律：本块 0 token；child env 显式剔除 DEEPSEEK_API_KEY；只判存在性。
  * 退出码：`0` 通过 ／ `1` 判据失败 ／ `2` 前置缺失 ／ `124` 看门狗
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync, cpSync, symlinkSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync, cpSync, symlinkSync, readFileSync, statSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
+import { createHash, randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
 
 const HARNESS = resolve(import.meta.dirname, '..')
@@ -701,15 +703,236 @@ async function phaseJ6() {
   obs('J6-g-budget', `真调用对话计数 ${turns} ≤ 10 预算（B ×${1 + bRetry} ＋ 负向 ×1；A 无 key 不计）`)
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// Phase ISO · 测试场地隔离工程化（W1/W2/W3 · 判据 V1–V4）
+// 判据权威 = exchange/log-trae.md〈📮 派发 · 测试场地隔离 · 工程化〉（WB 2026-10-30 21:40）
+// 全部判据取外部证据：真库 sha256/mtime、进程退出码、stderr 原文、磁盘实存。
+// ⛔ 不看插件自报、不看退出码单独成立（V1）。
+// ══════════════════════════════════════════════════════════════════════════
+const REAL_DB = join(REPO, '.dsh-home', 'larry-memory.db')
+
+/** 真库外部指纹（内容哈希 ＋ mtime） */
+function dbStamp(path) {
+  if (!existsSync(path)) return null
+  const st = statSync(path)
+  return {
+    sha256: createHash('sha256').update(readFileSync(path)).digest('hex'),
+    mtimeMs: st.mtimeMs,
+    mtime: new Date(st.mtimeMs).toISOString(),
+    size: st.size,
+  }
+}
+
+/** node.exe 全量命令行枚举（用于排除"别的 dsh 进程在写库"） */
+function nodeProcesses() {
+  const ps = "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"
+  try {
+    const raw = execFileSync('powershell', ['-NoProfile', '-Command', ps], { encoding: 'utf8', timeout: 30_000 })
+    const list = JSON.parse(raw || '[]')
+    return (Array.isArray(list) ? list : [list]).map((p) => ({ pid: p.ProcessId, cmd: String(p.CommandLine ?? '') }))
+  } catch (err) {
+    return [{ pid: -1, cmd: `ENUM_ERROR: ${err?.message ?? err}` }]
+  }
+}
+/** 除本进程外的 dsh 进程（命令行含 bin.js 且带 --profile） */
+function otherDshProcesses(selfPid) {
+  return nodeProcesses().filter((p) => p.pid !== selfPid && p.cmd.includes('bin.js') && p.cmd.includes('--profile'))
+}
+
+/** 临时 home 内的插件副本 → 源包 junction（被测代码 ≡ harness/packages/plugin-s4-memory 本次构建） */
+function linkPluginSource(home) {
+  const target = join(home, 'profiles', 'sdk', 'node_modules', '@larryagent', 'plugin-s4-memory')
+  rmSync(target, { recursive: true, force: true })
+  symlinkSync(PLUGIN_DIR, target, 'junction')
+  return target
+}
+
+/** id 定位的 config 覆盖（⛔ 不新增条目 —— 插件在 sdk profile 里已有一条） */
+function configPatch(tag, config) {
+  const lines = ['- id: larry-s4-memory', '  config:']
+  for (const [k, v] of Object.entries(config)) {
+    const raw = typeof v === 'string' ? `'${v.replaceAll('\\', '/').replaceAll("'", "''")}'` : String(v)
+    lines.push(`    ${k}: ${raw}`)
+  }
+  const name = `iso-${tag}.patch.yml`
+  save(name, lines.join('\n') + '\n')
+  return join(OUT, name)
+}
+
+/** 裸起 dsh（stdin 保持打开 ⇒ 正常启动时会挂着，由超时兜底），只取退出码 ＋ stderr 原文 */
+function spawnDshRaw(home, patches, timeoutMs = 90_000) {
+  const dshBin = createRequire(import.meta.url).resolve('@deepseek-ai/dsh/lib/bin.js')
+  const args = [dshBin, '--profile', 'sdk']
+  for (const p of patches) args.push('--patch', p)
+  const env = { ...childEnvOf(home), DSH_HOME: home }
+  const t0 = Date.now()
+  return new Promise((resolvePromise) => {
+    const child = spawn(process.execPath, args, { cwd: HARNESS, env, stdio: ['pipe', 'pipe', 'pipe'] })
+    let stderr = ''
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (c) => { stderr += c })
+    child.stdout.resume()
+    const timer = setTimeout(() => { try { child.kill() } catch { /* ignore */ } }, timeoutMs)
+    child.once('exit', (code, signal) => {
+      clearTimeout(timer)
+      resolvePromise({ code, signal, stderr, ms: Date.now() - t0, killedByTimeout: signal !== null && Date.now() - t0 >= timeoutMs - 1_000 })
+    })
+  })
+}
+
+/** 跑一轮 SDK 会话（保留 home，供跑后磁盘取证；调用方负责清理） */
+async function runSdkOnHome(home, patches, prompt) {
+  const harness = new DeepSeekHarness({
+    profile: 'sdk', dshHome: home, env: childEnvOf(home), patches,
+    provider: 'deepseek-official', model: 'deepseek-flash',
+    initializeTimeoutMs: 60_000, requestTimeoutMs: 120_000,
+  })
+  try {
+    return { result: await harness.run(prompt), error: null }
+  } catch (err) {
+    return { result: null, error: String(err?.message ?? err) }
+  } finally {
+    try { await harness.close() } catch { /* 不掩盖主判定 */ }
+  }
+}
+
+async function phaseISO() {
+  const plugin = await import(pathToFileURL(join(PLUGIN_DIR, 'lib', 'index.js')).href)
+  const DENY = plugin.OUTSIDE_HOME_DENY_MARK
+  const ALLOW = plugin.OUTSIDE_HOME_ALLOW_MARK
+  saveJson('ISO-marks.json', { deny: DENY, allow: ALLOW, pluginLib: join(PLUGIN_DIR, 'lib', 'index.js'), pluginLibSha256: dbStamp(join(PLUGIN_DIR, 'lib', 'index.js'))?.sha256 })
+
+  // ── 前置：其余 dsh 进程排除（V1 的 mtime 归因前提）──
+  const before = otherDshProcesses(process.pid)
+  saveJson('ISO-procs-before.json', before)
+  judge('ISO-procs-before', before.length === 0,
+    `跑前 node.exe 全量命令行枚举：除本进程外含 --profile 的 dsh 进程 ×${before.length}${before.length ? `（${before.map((p) => p.pid).join(',')}）` : ' ⇒ 其余 dsh 进程已排除'}`)
+
+  // ══ V1 · 事故复现臂：临时 home ＋ 装置原配置（dbPath = 真库绝对路径）⇒ 真库必须一字节不动 ══
+  // ⚠️ 走裸起（⛔ 不经 SDK client）：SDK 只把 stderr 尾部塞进异常文案，实测未带出断言行，
+  //    无法证明"失败是因为断言"；裸起直接取 stderr 原文 ＋ 退出码。
+  const v1Before = dbStamp(REAL_DB)
+  const homeV1 = makeHome()
+  linkPluginSource(homeV1)
+  const v1 = await spawnDshRaw(homeV1, [])
+  const v1After = dbStamp(REAL_DB)
+  const v1HomeDb = join(homeV1, 'larry-memory.db')
+  save('V1-stderr.txt', v1.stderr)
+  judge('V1-real-db-untouched', v1Before !== null && v1After !== null
+    && v1Before.sha256 === v1After.sha256 && v1Before.mtimeMs === v1After.mtimeMs,
+  `真库 sha256 ${v1Before?.sha256?.slice(0, 16) ?? '(缺)'}… → ${v1After?.sha256?.slice(0, 16) ?? '(缺)'}…；mtime ${v1Before?.mtime ?? '(缺)'} → ${v1After?.mtime ?? '(缺)'}；size ${v1Before?.size ?? '?'} → ${v1After?.size ?? '?'}`)
+  judge('V1-fail-loud', v1.code !== null && v1.code !== 0 && v1.stderr.includes(DENY),
+    `临时 home 启动 exit=${v1.code} ms=${v1.ms}；stderr 含断言行=${v1.stderr.includes(DENY)}`)
+  judge('V1-home-db-absent', !existsSync(v1HomeDb), `临时 home 内库文件 ${existsSync(v1HomeDb) ? '存在（⛔ 断言未在 open 之前生效）' : '不存在（断言在 open 之前拦住）'}`)
+  if (!KEEP_HOME) rmSync(homeV1, { recursive: true, force: true })
+
+  // ══ V2 · 反向对照：dbPath 指另一个 home，不豁免 ⇒ 进程非零退出 ＋ stderr 含断言行 ══
+  const homeV2 = makeHome()
+  linkPluginSource(homeV2)
+  const outsideV2 = mkdtempSync(join(tmpdir(), 'larry-36-outside-'))
+  const dbV2 = join(outsideV2, 'larry-memory.db')
+  const patchV2 = configPatch('v2', { dbPath: dbV2 })
+  const raw2 = await spawnDshRaw(homeV2, [patchV2])
+  save('V2-stderr.txt', raw2.stderr)
+  judge('V2-nonzero-exit', raw2.code !== null && raw2.code !== 0,
+    `exit=${raw2.code} signal=${raw2.signal ?? 'null'} ms=${raw2.ms}（期望非零且非被超时 kill）`)
+  judge('V2-stderr-assertion', raw2.stderr.includes(DENY),
+    `stderr 含断言行「${DENY}」=${raw2.stderr.includes(DENY)}；stderr 首行：${(raw2.stderr.split(/\r?\n/).find((l) => l.includes(DENY)) ?? raw2.stderr.split(/\r?\n/)[0] ?? '').slice(0, 300)}`)
+  judge('V2-outside-db-absent', !existsSync(dbV2), `另一 home 的库 ${existsSync(dbV2) ? '被创建（⛔ 异常）' : '未被创建'}`)
+  if (!KEEP_HOME) rmSync(homeV2, { recursive: true, force: true })
+  rmSync(outsideV2, { recursive: true, force: true })
+
+  // ══ V3 · 显式豁免：同一报错路径 ＋ allowOutsideHome ⇒ 放行 ＋ stderr 审计行（含解析后绝对路径）══
+  const homeV3 = makeHome()
+  linkPluginSource(homeV3)
+  const outsideV3 = mkdtempSync(join(tmpdir(), 'larry-36-outside-'))
+  const dbV3 = join(outsideV3, 'larry-memory.db')
+  const patchV3 = configPatch('v3', { dbPath: dbV3, allowOutsideHome: true })
+  const diag = []
+  const { DshDriver } = await import(pathToFileURL(join(HARNESS, 'packages', 'dsh-driver', 'lib', 'index.js')).href)
+  const driver = new DshDriver({
+    profile: 'sdk', dshHome: homeV3, patches: [patchV3], cwd: HARNESS,
+    env: childEnvOf(homeV3), marker: join(OUT, 'V3-driver.log'),
+    hooks: { onDiagnostic: (line) => diag.push(line) },
+  })
+  let v3InitError = null
+  let v3PromptError = null
+  try {
+    driver.start()
+    try { await driver.initialize() } catch (err) { v3InitError = String(err?.message ?? err) }
+    try { await driver.prompt(randomUUID(), 'V3 豁免臂：放行后应正常起会话。') } catch (err) { v3PromptError = String(err?.message ?? err) }
+  } finally {
+    const stop = await driver.stop()
+    saveJson('V3-stop.json', stop)
+    save('V3-stderr.txt', diag.join('\n') + '\n')
+    const allowLine = diag.find((l) => l.includes(ALLOW)) ?? ''
+    judge('V3-exit-normal', stop.childExit.exited && stop.childExit.code === 0 && !stop.forced,
+      `进程退出 code=${stop.childExit.code} signal=${stop.childExit.signal} forced=${stop.forced} killCalled=${stop.killCalled}；shutdown.ok=${stop.shutdown.ok}`)
+    judge('V3-audit-line', allowLine.includes(dbV3) && allowLine.includes(homeV3),
+      `stderr 审计行${allowLine ? `「${allowLine.slice(0, 300)}」` : '缺失'}\n           含解析后绝对路径 dbPath=${dbV3}: ${allowLine.includes(dbV3)}；含 home: ${allowLine.includes(homeV3)}`)
+    judge('V3-exempt-arm-works', existsSync(dbV3) && statSync(dbV3).size > 0,
+      `豁免臂库实体 ${existsSync(dbV3) ? `存在 size=${statSync(dbV3).size}` : '不存在'}（放行后库真的落在解析出的位置）`)
+    obs('V3-protocol', `initialize ${v3InitError ? `失败：${v3InitError.slice(0, 200)}` : '成功'}；prompt ${v3PromptError ? `失败：${v3PromptError.slice(0, 200)}` : '受理'}`)
+  }
+  if (!KEEP_HOME) rmSync(homeV3, { recursive: true, force: true })
+  rmSync(outsideV3, { recursive: true, force: true })
+
+  // ══ V4 · 相对路径 ⇒ 按当前 home 解析，磁盘实存 ══
+  const homeV4 = makeHome()
+  linkPluginSource(homeV4)
+  const patchV4 = configPatch('v4', { dbPath: 'larry-memory-rel.db' })
+  const nonce4 = `PING-v4-${Math.random().toString(36).slice(2, 10)}`
+  const v4 = await runSdkOnHome(homeV4, [patchV4], `${nonce4} V4 相对路径臂：库应落在当前 home 下。`)
+  const relDb = join(homeV4, 'larry-memory-rel.db')
+  save('V4-sdk-error.txt', `${v4.error ?? '(no error)'}\n`)
+  judge('V4-relative-file-on-disk', existsSync(relDb) && statSync(relDb).size > 0,
+    `磁盘实存 ${relDb}：${existsSync(relDb) ? `存在 size=${statSync(relDb).size}` : '不存在'}`)
+  if (existsSync(relDb)) {
+    const db = openDb(relDb)
+    try {
+      const rows = db.prepare('SELECT id, session_id, content FROM memories').all()
+      saveJson('V4-rows.json', rows)
+      obs('V4-row', `相对路径库里行 ×${rows.length}，含本次 nonce=${rows.some((r) => String(r.content).includes(nonce4))}`)
+    } finally { db.close() }
+  }
+  const strayV4 = join(REPO, '.dsh-home', 'larry-memory-rel.db')
+  obs('V4-no-stray', `仓库 .dsh-home 下未出现同名库：${!existsSync(strayV4)}（${strayV4}）`)
+  if (!KEEP_HOME) rmSync(homeV4, { recursive: true, force: true })
+
+  // ══ V4-b · 回归臂：生产形态（dbPath = home 内的绝对路径）照旧放行 ══
+  // 装置现配置 .dsh-home/larry-memory.db 就是这一形态 ⇒ 断言不得把正常部署打死。
+  const homeV4b = makeHome()
+  linkPluginSource(homeV4b)
+  const absDb = join(homeV4b, 'larry-memory-abs.db')
+  const patchV4b = configPatch('v4b', { dbPath: absDb })
+  const nonce4b = `PING-v4b-${Math.random().toString(36).slice(2, 10)}`
+  const v4b = await runSdkOnHome(homeV4b, [patchV4b], `${nonce4b} V4-b 回归臂：home 内绝对路径应照常放行。`)
+  save('V4b-sdk-error.txt', `${v4b.error ?? '(no error)'}\n`)
+  judge('V4b-abs-inside-home-ok', v4b.error === null && existsSync(absDb) && statSync(absDb).size > 0,
+    `home 内绝对路径：${v4b.error ? `启动失败「${v4b.error.slice(0, 200)}」` : '会话正常'}；库实体 ${existsSync(absDb) ? `size=${statSync(absDb).size}` : '不存在'}`)
+  if (!KEEP_HOME) rmSync(homeV4b, { recursive: true, force: true })
+
+  // ── 收尾：其余 dsh 进程复检 ＋ 真库终态 ──
+  const after = otherDshProcesses(process.pid)
+  saveJson('ISO-procs-after.json', after)
+  judge('ISO-procs-after', after.length === 0,
+    `跑后 node.exe 全量命令行枚举：其余 dsh 进程 ×${after.length}${after.length ? `（${after.map((p) => p.pid).join(',')}）` : ' ⇒ 收尾后仍无第三方 dsh 在跑'}`)
+  const fin = dbStamp(REAL_DB)
+  saveJson('ISO-real-db-final.json', fin)
+  judge('ISO-real-db-final', v1Before !== null && fin !== null && v1Before.sha256 === fin.sha256 && v1Before.mtimeMs === fin.mtimeMs,
+    `全部臂跑完：真库 sha256 ${v1Before?.sha256?.slice(0, 16)}… → ${fin?.sha256?.slice(0, 16)}…；mtime ${v1Before?.mtime} → ${fin?.mtime}`)
+}
+
 try {
-  if (PHASE === 'j0') await phaseJ0()
+  if (PHASE === 'iso') await phaseISO()
+  else if (PHASE === 'j0') await phaseJ0()
   else if (PHASE === 'j1j2') await phaseJ1J2()
   else if (PHASE === 'j3') await phaseJ3()
   else if (PHASE === 'j4') await phaseJ4()
   else if (PHASE === 'j5') await phaseJ5()
   else if (PHASE === 'j6') await phaseJ6()
   else {
-    console.error(`[36] ❌ 未实现的 phase：${PHASE}（本版实现 j0 / j1j2 / j3 / j4 / j5 / j6）`)
+    console.error(`[36] ❌ 未实现的 phase：${PHASE}（本版实现 j0 / j1j2 / j3 / j4 / j5 / j6 / iso）`)
     process.exitCode = 2
   }
 } catch (err) {

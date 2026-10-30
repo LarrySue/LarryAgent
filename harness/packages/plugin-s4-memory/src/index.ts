@@ -22,6 +22,8 @@
  * key 纪律：0 token，全程无凭据接触。
  */
 import { appendFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-session' // Context.sessions + session/* 事件的 declare 合并
@@ -32,10 +34,46 @@ export const inject = ['sessions', 'systemPrompt']
 
 /** J4 降级行唯一匹配串（stderr 通道，只出自 Chroma 失败路径） */
 export const DEGRADED_MARK = '[S36-MEMORY] chroma degraded:'
+/** 场地隔离断言：dbPath 落在当前 home 之外且未豁免（stderr ＋ throw，只出自失败路径） */
+export const OUTSIDE_HOME_DENY_MARK = '[S36-MEMORY] dbPath outside home (denied):'
+/** 场地隔离断言：同上但显式豁免（stderr 审计行，含解析后的绝对路径） */
+export const OUTSIDE_HOME_ALLOW_MARK = '[S36-MEMORY] dbPath outside home (allowed by config.allowOutsideHome):'
+
+/**
+ * 当前 DSH_HOME 的解析（与上游 `@deepseek-ai/dsh-home-paths:resolveDshHome` 同口径：
+ * `$DSH_HOME` ＞ `~/.dsh`；空白字符串视同未设，避免 resolve('') 落成 cwd）。
+ * ⛔ 不从 ctx 取：dsh 无 home 服务（实测 `provide('home'` 零命中）；
+ * 上游 resolver 包在本工作区不可解析（实测 ERR_MODULE_NOT_FOUND），且本单禁引入新依赖。
+ */
+function resolveHarnessHome(): string {
+  const fromEnv = process.env.DSH_HOME
+  if (fromEnv !== undefined && fromEnv.trim().length > 0) return resolve(fromEnv.trim())
+  return join(homedir(), '.dsh')
+}
+
+/** 配置里的 dbPath：`${DSH_HOME}` 占位替换 ＋ 相对路径按当前 home 解析为绝对路径 */
+function resolveDbPath(raw: string, home: string): string {
+  const substituted = raw.split('${DSH_HOME}').join(home)
+  return isAbsolute(substituted) ? resolve(substituted) : resolve(home, substituted)
+}
+
+/** `child` 是否落在 `parent` 之内（含 parent 自身；win32 下 path.relative 忽略大小写） */
+function isWithin(parent: string, child: string): boolean {
+  const rel = relative(parent, child)
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+}
 
 export interface Config {
-  /** SQLite 真相源路径（装置臂控；哨兵臂指向 DSH 默认后端位置） */
+  /**
+   * SQLite 真相源路径（装置臂控；哨兵臂指向 DSH 默认后端位置）。
+   * 相对路径按当前 DSH_HOME 解析；支持 `${DSH_HOME}` 占位。
+   */
   dbPath: string
+  /**
+   * 场地隔离断言的显式豁免：dbPath 落在当前 home 之外时默认 fail；
+   * 置 true 则放行，但每次启动在 stderr 留一行审计（含解析后的绝对路径）。
+   */
+  allowOutsideHome?: boolean
   /** ChromaDB server URL；留空则不做向量双写（SQLite 单写） */
   chromaUrl?: string
   /** 本地 embedding 模型（transformers.js onnx） */
@@ -94,8 +132,22 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   const cfg = { ...DEFAULTS, ...userConfig } as Required<Config>
   if (!cfg.dbPath) throw new Error(`${DEGRADED_MARK} config.dbPath is required`)
 
+  // ── 场地隔离断言（Tier0 红线 4 的代码化）：换 home ≠ 换库 ──────────────────
+  //   home 之外的库 ⇒ 默认 fail（⛔ 不是 warn）：临时 home 跑测试时真库必须不受波及。
+  const home = resolveHarnessHome()
+  const dbPath = resolveDbPath(cfg.dbPath, home)
+  if (!isWithin(home, dbPath)) {
+    if (cfg.allowOutsideHome === true) {
+      process.stderr.write(`${OUTSIDE_HOME_ALLOW_MARK} dbPath=${dbPath} home=${home}\n`)
+    } else {
+      const line = `${OUTSIDE_HOME_DENY_MARK} dbPath=${dbPath} home=${home}`
+      process.stderr.write(`${line}\n`)
+      throw new Error(line)
+    }
+  }
+
   // ── SQLite 真相源（node:sqlite · Node 24 内置，零外部依赖）─────────────────
-  const db = new DatabaseSync(cfg.dbPath)
+  const db = new DatabaseSync(dbPath)
   db.exec(`
     CREATE TABLE IF NOT EXISTS memories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
