@@ -43,6 +43,22 @@ const DEFAULT_DEST = 'D:/Code/_backups/larryagent'
 const NL = String.fromCharCode(10)
 const ZSTD_MAGIC = 0xfd2fb528
 
+/**
+ * tar 解析：Windows 上优先系统自带 bsdtar（C:\Windows\System32\tar.exe）。
+ * ⛔ 不用 PATH 里的 GNU tar：GNU tar 把 `C:\...` 的 `C:` 当远程主机（host:path），
+ * 绝对 Windows 路径会报 `Cannot connect to C:`。`LARRY_BACKUP_TAR` 仅用于故障注入测试。
+ */
+function resolveTar() {
+  const override = (process.env.LARRY_BACKUP_TAR ?? '').trim()
+  if (override) return override
+  if (process.platform === 'win32') {
+    const bsdtar = 'C:/Windows/System32/tar.exe'
+    if (existsSync(bsdtar)) return bsdtar
+  }
+  return 'tar'
+}
+const TAR_BIN = resolveTar()
+
 const findings = []
 const say = (line = '') => console.log(line)
 const judge = (id, ok, detail) => {
@@ -267,17 +283,25 @@ function credentialScan(filesRoot) {
 // 源指纹（B-5：备份前后源文件未动）
 // ==========================================================================
 
-function fingerprintSources(paths) {
+/**
+ * 源指纹算法（B-5，⛔ 换人复算必须同式）：
+ *   1) 文件集合 = 上列固定集合（DB 及其 -wal/-shm 若存在 ＋ sessions 全部文件 ＋ CoT 若存在）
+ *   2) 路径 = 相对仓库根、正斜杠
+ *   3) 每项 = sha256(路径 + "|" + 文件内容 sha256)
+ *   4) 按路径字典序用 "\n" 连接后再 sha256 ⇒ aggregate
+ * ⚠️ 文件数会比「2 DB ＋ 31 sessions」多 2：larry.db 的 -wal/-shm 也在集合里。
+ */
+function fingerprintSources(root, paths) {
   const entries = []
   for (const path of paths) {
     if (!existsSync(path)) continue
     const stat = statSync(path)
     if (!stat.isFile()) continue
-    entries.push({ path, size: stat.size, sha256: sha256File(path) })
+    entries.push({ path: relUnix(root, path), sha256: sha256File(path) })
   }
-  const aggregate = sha256Buffer(
-    Buffer.from(entries.map((entry) => `${entry.path}|${entry.size}|${entry.sha256}`).join(NL)),
-  )
+  entries.sort((a, b) => a.path.localeCompare(b.path))
+  const items = entries.map((entry) => sha256Buffer(Buffer.from(`${entry.path}|${entry.sha256}`, 'utf8')))
+  const aggregate = sha256Buffer(Buffer.from(items.join(NL), 'utf8'))
   return { files: entries.length, aggregate_sha256: aggregate, entries }
 }
 
@@ -310,6 +334,8 @@ function buildManifest(context) {
     credential,
     dataFileCount,
     dataBytes,
+    tarBin,
+    tarVersion,
     manifestShaNote,
   } = context
 
@@ -322,6 +348,7 @@ function buildManifest(context) {
   push(`- 源仓库：\`${repoRoot}\``, NL)
   push(`- 落点目录：\`${destDir}\``, NL)
   push(`- 单文件包：\`${packageName}\``, NL)
+  push(`- 打包工具：\`${tarBin}\`（${tarVersion}）`, NL)
   push(`- 数据文件数：**${dataFileCount}**（不含 MANIFEST.md / SHA256SUMS）`, NL)
   push(`- 数据总字节：**${dataBytes}**（${formatBytes(dataBytes)}）`, NL, NL)
 
@@ -430,7 +457,14 @@ function buildManifest(context) {
   push(`- 包本身的 sha256 写在同一目录的 \`${stem}.SHA256SUMS\`（单文件行）。`, NL)
   push(`- 备份前源指纹：\`${fingerprintBefore.aggregate_sha256}\`（${fingerprintBefore.files} 个文件）`, NL)
   push(`- 备份后源指纹：\`${fingerprintAfter.aggregate_sha256}\`（${fingerprintAfter.files} 个文件）`, NL)
-  push(`- **源文件未动**：${fingerprintBefore.aggregate_sha256 === fingerprintAfter.aggregate_sha256 ? 'true' : 'false'}`, NL, NL)
+  push(`- **源文件未动**：${fingerprintBefore.aggregate_sha256 === fingerprintAfter.aggregate_sha256 ? 'true' : 'false'}`, NL)
+  push(`- **源指纹算法（换人复算请照此式）**：文件集合 = \`.dsh-home/larry-memory.db\`（含 \`-wal\` / \`-shm\` 若存在）＋ \`.dsh-home/sessions/**/*\` 全部文件 ＋ \`backend/data/larry.db\`（含 \`-wal\` / \`-shm\` 若存在）＋ \`backend/data/cot_archive/**/*\`（若存在）；`, NL)
+  push(`  路径统一为**相对仓库根、正斜杠**；每项 = \`sha256(UTF-8(相对路径 + "|" + 文件内容 sha256))\`；按路径字典序用 \`"\\n"\` 连接后再 \`sha256\` ⇒ aggregate。`, NL)
+  push(`  ⚠️ 本次 ${fingerprintBefore.files} 个文件比「2 DB ＋ 31 sessions」多 2 个：\`backend/data/larry.db-wal\` 与 \`larry.db-shm\` 也在集合内。`, NL, NL)
+  push(`源指纹文件集合（前 ${fingerprintBefore.files} 个，路径 + 内容 sha256）：`, NL, NL)
+  push('```text', NL)
+  for (const entry of fingerprintBefore.entries) push(`${entry.path}  ${entry.sha256}`, NL)
+  push('```', NL, NL)
   push(`- 凭据文件名扫描：\`credentials\` 命中 **0**；凭据形态扫描（文本＋解压后的 sessions）：`, NL)
   push(`  命中 **${credential.hits}** 处 / 总长度 **${credential.match_length}**（⛔ 不回显内容；二进制 DB 跳过 ${credential.skipped_binary} 个）。`, NL, NL)
 
@@ -448,14 +482,14 @@ function buildManifest(context) {
 // ==========================================================================
 
 function tarCreate(packagePath, stageDir) {
-  const result = spawnSync('tar', ['-czf', packagePath, '-C', stageDir, '.'], { encoding: 'utf8' })
+  const result = spawnSync(TAR_BIN, ['-czf', packagePath, '-C', stageDir, '.'], { encoding: 'utf8' })
   if (result.error) return { ok: false, detail: `tar 不可用：${result.error.message}` }
   if (result.status !== 0) return { ok: false, detail: `tar 退出 ${result.status}：${result.stderr}` }
   return { ok: true, detail: `tar -czf ${basename(packagePath)}` }
 }
 
 function tarExtract(packagePath, extractDir) {
-  const result = spawnSync('tar', ['-xzf', packagePath, '-C', extractDir], { encoding: 'utf8' })
+  const result = spawnSync(TAR_BIN, ['-xzf', packagePath, '-C', extractDir], { encoding: 'utf8' })
   if (result.error) return { ok: false, detail: `tar 不可用：${result.error.message}` }
   if (result.status !== 0) return { ok: false, detail: `tar 退出 ${result.status}：${result.stderr}` }
   return { ok: true, detail: 'tar -xzf' }
@@ -519,6 +553,11 @@ function main() {
   say(`⚠️ D: 与 C: 同属 Disk 0，此落点不防盘坏；请另拷到外部介质。`)
   say(`repo=${repoRoot}`)
   say(`dest=${destDir}`)
+  const tarVersionResult = spawnSync(TAR_BIN, ['--version'], { encoding: 'utf8' })
+  const tarVersion = ((tarVersionResult.stdout || tarVersionResult.stderr || 'unknown')
+    .split(NL)[0] || 'unknown').trim()
+  say(`tar=${TAR_BIN}`)
+  say(`  version=${tarVersion}`)
 
   if (!existsSync(liveDb) && !existsSync(legacyDb) && !existsSync(sessionsDir)) {
     console.error('前置缺失：记忆库、旧库、会话流水都不存在，拒绝生成空包')
@@ -542,7 +581,7 @@ function main() {
   for (const file of sessionSourceFiles) sourceFingerprintPaths.push(file)
   const cotSourceFiles = walkFiles(cotDir)
   for (const file of cotSourceFiles) sourceFingerprintPaths.push(file)
-  const fingerprintBefore = fingerprintSources(sourceFingerprintPaths)
+  const fingerprintBefore = fingerprintSources(repoRoot, sourceFingerprintPaths)
 
   say('')
   say('== 收集 ==')
@@ -634,7 +673,7 @@ function main() {
     process.exit(2)
   }
 
-  const fingerprintAfter = fingerprintSources(sourceFingerprintPaths)
+  const fingerprintAfter = fingerprintSources(repoRoot, sourceFingerprintPaths)
   const sourceUnchanged = fingerprintBefore.aggregate_sha256 === fingerprintAfter.aggregate_sha256
   judge(
     'B-5-source-unchanged',
@@ -676,6 +715,8 @@ function main() {
     credential,
     dataFileCount,
     dataBytes,
+    tarBin: TAR_BIN,
+    tarVersion,
     manifestShaNote: 'MANIFEST 是生成时的事实快照；包内文件才是数据本体。',
   })
   writeFileSync(join(stageDir, 'MANIFEST.md'), manifest, 'utf8')
