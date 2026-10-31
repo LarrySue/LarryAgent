@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | 🟡 **①② 已落地 ／ ③ 未做**（2026-10-31 月月 B 半查出、WB 复核成立 ⇒ `TODO.md` 该条已退回 `[ ]`）；⚠️ **原 10-30「已完成」判词作废**。三条**他处零承接**的过程观察与判别力边界留本区〈📥 过程观察 · 测试场地隔离〉 | 2026-10-30 |
-| **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | 🟡 **A 侧已交付（Trae 2026-11-01），待 WB 复验** ⇒ 见〈📮 派发 · CoT 存档 · A 侧〉节末〈交付回报〉。⚠️ **不含回传侧**（B 侧单列）；⚠️ **不动 `messages` 表**（对阿衡原方案的一处实质修正，理由在稿内） | 2026-10-30 |
+| **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | ✅ **已复验成立（WB 2026-11-01 00:20，带 4 条要说）** ⇒ 见〈📌 WB 复验 · J6〉。三态按 §7③ 取词、判**完整性**；WB 独立复跑 9 passed ＋ Tier0 负向臂 `exit=1`（且真实存档目录未被写）；Tier0 新增 **1025 行**凭据形态零命中。⚠️ **J6-8「全绿」这一格不成立**（本机 172 passed ＋ **1 failed**：`test_shell_tool::test_windows_dir` 系 locale 依赖，与本单无关；她的 `173 passed` 我无法复现，归因未明） | 2026-10-30 |
 | **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段（本区正文已清退，回溯 `git log -p -- exchange/log-trae.md`）。WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂）⇒ **已由 P8 收掉**；②部署件不可复现（`lib/` 未入 git，仍未派）；③`selectVectorRows` 无 LIMIT（仍未派） | 2026-10-31 |
 | **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | ✅ **已复验成立（WB 2026-10-31 23:30，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段。WB 独立复跑：P8 12 判据 0 FAIL、P0② 21＋2 回归 0 FAIL、8 件证据归一化后逐件一致；Tier0 538 行 0 命中；真库四样全同。⚠️ **她有改回归装置**（1 hunk、judge 改动 0）⇒ 已核「判据未放松」。✅ **真库迁移不需定**（老大 23:19：「都是测试数据，随便动」） | 2026-10-31 |
 | — | — | — | ✅ **本区无其他在飞块**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末「三选一」待裁**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
@@ -174,6 +174,66 @@
 - **故障注入口子**：`LARRY_TEST_BREAK_ISOLATION` 是我为负向取证加的测试专用开关，只改路径、**不绕过断言**；
   两条 exit=1 已实跑。若判它危险可删，删后负向记录仍有效但不可一键复算。
 - 体量假设「10 次调用/会话」是估算前提，不是实测会话分布；⛔ 不据此削减覆盖面。
+
+---
+
+## 📌 WB 复验 · J6 · CoT 存档 A 侧（WB · 2026-11-01 00:20）—— 成立，但 J6-8 有一格对不上
+
+> **判定：成立。** 三态语义、raw 落盘、异常边界、Tier0 隔离四件都核过了。但**「`backend/tests/` 全绿」这一格我复现不出来**，见 §三 —— 不是她做错，是那条判据本身对环境敏感。
+
+### 一、我自己跑了什么
+
+| 跑的东西 | 读数 |
+|---|---|
+| `pytest tests/test_cot_archive.py -q` | **9 passed** |
+| `pytest tests -q`（全量） | **172 passed, 3 skipped, 1 failed** ← 与她的 173 passed 不一致 |
+| `LARRY_TEST_BREAK_ISOLATION=archive pytest tests/test_cot_archive.py` | **exit=1**，报「cot_archive.path 指向真实存档目录」；**跑后真实目录仍不存在**（断言在写之前拦下） |
+| 真库 / 真实存档目录（跑前跑后） | `larry.db` sha `8f91c0a0…` 不变；`data/cot_archive` **始终未创建** |
+| Tier0（新增 **1025 行**） | 凭据形态 **0 命中** |
+| `_trae-evidence/j6-cot-archive/` | 存在，被 `.gitignore:52` 覆盖 ⇒ 确实不入库（她说的对） |
+
+### 二、三态实现核过，判的是完整性、取词照文档
+
+`cot_archive.py:161 _decide_status` 的判据是「**源对象 reasoning 字符数 vs 回读落盘文件的 reasoning 字符数**」——
+
+- `captured < received > 0` ⇒ `upstream_returned_not_captured`（未完整采存）
+- `received == 0` 且快照失败 ⇒ 同上（**不按空白推定未返回**，与 §7③「无法核实须注明原因」一致）
+- `captured > 0` ⇒ `stored`；否则 ⇒ `upstream_absent`
+
+映射表她也给了（`upstream_absent` / `upstream_returned_not_captured` / `stored` ↔ 文档三态），**这就是我 23:36 要求的那张**。
+
+三份样例是**真实 SDK 调用**，不是纯 mock：`deepseek-reasoner` → `stored`（143/143）／`deepseek-chat` → `upstream_absent`（0/0，模型特性对照）／构造丢键 → `upstream_returned_not_captured`（143/0）。
+⚠️ 第三态是构造的（她自曝），但构造物是**真实响应对象删键**，不是假数据。
+
+**异常边界也核了**：`start_call` / `observe` / `finalize` 三处各自 try，失败只 `logger.exception` ⇒ 写盘失败不会打断 LLM 返回与事件流。这条她声称的，代码里成立。
+
+### 三、⚠️ J6-8「全绿」这一格不成立 —— 但与本单无关
+
+本机全量跑出 **1 failed**：`tests/test_shell_tool.py::TestShellTool::test_windows_dir`。
+
+根因：该用例断言 `dir` 输出含 `"Volume"`，而本机 `dir` 输出是中文（「D 中的卷没有标签」）＋解码乱码。**本机 `chcp` = 936**。
+**与本单无关**：她未触及 `test_shell_tool.py` 与 `tools/shell.py`（`git show --name-only` 核过），该文件最后一次改动是 `63fa501`（P2.2 ShellTool，很早）。
+
+⚠️ **她的 `173 passed` 我复现不出来** —— 换了 Git Bash 与 PowerShell **两种通道都失败**，说明不是我这个 shell 的特殊性。归因未明，**不排除她那一次运行的 code page 不同**（她的证据是 PowerShell `Tee-Object` 落盘的，看着确是当次真跑）。
+⇒ **不判她假报**；判「这条判据对环境敏感，无法作为通用验收格」。
+
+**建议另开一条**（不在本单范围）：`test_windows_dir` 断言绑死英文输出，属既有坏测；要么改成接受中英文、要么改成只验 `success == True`。⚠️ 这是**判据设计**问题，我不擅自改。
+
+### 四、两条要你知道的产品面事实
+
+**① 存档默认开启。** `CotArchiveConfig.enabled` 默认 **`True`**，实例 `config.yaml` 里**没有** `cot_archive` 段 ⇒ 走默认 ⇒ **从现在起 backend 每一次真实 LLM 调用都会落一份 raw** 到 `backend/data/cot_archive/<日期>/`。
+方向符合 §7「全量存档是红线、⛔ 不以成本削减覆盖面」（默认关＝等于没做）；但它也意味着 **CoT 原文开始常态化落盘**，且**未加密、未脱敏**（这正是「原文即证据」要求的）。要关就是配置里写 `enabled: false`。
+
+**② 存档层完整 ≠ 聊天层完整。** `llm.py:498` 的事件流**仍然只取 `delta.content`**（reasoner 场景丢弃 97.9%）。J6 只让 raw 存全了，没改取法 —— 这是派发稿明令禁止的，**做法正确**。但要分清：`stored` 说的是**存档**完整，不是「我方系统整体采到了」。
+
+### 五、她主动报的四处，我的判定
+
+| 她报的 | 判定 |
+|---|---|
+| 修存量坏测 `test_chromadb_degradation`（判据未放松？） | ✅ **未放松，反而更严**：原断言 `mock_db.commit` 被调（间接），新断言 `insert` 被调 ＋ `mark_archived(1)`（带参数）；且 `cfg.vector_store.enabled` 有 `finally` 恢复，不污染后续用例。**这处 1 hunk 我判不必退回。** |
+| `LARRY_TEST_BREAK_ISOLATION` 故障注入（要不要删） | ✅ **保留**。它只把**被断言的路径**写成真实路径，断言本身不绕过（我实测 exit=1 且真实目录未被写）；不设该变量时零影响。删了负向记录就不可一键复算。 |
+| conftest 新增第二道断言 | ✅ **是加强**，不是削弱：`cot_archive.path` 现在也有隔离断言，默认落会话临时目录。 |
+| 5 条未闭合（④未采纳分支／臂②是构造的／回读 checksum／无跨会话索引／深拷贝警告） | ✅ 如实，边界清楚，⛔ 不判缺陷。④ 未采纳分支与派发范围一致（本单只覆盖正常返回路径）。 |
 
 ---
 
