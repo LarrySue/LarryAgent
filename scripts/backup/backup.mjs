@@ -360,7 +360,9 @@ function buildManifest(context) {
   push(`## 0. 还原（另一人可独立跑通）`, NL, NL)
   push('```bash', NL)
   push(`# 1) 解包到空目录（⛔ 不要原地解开覆盖）`, NL)
-  push(`tar -xzf ${packageName} -C /path/to/empty/restore`, NL, NL)
+  push(`tar -xzf ${packageName} -C /path/to/empty/restore`, NL)
+  push(`# Windows：若 PATH 里的 tar 是 GNU（Git/MSYS），改用系统 bsdtar，⛔ 不要用 GNU tar 解绝对盘符路径`, NL)
+  push(`# & "$env:SystemRoot\\System32\\tar.exe" -xzf ${packageName} -C <绝对解包目录>`, NL, NL)
   push(`# 2) 校验（Linux/macOS 自带 sha256sum；Windows 用下面的 PowerShell 等价）`, NL)
   push(`cd /path/to/empty/restore`, NL)
   push(`sha256sum -c SHA256SUMS`, NL)
@@ -372,6 +374,8 @@ function buildManifest(context) {
   push(`  if ((Get-FileHash $p -Algorithm SHA256).Hash.ToLower() -ne $h) { throw "FAIL $p" }`, NL)
   push(`}`, NL)
   push('```', NL, NL)
+  push('⚠️ Windows 解包务必用系统自带 `C:\\Windows\\System32\\tar.exe`（bsdtar）；GNU tar 会把 `C:` / `D:` 当远程主机，', NL)
+  push('打包与解包两个方向都会失败（`Cannot connect to C:/D:`）。', NL, NL)
   push(`3) 先停 DSH 与 backend，再回填（目标最好是空的 DSH_HOME / backend/data）：`, NL, NL)
   push('```bash', NL)
   push(`# 记忆库（TS 插件在跑的那份）`, NL)
@@ -482,6 +486,8 @@ function buildManifest(context) {
 // ==========================================================================
 
 function tarCreate(packagePath, stageDir) {
+  // ⚠️ 所有路径参数（-f 包路径 / -C 工作目录）都走 TAR_BIN（Windows 优先 bsdtar）；
+  // 成员名固定为相对 `.`，⛔ 不传绝对盘符成员名。GNU tar 会把 C:/D: 当远程主机。
   const result = spawnSync(TAR_BIN, ['-czf', packagePath, '-C', stageDir, '.'], { encoding: 'utf8' })
   if (result.error) return { ok: false, detail: `tar 不可用：${result.error.message}` }
   if (result.status !== 0) return { ok: false, detail: `tar 退出 ${result.status}：${result.stderr}` }
@@ -489,6 +495,8 @@ function tarCreate(packagePath, stageDir) {
 }
 
 function tarExtract(packagePath, extractDir) {
+  // 解包方向同样两个路径参数（-f 包路径 / -C 解包目录）都走 TAR_BIN；
+  // 不指定成员名 ⇒ 不触发 GNU tar 的绝对盘符/远程主机分支。
   const result = spawnSync(TAR_BIN, ['-xzf', packagePath, '-C', extractDir], { encoding: 'utf8' })
   if (result.error) return { ok: false, detail: `tar 不可用：${result.error.message}` }
   if (result.status !== 0) return { ok: false, detail: `tar 退出 ${result.status}：${result.stderr}` }

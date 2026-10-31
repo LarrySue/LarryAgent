@@ -174,7 +174,7 @@ B-5 的算法与 35 文件集合写进 MANIFEST，可逐项复算。
    （`/usr/bin/tar` 1.35）会把 `C:` 当远程主机，已不再用于打包/解包。MANIFEST 顶部写入本次实际用的
    `打包工具` 与版本；`LARRY_BACKUP_TAR` 仅作故障注入。
    - 读数：`--dest C:\Users\SuLarry\AppData\Local\Temp\larry-backup-b8` ⇒
-     `larryagent-backup-20261101-022947-815-a7f0.tar.gz`（479176 B），`EXITCODE=0`，8/8 PASS。
+     `larryagent-backup-20261101-023634-229-e235.tar.gz`（479406 B），`EXITCODE=0`，8/8 PASS。
 2. **失败退出码**：`LARRY_BACKUP_TAR=C:\Windows\System32\no-such-tar.exe` ⇒ 打包阶段打印
    `tar 不可用：spawnSync ... ENOENT`，**EXITCODE=1**，不产生包。
 3. **B-5 源指纹**：改为「相对仓库根正斜杠路径 ＋ 每项 `sha256(路径|文件 sha256)` ＋ 字典序 `\n` 连接再 sha256」；
@@ -182,14 +182,21 @@ B-5 的算法与 35 文件集合写进 MANIFEST，可逐项复算。
    `backend/data/larry.db-wal`、`larry.db-shm` 也在集合内。
    - 新 aggregate：`2e020fabeaf40740c5364350ce92e6f6170a251a252346f0acdcd7fe12cfd36d`（before=after）。
    - 独立复算 `b5-recompute.mjs` ⇒ `manifest_files=35 … match=true`。
-4. **B-6 复跑**：`022915-948` / `023001-384`，均 `data_files=33`；落点现有 **8 个包**，旧包全保留。
-5. **B-3 复跑**：修复后包拷到另一临时目录、干净解包 ⇒ `sums_lines 34 / checked_ok 34 / bad 0 / data_files 33`。
+4. **B-6 复跑**：`023633-578` / `023633-900`，均 `data_files=33`；落点现有 **10 个包**，旧包全保留。
+5. **B-3 复跑**：最终包拷到另一临时目录、干净解包 ⇒ `sums_lines 34 / checked_ok 34 / bad 0 / data_files 33`。
+6. **B-8 解包方向复核（阿衡 2026-11-01 补）**：GNU tar 对绝对盘符路径在**解包**方向也会走远程主机分支
+   （`Cannot connect to D:`，`-C /d/Temp/...`）。本实现从第一次修复起，`tarCreate` 与 `tarExtract` 的
+   **所有路径参数**（`-f` 包路径、`-C` 工作/解包目录）都走同一个 `TAR_BIN`（Windows 上 bsdtar）；
+   成员名固定为相对 `.` / 不指定，⛔ 无绝对盘符成员名。
+   - 读数：`C:\Windows\System32\tar.exe -xzf <包> -C D:\Temp\Sys\b8-extract-check2` ⇒ `TAR_EXITCODE=0`，
+     `sums_lines 34 / checked_ok 34 / bad 0`（`b8-extract-absolute-final.stdout.txt`）。
+   - 打包方向 `--dest C:\Users\...` ⇒ 479406 B，exit=0。
 
-证据：`_trae-evidence/backup/`（`READINGS.md`、`fix-run1.stdout.txt`、`fix-b8-c-absolute.stdout.txt`、
-`fix-failure-exit.stdout.txt`、`fix-b6-run2.stdout.txt`、`b5-recompute-check.txt`、`fix-offsite-verify.txt`）。
-canonical 包更新为 `larryagent-backup-20261101-022915-948-94f8.tar.gz`（479160 B）。
+证据：`_trae-evidence/backup/`（`READINGS.md`、`fix2-run1.stdout.txt`、`fix2-run2.stdout.txt`、
+`fix2-b8-c-absolute.stdout.txt`、`fix-failure-exit.stdout.txt`、`b5-recompute-check.txt`、
+`b8-extract-absolute-final.stdout.txt`）。canonical 包更新为 `larryagent-backup-20261101-023633-578-e1fa.tar.gz`（479380 B）。
 
-**未闭合**：默认落点现 8 个包（含调试版，按「不删旧包」保留）；非 Windows 仍用 PATH tar（GNU 的 `C:` 问题只影响 Windows
+**未闭合**：默认落点现 10 个包（含调试版，按「不删旧包」保留）；非 Windows 仍用 PATH tar（GNU 的 `C:` 问题只影响 Windows
 绝对路径）；未做并发写会话的一致性演练。
 
 ---
