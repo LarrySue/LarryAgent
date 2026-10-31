@@ -223,7 +223,7 @@
 **两处现状修正**：
 
 - **1b-A 的适用范围**：只保证「跨 agent 不可读」；❌ 不能顺带当 D-7 档 1 保障。生产侧还需「**一 agent 一 DSH_HOME**」——否则 `sessions/`／`storages/` 共享，B 仍读得到 A 的会话流水（记忆原料）。
-- **双写现状**：生产 patch 只配 `dbPath`、**未配 `chromaUrl`** ⇒ 双写未启用；从生产插件目录 import `@huggingface/transformers`／`chromadb` 均 **ERR_MODULE_NOT_FOUND**（依赖在 `harness/node_modules`，插件实体复制到 profile 后够不着）⇒ 配了也起不来。⇒ 统一口径：**没在写＋想启也启不了＋读路径也没有**。
+- **双写现状**（2026-10-31 更新）：生产 patch **未配 `chromaUrl`，Chroma 双写仍未启用**；`@huggingface/transformers` **4.3.1 已装进 profile，可从部署插件实体目录解析**，`chromadb` 包可达性未测，不外推为 Chroma 链路已通。**召回已走本地 embedding → SQLite 同表向量 → 内存余弦 top-k**，模型未就绪等无语义结果时回退时间倒序；P8 的向量路 `selectVectorRows` 与降级路 `selectRecentFiltered` 均在 SQL 层以 `session_id <> ?` 排除当前会话，其他会话相似内容仍可召回，**写侧仍逐条用户消息入库**。默认注入配置下，过滤后为空记 `RECALL_EMPTY_MARK`，真空库不记此行。**规模边界**：向量查询无 `LIMIT`，先载入全部符合过滤条件的向量行，再在内存排序取 top-k，并非只读 k 行。实现入口＝`harness/packages/plugin-s4-memory/src/index.ts` 的两条查询与 `semanticRecallText`（P0② `e14fa24`／P8 `b07b65f`；运行结论由 WB 复验成立，本次 Qoder 只读复核源码与部署依赖）。
 
 **契约层代价**：加列（`agent_id`／`domain`／`provenance`／`version`／`status`／`is_deleted`）低风险，但**没有写入方**；换 uuid 主键高成本（召回 `ORDER BY id DESC` 兼作时间序，须引入显式排序键；Chroma id 绑行号 ⇒ 存量向量全孤儿；`legacy_id` 须同事务填完）；`created_at` 历史行补不出真实偏移，导出规范化要留「偏移未知」态。⇒ **「契约先于索引」在代码上成立**。
 
