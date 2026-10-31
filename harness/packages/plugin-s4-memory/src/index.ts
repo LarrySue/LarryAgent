@@ -38,7 +38,7 @@ import {
   resolveManifestPath,
   type SessionEventStats,
 } from './manifest.js'
-import { cosineTopK, encodeVector, type RecallRow, type RecallVectorRow } from './recall.js'
+import { applyRecallGate, cosineTopK, encodeVector, type RecallRow, type RecallVectorRow } from './recall.js'
 
 export const name = 'larry-s4-memory'
 export const inject = ['sessions', 'systemPrompt']
@@ -49,6 +49,10 @@ export const DEGRADED_MARK = '[S36-MEMORY] chroma degraded:'
 export const P02_DEPLOY_SENTINEL = '[S36-MEMORY] p02-vector-recall-v1'
 /** P8 本单新增部署哨兵（P7 口径：部署件内必须命中） */
 export const P08_DEPLOY_SENTINEL = '[S36-MEMORY] p08-recall-session-filter-v1'
+/** ②.2.1 本单新增部署哨兵（部署件内必须命中） */
+export const P221_DEPLOY_SENTINEL = '[S36-MEMORY] p221-recall-gate-v1'
+/** ②.2.1 被挡记录：正常操作日志，⛔ 不混入 degraded（那是故障语义） */
+export const RECALL_GATE_MARK = '[S36-MEMORY] recall gate:'
 /** 语义召回降级原因（与 DEGRADED_MARK 共用同一 stderr／degradedLogPath 通道） */
 export const EMBED_RECALL_FALLBACK = 'recall fallback to time-order'
 /** P8-d 空召回 OBS 行（与降级共用同一通道；⛔ 不冒充降级） */
@@ -106,8 +110,20 @@ export interface Config {
   embedModel?: string
   /** 模型缓存目录（支持 `${DSH_HOME}` 占位与相对路径；留空 = transformers.js 默认 .cache） */
   modelCacheDir?: string
-  /** 注入面召回条数 */
+  /**
+   * 注入面召回条数；②.2.1 起它也是相关性门的 **k 上限**（默认 6）。
+   * ⭐ 上限不是目标：门内不足 k 条就注入实际条数，⛔ 不拿低分条凑数。
+   */
   recallLimit?: number
+  /** ②.2.1 相对门宽度：只保留 score >= top1 - recallDelta；默认 0.20 */
+  recallDelta?: number
+  /** ②.2.1 绝对下限 **预留键**：本期 ⛔ 不实现过滤，默认 0（仅占位） */
+  recallMinTop?: number
+  /**
+   * ②.2.1 被挡记录文件（被挡条数 ＋ 被挡最高分，⛔ 不写内容）。
+   * 缺省只写 stderr；⛔ 不复用 degradedLogPath（故障/正常语义分开）。
+   */
+  recallGateLogPath?: string
   /** ChromaDB collection 名 */
   collectionName?: string
   /**
@@ -123,11 +139,12 @@ export interface Config {
 }
 
 const DEFAULTS: Required<Pick<Config,
-  'embedModel' | 'modelCacheDir' | 'recallLimit' | 'collectionName' | 'injectSection' | 'injectContext' | 'manifestPath'
+  'embedModel' | 'modelCacheDir' | 'recallLimit' | 'recallDelta' | 'collectionName' | 'injectSection' | 'injectContext' | 'manifestPath'
 >> = {
   embedModel: 'Xenova/bge-small-zh-v1.5',
   modelCacheDir: 'D:/Code/_models',
-  recallLimit: 8,
+  recallLimit: 6,
+  recallDelta: 0.20,
   collectionName: 'larry_memories',
   injectSection: false,
   injectContext: true,
@@ -165,6 +182,18 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     process.stderr.write(text)
     if (cfg.degradedLogPath) {
       try { appendFileSync(cfg.degradedLogPath, text) } catch { /* 诊断失败不得反噬业务 */ }
+    }
+  }
+
+  /**
+   * ②.2.1 被挡记录通道：stderr ＋ 可选 recallGateLogPath。
+   * ⛔ 不复用 degradedLogPath —— 被挡是正常工作，不是故障；混在一起会淹掉故障排查。
+   */
+  function writeGate(line: string): void {
+    const text = line.endsWith('\n') ? line : `${line}\n`
+    process.stderr.write(text)
+    if (cfg.recallGateLogPath) {
+      try { appendFileSync(cfg.recallGateLogPath, text) } catch { /* 诊断失败不得反噬业务 */ }
     }
   }
 
@@ -505,10 +534,35 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
         startBackfill()
       }
       const rows = selectVectorRows.all(sessionId) as unknown as RecallVectorRow[]
-      if (rows.length === 0) return { text: '', emptyReason: 'no-cross-session-vectors' }
-      const top = cosineTopK(rows, cached.vector, cfg.recallLimit)
-      if (top.length === 0) return { text: '', emptyReason: 'no-candidates' }
-      return { text: formatRecall(top, true) }
+      const delta = Number.isFinite(cfg.recallDelta) ? cfg.recallDelta : 0.20
+      const limit = Number.isFinite(cfg.recallLimit) ? cfg.recallLimit : 6
+
+      if (rows.length === 0) {
+        // ②.2.1 R-6：过滤后候选池为空 ⇒ 必写被挡记录；但**真空库**保持 P8-d 控制臂（不写）。
+        // 判别：库里一行都没有（anyRows=0）＝真空库；有记忆但无跨会话候选＝过滤后为空。
+        const anyRows = selectRecent.all(1) as unknown as RecallRow[]
+        if (anyRows.length > 0) {
+          writeGate(
+            `${RECALL_GATE_MARK} candidates=0 kept=0 blocked=0 blocked_top=none top1=none delta=${delta} limit=${limit} reason=no-cross-session-vectors sentinel=${P221_DEPLOY_SENTINEL}`,
+          )
+        }
+        return { text: '', emptyReason: 'no-cross-session-vectors' }
+      }
+
+      // 先取**全部**候选（limit=rows.length），再在 JS 层过门＋截上限：
+      // ⛔ 不在 SQL 加 LIMIT，避免「候选变少」与「被门挡掉」两个变量混在一起。
+      const scoredAll = cosineTopK(rows, cached.vector, rows.length)
+      if (scoredAll.length === 0) return { text: '', emptyReason: 'no-candidates' }
+
+      const gate = applyRecallGate(scoredAll, delta, limit)
+      const blockedTopText = gate.blockedTop === null ? 'none' : gate.blockedTop.toFixed(6)
+      const top1Text = gate.top1 === null ? 'none' : gate.top1.toFixed(6)
+      // 每轮召回都写：被挡条数 ＋ 被挡最高分（⛔ 不写内容；全挡/空池也写）
+      writeGate(
+        `${RECALL_GATE_MARK} candidates=${scoredAll.length} kept=${gate.kept.length} blocked=${gate.blockedCount} blocked_top=${blockedTopText} top1=${top1Text} delta=${delta} limit=${limit} reason=ok sentinel=${P221_DEPLOY_SENTINEL}`,
+      )
+      if (gate.kept.length === 0) return { text: '', emptyReason: 'all-below-gate' }
+      return { text: formatRecall(gate.kept.map((entry) => entry.row), true) }
     } catch (err: unknown) {
       const reason = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ')
       writeDegraded(`${DEGRADED_MARK} ${EMBED_RECALL_FALLBACK} reason=${P02_DEPLOY_SENTINEL} cause=${reason}`)

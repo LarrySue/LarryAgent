@@ -41,14 +41,20 @@ export function decodeVector(blob: unknown): Float32Array | null {
   return new Float32Array(copy.buffer, 0, copy.byteLength / 4)
 }
 
+/** 带分数的召回行（②.2.1 相关性门需要 score；⛔ 不再在返回时丢掉） */
+export interface ScoredRecall {
+  row: RecallRow
+  score: number
+}
+
 /**
  * 余弦 top-k。
  * @param rows 带向量的记忆行（按 id 倒序或任意序均可）
  * @param query query 向量（维度须与入库向量一致）
  * @param limit 返回条数
- * @returns 按余弦得分降序的行（不含 embedding 列）
+ * @returns 按余弦得分降序的 {row, score}（不含 embedding 列）
  */
-export function cosineTopK(rows: RecallVectorRow[], query: number[], limit: number): RecallRow[] {
+export function cosineTopK(rows: RecallVectorRow[], query: number[], limit: number): ScoredRecall[] {
   if (limit <= 0 || query.length === 0) return []
   const q = Float32Array.from(query)
   let qNormSq = 0
@@ -75,5 +81,43 @@ export function cosineTopK(rows: RecallVectorRow[], query: number[], limit: numb
   }
 
   scored.sort((a, b) => (b.score - a.score) || (b.row.id - a.row.id))
-  return scored.slice(0, limit).map((s) => s.row)
+  return scored.slice(0, limit)
+}
+
+/** 相对门的判定结果（不含内容，只留计数与分数，供日志使用） */
+export interface RecallGateResult {
+  /** 过门且未超上限的行（按分数降序） */
+  kept: ScoredRecall[]
+  /** 被相对门挡掉的条数（score < top1 - delta） */
+  blockedCount: number
+  /** 被挡条目里的最高分；无被挡项时为 null */
+  blockedTop: number | null
+  /** 本轮 top1 分数；无候选时为 null */
+  top1: number | null
+}
+
+/**
+ * ②.2.1 相关性门：只保留 score >= top1 - delta，再截到 k。
+ *
+ * ⭐ k 是**上限不是目标**：门内不足 k 条就返回实际条数，⛔ 不拿低分条凑数。
+ * ⚠️ minTop（绝对下限）本期不实现；这里刻意没有绝对阈值参数。
+ * 数学性质：top1 自身必然过门（delta >= 0 ⇒ top1 >= top1 - delta），
+ * 所以「全部被门挡掉」不可达——R-6 因此改为「候选池为空」的判据。
+ */
+export function applyRecallGate(scored: ScoredRecall[], delta: number, limit: number): RecallGateResult {
+  if (scored.length === 0) {
+    return { kept: [], blockedCount: 0, blockedTop: null, top1: null }
+  }
+  const top1 = scored[0].score
+  const threshold = top1 - delta
+  const blocked = scored.filter((entry) => entry.score < threshold)
+  const kept = scored
+    .filter((entry) => entry.score >= threshold)
+    .slice(0, Math.max(0, limit))
+  return {
+    kept,
+    blockedCount: blocked.length,
+    blockedTop: blocked.length > 0 ? Math.max(...blocked.map((entry) => entry.score)) : null,
+    top1,
+  }
 }

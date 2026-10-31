@@ -369,7 +369,8 @@ async function phaseP4() {
     const embedder = embedding.createEmbedder({ modelId: MODEL_ID, cacheDir: MODEL_DIR })
     const queryVector = await embedder.encode(query)
     const vectorRows = dbAll(dbPath, 'SELECT id, content, created_at, embedding FROM memories WHERE embedding IS NOT NULL ORDER BY id DESC')
-    const top = recall.cosineTopK(vectorRows, queryVector, 8)
+    // ②.2.1 起 cosineTopK 返回 {row, score}；探针只取 row（判据未改）
+    const top = recall.cosineTopK(vectorRows, queryVector, 8).map((entry) => entry.row)
     const topIds = top.map((r) => r.id)
     const timeOrderIds = dbAll(dbPath, 'SELECT id FROM memories ORDER BY id DESC').map((r) => r.id)
     const timeRank = timeOrderIds.indexOf(1) + 1
@@ -540,7 +541,10 @@ try {
   const copyHome = makeArmHome('p5b-copy')
   const copyPluginDir = join(copyHome, 'plugin-copy')
   mkdirSync(join(copyPluginDir, 'lib'), { recursive: true })
-  for (const file of ['index.js', 'embedding.js', 'recall.js', 'index.d.ts', 'embedding.d.ts', 'recall.d.ts']) {
+  // ②.2.1 订正：按目录全量复制，而不是硬编码文件清单
+  //（⑪.1 新增 manifest.js 后，旧清单会让 index.js 的 import 断链；判据未改）
+  for (const file of readdirSync(join(DEPLOYED, 'lib'))) {
+    if (!file.endsWith('.js') && !file.endsWith('.d.ts')) continue
     const src = join(DEPLOYED, 'lib', file)
     if (existsSync(src)) copyFileSync(src, join(copyPluginDir, 'lib', file))
   }

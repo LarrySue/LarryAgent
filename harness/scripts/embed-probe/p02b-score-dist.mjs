@@ -128,12 +128,9 @@ for (const c of CASES) {
   }))
   const scored = recall.cosineTopK(rows, q, rows.length)
   const scoreOf = new Map()
-  for (const r of scored) {
-    // cosineTopK 丢掉 score ⇒ 这里自己补算，只为读数（不判它的实现）
-    const v = vecs[r.id]
-    let dot = 0, qn = 0, vn = 0
-    for (let i = 0; i < q.length; i++) { dot += q[i] * v[i]; qn += q[i] * q[i]; vn += v[i] * v[i] }
-    scoreOf.set(r.id, dot / (Math.sqrt(qn) * Math.sqrt(vn)))
+  for (const entry of scored) {
+    // ②.2.1 起 score 随返回值带出；探针直接用，不再自己补算
+    scoreOf.set(entry.row.id, entry.score)
   }
 
   const group = { high: [], mid: [], noise: [] }
