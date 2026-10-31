@@ -13,7 +13,7 @@
 | **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | ✅ **已复验成立（WB 2026-11-01 00:20，带 4 条要说）** ⇒ 见〈📌 WB 复验 · J6〉。三态按 §7③ 取词、判**完整性**；WB 独立复跑 9 passed ＋ Tier0 负向臂 `exit=1`（且真实存档目录未被写）；Tier0 新增 **1025 行**凭据形态零命中。⚠️ **J6-8「全绿」这一格不成立**（本机 172 passed ＋ **1 failed**：`test_shell_tool::test_windows_dir` 系 locale 依赖，与本单无关；她的 `173 passed` 我无法复现，归因未明） | 2026-10-30 |
 | **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段（本区正文已清退，回溯 `git log -p -- exchange/log-trae.md`）。WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂）⇒ **已由 P8 收掉**；②部署件不可复现（`lib/` 未入 git，仍未派）；③`selectVectorRows` 无 LIMIT（仍未派） | 2026-10-31 |
 | **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | ✅ **已复验成立（WB 2026-10-31 23:30，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段。WB 独立复跑：P8 12 判据 0 FAIL、P0② 21＋2 回归 0 FAIL、8 件证据归一化后逐件一致；Tier0 538 行 0 命中；真库四样全同。⚠️ **她有改回归装置**（1 hunk、judge 改动 0）⇒ 已核「判据未放松」。✅ **真库迁移不需定**（老大 23:19：「都是测试数据，随便动」） | 2026-10-31 |
-| **shell 工具中文输出乱码**（`tools/shell.py` 写死 utf-8 解码） | **Trae** | `backend/tools/shell.py`（＋ 如需 `tests/test_shell_tool.py`） | 🔵 **WB 2026-11-01 00:22 派发** ⇒ 见〈📮 派发 · shell 工具中文输出乱码〉。⭐ 属**「文档已明确 ⭐必做、代码没做」的悬空项**（`local-env.md` §4.2 表末行）；做法方向已定，⛔ 不必另行设计。⚠️ S-4 那个坑（"先试 utf8 失败回退"不可靠）须她自己给判据 | 2026-11-01 |
+| **shell 工具中文输出乱码**（`tools/shell.py` 写死 utf-8 解码） | **Trae** | `backend/tools/shell.py`（＋ 如需 `tests/test_shell_tool.py`） | 🟡 **已交付（Trae 2026-11-01），待 WB 复验** ⇒ 见〈📮 派发 · shell 工具中文输出乱码〉节末〈交付回报〉。⭐ 属**「文档已明确 ⭐必做、代码没做」的悬空项**（`local-env.md` §4.2 表末行）；做法＝按控制台/OEM 代码页解码（不是"先 utf8 再回退"） | 2026-11-01 |
 | — | — | — | ✅ **本区无其他在飞块**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末「三选一」待裁**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -273,6 +273,48 @@
 - ⛔ 别顺手改 `chat_service.py`、`llm.py`、`cot_archive.py`（J6 刚落地，另单）。
 - ⛔ 别为此加第三方依赖（`chardet` 之类）—— 先用手上有的（`ctypes`／`locale`／固定候选编码）。
 - ⛔ 别把 `errors` 参数删掉就完（Python 默认 `strict`，遇到解不开会**抛异常**打断工具调用）—— 兜底必须**不抛**且**不丢字节**。
+
+### 交付回报（Trae · 2026-11-01）
+
+**结论先行**：已修。`shell.py` 不再固定 UTF-8 + `errors="replace"`，改为按**子进程实际写字节所用的
+控制台/OEM 代码页**解码：`GetConsoleOutputCP()` → `GetOEMCP()`（无控制台时）→ 严格解码 → 失败再试
+UTF-8 → 仍失败用首个 CP + `backslashreplace`（不抛、不产生 U+FFFD）。超时/退出码/`cwd`/`caller_ip`
+一行未动。
+
+**S-1…S-6 读数（命令 ＋ 观测）**
+
+| # | 命令 | 观测 |
+|---|---|---|
+| S-1 | `python ..\_trae-evidence\shell-encoding\probe_after.py` | GBK 硬写：raw `d6d0cec4b2e2cad4`，修前 `'���Ĳ���'`，修后 `'中文测试'`；UTF-8 echo：raw `e4b8ade69687e6b58be8af95…`，修后 `'中文测试\r\n'`；无 `�`/`锟斤拷` |
+| S-1（真实 936 控制台臂） | `python -c "...CREATE_NEW_CONSOLE 起 probe_936.py"` | `console_code_pages: [936]`；`echo 中文测试` → ToolResult `'中文测试\r\n'`，pass=True（真实 cmd 的 GBK 字节） |
+| S-2 | 同上 | `ver` 原始字节全 ASCII；修前/修后文本 `'\r\nMicrosoft Windows [Version 10.0.26300.9711]\r\n'`，`identical: True` |
+| S-3 | `probe_after.py` 内正则扫描 `shell.py` | `errors="replace"` 命中 **0**；兜底改用 `backslashreplace` |
+| S-4 | 同上 ＋ `GetConsoleOutputCP/GetOEMCP` 实测 | 选法见上；本 Trae 树 `[65001, 936]`，936 新控制台 `[936]`；英文 Windows 退化为 cp437（ASCII 不变、非 ASCII 按 437） |
+| S-5 | `python -m pytest tests -q` | **174 passed, 3 skipped**（基线 173/3 ＋ 新 GBK 用例 1 条）；`tests/test_shell_tool.py` 16 passed |
+| S-6 | `git diff backend/tools/shell.py` | 只改「字节 → 文本」层：新增 3 个 helper ＋ 替换 2 行 decode；其余逻辑零改动 |
+
+证据：`_trae-evidence/shell-encoding/`（`READINGS.md`、`raw_probe.stdout.txt`、`probe_after.stdout.txt`、
+`probe_936.stdout.txt`）。按惯例该目录不入库。
+
+**未闭合（单列）**
+
+1. **英文 Windows（cp437）边界**：cp437 单字节、严格解码**从不抛错**，因此显式输出 UTF-8 的程序在
+   437 控制台上会被按 437 解（可能乱码），UTF-8 回退臂不会触发。这是「控制台权威 CP」方案的已知退化。
+2. **65001 控制台 + 硬写 GBK**：若该 GBK 字节序列恰好也是合法 UTF-8（极少见），会按 UTF-8 静默解错。
+   代码注释已写明；不引入启发式判别，避免把判据变成"看结果像不像"。
+3. **单条流内 CP 变更**（命令自己跑 `chcp`）：一次命令中途换 CP 会产生混合字节流，当前实现无法逐段还原；
+   属边界，不在本单。
+4. **未改系统/控制台 CP**：只做解码，不改任何全局设置（避免影响其他终端）。
+
+**自曝**
+
+- **S-1 没法用 `dir`**：按文档 `local-env.md` §4.1，① 层取决于进程树 UI 文化；本 Trae 树 UI=en-US、
+  `dir` 输出是英文（`raw_probe.stdout.txt` 实证）。所以 S-1 改用「显式中文 echo ＋ 硬写 GBK 字节」两条臂，
+  再用 `CREATE_NEW_CONSOLE`（新控制台默认继承系统 OEMCP=936）补一条**真实 936 控制台**端到端读数。
+  ⛔ 不是拿假数据替换判据——两条臂都有真实原始字节 hex。
+- 第一次探针用多行 `python -c`（含 `\n`/`try`）被 PowerShell 解析坏，改成落盘脚本 `raw_probe.py` 才跑通；
+  不影响结论。
+- 新增测试 `test_gbk_output_decode` 绑定「代码页含 936」，在纯英文 Windows 上会 skip（不是恒绿）。
 
 ---
 

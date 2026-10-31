@@ -25,6 +25,7 @@ Shell 命令执行工具
 """
 
 import asyncio
+import codecs
 import logging
 import sys
 
@@ -32,6 +33,85 @@ from config import get_config
 from tools.base import BaseTool, ToolResult
 
 logger = logging.getLogger(__name__)
+
+
+def _windows_console_code_pages() -> list[int]:
+    """
+    返回当前解释器所在控制台的输出代码页（Windows），按优先级排列。
+
+    依据：Windows 控制台程序写 stdout 时使用**控制台输出代码页**
+    （GetConsoleOutputCP）；进程没有控制台时退回 OEM 代码页（GetOEMCP）。
+    这两个值就是「子进程会按哪个编码写字节」的权威判据，⛔ 不靠猜。
+    """
+    if sys.platform != "win32":
+        return []
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        pages: list[int] = []
+        for getter in (kernel32.GetConsoleOutputCP, kernel32.GetOEMCP):
+            page = int(getter())
+            if page and page not in pages:
+                pages.append(page)
+        return pages
+    except Exception:
+        logger.warning("Failed to read Windows console code page", exc_info=True)
+        return []
+
+
+def _codec_name(code_page: int) -> str | None:
+    """代码页 → Python 编码名；未知代码页返回 None。"""
+    name = "utf-8" if code_page == 65001 else f"cp{code_page}"
+    try:
+        codecs.lookup(name)
+        return name
+    except LookupError:
+        return None
+
+
+def _decode_console_bytes(data: bytes) -> str:
+    """
+    把子进程原始字节解成文本。
+
+    判据（S-4）：Windows 上按**控制台输出代码页 / OEM 代码页**严格解码——
+    这就是子进程实际写字节时用的编码，不是「先试 UTF-8 再回退」那种不可靠顺序。
+    严格解码都失败时再试 UTF-8（覆盖显式输出 UTF-8 的程序）；仍失败则用首个
+    可用代码页 + backslashreplace：⛔ 不抛异常、⛔ 不产生 U+FFFD，字节以 \\xNN 保留。
+
+    已知边界：
+    - 英文 Windows：OEMCP=437，纯 ASCII 输出逐字不变；非 ASCII 按 cp437 解，
+      与系统控制台自身一致。
+    - 若控制台 CP=65001 而某个程序硬写 GBK，且该 GBK 字节序列恰好也是合法
+      UTF-8（极少见），会静默解成错误字符——这是「控制台权威 CP」方案的边界。
+    """
+    if not data:
+        return ""
+
+    encodings: list[str] = []
+    for page in _windows_console_code_pages():
+        name = _codec_name(page)
+        if name and name not in encodings:
+            encodings.append(name)
+    if "utf-8" not in encodings:
+        encodings.append("utf-8")
+
+    for encoding in encodings:
+        try:
+            text = data.decode(encoding)
+            logger.debug(
+                "Shell output decoded encoding=%s bytes=%d", encoding, len(data),
+            )
+            return text
+        except UnicodeDecodeError:
+            continue
+
+    fallback = encodings[0]
+    logger.debug(
+        "Shell output undecodable, fallback=%s backslashreplace bytes=%d",
+        fallback, len(data),
+    )
+    return data.decode(fallback, errors="backslashreplace")
 
 
 class ShellTool(BaseTool):
@@ -153,8 +233,8 @@ class ShellTool(BaseTool):
                 proc.communicate(),
                 timeout=self._timeout,
             )
-            stdout_text = stdout.decode("utf-8", errors="replace")
-            stderr_text = stderr.decode("utf-8", errors="replace")
+            stdout_text = _decode_console_bytes(stdout)
+            stderr_text = _decode_console_bytes(stderr)
 
             if proc.returncode == 0:
                 return ToolResult(

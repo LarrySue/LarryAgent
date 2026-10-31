@@ -256,6 +256,34 @@ class TestShellTool(unittest.TestCase):
         self.assertIn("<DIR>", result.content)
         print(f"[PASS] Test 7: Windows dir 命令正常")
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows only")
+    def test_gbk_output_decode(self):
+        """
+        显式 GBK 字节的中文输出应解成可读中文（S-1 回归）。
+
+        该命令由子进程直接 `stdout.buffer.write(..., encode('gbk'))`，模拟
+        OEM 代码页程序输出；不依赖 UI 语言（本 Trae 树 dir 输出是英文）。
+        """
+        from tools.shell import _windows_console_code_pages
+
+        if 936 not in _windows_console_code_pages():
+            self.skipTest("当前控制台/OEM 代码页不含 936，GBK 路径不适用")
+
+        tool = self._get_tool()
+        command = (
+            "python -c \"import sys;"
+            "sys.stdout.buffer.write('中文测试'.encode('gbk'))\""
+        )
+
+        async def run():
+            return await tool.execute(command, caller_ip="127.0.0.1")
+
+        result = asyncio.get_event_loop().run_until_complete(run())
+        self.assertTrue(result.success, f"命令失败: {result.error}")
+        self.assertIn("中文测试", result.content)
+        self.assertNotIn("\ufffd", result.content)
+        print(f"[PASS] Test 8: GBK 中文输出解码正常 → {result.content.strip()}")
+
 
 def run_tests():
     """运行所有测试"""
