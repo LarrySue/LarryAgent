@@ -263,7 +263,25 @@
       | ⑦ 格式 | ✅ 部分 | J6 用 JSONL（最笨格式之一）；SQLite 本体为二进制 |
     - ⚠️ **① 的一条边界（不判缺陷）**：`file_ops.py:160` 列目录 >1000 条**截断** ⇒ 存档里的「工具返回原文」＝**模型当时收到的原文**，不一定是磁盘全量。⛔ 别把它读成存档有损。
     - **拆块（按「一个编号＝一份派发稿／可单独验收」）** —— ⑪.2 已于 00:41 裁定，剩 ⑪.1 ／ ⑪.3 ／ ⑪.4：
-      - **⑪.1 · ⑥ 自描述清单**（**最该先做**）：两侧皆无，是七类里唯一「完全空白且不依赖事件触发」的一项；§7 已给字段表（是什么/怎么来的/何时/从哪来…），落点＝与存档同级、一行一记录。判据：给字段表逐格读数 ＋ 抽 3 份存档能凭清单反查到「谁写/何时写」。
+      - **⑪.1 · ⑥ 自描述清单 —— ✅ 已复验成立（Trae `4ffa6b5` ／ WB 2026-11-01 01:38，带 3 条增量 ＋ 1 条未闭合）**
+        - **交付**：新增 `src/manifest.ts`（1011 行，纯文本 JSONL）＋ `index.ts` 接线（`manifestPath` 配置、启动清点一次、每个 `turn/end` 刷新同一行）＋ 两个探针。产物：`manifestPath` 默认 `sessions/archive-manifest.jsonl`。
+        - **WB 独立复跑（⛔ 不是读她的表）**：
+          - `probe.mjs` **10/10 PASS**（8 PASS ＋ 2 OBS），与她报的一致；**12 件 json 归一化后 11 件逐件一致**，唯一差异 `c6-before-after.json` 属**运行变量**（`before` 的 hash `4812eb63…`／`covered_bytes 12263` 两边完全相同；`after` 两边 hash 不同但 **`covered_bytes` 都是 12361`** ⇒ C-6 要验的是「hash 与时刻都变」，不是「等于某值」）。
+          - `live-smoke.mjs`（真实 dsh 两轮）**5/5 PASS**：turn1 生成清单（`source=live-events`）／turn2 **同一行更新**（`lines=1`，events 16→24）／hash 与时刻同变／清单里的 archive 路径与磁盘一致。
+          - **C-3 三问我自己答了一遍**（只读清单、不看代码与 docs）：是什么＝`dsh-session-archive` ＋ `format v0/v3`；何时谁因何＝`recorded_by=plugin-s4-memory`／`trigger=refresh`／`recorded_at`／`timezone=Asia/Shanghai`／`session_created_at`／`cwd`；用什么读＝`read_with` 三步（逐帧解压→拼接→逐行 JSON.parse）＋ `no_project_dependency=true`。⇒ **判据成立**。
+          - **Tier0**：她提交**新增 1492 行**，凭据形态（`sk-`／`Bearer`／`assign`／`ghp`）**0 命中**。
+          - **副作用**：真 `.dsh-home/sessions/` **仍无** `archive-manifest.jsonl`；真库 sha `16089de3…`／mtime `10-30 15:01` **前后不变**；工作区收尾干净。
+          - **私域边界**：清单**不含消息正文**（长文本字段全是格式说明；「老大／苏苏／记忆」零命中），仅含真实 session id 与 cwd；`_trae-evidence/` 由 `.gitignore:52` 覆盖⇒不入库。✓
+        - **增量①（推翻我自己 ⑪.3 的结论，见下条）**：`④ 未采纳分支` 并非「无载体」—— **有三条载体**：`turn/end.reason.kind ∈ {aborted, blocked, max-tokens, interrupted}` ＋ `assistant/message.interrupted?: true` ＋ `assistant/attempt`（"重生成"无独立事件，表现为新 turn/attempt）。她给的 `TurnEndReasonMap` 六种 kind 我逐条核过（`types.d.ts:159-196`）。
+        - **增量②（可复现性）**：探针读 `lib/manifest.js`，而 **`lib/` 被 `harness/.gitignore:2` 忽略** ⇒ 别人 clone 后**直接跑 probe 会失败**，须先 `build`。⚠️ 不是缺陷（项目一贯如此），但交付物应写明前置；建议探针首行自检产物存在并给出 `npm run build` 提示。
+        - **增量③（证据边界）**：C-5 的「生产默认路径」是 **OBS 而非 PASS** —— 探针只打印 `production default (not written) = …`，**没在真实 home 上验证过**。⇒ 「生产默认」目前是**推算**，真实首启会让真 `sessions/` 出现清单文件（那是设计意图，但⛔ 别当成已实测）。
+        - **⚠️ 未闭合①（回归未全复现，⛔ 不判她假报）**：她报 `run-36-memory.mjs`（`S36_PHASE=iso`）**17/17 PASS**；WB 复跑 **2 次**：**前 11 条全 PASS**（V1／V2／V3／V4 全部隔离断言逐条复现，含 V4 相对路径落盘与 `V4-no-stray`），但**第 12 条 `V4b-abs-inside-home-ok` 两次都没出 PASS**：第一次 `FAIL`（子进程 `exit code: 143`＝SIGTERM，stderr 只有 SQLite ExperimentalWarning），第二次装置**看门狗 420s 自身触发**（退出码 124）。
+          - **可确定**：V4b 的库实体**建出来了**（`size=16384`）⇒ 它其实**启动了**，只是进程退出码非 0 被判"启动失败"。
+          - **不可确定**：initialize 为何超时（`initializeTimeoutMs=60s`）。⇒ **成因未知**，⛔ 不编。
+          - ⚠️ 而 `V4b` 属**10-30 场地隔离那批用例**，与 ⑪.1 的 manifest 无代码交集 ⇒ **不据此判 ⑪.1 不成立**，但回归面**须挂未闭合**，建议单独查一次（含「是不是这台机器同时跑着我这边长任务导致资源竞争」这一可能）。
+        - **⚠️ 我做错的一件事（如实记）**：`run-36-memory.mjs` 的证据目录 `_trae-evidence/36/run-iso` **被我两次复跑覆盖**（它硬编码，无输出开关），⇒ **10-30 那次 V4b 的原件已不可查**，只能靠 `TODO.md` 里的复验结论回溯。教训：复跑前须先备份 `_trae-evidence/36`（本轮我只备份了 `archive-manifest`）。
+        - **📌 下一步（不阻塞）**：C-4 的七类完备性判据、C-7 的缺失标记都在 probe 里验过；**`⑥` 已可用**。⇒ ⑪ 段剩 ⑪.3（待订正）／⑪.4.1（已出稿待人叫）／⑪.4.2（未派）。
+
       - **⑪.2 · ⑦ 格式口径 —— ✅ 已裁（老大 2026-11-01 00:41）：取甲案**。
         原话：「**压缩不算违背全量存储的原则，且压缩包方便拷贝，是对的**」。
         ⇒ `jsonl.zstd` **合规**，⛔ 不必另落未压缩副本。
@@ -281,7 +299,7 @@
         - **② 附带文件 → 🟡「结构有位置、无实例」**：`user/message.data.content[]` 是**多模态内容数组**（有 `type` 字段），但 62 次**全是 `text`**；且全库**零附件字段名**（file/attach/image/mime/base64 等一个没有）。⇒ ⛔ 不能说「不支持」，只能说**从未出现过非文本内容**。⚠️ 这是**推断**：那种结构（OpenAI 风格 content 数组）天然可扩 image/file，但**无实例 = 无证据**。
         - **④ 未采纳分支 → 🟡「部分有载体」**：`turn/end.data.reason.kind` 实测 `completed` 28 ／ **`error` 3** ⇒ **异常收尾被记录了**（且键结构有 `reason.error` 可带错误详情）。另有 `assistant/attempt`（仅 1 次，`stream[].type` 只有 `chunk`，语义不明，⛔ 不据它下结论）。⇒ **「取消／打断／重生成」三类零命中**，无对应事件。
         - ⚠️ **证据边界（必须写明）**：以上是**行为证据**（678 行里发生过什么），**不是设计证据**（类型定义里有没有）。**WB 未定位到 dsh 包源码**，无法确认事件 union。⇒ 「未见」⛔ 不等于「没有」。要定这条须查类型定义（下一步或随 ⑪.1 一起问 Trae）。
-        - **对本块结论**：②④ **均不升级为「真缺口」**，但**都不是完整覆盖**——② 缺实例、④ 缺「取消/打断/重生成」三类。⛔ 暂不单独立块，等类型定义摸清再定。
+        - **⚠️ 本条结论已订正（WB 2026-11-01 01:38，源＝Trae ⑪.1 交付 §0.5，WB 逐条核源码）**：原写「④ 缺「取消/打断/重生成」三类」**是错的** —— 该说法把「**样本里没发生过**」写成了「**没有载体**」。实际有三条载体：`turn/end.reason.kind ∈ {aborted, blocked, max-tokens, interrupted}`（`types.d.ts:159-196`，`TurnEndReasonMap` 共六种 kind）＋ `assistant/message.interrupted?: true`（`:316`）＋ `assistant/attempt`（失败／重试／取消的尝试）。「重生成」无独立事件，表现为新 turn/attempt。⇒ **④ 载体齐备**，678 行样本里只出现过 `completed` 28 ／ `error` 3 属**行为样本不足**，非设计缺失。⚠️ 这与我 00:53 自己写的边界（「未见 ≠ 没有」）自相矛盾 —— **边界写对了，结论句写宽了**，同一晚第二次同形。
       - **⑪.4 · 存档备份 —— 要求已写全、实现为零、演练为零**（WB 2026-11-01 00:57 摸完，🟢）
         - ⚠️ **先订正我自己的错**：本块初判为「备份清单未含 CoT 存档」，**错**。我只读了 `move-in-plan.md:62` 的前半句就下了结论，后半句还有：
           > ⚠️ **另加一项（2026-10-29 老大定）**：**全量存档本身也进备份覆盖面** —— 含会话附档原件、CoT、人格／提示词同期快照；判据＝**能从备份单独还原一次会话的完整存档**，不是「能还原记忆库」就够。

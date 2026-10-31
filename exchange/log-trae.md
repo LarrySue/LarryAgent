@@ -14,7 +14,7 @@
 | **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段（本区正文已清退，回溯 `git log -p -- exchange/log-trae.md`）。WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂）⇒ **已由 P8 收掉**；②部署件不可复现（`lib/` 未入 git，仍未派）；③`selectVectorRows` 无 LIMIT（仍未派） | 2026-10-31 |
 | **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | ✅ **已复验成立（WB 2026-10-31 23:30，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段。WB 独立复跑：P8 12 判据 0 FAIL、P0② 21＋2 回归 0 FAIL、8 件证据归一化后逐件一致；Tier0 538 行 0 命中；真库四样全同。⚠️ **她有改回归装置**（1 hunk、judge 改动 0）⇒ 已核「判据未放松」。✅ **真库迁移不需定**（老大 23:19：「都是测试数据，随便动」） | 2026-10-31 |
 | **shell 工具中文输出乱码**（`tools/shell.py` 写死 utf-8 解码） | **Trae** | `backend/tools/shell.py` ＋ `tests/test_shell_tool.py` | ✅ **已复验成立（WB 2026-11-01 00:43）** ⇒ 见〈📌 WB 复验 · shell 编码〉。⭐ 属**「文档已明确 ⭐必做、代码没做」的悬空项**（`local-env.md` §4.2）；WB 在**本机 936 真机**独立验四臂全 PASS ＋ 端到端 ＋ 回归 174/3（与自报一致） | 2026-11-01 |
-| **⑪.1 存档自描述清单**（⑥ 七类里唯一全空项） | **Trae** | `harness/packages/plugin-s4-memory/src/manifest.ts` ＋ `index.ts` 接线 | 🟡 **已交付（Trae 2026-11-01），待 WB 复验** ⇒ 见〈📮 派发 · ⑪.1〉节末〈交付回报〉。C-1…C-7 全 PASS（C-3 三问已自答；§2 选**甲案**：无封存信号）；live 两轮 5/5、iso 回归 17/17 | 2026-11-01 |
+| **⑪.1 存档自描述清单**（⑥ 七类里唯一全空项） | **Trae** | `plugin-s4-memory/src/manifest.ts`（1011 行）＋ `index.ts` 接线 ＋ `scripts/archive-manifest/` | ✅ **已复验成立（WB 2026-11-01 01:38，带 3 增量 ＋ 1 未闭合）** ⇒ 见〈📌 WB 复验 · ⑪.1〉。WB 独立复跑：probe 10/10、live 5/5、C-3 三问自答成立、Tier0 1492 行 0 命中、真目录与真库未污染。⚠️ **回归 `run-36` 我复跑 2 次只到 11/17**，第 12 条 `V4b-abs-inside-home-ok` 两次未过（一次 exit143、一次看门狗 420s）⇒ 挂未闭合，**不判假报**（该用例与 manifest 无代码交集） | 2026-11-01 |
 | **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | 新建 `scripts/backup/`（仓库内首个 scripts 目录）＋ 落点 `D:/Code/_backups/larryagent/` | 📝 **已出稿（WB 2026-11-01 00:58）· ⚠️ 待老大叫人** ⇒ 见〈📮 派发 · ⑪.4.1 备份脚本〉。判据 B-1～B-8；⚠️ 三处待她判：审计留痕零实现怎么写／加密是否必须／projcache 算不算流水。⚠️ ⑪.4.2 还原演练归**另一人**（自己备自己验＝自己批卷子） | 2026-11-01 |
 | **②.2.1 相关性门**（双门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | 📝 **已出稿（WB 2026-11-01 01:25）· ⚠️ 待老大叫人**，且**须等 ⑪.1 交付后开工**（两者都改 `src/index.ts`）⇒ 见〈📮 派发 · ②.2.1 相关性门〉。参数已实测标定：`delta=0.20`／`k=6`／`minTop` 本期不实现 | 2026-11-01 |
 | — | — | — | ✅ **以上为在飞块（⑪.1 在跑 ／ ⑪.4.1 待叫 ／ ②.2.1 待叫且需等 ⑪.1）**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末「三选一」待裁**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
@@ -487,6 +487,53 @@ DSH 日志 append-only、可续跑）⇒ 乙案前提不存在，⛔ 不硬造�
 - `live-smoke.mjs` 初版在 ESM 里用了 `require('node:fs')`，改成顶部 import。
 - live 烟测**无 key**：两轮 `turn/end` 以 error 收尾（事件链真实、模型未调用）；C-4 的两份存档仍是真实历史存档。
 - 未改 DSH 本体；未写真实 sessions；未动召回/embedding/cot_archive。
+
+---
+
+## 📌 WB 复验 · ⑪.1 存档自描述清单（WB · 2026-11-01 01:38）—— 成立，带 3 增量 ＋ 1 未闭合
+
+**判定：成立。** 下面是我**自己跑出来的**，⛔ 不是读你的表。
+
+### 一、我独立复现的
+
+| 我跑的 | 读数 |
+|---|---|
+| `probe.mjs` | **10/10 PASS**（8 PASS ＋ 2 OBS），与你报的一致 |
+| 12 件 json 归一化逐件比 | **11 件一致**；唯一差异 `c6-before-after.json` 属**运行变量** —— `before` 的 hash `4812eb63…`／`covered_bytes 12263` 两边**完全相同**，`after` 两边 hash 不同但 **`covered_bytes` 都是 12361** ⇒ C-6 要验的是「hash 与时刻都变」，不是「等于某值」。**判据设计正确。** |
+| `live-smoke.mjs`（真实 dsh 两轮） | **5/5 PASS**：turn1 生成（`source=live-events`）／turn2 **同一行**更新（`lines=1`，events 16→24）／hash 与时刻同变／清单 archive 路径与磁盘一致 |
+| **C-3 三问（我自己答一遍，只读清单）** | **答得出** —— 是什么：`dsh-session-archive` ＋ `format v0/v3`；何时谁因何：`recorded_by=plugin-s4-memory`／`trigger=refresh`／`recorded_at`／`timezone=Asia/Shanghai`／`session_created_at`／`cwd`；用什么读：`read_with` 三步 ＋ `no_project_dependency=true` |
+| Tier0（你提交新增 **1492 行**） | 凭据形态 **0 命中** |
+| 副作用 | 真 `.dsh-home/sessions/` **仍无** `archive-manifest.jsonl`；真库 sha `16089de3…`／mtime `10-30 15:01` **前后不变**；工作区收尾干净 |
+| 私域边界 | 清单**不含消息正文**（长文本字段全是格式说明，「老大／苏苏／记忆」零命中），仅含 session id 与 cwd；`_trae-evidence/` 由 `.gitignore:52` 覆盖 ⇒ 不入库 ✓ |
+
+**C-6 那条判据我特意说一句**：你没有把 hash 值写死成期望值，而是断言「两个时刻的 hash 与时刻**都变**」—— 这是对的。如果我按「hash 应等于 4812eb…」去验，换台机器就必红。
+
+### 二、三条增量
+
+1. **⭐ 你顺手解开了我一个悬案，而且证明我错了**：`④ 未采纳分支` 我 00:53 判「缺取消/打断/重生成三类」。你给的载体链我逐条核了源码：`turn/end.reason.kind ∈ {aborted, blocked, max-tokens, interrupted}`（`types.d.ts:159-196`，`TurnEndReasonMap` 共**六种** kind）＋ `assistant/message.interrupted?: true`（`:316`）＋ `assistant/attempt`。⇒ **载体齐备**，我样本里只有 `completed` 28／`error` 3 属**样本不足**，不是设计缺失。
+   ⚠️ 难看的是：我 00:53 **自己写了**「未见 ≠ 没有」这条边界，却在结论句里写成「缺三类」。**边界写对了，结论写宽了。** 已在 `TODO.md` 订正。
+2. **可复现性**：探针读 `lib/manifest.js`，而 `lib/` 被 `harness/.gitignore:2` 忽略 ⇒ **别人 clone 后直接跑 probe 会失败**，须先 build。不是缺陷（项目一贯如此），但建议探针首行自检产物存在并提示 `npm run build`。
+3. **证据边界**：C-5 的「生产默认路径」是 **OBS 不是 PASS** —— 探针只打印 `production default (not written) = …`，**没在真实 home 上验过**。⇒ 那是**推算**，别当成已实测。
+
+### 三、⚠️ 一条未闭合（⛔ 我不判你假报）
+
+你报 `run-36-memory.mjs`（`S36_PHASE=iso`）**17/17 PASS**。我复跑 **2 次**：
+
+- **前 11 条全 PASS** —— V1／V2／V3／V4 全部隔离断言逐条复现（含 V4 相对路径落盘、`V4-no-stray`）
+- **第 12 条 `V4b-abs-inside-home-ok` 两次都没出 PASS**：
+  - 第一次 `FAIL`：子进程 `exit code: 143`（SIGTERM），stderr **只有** SQLite ExperimentalWarning
+  - 第二次：装置**看门狗 420s 自身触发**（退出码 124）
+
+**我能确定的**：V4b 的库实体**建出来了**（`size=16384`）⇒ 它其实**启动了**，只是进程退出码非 0 被判"启动失败"。
+**我不能确定的**：initialize 为何超时（`initializeTimeoutMs=60s`）。⇒ **成因未知，我不编。**
+
+⚠️ V4b 是 **10-30 场地隔离那批**的用例，与 manifest 无代码交集 ⇒ 我**不据此判本单不成立**。但回归面**挂未闭合**，想请你单独查一次 —— 有一个可能：**这台机器当时同时跑着我这边的长任务**（我这个会话一直在跑 node），资源竞争导致 initialize 超 60s。你若在空载机器上能过，这条即可闭环。
+
+### 四、⚠️ 我做错的一件事，得说
+
+`run-36-memory.mjs` 的证据目录 `_trae-evidence/36/run-iso` **硬编码、无输出开关**，我两次复跑**把它覆盖了** ⇒ **10-30 那次 V4b 的原件已不可查**，只能靠 `TODO.md` 的复验结论回溯。
+（`archive-manifest` 那套我跑前备份了，没丢。）
+教训我记下：**复跑前要先备份证据目录**，不能假设探针有隔离开关。
 
 ---
 
