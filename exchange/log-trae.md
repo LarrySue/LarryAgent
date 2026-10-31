@@ -10,10 +10,10 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | 🟡 **①② 已落地 ／ ③ 未做**（2026-10-31 月月 B 半查出、WB 复核成立 ⇒ `TODO.md` 该条已退回 `[ ]`）；⚠️ **原 10-30「已完成」判词作废**。三条**他处零承接**的过程观察与判别力边界留本区〈📥 过程观察 · 测试场地隔离〉 | 2026-10-30 |
-| **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | 新建 `scripts/backup/`（仓库内首个 scripts 目录）＋ 落点 `D:/Code/_backups/larryagent/` | 📝 **已出稿（WB 2026-11-01 00:58）· ⚠️ 待老大叫人** ⇒ 见〈📮 派发 · ⑪.4.1 备份脚本〉。判据 B-1～B-8；⚠️ 三处待她判：审计留痕零实现怎么写／加密是否必须／projcache 算不算流水。⚠️ ⑪.4.2 还原演练归**另一人**（自己备自己验＝自己批卷子） | 2026-11-01 |
+| **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | `scripts/backup/backup.mjs` ＋ 落点 `D:/Code/_backups/larryagent/` | 🟡 **已交付（Trae 2026-11-01），待 WB 复验** ⇒ 见〈📮 派发 · ⑪.4.1〉节末〈交付回报〉。B-1…B-8 全 PASS；实际包 478140 B；三处判断已写（审计空类单列／不加密／projcache 排除） | 2026-11-01 |
 | **②.2.1 相关性门**（双门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | 📝 **已出稿（WB 2026-11-01 01:25）· ⚠️ 待老大叫人**，且**须等 ⑪.1 交付后开工**（两者都改 `src/index.ts`）⇒ 见〈📮 派发 · ②.2.1 相关性门〉。参数已实测标定：`delta=0.20`／`k=6`／`minTop` 本期不实现 | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ⚠️ **待你单独核实**（WB 2026-11-01 01:38 复跑 2 次只到 11/17）：`V4b-abs-inside-home-ok` 两次未过 —— 一次子进程 `exit 143`（SIGTERM）、一次装置看门狗 420s 触发；但**库实体建出来了（16384）**说明它其实启动了，只是退出码非 0 被判「启动失败」。⚠️ 一个可能：**我这边同时在跑长任务**，资源竞争把 initialize 拖过 60s。**你若在空载机器上能过，这条即闭环** | 2026-11-01 |
-| — | — | — | ✅ **以上为在飞块（⑪.4.1 待叫 ／ ②.2.1 待叫 ／ V4b 待核实 ＋ 测试场地隔离 ③ 未做）**。已闭环五块（CoT 存档／P0② 一期／P8／shell 编码／⑪.1）的结论均在 `TODO.md`，见〈🗂 已清理段落〉。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」。
+| — | — | — | ✅ **以上为在飞块（⑪.4.1 已交付待复验 ／ ②.2.1 待叫 ／ V4b 待核实 ＋ 测试场地隔离 ③ 未做）**。已闭环五块（CoT 存档／P0② 一期／P8／shell 编码／⑪.1）的结论均在 `TODO.md`，见〈🗂 已清理段落〉。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」。
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -102,6 +102,68 @@
 - ⛔ 不改 `backend/` 与插件 `src/`（⑪.1 在飞，文件零重叠但别串台）
 - ⛔ 不引入第三方依赖：tar／gzip 用系统自带，压缩用 Node 内置 `zlib`（实测 `node v24.14.1` 有 `zstdCompressSync`／`gzipSync`）
 - ⛔ 不顺手把备份接进插件运行时 —— 这是**独立命令**，接钩子是另一件事，不在本单
+
+### 交付回报（Trae · 2026-11-01）
+
+**结论先行**：`scripts/backup/backup.mjs` 已落地，一条命令出「单文件包 ＋ MANIFEST.md ＋ SHA256SUMS」。
+实际包：
+
+```
+D:\Code\_backups\larryagent\larryagent-backup-20261101-020020-334-99f6.tar.gz
+478140 字节  sha256=5ff6b689…a0ba
+```
+
+包内 33 个数据文件（2 个记忆库快照 ＋ 31 个 sessions 文件），`MANIFEST.md` 四类逐项点名，
+包内 `SHA256SUMS` 34 行（MANIFEST ＋ 33 数据文件）。同目录另有 `.MANIFEST.md` / `.SHA256SUMS` 边车。
+**可换落点**：`node scripts/backup/backup.mjs --dest <dir>`（或 `LARRY_BACKUP_DIR`）；每次运行打印 Disk 0 警告。
+
+**B-1…B-8 读数**
+
+| # | 读数 |
+|---|---|
+| B-1 | 单文件 `larryagent-backup-20261101-020020-334-99f6.tar.gz`，478140 B（见上） |
+| B-2 | MANIFEST 四类均出现：记忆库「有 2 项」；会话流水「有 31 项 / 480703 B」；审计留痕「本类空：无实现＋理由」；全量存档逐子类（CoT／附档／未采纳／环境／自描述／格式） |
+| B-3 | 拷到另一目录 → 干净目录 `tar -xzf` → `sums_lines 34 / checked_ok 34 / bad 0 / data_files 33`，与 MANIFEST 的 33 一致 |
+| B-4 | 凭据文件名 0 命中；文本＋解压 sessions 形态扫描命中 0（总长度 0；DB 二进制跳过 2 个；`.credentials.yaml` 从未读取） |
+| B-5 | 源指纹 `983192e1…`（35 文件）备份前后不变；`source_unchanged=true`（VACUUM 只读连接实测不改源） |
+| B-6 | 同版本连跑两次：`020020-334` / `020133-868`，均 `data_files=33`；落点 6 个包，旧包全保留、未覆盖 |
+| B-7 | MANIFEST 原文「**本类空：backend 从未真实调用，目录尚未创建**」；⛔ 未写「已备份 0 个文件」 |
+| B-8 | 默认 `D:\Code\_backups\larryagent\…020020-334…`；换落点 `--dest` → `…\alt-dest\…020020-659…`（包在新目录） |
+
+**§3 三处判断**
+
+1. **审计留痕零实现**：MANIFEST 单列「本类空：无实现」，理由＝append-only 机制未落地；⛔ 不并入其他类、
+   ⛔ 不写「已备份 0 个文件」。
+2. **加密**：一期**不加密**（认同 WB：无 key 的加密包三十年后是废纸）；代偿＝MANIFEST 标注私域内容/可读域、
+   落点不得共享。未停手报矛盾。
+3. **`storages/session_projcache`**：**排除**。依据 `dsh-session-projection-cache` README「log leads, the cache
+   follows」「malformed or stale record reads as absent，consumers … own any log refold」⇒ 可由 `sessions/` 重建的派生缓存；
+   本机 31 文件 / 124374 B，MANIFEST 写明排除理由。
+
+**还原（另一人可独立跑）**：MANIFEST 内含 bash 与 PowerShell 两套命令：`tar -xzf` → `sha256sum -c SHA256SUMS`
+（Windows 用 `Get-FileHash` 等价）；再停 DSH/backend，按路径回填两个 DB 与 `sessions/`。DB 快照是 `VACUUM INTO`
+一致性快照（无 WAL/SHM；恢复前移走目标旧 WAL/SHM）。`.credentials.yaml` 不在包内，需另行提供。
+
+证据：`_trae-evidence/backup/`（`READINGS.md`、`final2-MANIFEST.md`、`final2-package.SHA256SUMS`、
+`b6-b8.txt`、各次 stdout）。实际包在 `D:\Code\_backups\larryagent\`（**不入 git**）。
+
+**未闭合（单列）**
+
+1. CoT／附档／未采纳分支／环境人格快照目前均无实例，MANIFEST 显式写空类；backend 真实调用后脚本会自动纳入 `cot_archive`。
+2. 审计留痕仍零实现；MANIFEST 只占位。
+3. 落点默认 D:，与源同属 Disk 0；换外部介质需人工 `--dest`，未做自动轮转/清理（§7 要求不自动删）。
+4. 未加密：包内记忆库/会话流水为明文私域，靠落点访问控制。
+5. 会话流水逐文件复制；DSH 正在写某会话时末帧可能不完整，建议停 DSH/backend 后备份（未做并发实测）。
+6. `.credentials.yaml` 刻意不入包；还原后凭据另行提供。
+7. 默认落点已有 6 个包（含本次迭代版），按「不删旧包」保留；canonical 以 B-1 为准。
+8. `backend/data/scratch.db` 判为测试临时库，排除。
+
+**自曝**
+
+- 脚本迭代过几版（补 PowerShell 回填、补 WAL/SHM 恢复提醒），因此落点留下 6 个包；⛔ 未删旧包，canonical 是最新版。
+- 第一次 `VACUUM INTO` 探针把路径用双引号拼进 SQL，报 `no such column`；改成单引号字面量后通过。
+- 脚本没有读 `.credentials.yaml`，也没有扫描 DB 二进制里的凭据形态（B-4 只覆盖文本/解压 sessions）；这是**已知覆盖边界**。
+- 本次在空闲机器上跑（源指纹前后不变）；未在 DSH 活跃写入时验证一致性。
 
 ---
 
