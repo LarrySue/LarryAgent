@@ -66,6 +66,8 @@
 - ⛔ **不动** `scripts/backup/backup.mjs`（那是 ⑪.4.1 的实现，你是来验的，不是来改的）。
 - ⛔ **不动** `TODO.md` ／ `docs/` ／ 其他 `exchange/log-*.md`（除本区回报）。
 - 解 zstd 可用 Node（`node -e` 或写 `.mjs`），项目 node 是 v24，`zlib.zstdDecompressSync` 可用；⚠️ 存档是**多帧**，需逐帧解压拼接。
+- ⚠️ **提交纪律（并行期硬要求）**：本单与 Trae 的 ②.2.1 **同时在跑** ⇒ 你提交本区回报时**一律 `git commit -F - -- exchange/log-claude.md`**（路径限定），⛔ **不要用裸 `git commit`**。
+  理由不是谨慎：**裸 commit 提交的是"当时暂存区的全部"** —— 我 2026-10-31 22:28 就因为裸 commit 把 Trae 已 `git add` 的 6 个在飞文件一起提交了（`reset --soft` 才拆回来）。你只管你自己的路径，别人的暂存不该由你按下确认。
 
 ### 5 · 交付
 
