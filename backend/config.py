@@ -87,6 +87,15 @@ class LLMConfig:
 
 
 @dataclass
+class CotArchiveConfig:
+    """CoT 存档（A 侧）：raw 全量落盘 ＋ 三态显式标注。
+    路径口径见 docs/la-space/requirements.md §7③；path 留空＝与 database 同根。
+    """
+    enabled: bool = True
+    path: str = ""
+
+
+@dataclass
 class Config:
     machine_id: str = ""
     roles: dict[str, dict] = field(default_factory=dict)
@@ -99,6 +108,7 @@ class Config:
     search: SearchConfig = field(default_factory=SearchConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    cot_archive: CotArchiveConfig = field(default_factory=CotArchiveConfig)
 
     def get_system_prompt(self, role: str = "default") -> str:
         """获取指定角色的 system prompt，不存在则回退到 default。"""
@@ -161,6 +171,17 @@ def load_config(config_path: str | None = None) -> Config:
         vs_path = str((config_dir / vs_path).resolve())
     vs_raw["path"] = vs_path
 
+    # CoT 存档路径：未显式配置时与现有会话数据同根（database.path 所在目录），
+    # ⛔ 不硬编码盘符；显式 path 与 database 一样按配置文件所在目录解析。
+    ca_raw = dict(raw.get("cot_archive", {}) or {})
+    ca_path = ca_raw.get("path") or ""
+    if ca_path:
+        if not os.path.isabs(ca_path):
+            ca_path = str((config_dir / ca_path).resolve())
+    else:
+        ca_path = str((Path(db_path).resolve().parent / "cot_archive").resolve())
+    ca_raw["path"] = ca_path
+
     _config = Config(
         machine_id=raw.get("machine_id", ""),
         roles=raw.get("roles", {}),
@@ -173,6 +194,7 @@ def load_config(config_path: str | None = None) -> Config:
         search=SearchConfig(**raw.get("search", {})),
         llm=LLMConfig(**raw.get("llm", {})),
         logging=LoggingConfig(**raw.get("logging", {})),
+        cot_archive=CotArchiveConfig(**ca_raw),
     )
     return _config
 

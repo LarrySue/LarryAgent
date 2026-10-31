@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | 🟡 **①② 已落地 ／ ③ 未做**（2026-10-31 月月 B 半查出、WB 复核成立 ⇒ `TODO.md` 该条已退回 `[ ]`）；⚠️ **原 10-30「已完成」判词作废**。三条**他处零承接**的过程观察与判别力边界留本区〈📥 过程观察 · 测试场地隔离〉 | 2026-10-30 |
-| **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | 🔵 **WB 2026-10-30 23:55 派发** ⇒ 见〈📮 派发 · CoT 存档 · A 侧〉节。⚠️ **不含回传侧**（B 侧单列）；⚠️ **不动 `messages` 表**（对阿衡原方案的一处实质修正，理由在稿内） | 2026-10-30 |
+| **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | 🟡 **A 侧已交付（Trae 2026-11-01），待 WB 复验** ⇒ 见〈📮 派发 · CoT 存档 · A 侧〉节末〈交付回报〉。⚠️ **不含回传侧**（B 侧单列）；⚠️ **不动 `messages` 表**（对阿衡原方案的一处实质修正，理由在稿内） | 2026-10-30 |
 | **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段（本区正文已清退，回溯 `git log -p -- exchange/log-trae.md`）。WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂）⇒ **已由 P8 收掉**；②部署件不可复现（`lib/` 未入 git，仍未派）；③`selectVectorRows` 无 LIMIT（仍未派） | 2026-10-31 |
 | **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | ✅ **已复验成立（WB 2026-10-31 23:30，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段。WB 独立复跑：P8 12 判据 0 FAIL、P0② 21＋2 回归 0 FAIL、8 件证据归一化后逐件一致；Tier0 538 行 0 命中；真库四样全同。⚠️ **她有改回归装置**（1 hunk、judge 改动 0）⇒ 已核「判据未放松」。✅ **真库迁移不需定**（老大 23:19：「都是测试数据，随便动」） | 2026-10-31 |
 | — | — | — | ✅ **本区无其他在飞块**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末「三选一」待裁**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
@@ -121,6 +121,59 @@
 - ⛔ 不为省体量丢 chunk、采样、只存首尾。
 - ⛔ 不给 `reasoning_content` 做任何"清洗/规范化" —— 原样即证据。
 - **只做这一件**，别顺手动 `chat_service.py`。
+
+### 交付回报（Trae · 2026-11-01）
+
+**结论先行**：A 侧已落地。新增 `backend/models/cot_archive.py`，在 `llm.py` 两处入口挂钩：每次调用落一份
+`<root>/<YYYY-MM-DD>/<call_stem>.meta.json` ＋ 同 stem `.response.jsonl`（每行一个源对象的 `model_dump()`，
+非流式只有一行）。三态按「源对象 reasoning 字符数 vs **回读落盘文件**的 reasoning 字符数」判，判据是完整性。
+写盘失败只 `logger.exception`，LLM 返回与事件流不受影响。「raw 是否够」：**够**，与派发口径一致，未发现需要
+加 `messages` 位的理由（raw 能存能按日期/call_id 查；跨会话检索另单再做）。
+
+**三态语义 ↔ 代码标识符（一一映射）**
+
+| `requirements.md` §7③ | 代码标识符 | 判定 |
+|---|---|---|
+| 上游未返回 | `upstream_absent`（`cot_archive.py:46`） | 源侧读数 0 且落盘无 reasoning 键 |
+| 上游返回但我方未采 | `upstream_returned_not_captured`（`:47`） | `captured < received`（含快照失败无法核实的保守情形） |
+| 已存 | `stored`（`:48`） | `captured >= received > 0` |
+
+**J6-1…J6-8 读数（命令 ＋ 观测）**
+
+| # | 命令 | 观测 |
+|---|---|---|
+| J6-1 | `python -m pytest tests/test_cot_archive.py -q` | 9 passed；非流式 `llm.py:386`、流式 `:492/:511/:557` 都产出 raw；53 chunk → 53 行 |
+| J6-2 | 同上 ＋ `python ../_trae-evidence/j6-cot-archive/probe.py` | 真实 SDK `model_dump()` 含 `reasoning_content`（`model_extra` 保留）；未知键 `provider_unknown_key` 深比较仍在；无清洗/重排 |
+| J6-3 | 同上 | `meta` 含 `model` / `params`（含 tools/stream 参数）/ `messages` 原文 / `created_at` 时区 / `response.file` / `chunk_count`；测试断言 `messages` 与入参相等 |
+| J6-4 | `test_three_state_arms` | 三次调用 `["stored", "upstream_absent", "upstream_returned_not_captured"]`；臂② `captured=0 < received=143`，未落成 `upstream_absent`；臂③ 三份记录字段完整 |
+| J6-5 | `python -c "from config import get_config; ..."` | `cot_archive.enabled=True`，`path=D:\Code\LarryAgent\backend\data\cot_archive`，与 `database.path` 同根；换根用例通过（旧根零文件） |
+| J6-6 | `$env:LARRY_TEST_BREAK_ISOLATION='real'` / `'archive'` + pytest | 两条负向臂均 `EXITCODE=1`；断言行 `conftest.py:259`（真实库）／`:266`（真实存档）；测试默认落临时目录 |
+| J6-7 | `probe.py` / `size.json` | 53 chunk × 平均 413.2 B ＝ 21.4 KB/次；10 次/会话≈0.21 MB、50 次≈1.04 MB（仅响应 raw，meta 短会话≈1 KB） |
+| J6-8 | `python -m pytest tests -q` | `173 passed, 3 skipped`；`git diff backend/models/llm.py` 只有新增，两处事件 dict 字面量零改动；测试另断言事件键集合逐字一致 |
+
+证据：`_trae-evidence/j6-cot-archive/`（`READINGS.md`、三态 raw 样例、`probe.stdout.txt`、`size.json`、两条负向臂输出、
+`pytest-full.txt`）。该目录按仓库惯例被 `.gitignore` 排除，不入库。
+
+**未闭合（单列）**
+
+1. **④ 未采纳分支**（流中断/取消/异常重试失败）**不落档**——本单只覆盖正常返回路径，与派发范围一致；要做得另开单并先定「未采纳」标记。
+2. **臂②是构造的**（`model_dump` 丢键模拟我方未采），不是线上真实的部分采集故障；真实流中断下的部分丢失未实测（本单 0 真实调用）。
+3. **完整性核对是「回读可 `json.loads`」**，没有 checksum/字节级比对；解析失败会落到第二态并记 `capture_errors.readback`。
+4. **raw 无跨会话索引**：只能按日期目录 + `call_id` 取；结构化检索/召回不在本单。
+5. **深拷贝警告**：`messages` 在调用发起时深拷贝；若未来 message 里塞入不可深拷贝对象会退化（当前全是 dict/str，不触发）。
+
+**自曝**
+
+- 第一版测试把「2 个 reasoning-only chunk + 1 个 content chunk」写成期望 2 个 delta 事件；实跑只有 1 个
+  ——原因是 `delta.content` 为空本就不出 delta，这是既有取法，**不是新代码回归**。按实际行为订正断言，未放宽判据。
+- 生成测试文件时末尾误留一段 `</</content>` 残片，已自检删除；不影响判据。
+- **存量坏测**：`test_chromadb_degradation.py::test_confirm_and_store_chromadb_failure` 在 HEAD 上就红
+  （patch `memory.archiver.get_db`，而该属性自 `7d4aa05` 起不存在；且 conftest 默认 `vector_store.enabled=false`，
+  根本走不到 insert 失败分支）。为达 J6-8 全绿做了**最小修复**（显式开开关 + 断言 `mark_archived` 仍被调用，
+  判据未放松）。该文件属测试区（通常归 Claude），若 WB 认为这处 1 hunk 需退回/改写，请裁定。
+- **故障注入口子**：`LARRY_TEST_BREAK_ISOLATION` 是我为负向取证加的测试专用开关，只改路径、**不绕过断言**；
+  两条 exit=1 已实跑。若判它危险可删，删后负向记录仍有效但不可一键复算。
+- 体量假设「10 次调用/会话」是估算前提，不是实测会话分布；⛔ 不据此削减覆盖面。
 
 ---
 

@@ -82,39 +82,48 @@ class TestChromaDBDegradation(unittest.TestCase):
         - SQLite 记录已写入（memory_id 返回）
         - 会话标记为已归档
         - 仅 warning 日志，不抛异常
+
+        ⚠️ 2026-10-31 修复（J6 回归发现存量坏测）：archiver 早在 7d4aa05 就不再用
+        `get_db`（SQL 集中到 db/ 模块），本用例原先 patch `memory.archiver.get_db`
+        会直接 AttributeError；且 conftest 默认 vector_store.enabled=false 会在
+        Chroma 写入前提前返回，根本走不到 insert 失败分支。改为显式开启开关 +
+        断言 mark_archived 仍被调用（判据不放松：SQLite 侧继续执行）。
         """
+        from config import get_config
         from memory.archiver import confirm_and_store
 
-        async def run():
-            # mock SQLite 操作正常
-            with patch("memory.archiver.create_memory", new_callable=AsyncMock) as mock_create:
-                mock_create.return_value = 999  # 模拟 memory_id
-
-                with patch("memory.archiver.chunk_text") as mock_chunk:
+        cfg = get_config()
+        original_enabled = cfg.vector_store.enabled
+        cfg.vector_store.enabled = True
+        try:
+            async def run():
+                with patch("memory.archiver.create_memory", new_callable=AsyncMock) as mock_create, \
+                     patch("memory.archiver.get_active_memory_by_conversation_id",
+                           new_callable=AsyncMock) as mock_existing, \
+                     patch("memory.archiver.chunk_text") as mock_chunk, \
+                     patch("memory.archiver.embed_batch", new_callable=AsyncMock) as mock_embed, \
+                     patch("memory.archiver.insert", new_callable=AsyncMock) as mock_insert, \
+                     patch("memory.archiver.mark_archived", new_callable=AsyncMock) as mock_mark:
+                    mock_create.return_value = 999  # 模拟 memory_id
+                    mock_existing.return_value = None
                     mock_chunk.return_value = ["chunk1", "chunk2"]
+                    mock_embed.return_value = [[0.1] * 512, [0.2] * 512]
+                    mock_insert.side_effect = Exception("ChromaDB disk full")
 
-                    with patch("memory.archiver.embed_batch", new_callable=AsyncMock) as mock_embed:
-                        mock_embed.return_value = [[0.1] * 512, [0.2] * 512]
+                    result = await confirm_and_store(
+                        conversation_id=1,
+                        summary="测试摘要",
+                        source_role="default",
+                    )
+                    mock_insert.assert_awaited_once()
+                    # 验证归档标记仍写入（SQLite 侧未被 Chroma 失败拖垮）
+                    mock_mark.assert_awaited_once_with(1)
+                    return result
 
-                        # ChromaDB insert 抛异常
-                        with patch("memory.archiver.insert", new_callable=AsyncMock) as mock_insert:
-                            mock_insert.side_effect = Exception("ChromaDB disk full")
+            memory_id = asyncio.get_event_loop().run_until_complete(run())
+        finally:
+            cfg.vector_store.enabled = original_enabled
 
-                            # mock db 操作
-                            mock_db = AsyncMock()
-                            with patch("memory.archiver.get_db", new_callable=AsyncMock) as mock_get_db:
-                                mock_get_db.return_value = mock_db
-
-                                result = await confirm_and_store(
-                                    conversation_id=1,
-                                    summary="测试摘要",
-                                    source_role="default",
-                                )
-                                # 验证 db.commit 被调用（归档标记已写入）
-                                mock_db.commit.assert_called_once()
-                                return result
-
-        memory_id = asyncio.get_event_loop().run_until_complete(run())
         self.assertEqual(memory_id, 999, "ChromaDB 失败时应仍返回 memory_id")
         print("[PASS] Test 3: confirm_and_store 降级成功 → SQLite 保留, 返回 memory_id=999")
 

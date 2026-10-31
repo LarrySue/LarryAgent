@@ -31,6 +31,7 @@ from tenacity import (
 )
 
 from config import get_config
+from models import cot_archive
 
 logger = logging.getLogger(__name__)
 
@@ -381,6 +382,18 @@ async def chat_completion(
         _debug_log_response(response)
         _log_token_usage(model, usage)
 
+        # —— CoT 存档（A 侧）：raw 全量落盘 ＋ 三态标注；写失败只记日志，不影响返回
+        await cot_archive.archive_non_stream_call(
+            model=model,
+            messages=messages,
+            params={
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "tools": tools,
+            },
+            response=response,
+        )
+
         elapsed = time.perf_counter() - start
         logger.info(
             "LLM response model=%s finish=%s chars=%d tool_calls=%d tokens=%s elapsed=%.2fs",
@@ -475,11 +488,28 @@ async def chat_completion_stream_events(
     #       流迭代中失败通常是中途网络断开，重试整个流代价高且用户已看到部分输出
     stream = await _call_with_retry(client.chat.completions.create, **kwargs)
 
+    # —— CoT 存档（A 侧）：整次流一份记录，每个 chunk 原样快照（含 usage-only chunk）
+    archive = cot_archive.start_call(
+        mode="stream",
+        model=model,
+        messages=messages,
+        params={
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "tools": tools,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        },
+    )
+
     usage_data: dict = {}
     finish_reason: str | None = None
     ingest_tc, finalize_tc = stream_tool_call_accumulator()
 
     async for chunk in stream:
+        if archive is not None:
+            archive.observe(chunk)
+
         # —— usage（final chunk 可能含 usage）
         if hasattr(chunk, "usage") and chunk.usage:
             usage_data = {
@@ -521,6 +551,14 @@ async def chat_completion_stream_events(
         usage_data.get("total_tokens", "N/A"),
         elapsed,
     )
+
+    # 落盘在 finish 事件之前完成：保证事件流的消费者看到 finish 时，存档已就位
+    if archive is not None:
+        await archive.finalize(finish={
+            "finish_reason": finish_reason or "stop",
+            "tool_calls_count": len(final_tool_calls),
+            "usage": usage_data,
+        })
 
     yield {
         "type": "finish",

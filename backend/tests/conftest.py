@@ -37,6 +37,7 @@ import yaml
 _BACKEND_DIR = Path(__file__).parent.parent
 _REAL_CONFIG = _BACKEND_DIR / "config.yaml"
 _REAL_DB = (_BACKEND_DIR / "data" / "larry.db").resolve()
+_REAL_COT_ARCHIVE = (_BACKEND_DIR / "data" / "cot_archive").resolve()
 
 # ---------------------------------------------------------------------------
 # 会话级临时配置（模块导入时执行——先于一切测试模块）
@@ -57,13 +58,29 @@ _REAL_DB = (_BACKEND_DIR / "data" / "larry.db").resolve()
 _session_tmpdir = tempfile.mkdtemp(prefix="larry_test_")
 _session_db = Path(_session_tmpdir) / "session.db"
 _session_chroma = Path(_session_tmpdir) / "chroma"
+_session_cot_archive = Path(_session_tmpdir) / "cot_archive"
 _session_yaml = Path(_session_tmpdir) / "config.session.yaml"
 
 # 以真实配置为基底，只替换持久化路径——其余行为（models/roles/tools/llm）完全一致
 with open(_REAL_CONFIG, "r", encoding="utf-8") as f:
     _cfg = yaml.safe_load(f)
 
-_cfg.setdefault("database", {})["path"] = str(_session_db.resolve())
+# Tier 0 红线 4 负向臂的故障注入（仅取证用）：
+# 置 LARRY_TEST_BREAK_ISOLATION=real / db / archive 时故意把对应路径写成真实路径，
+# 会话级断言必须 fail（pytest exit≠0）。不设该变量时零影响，断言也不会被绕过。
+_BREAK_ISOLATION = os.environ.get("LARRY_TEST_BREAK_ISOLATION", "").strip().lower()
+
+_cfg.setdefault("database", {})["path"] = (
+    str(_REAL_DB)
+    if _BREAK_ISOLATION in ("real", "db")
+    else str(_session_db.resolve())
+)
+_cfg.setdefault("cot_archive", {})["path"] = (
+    str(_REAL_COT_ARCHIVE)
+    if _BREAK_ISOLATION in ("real", "archive")
+    else str(_session_cot_archive.resolve())
+)
+
 _cfg.setdefault("vector_store", {}).update(
     enabled=False,
     path=str(_session_chroma.resolve()),
@@ -231,8 +248,9 @@ def _assert_test_db_isolation():
     """
     Tier 0 第 4 条的程序性强制：验证【行为】而非动作。
 
-    断言最终解析出的 database.path 不指向真实库 backend/data/larry.db，
-    指向即 fail——防止任何测试（包括未来新增）以任何方式连上真实库。
+    断言最终解析出的 database.path 不指向真实库 backend/data/larry.db、
+    cot_archive.path 不指向真实存档目录 backend/data/cot_archive，
+    指向即 fail——防止任何测试（包括未来新增）以任何方式写进真实数据。
     """
     from config import get_config
 
@@ -241,6 +259,13 @@ def _assert_test_db_isolation():
         pytest.fail(
             f"测试隔离失效：database.path 指向真实库 {_REAL_DB}。"
             f"请勿在测试中覆盖 LARRY_CONFIG 或重载真实配置。"
+        )
+
+    actual_archive = Path(get_config().cot_archive.path).resolve()
+    if actual_archive == _REAL_COT_ARCHIVE:
+        pytest.fail(
+            f"测试隔离失效：cot_archive.path 指向真实存档目录 {_REAL_COT_ARCHIVE}。"
+            f"测试的 CoT 存档必须落临时目录。"
         )
 
 
