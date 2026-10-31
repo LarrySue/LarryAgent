@@ -38,8 +38,14 @@ export const inject = ['sessions', 'systemPrompt']
 export const DEGRADED_MARK = '[S36-MEMORY] chroma degraded:'
 /** P0② 本单新增部署哨兵（P7：部署件内必须命中这条唯一串） */
 export const P02_DEPLOY_SENTINEL = '[S36-MEMORY] p02-vector-recall-v1'
+/** P8 本单新增部署哨兵（P7 口径：部署件内必须命中） */
+export const P08_DEPLOY_SENTINEL = '[S36-MEMORY] p08-recall-session-filter-v1'
 /** 语义召回降级原因（与 DEGRADED_MARK 共用同一 stderr／degradedLogPath 通道） */
 export const EMBED_RECALL_FALLBACK = 'recall fallback to time-order'
+/** P8-d 空召回 OBS 行（与降级共用同一通道；⛔ 不冒充降级） */
+export const RECALL_EMPTY_MARK = '[S36-MEMORY] recall empty after session filter:'
+/** provider 占位（零宽空格）：过滤后为空时保住注入条，瀑布随后替换为最终文本（'' 渲染时被过滤） */
+const RECALL_PLACEHOLDER = '\u200B'
 /** 场地隔离断言：dbPath 落在当前 home 之外且未豁免（stderr ＋ throw，只出自失败路径） */
 export const OUTSIDE_HOME_DENY_MARK = '[S36-MEMORY] dbPath outside home (denied):'
 /** 场地隔离断言：同上但显式豁免（stderr 审计行，含解析后的绝对路径） */
@@ -185,11 +191,16 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   const insertRow = db.prepare(
     "INSERT OR IGNORE INTO memories(session_id, source_event_seq, content, created_at) VALUES(?,?,?, datetime('now','localtime'))"
   )
+  // P8：两条召回路径的最终过滤都在 SQL 层（⛔ 别一边 SQL 一边 JS）。
+  //   selectRecent 保留为「库非空」探针（不过滤），用于区分「过滤后为空」与「真空白库」。
   const selectRecent = db.prepare(
     'SELECT id, content, created_at FROM memories ORDER BY id DESC LIMIT ?'
   )
+  const selectRecentFiltered = db.prepare(
+    'SELECT id, content, created_at FROM memories WHERE session_id <> ? ORDER BY id DESC LIMIT ?'
+  )
   const selectVectorRows = db.prepare(
-    'SELECT id, content, created_at, embedding FROM memories WHERE embedding IS NOT NULL ORDER BY id DESC'
+    'SELECT id, content, created_at, embedding FROM memories WHERE embedding IS NOT NULL AND session_id <> ? ORDER BY id DESC'
   )
   const selectMissingVectors = db.prepare(
     'SELECT id, content FROM memories WHERE embedding IS NULL ORDER BY id ASC'
@@ -356,10 +367,30 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     return `${RECALL_TITLE_PREFIX}（${label}）\n${lines.join('\n')}`
   }
 
-  /** 时间倒序回退（P5：模型未就绪时调用方必须立刻拿到这份） */
-  const recallText = (): string => {
-    const rows = selectRecent.all(cfg.recallLimit) as unknown as RecallRow[]
-    return formatRecall(rows, false)
+  /** 当前装配所属会话 id（来自 context.agent.session；无 agent 装配返回 null） */
+  function sessionIdOf(context: unknown): string | null {
+    const agent = (context as { agent?: { session?: { id?: unknown } } }).agent
+    const rawSessionId = agent?.session?.id
+    return rawSessionId === undefined ? null : String(rawSessionId)
+  }
+
+  /** 过滤后的时间倒序回退（P8：两条召回路径都在 SQL 层排除本会话） */
+  function fallbackRecallText(sessionId: string): string {
+    const rows = selectRecentFiltered.all(sessionId, cfg.recallLimit) as unknown as RecallRow[]
+    return rows.length ? formatRecall(rows, false) : ''
+  }
+
+  /**
+   * provider 面：P8 过滤后的时间倒序；过滤后为空时返回零宽占位，
+   * 保住注入条让 system-prompt/assemble 瀑布把最终文本（语义或空）替换进来。
+   * ⚠️ 真空白库（一行都没有）不产生注入条 ⇒ 与「过滤后为空」不同形（P8-d）。
+   */
+  const recallText = (context: unknown): string => {
+    const sessionId = sessionIdOf(context)
+    if (!sessionId) return ''
+    const anyRows = selectRecent.all(1) as unknown as RecallRow[]
+    if (anyRows.length === 0) return ''
+    return fallbackRecallText(sessionId) || RECALL_PLACEHOLDER
   }
 
   /** 会话历史里的最后一条「真用户消息」（source.kind='user'；过滤 plugin/tool/system 注入） */
@@ -376,28 +407,34 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     return ''
   }
 
+  interface SemanticRecallResult {
+    text: string
+    /** 最终没有语义结果时的可区分原因（P8-d 日志用） */
+    emptyReason?: string
+  }
+
   /**
-   * 语义召回（读侧，P0② 核心）：
+   * 语义召回（读侧，P0② 核心；P8 排除本会话）：
    *   - query = 当前会话最后一条真 user 消息；优先读 session.deriveMessages()
    *     （装配时当前 prompt 已在会话日志里，而 session/event 回调是 post-commit，
    *     可能晚于装配 ⇒ 只靠事件 map 会在首轮拿不到 query），map 作回退
    *   - 就绪检查是同步文件检查；未就绪 ⇒ 一条降级行 ＋ 后台预取，⛔ 不等待加载
    *   - 向量来自 memories.embedding（写侧先落库，老库由 backfill 补齐）
+   *   - P8：selectVectorRows 用 SQL `session_id <> ?` 排除本会话（与降级路同层）
    */
-  async function semanticRecallText(context: unknown): Promise<string> {
+  async function semanticRecallText(context: unknown): Promise<SemanticRecallResult> {
     const agent = (context as { agent?: { session?: { id?: unknown } } }).agent
-    const rawSessionId = agent?.session?.id
-    if (rawSessionId === undefined) return ''
-    const sessionId = String(rawSessionId)
+    const sessionId = sessionIdOf(context)
+    if (!sessionId) return { text: '', emptyReason: 'no-session' }
     const sessionQuery = lastUserTextFromSession(agent?.session)
     const mapQuery = lastUserBySession.get(sessionId) ?? ''
     const query = mapQuery || sessionQuery
-    if (!query) return ''
+    if (!query) return { text: '', emptyReason: 'no-query' }
 
     if (!embedder.ready()) {
       writeDegraded(`${DEGRADED_MARK} ${EMBED_RECALL_FALLBACK} reason=${P02_DEPLOY_SENTINEL} cause=model-not-ready`)
       startPrewarm()
-      return ''
+      return { text: '', emptyReason: 'model-not-ready' }
     }
 
     try {
@@ -408,40 +445,60 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
         queryVectorCache.set(sessionId, cached)
         startBackfill()
       }
-      const rows = selectVectorRows.all() as unknown as RecallVectorRow[]
+      const rows = selectVectorRows.all(sessionId) as unknown as RecallVectorRow[]
+      if (rows.length === 0) return { text: '', emptyReason: 'no-cross-session-vectors' }
       const top = cosineTopK(rows, cached.vector, cfg.recallLimit)
-      if (top.length === 0) return '' // 尚无向量（回填未完成）⇒ 安静回退
-      return formatRecall(top, true)
+      if (top.length === 0) return { text: '', emptyReason: 'no-candidates' }
+      return { text: formatRecall(top, true) }
     } catch (err: unknown) {
       const reason = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ')
       writeDegraded(`${DEGRADED_MARK} ${EMBED_RECALL_FALLBACK} reason=${P02_DEPLOY_SENTINEL} cause=${reason}`)
       startPrewarm()
-      return ''
+      return { text: '', emptyReason: 'embedding-error' }
     }
   }
 
-  // ── 读侧接线（P0②）：装配瀑布里替换同一注入条文本，⛔ 不改条数与位置 ───────
+  // ── 读侧接线（P0②/P8）：装配瀑布里替换同一注入条文本，⛔ 不改条数与位置 ────
   if (cfg.injectContext || cfg.injectSection) {
     ctx.on('system-prompt/assemble', async (assembly, context, next) => {
       const assembled = await next()
+      const replace = <T extends { name: string; text: string }>(entries: T[], text: string): { entries: T[]; hit: boolean } => {
+        let hit = false
+        const list = entries.map((entry) => {
+          if (entry.name !== RECALL_NAME) return entry
+          hit = true
+          return { ...entry, text }
+        })
+        return { entries: list, hit }
+      }
       try {
-        const text = await semanticRecallText(context)
-        if (!text) return assembled
-        const replace = <T extends { name: string; text: string }>(entries: T[]): { entries: T[]; hit: boolean } => {
-          let hit = false
-          const list = entries.map((entry) => {
-            if (entry.name !== RECALL_NAME) return entry
-            hit = true
-            return { ...entry, text }
-          })
-          return { entries: list, hit }
-        }
-        const sections = replace(assembled.sections)
-        const contexts = replace(assembled.contexts)
+        const sessionId = sessionIdOf(context)
+        if (!sessionId) return assembled
+        const semantic = await semanticRecallText(context)
+        const finalText = semantic.text || fallbackRecallText(sessionId)
+        const sections = replace(assembled.sections, finalText)
+        const contexts = replace(assembled.contexts, finalText)
         if (!sections.hit && !contexts.hit) return assembled
+        if (!finalText) {
+          writeDegraded(`${RECALL_EMPTY_MARK} reason=${semantic.emptyReason ?? 'no-cross-session-rows'} sentinel=${P08_DEPLOY_SENTINEL}`)
+        }
         return { ...assembled, sections: sections.entries, contexts: contexts.entries }
       } catch {
-        return assembled
+        // 兜底：至少把 provider 的过滤后时间倒序交出去，⛔ 不把未过滤内容留给模型
+        try {
+          const sessionId = sessionIdOf(context)
+          if (!sessionId) return assembled
+          const fallback = fallbackRecallText(sessionId)
+          const sections = replace(assembled.sections, fallback)
+          const contexts = replace(assembled.contexts, fallback)
+          if (!sections.hit && !contexts.hit) return assembled
+          if (!fallback) {
+            writeDegraded(`${RECALL_EMPTY_MARK} reason=assemble-error-fallback sentinel=${P08_DEPLOY_SENTINEL}`)
+          }
+          return { ...assembled, sections: sections.entries, contexts: contexts.entries }
+        } catch {
+          return assembled
+        }
       }
     })
   }

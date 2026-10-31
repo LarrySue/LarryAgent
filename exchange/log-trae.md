@@ -12,7 +12,7 @@
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | ✅ **已复验成立（WB 2026-10-30 22:40，带 2 条增量）** ⇒ 结论落 `TODO.md:89`；逐条读数、三条过程观察与判别力边界见本区〈📌 已办结 · 测试场地隔离〉 | 2026-10-30 |
 | **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | 🔵 **WB 2026-10-30 23:55 派发** ⇒ 见〈📮 派发 · CoT 存档 · A 侧〉节。⚠️ **不含回传侧**（B 侧单列）；⚠️ **不动 `messages` 表**（对阿衡原方案的一处实质修正，理由在稿内） | 2026-10-30 |
 | **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量 ＋ 1 条待拍）** ⇒ 见〈📌 WB 复验 · P0②〉；WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂，待拍）；②部署件不可复现（`lib/` 未入 git）；③`selectVectorRows` 无 LIMIT | 2026-10-31 |
-| **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | 🔵 **WB 2026-10-31 22:50 派发** ⇒ 见〈📮 派发 · P8〉节。五条判据含**负证**（⛔ 别把过滤做成清空）与**两路覆盖**（降级路同改）；真库迁移**在副本上演练、⛔ 不动真库** | 2026-10-31 |
+| **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | 🟢 **已交付（Trae 2026-10-31 23:10）** ⇒ 见〈✅ 交付 · P8〉节；P8-a～e 12 判据全绿（负证＋两路＋副本迁移），P0② 21＋2 回归全绿，待 WB 复验。⚠️ 部署件已同步（`lib/index.js` sha256 `476a0a8d…`） | 2026-10-31 |
 | — | — | — | ✅ **本区无其他在飞块**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末「三选一」待裁**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -135,6 +135,42 @@
 - ⛔ 不顺带重构召回路、不改 `recallLimit` 默认值
 - ⛔ 不动 `backend/`（J6 在飞，文件零重叠可并行；你若判两单会互相干扰 ⇒ **停手报矛盾**）
 - ⛔ 发现判据本身不可复算 ⇒ 停手报矛盾，⛔ 别猜我要什么
+
+---
+
+## ✅ 交付 · P8 召回排除本会话 ＋ 真库首启迁移演练（Trae · 2026-10-31 23:10）
+
+> **结论先行**：两条召回路径（向量 `selectVectorRows` / 降级 `selectRecentFiltered`）都在 **SQL 层**加 `session_id <> ?`；同会话消息不再占召回槽，跨会话近似仍可召回；过滤后为空写一条 `RECALL_EMPTY_MARK` OBS，真空库不写；真库副本演练：5→6 列、id/content 逐行 sha 全同、embedding 回填 54/54、真库 sha256 未变。**P8-a～e 12 判据 0 FAIL**；P0② 21＋2 回归全绿。
+> 证据：`D:/Code/_trae-evidence/p08-recall-filter/`；复跑：`node harness/scripts/embed-probe/p08-recall-filter-probe.mjs`（临时 home ＋ `copyFileSync(REAL_DB, <home>/real-copy.db)`，`DSH_HOME=<home>`，⛔ 不动真库）。
+> 部署件：`lib/index.js` **23,446 B** / sha256 `476a0a8d03d36ee085f22b7f03100a095278cfa90858b04bf7afd075feae84a2`；P8 哨兵 `p08-recall-session-filter-v1` ×1。
+
+### 一、逐条读数（id 列表 / 交集 / 计数 / sha）
+
+| 判据 | 实际读数 |
+|---|---|
+| **P8-a 向量路** | 召回 ids=`[2,3,4]`；本会话 A ids=`[1,5]`；交集=`[]` |
+| **P8-b 向量路** | B 会话近似条 id=`2` 在召回列表 |
+| **P8-a 降级路** | 召回 ids=`[4,3,2]`；本会话 A ids=`[1,5]`；交集=`[]` |
+| **P8-b 降级路** | B 会话近似条 id=`2` 在召回列表 |
+| **P8-c 两路覆盖** | 向量路 / 降级路各跑 a＋b；两条路径最终过滤均为 SQL（`selectVectorRows` / `selectRecentFiltered`） |
+| **P8-d 空集可辨** | 库里仅本会话 2 行 ⇒ 召回正文 `""`，OBS 恰 1 条：`[S36-MEMORY] recall empty after session filter: reason=no-cross-session-vectors sentinel=…`；对照真空库 ⇒ 正文 `""`、`RECALL_EMPTY_MARK` **0 条**（两种空不同形） |
+| **P8-e 迁移** | 副本 54 行：`PRAGMA table_info` 5 列 → 6 列（含 `embedding`）；54 行 `id/content` 逐行 sha **全同**（54/54）；`embedding IS NOT NULL` = **54/54**；真库 sha256 `16089de35e82…` 前后相同 |
+| **P7 部署件** | 23,446 B；sha256 `476a0a8d…`；本单哨兵 ×1；P0② 哨兵仍在（回归探针 P7 过） |
+| **P0② 回归** | `p02-recall-probe` 21 判据 0 FAIL；`p02-dsh-integration` 2 判据 0 FAIL |
+
+### 二、实现（WB 派发 P8）
+
+- `selectRecentFiltered`（SQL `WHERE session_id <> ?`）＋ `selectVectorRows`（SQL 同过滤）；`selectRecent` **保留**，只作「库非空」探针（用来区分过滤后为空 vs 真空白库，不是召回路径）。
+- provider `recallText(context)` 返回过滤后的时间倒序；过滤后为空时返回零宽占位，保住注入条，由 `system-prompt/assemble` 瀑布替换成 `语义 || 过滤回退 || ''`；最终为空时写 P8-d OBS 行并把文本置空（渲染时被过滤）。
+- `semanticRecallText` 改为返回 `{ text, emptyReason }`（no-session / no-query / model-not-ready / no-cross-session-vectors / no-candidates / embedding-error）；过滤后的向量路不排除其他会话。
+- ⛔ 未加 LIMIT；⛔ 未删 `selectRecent`；⛔ 未动 `doubleWrite`／`getChroma`／`chromaUrl`；⛔ 未改 `recallLimit` 默认值；⛔ 未动 `backend/`。
+
+### 三、备注与边界
+
+- P8-d 的 OBS 行与降级行共用 `writeDegraded` 通道，但用独立 `RECALL_EMPTY_MARK`，不会冒充 `DEGRADED_MARK`；P5 三臂的「恰 1 行降级」读数不受影响（回归已验）。
+- 零宽占位只在 provider 与瀑布之间；若瀑布不在作用域，provider 文本本身已是**过滤后**内容，不会把本会话消息漏给模型。
+- 真库 54 行这回**只是副本演练**；真库何时迁移、要不要先备份，等本单读数回去由 WB/老大定（⛔ 本单未动真库）。
+- 认定路径：`selectRecent` 过滤前先查任意一行（`LIMIT 1`）而非直接过滤，避免把「真空库」与「过滤后为空」做成同形。
 
 ---
 

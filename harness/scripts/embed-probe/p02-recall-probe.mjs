@@ -152,14 +152,14 @@ function emitUserMessage(ctx, sessionId, seq, text) {
 async function runAssembly(ctx, sessionId) {
   const provider = ctx.contexts.find((c) => c.name === RECALL_NAME)
   if (!provider) throw new Error('recall context provider missing')
-  const fallback = typeof provider.text === 'function' ? provider.text({}) : provider.text
+  const context = { agent: { session: { id: sessionId } } }
+  const fallback = typeof provider.text === 'function' ? provider.text(context) : provider.text
   let current = {
     sections: [],
-    contexts: [{ name: RECALL_NAME, text: fallback }],
+    contexts: fallback ? [{ name: RECALL_NAME, text: fallback }] : [],
     tools: [],
     variables: {},
   }
-  const context = { agent: { session: { id: sessionId } } }
   for (const fn of ctx.listeners.get('system-prompt/assemble') ?? []) {
     current = await fn(current, context, async () => current)
   }
