@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | ✅ **已复验成立（WB 2026-10-30 22:40，带 2 条增量）** ⇒ 结论落 `TODO.md:89`；逐条读数、三条过程观察与判别力边界见本区〈📌 已办结 · 测试场地隔离〉 | 2026-10-30 |
 | **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | 🔵 **WB 2026-10-30 23:55 派发** ⇒ 见〈📮 派发 · CoT 存档 · A 侧〉节。⚠️ **不含回传侧**（B 侧单列）；⚠️ **不动 `messages` 表**（对阿衡原方案的一处实质修正，理由在稿内） | 2026-10-30 |
-| **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | 🟢 **已交付（Trae 2026-10-31 22:20）** ⇒ 见〈✅ 交付 · P0②〉节；P1–P7 部署件 21 判据全绿 ＋ 真实 dsh 装配面 2 判据全绿，待 WB 复验。⚠️ 部署件已同步（`lib/index.js` sha256 `72f2845c…`）；J5 旧装置 EEXIST 为既有老化，未改装置 | 2026-10-31 |
+| **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量 ＋ 1 条待拍）** ⇒ 见〈📌 WB 复验 · P0②〉；WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂，待拍）；②部署件不可复现（`lib/` 未入 git）；③`selectVectorRows` 无 LIMIT | 2026-10-31 |
 | — | — | — | ✅ **本区无其他在飞块**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -72,6 +72,44 @@
 
 - J5 旧装置 EEXIST（上述第 4 条）—— 属既有老化，等 WB 决定是否修装置。
 - 真库老行回填只有设计路径，未在真库实测（Tier0 边界）。
+
+---
+
+## 📌 WB 复验 · P0② 向量召回 · 第一期（WB · 2026-10-31 22:34）
+
+> **判定：成立（带 3 条增量 ＋ 1 条待拍 ＋ 2 条备注）。** 不是我读你的表采信的 —— 我把两条探针**自己重跑了一遍**（`P02_EVIDENCE_DIR` 指到我自己的目录，你的证据未被覆盖），读数逐条复现。
+> 结论已落 `TODO.md` P0② 段；状态区已升「已复验成立」。
+
+### 一、我独立复跑了什么
+
+| 复跑对象 | 结果 |
+|---|---|
+| `p02-recall-probe.mjs` | **21 判据 0 FAIL**，与自报一致（P1 ／ P2 ／ P3 ／ P4×4 ／ P5×9 ／ P6×2 ／ P7×2） |
+| `p02-dsh-integration.mjs` | **2 判据 0 FAIL** —— 真实 cordis 通道上 `system-prompt/assemble` 确实收到 scoped assembly，context 面含「语义 top-」＋目标正文、召回块标题仅 1 次 |
+| Tier0（我自己扫，不采信自检） | 两次提交新增 **1219 行**，`sk-`／`Bearer`／`assign`／`ghp` 四类形态 **0 命中** |
+| 真库副作用 | 跑前跑后 `sha256 16089de3…` ／ **54 行** ／ mtime `10-30 15:01:18` **三样全同** |
+| 环境面（不在 git 的改动） | profile `package.json` 确有 `@huggingface/transformers: 4.3.1`；`pnpm-workspace.yaml` `onnxruntime-node: true`；模型 `D:/Code/_models/Xenova/bge-small-zh-v1.5/onnx/model.onnx` **94,851,877 B** 在 |
+
+### 二、增量（按重要性）
+
+**① 召回未排除当前会话自身消息（产品面，最大）**
+写侧把每条真实用户消息都入库（`src/index.ts:324`），读侧 `selectVectorRows` 无 session 过滤（`:192`）⇒ 同一会话上一轮说过的话会稳定占住召回槽。`P4-topk.json` 里 `topIds[0]=25` 就是探针自己发的那条 query（种子里没有它，是 `emitUserMessage` 写进去的），余弦 1.0 自匹配。
+⚠️ **这是我派发稿的判据缺臂，不是你做错了** —— 我写 P4 时只要求「目标条在 top-3」，没写「召回须排除本会话」。它与 `TODO.md` DSH-4 那条老讨论题（参考件 `recallSync` 的 `session_id !=` 形状）是同一个问题，现在有实物了。**⏳ 待老大拍**：加一行 `WHERE session_id <> ?` 算不算本期范围。
+
+**② 部署件不可复现（我 P7 判据缺臂）**
+`harness/.gitignore:2` 忽略 `lib/`，同步是手工动作、仓库里没有脚本 ⇒ P7 只能证「此刻是对的」，证不了「下次重做还是这个」。建议补 `deploy:profile`：构建 → 同步 → **回读部署件哨兵**，一步到底。
+
+**③ `selectVectorRows` 无 LIMIT**：54 行无碍，万行时每次装配读 ≈20MB ＋ 全量余弦。这条 SQL 应一并写进「何时引 Chroma」的触发条件（库大时先加 LIMIT／分批）。
+
+### 三、备注（不判缺陷，供你判断）
+
+- `top.length===0` 时静默回退**不写降级日志** ⇒「回填未完成」与「没 query」在日志上同形（与 J5 三态同族，建议补一行 OBS 级）；
+- `backfillStarted` 置 true 后**同进程内**失败不重试（注释写"等下次就绪"，实际下次是下个进程）。
+
+### 四、你自己报的两条，我核过，都成立
+
+- `getEmbed`（`pooling:'mean'`）确已移除，语义与 Chroma 共用同一 CLS 编码器；
+- J5 旧装置 `EEXIST` 确属**既有老化**：`run-36-memory.mjs:56` 先 `cpSync` 整个 profile、`:76` 再 `symlinkSync` 同一路径 ⇒ 必撞。**我 2026-10-30 的日志里已记过同一现象、早于本单**，不是你引入的。装置要不要修（一行 `rmSync`），等 `TODO` 那边一起排。
 
 ---
 

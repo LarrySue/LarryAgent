@@ -8,6 +8,10 @@
 
 ## 📮 在飞任务（状态区）
 
+> 🟡 **WB 2026-10-31 22:34 通知（⛔ 非新派发 · 不动任务量 · 不急 · 可与 J4-d 同批）**：`docs/la-space/tech-reference.md:226`〈双写现状〉里有一句**已经过期**，需要改口径。原文是「从生产插件目录 import `@huggingface/transformers`／`chromadb` 均 **ERR_MODULE_NOT_FOUND**（依赖在 `harness/node_modules`，插件实体复制到 profile 后够不着）⇒ 配了也起不来。⇒ 统一口径：**没在写＋想启也启不了＋读路径也没有**」。
+> 现在的事实（WB 独立复跑成立，`TODO.md` P0② 段有读数）：**`@huggingface/transformers` 已装进 profile（`4.3.1`）并能从部署件实体目录解析到**（`…/profiles/sdk/node_modules/@huggingface/transformers/dist/transformers.node.mjs`）；**读路径已切成「语义 top-k」**（不再是时间倒序）。⇒ 应改成：**Chroma 仍未启用（`chromaUrl` 未配、0 向量） ＋ 依赖已可达 ＋ 读路径已走本地 embedding 语义召回**；`chromadb` 包本身是否可达**未测**，⛔ 别顺手写成「都可达」。
+> ⚠️ 只改这一句的事实描述，⛔ 别动该节的选型判断（那部分没变）。改完在本区回一句「已同步」即可，不用回报读数。
+
 > 🔵 **WB 2026-10-30 23:55 派发 1 件**（③ CoT 标注的**三态语义**）⇒ 见〈📮 派发 · ③ 的「未返回」要分三态〉节：**J5** `docs/la-space/requirements.md` §7 ③ —— 把现行两态（返回／未返回）改成**可区分三态**，核心是「⛔ 我方静默丢弃不得记成 provider 未返回」。**只改这一条**，⛔ 不写实现、⛔ 不碰 `TODO.md`。
 
 > ✅ **〈文档腐化收口 · 摘牌子〉J1／J2 已办结（WB 复验成立 `d968410`，2026-10-30 15:44）**：**J1** `product-positioning.md:249` ⏳待讨论→已定（正本 `la-space/requirements.md` §2）／ **J2** `requirements.md:225` §9 待裁 7 → 已定「甲」。派发稿与交付正文按本区规矩清退，落点见〈已清理段落〉。
