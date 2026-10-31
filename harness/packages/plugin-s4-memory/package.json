@@ -14,7 +14,9 @@
   },
   "files": [
     "lib/index.js",
-    "lib/index.d.ts"
+    "lib/index.d.ts",
+    "lib/manifest.js",
+    "lib/manifest.d.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json"

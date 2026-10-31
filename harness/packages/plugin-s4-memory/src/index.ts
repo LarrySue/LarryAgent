@@ -29,6 +29,15 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-session' // Context.sessions + session/* 事件的 declare 合并
 import type {} from '@deepseek-ai/dsh-system-prompt' // Context.systemPrompt 的 declare 合并
 import { createEmbedder, resolveModelCacheDir } from './embedding.js'
+import {
+  assertManifestPathInsideHome,
+  createSessionStats,
+  MANIFEST_DEGRADED_MARK,
+  observeSessionEvent,
+  refreshArchiveManifest,
+  resolveManifestPath,
+  type SessionEventStats,
+} from './manifest.js'
 import { cosineTopK, encodeVector, type RecallRow, type RecallVectorRow } from './recall.js'
 
 export const name = 'larry-s4-memory'
@@ -82,10 +91,15 @@ export interface Config {
    */
   dbPath: string
   /**
-   * 场地隔离断言的显式豁免：dbPath 落在当前 home 之外时默认 fail；
+   * 场地隔离断言的显式豁免：dbPath / manifestPath 落在当前 home 之外时默认 fail；
    * 置 true 则放行，但每次启动在 stderr 留一行审计（含解析后的绝对路径）。
    */
   allowOutsideHome?: boolean
+  /**
+   * 存档自描述清单路径（D6 第 ⑥ 类）。支持 `${DSH_HOME}` 占位与相对路径；
+   * 缺省 `sessions/archive-manifest.jsonl`（与 sessions 存档同层）。
+   */
+  manifestPath?: string
   /** ChromaDB server URL；留空则不做向量双写（SQLite 单写） */
   chromaUrl?: string
   /** 本地 embedding 模型（transformers.js onnx） */
@@ -109,7 +123,7 @@ export interface Config {
 }
 
 const DEFAULTS: Required<Pick<Config,
-  'embedModel' | 'modelCacheDir' | 'recallLimit' | 'collectionName' | 'injectSection' | 'injectContext'
+  'embedModel' | 'modelCacheDir' | 'recallLimit' | 'collectionName' | 'injectSection' | 'injectContext' | 'manifestPath'
 >> = {
   embedModel: 'Xenova/bge-small-zh-v1.5',
   modelCacheDir: 'D:/Code/_models',
@@ -117,6 +131,7 @@ const DEFAULTS: Required<Pick<Config,
   collectionName: 'larry_memories',
   injectSection: false,
   injectContext: true,
+  manifestPath: 'sessions/archive-manifest.jsonl',
 }
 
 /**
@@ -165,6 +180,35 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
       process.stderr.write(`${line}\n`)
       throw new Error(line)
     }
+  }
+
+  // ── 存档自描述清单（⑪.1）────────────────────────────────────────────────
+  // 路径同样受场地隔离断言保护：临时 home 的测试不得把清单写进真实 sessions。
+  const manifestPath = resolveManifestPath(cfg.manifestPath, home)
+  assertManifestPathInsideHome(home, manifestPath, cfg.allowOutsideHome === true)
+  const sessionStats = new Map<string, SessionEventStats>()
+  let manifestQueue: Promise<void> = Promise.resolve()
+
+  /** 清单刷新串行化：turn/end 是 fire-and-forget，失败只走 degraded 通道 */
+  function scheduleManifestRefresh(trigger: string): void {
+    manifestQueue = manifestQueue
+      .then(() => refreshArchiveManifest({
+        home,
+        manifestPath,
+        liveStats: sessionStats,
+        trigger,
+      }))
+      .then((result) => {
+        if (result.errors.length > 0) {
+          writeDegraded(
+            `${MANIFEST_DEGRADED_MARK} trigger=${trigger} errors=${result.errors.length} first=${result.errors[0]}`,
+          )
+        }
+      })
+      .catch((err: unknown) => {
+        const reason = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ')
+        writeDegraded(`${MANIFEST_DEGRADED_MARK} trigger=${trigger} reason=${reason}`)
+      })
   }
 
   // ── SQLite 真相源（node:sqlite · Node 24 内置，零外部依赖）─────────────────
@@ -333,6 +377,18 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   })
 
   ctx.on('session/event', (session, event) => {
+    // ⑪.1：维护本会话的 live 事件统计；每个 turn/end 刷新自描述清单
+    const sessionKey = String(session.id)
+    let stats = sessionStats.get(sessionKey)
+    if (!stats) {
+      stats = createSessionStats()
+      sessionStats.set(sessionKey, stats)
+    }
+    observeSessionEvent(stats, event)
+    if ((event as { type?: string }).type === 'turn/end') {
+      scheduleManifestRefresh('turn/end')
+    }
+
     const e = event as unknown as UserMessageLike
     if (e.type !== 'user/message') return
     // J0 实证：synthetic runtime snapshot 带 source.kind='plugin'，真用户消息无 source
@@ -352,6 +408,9 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     void ingestEmbedding(Number(info.lastInsertRowid), text)
     void doubleWrite(String(info.lastInsertRowid), text)
   })
+
+  // 启动清点：把已有存档（含插件安装前产生的）纳入清单；失败只走 degraded 通道
+  scheduleManifestRefresh('startup')
 
   // ── 注入面（默认仅 context 面；section 面由 config 显式开启）────────────────
   const RECALL_NAME = 'larry-memory-recall'

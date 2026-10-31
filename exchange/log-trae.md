@@ -14,7 +14,7 @@
 | **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | ✅ **已复验成立（WB 2026-10-31 22:34，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段（本区正文已清退，回溯 `git log -p -- exchange/log-trae.md`）。WB 独立复跑两条探针（21 ＋ 2 判据 0 FAIL）、Tier0 0 命中、真库未动。增量①**召回未排除本会话自身消息**（WB 判据缺臂）⇒ **已由 P8 收掉**；②部署件不可复现（`lib/` 未入 git，仍未派）；③`selectVectorRows` 无 LIMIT（仍未派） | 2026-10-31 |
 | **P0② 增补 · P8**（召回排除本会话 ＋ 真库首启迁移演练） | **Trae** | `plugin-s4-memory/src/index.ts`（`selectVectorRows` / `selectRecent`）＋ `scripts/embed-probe/` | ✅ **已复验成立（WB 2026-10-31 23:30，带 3 条增量）** ⇒ 结论落 `TODO.md` P0② 段。WB 独立复跑：P8 12 判据 0 FAIL、P0② 21＋2 回归 0 FAIL、8 件证据归一化后逐件一致；Tier0 538 行 0 命中；真库四样全同。⚠️ **她有改回归装置**（1 hunk、judge 改动 0）⇒ 已核「判据未放松」。✅ **真库迁移不需定**（老大 23:19：「都是测试数据，随便动」） | 2026-10-31 |
 | **shell 工具中文输出乱码**（`tools/shell.py` 写死 utf-8 解码） | **Trae** | `backend/tools/shell.py` ＋ `tests/test_shell_tool.py` | ✅ **已复验成立（WB 2026-11-01 00:43）** ⇒ 见〈📌 WB 复验 · shell 编码〉。⭐ 属**「文档已明确 ⭐必做、代码没做」的悬空项**（`local-env.md` §4.2）；WB 在**本机 936 真机**独立验四臂全 PASS ＋ 端到端 ＋ 回归 174/3（与自报一致） | 2026-11-01 |
-| **⑪.1 存档自描述清单**（⑥ 七类里唯一全空项） | **Trae** | `harness/packages/plugin-s4-memory/`（新模块）＋ 配置 | 🔵 **WB 2026-11-01 00:52 派发** ⇒ 见〈📮 派发 · ⑪.1 存档自描述清单〉。⭐ 判据含量化核心：**C-3「三十年后只看清单＋存档」要实操自答三问**；⚠️ §2 有一个 WB 没定的点（清单何时写／更新）要她自己判并写理由 | 2026-11-01 |
+| **⑪.1 存档自描述清单**（⑥ 七类里唯一全空项） | **Trae** | `harness/packages/plugin-s4-memory/src/manifest.ts` ＋ `index.ts` 接线 | 🟡 **已交付（Trae 2026-11-01），待 WB 复验** ⇒ 见〈📮 派发 · ⑪.1〉节末〈交付回报〉。C-1…C-7 全 PASS（C-3 三问已自答；§2 选**甲案**：无封存信号）；live 两轮 5/5、iso 回归 17/17 | 2026-11-01 |
 | **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | 新建 `scripts/backup/`（仓库内首个 scripts 目录）＋ 落点 `D:/Code/_backups/larryagent/` | 📝 **已出稿（WB 2026-11-01 00:58）· ⚠️ 待老大叫人** ⇒ 见〈📮 派发 · ⑪.4.1 备份脚本〉。判据 B-1～B-8；⚠️ 三处待她判：审计留痕零实现怎么写／加密是否必须／projcache 算不算流水。⚠️ ⑪.4.2 还原演练归**另一人**（自己备自己验＝自己批卷子） | 2026-11-01 |
 | — | — | — | ✅ **以上为在飞块（当前 ⑪.1 ＋ ⑪.4.1 两件）**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末「三选一」待裁**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
 
@@ -417,6 +417,75 @@ WB 实测：**cp936 也会抛**。UTF-8 字节串在 cp936 下确实触发 `Unic
 - ⛔ 别顺手改召回／embedding／cot_archive（三块刚落地或刚复验）。
 - ⛔ 别为「让清单好看」省略七类里的空项 —— **空项要写理由，那正是完备性判据要的**。
 - ⛔ 别把清单做成数据库表（`⛔ 不依赖我们的代码`是硬要求，SQLite 需要程序才能读）。
+
+### 交付回报（Trae · 2026-11-01）
+
+**结论先行**：已落地。新增 `src/manifest.ts`（纯文本 JSONL 清单：四格 ＋ 七类完备性 ＋ 校验和时点 ＋ 缺失标记），
+`index.ts` 接线：`manifestPath` 配置、启动清点一次、每个 `turn/end` 刷新同一行；写失败只走
+`[S36-MEMORY] manifest degraded:` 通道，⛔ 不阻塞会话。清单不依赖项目代码：任意 zstd 解码器 ＋ JSONL 解析即可读。
+真实 `.dsh-home/sessions` **零写入**（全部在临时 home 跑）。
+
+**C-3 三问自答（只凭清单行＋存档）**
+
+1. **这是什么**：`dsh-session-archive`；多帧 Zstandard ＋ UTF-8 JSONL（首行会话头，后续事件
+   `{type, seq, time, data}`）。本会话 14 类事件（user/message、assistant/message、request/header、turn/end…）。
+2. **何时·谁·为何**：session `session-a403…`，created `2026-09-17T12:26:50.581Z`，cwd `D:\Code\LarryAgent`；
+   由 DSH 运行时写入，清单行由 `plugin-s4-memory` 在 `refresh` 时登记。
+3. **用什么读**：`dsh-session-format v3`；逐帧 zstd 解压 → 拼接明文 → JSONL 解析；
+   Node ≥24 `zlib.zstdDecompressSync` 或 `zstd` CLI 均可，无需项目代码/数据库/网络。
+
+**C-1…C-7 读数**
+
+| # | 命令/位置 | 观测 |
+|---|---|---|
+| C-1 | `node scripts/archive-manifest/probe.mjs` | 2 entries / 6382 B / 全部 `JSON.parse` OK；`cat-sample.txt` 可裸读 |
+| C-2 | 同上 | 四格齐全：`entry_type`、`origin`（session/created/cwd/recorded_by/trigger/time）、`format.read_with`、`checksum` |
+| C-3 | 同上 | 三问均作答（见上）；`c3-answers.json` |
+| C-4 | 同上 | v3＋v0 各 7 项均有 `present`＋`reason`；③ 写「无法核实」而非推定上游未返回；`c4-*.json` |
+| C-5 | 同上 | `manifestPath` 默认 `sessions/archive-manifest.jsonl`；生产默认 `D:\Code\LarryAgent\.dsh-home\sessions\archive-manifest.jsonl`；换根 A sha 不变、B entries=1 |
+| C-6 | 同上 | 同份存档两次刷新：hash `4812eb…→3e3d43…`、time `17:19:04.074→17:19:04.106`、bytes `12263→12361` |
+| C-7 | 同上 | 改名后 `present→missing`、`checksum=null`、`last_known.bytes=13601`、`stats.stale=true` |
+| Tier0 | 子进程 + 真实路径 | 临时 home ＋ 真实 manifestPath ⇒ `exit=1`，stderr 含 `manifestPath outside home (denied)` |
+| live | `node scripts/archive-manifest/live-smoke.mjs` | 真实 dsh 两轮 5/5 PASS：turn1 生成清单（`source=live-events`）、turn2 同一行、hash/时刻变化、archive 与磁盘一致 |
+| 回归 | `S36_PHASE=iso node scripts/run-36-memory.mjs` | **17/17 PASS**；真库 sha/mtime 前后不变 |
+
+证据：`_trae-evidence/archive-manifest/`（`READINGS.md`、`manifest-sample.jsonl`、`c3/c4/c6/c7`、`tier0-negative.txt`、
+`live-*.jsonl`、`iso36.stdout.txt`）。清单样例含真实 session id/cwd/事件类型统计，**不含消息正文**。
+
+**§2 选择：甲案（每个 turn/end 更新同一行）**
+
+先查了事件 union：**没有「会话封存／关闭」事件**（56 类里 `session/end-seed` 是种子历史标记，不是关闭；
+DSH 日志 append-only、可续跑）⇒ 乙案前提不存在，⛔ 不硬造。甲案每次刷新还会清点全部存档（新存档补行、
+缺失标 missing），因此不只跟当前会话走。代价：同一行覆盖、不保留历史版本；C-6 用外部两次快照对照。
+
+**§0.5 第 4 条：dsh 包与事件 union（顺手读数）**
+
+- 包位置：`.dsh-home/profiles/sdk/node_modules/@deepseek-ai/dsh-session`（0.1.5-rc.2）。
+- 完整 union：`lib/types/known-event-types.js:21-78`，**56 类**（含 approval/compaction/goal/hook/llm-retry/
+  plan/schedule/subagent/team/todo/tool-workflow/tool/ptc-dispatch…）。
+- **取消/中止/重生成/打断无独立事件类型**：取消＝`turn/end.reason.kind='aborted'`（`types.d.ts:159-173`）；
+  流中途打断＝`assistant/message.interrupted=true`（`:299-317`）；失败/重试/取消的尝试＝`assistant/attempt`
+  （`:318-327`）。「重生成」无独立事件，表现为新 turn/attempt。⇒ WB 的「三类零命中」只证明未发生，不证明没有载体。
+
+**未闭合（单列）**
+
+1. **`lib/` 被 `harness/.gitignore` 排除**（既有事实）⇒ 复算须先 `pnpm --filter @larryagent/plugin-s4-memory run build`；
+   部署件已实体同步（`index.js`/`manifest.js`/d.ts/`package.json` 五件 hash 全同），但新 clone 不能只靠 git 复现部署件。
+2. **并发写会话**：若另一 dsh 进程正在写同一存档，可能读到 torn 末帧 ⇒ 本次标 `unreadable`，下次刷新恢复；
+   未做并发实测。
+3. **③ CoT 判据**：`reasoningTokens=0`＋无 reasoning 文本时标「无法核实」而非「上游未返回」，符合 requirements
+   「不得仅凭空白推定」；若未来要区分「未返」与「未采」，需适配层证据。
+4. **甲案不保留行内历史**：hash 时点只能靠外部快照；若以后有封存信号可改乙案。
+5. **启动清点全量扫描**：当前 6 会话 ×~13 KB 可忽略；会话树很大时首启成本未测。
+
+**自曝**
+
+- C-5 第一版探针拿「两个 home 的清单内容 sha 相同」当判据，**错了**——两边存档集合不同（A=2、B=1），
+  内容本就不该相同。改成「A 的 sha 不变（B 刷新不串台）＋ B 只写自己 home」后才 PASS。
+- 编译首轮 `Buffer` 泛型不兼容（`Buffer<ArrayBufferLike>` vs `ArrayBuffer`），显式标注 `plain: Buffer` 后过。
+- `live-smoke.mjs` 初版在 ESM 里用了 `require('node:fs')`，改成顶部 import。
+- live 烟测**无 key**：两轮 `turn/end` 以 error 收尾（事件链真实、模型未调用）；C-4 的两份存档仍是真实历史存档。
+- 未改 DSH 本体；未写真实 sessions；未动召回/embedding/cot_archive。
 
 ---
 
