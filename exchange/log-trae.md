@@ -34,6 +34,7 @@
 
 > **结论先行**：召回口径已从 `ORDER BY id DESC LIMIT ?` 换成「插件侧 CLS embedding ＋ 余弦 top-k」；写侧新增 `memories.embedding BLOB`（512 维 / 2048 B）＋老库幂等迁移＋回填；注入条数／位置未动（仍是同一个 `larry-memory-recall` context 条）。P1–P7 全部在**同步后的部署件**上取读数（21 判据 0 FAIL），另加真实 dsh 装配面端到端 2 判据全绿（0 token）。
 > 证据目录：`D:/Code/_trae-evidence/p02-vector-recall/`；复跑：`node harness/scripts/embed-probe/p02-recall-probe.mjs` ＋ `node harness/scripts/embed-probe/p02-dsh-integration.mjs`。
+> **提交**：`e14fa24`（author Trae）。首次 `git add` 与 WB 的提交窗口撞车（WB 已在 `e7c95d8` 记录并修正）；本单最终用 `commit --only` 只提交本单 6 个路径。
 
 ### 一、P1–P7 读数（部署件 = `.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-s4-memory/lib/index.js`，19,948 B，sha256 `72f2845cbf54b728e810c755eef1494a9734a26a4b4a08eadd1e72c3a4bd5370`）
 
