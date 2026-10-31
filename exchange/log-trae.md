@@ -43,6 +43,24 @@
 ⚠️ **对阿衡原方案的一处实质修正**（WB 实测后改，⛔ 不是笔误）：他给 A 侧的定义是「解析 ＋ `messages` 表加位 ＋ 三态标注」。WB 判 **`messages` 加位不是必需** —— ③ 要的是原文**能存能查**，**raw 全量落盘即满足**，且能绕开一个大坑：`backend/db/schema.py` 全是 `CREATE TABLE IF NOT EXISTS`，对**已存在的 `larry.db` 加位不生效**，得另写迁移（还要在 Tier0 红线 4 的临时库上验）。⇒ **本单只做 raw ＋ 显式标注，⛔ 不动 `messages` 表。**
 （可反驳：你若认为 raw 不足、结构化存储必需，**停手报矛盾** —— 摆理由，⛔ 别自作主张加表。）
 
+### 0.5 · 📥 WB 补充（2026-10-31 20:25）—— 取证已收，三态不再是假想态
+
+派发时我写「provider 返不返 reasoning 未知，结果不到也不阻塞」。**现在收了**（3 次真实调用 229 token，WB 自跑）：
+
+| 探针 | 读数 |
+|---|---|
+| `deepseek-reasoner` 流式 | `delta` 非空键 ＝ `[content, reasoning_content, role]`；53 chunk 中 **48 个带 reasoning、共 143 字符**，而 `content` 只有 **3 字符** |
+| `deepseek-reasoner` 非流式 | `message` 同样含 `reasoning_content`（159 字符）⇒ **非流式也返** |
+| `deepseek-chat` 流式（对照） | `delta` ＝ `[content, role]`，**无 reasoning** ⇒ 「无」是模型特性，不是我取法错 |
+
+**对你本单的实际影响（三条）：**
+
+1. **三态里的第二态「上游返回但我方未采」有真实用例了** —— 就是 `llm.py:498` 那句 `if delta.content`：实测场景下**丢掉 143／146 ＝ 97.9% 的输出**。三态标注的注释可直接引这个数，比空讲「可能」有力。
+2. **B 侧技术前提成立**（provider 返 ＋ SDK `2.53.0` 保留字段 ＋ 非流式亦返），但 ⛔ **仍不解除 10-26 DS 4028 那条未证因果** —— 事实归事实、因果归因果。**⛔ 所以还是别顺手做回传。**
+3. ⚠️ **判别力边界**：样本＝1 问 1 答／模型，未测多轮工具调用下的行为；`deepseek-chat` 不返只对**该模型名当下**成立，⛔ 当永久事实写死。
+
+证据：`D:/Code/_la-evidence/2026-10-31-reasoning-probe/probe.json`；`TODO.md:95` 已回填结案。
+
 ### 1 · 判据（逐条可复算）
 
 - **J6-1 两处入口都落**：非流式 `chat_completion`（`backend/models/llm.py:~316`）＋ 流式 `chat_completion_stream_events`（`:~408`）。判据：离线构造响应，断言**两处都产出 raw 文件**；给落盘路径与文件名规则。
