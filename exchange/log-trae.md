@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | ✅ **已复验成立（WB 2026-10-30 22:40，带 2 条增量）** ⇒ 结论落 `TODO.md:89`；逐条读数、三条过程观察与判别力边界见本区〈📌 已办结 · 测试场地隔离〉 | 2026-10-30 |
 | **CoT 存档 · A 侧**（raw 全量落盘 ＋ 三态显式标注） | **Trae** | `backend/models/llm.py` 两处入口 ＋ 新模块 ＋ `backend/tests/` | 🔵 **WB 2026-10-30 23:55 派发** ⇒ 见〈📮 派发 · CoT 存档 · A 侧〉节。⚠️ **不含回传侧**（B 侧单列）；⚠️ **不动 `messages` 表**（对阿衡原方案的一处实质修正，理由在稿内） | 2026-10-30 |
-| **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | 🔵 **WB 2026-10-31 21:10 派发** ⇒ 见〈📮 派发 · P0② 向量召回 · 第一期〉节。⚠️ 与 J6 **文件零重叠**（J6 在 `backend/`，本单在 `harness/`），可并行 | 2026-10-31 |
+| **P0② 向量召回 · 第一期**（embedding 接通 ＋ 语义 top-k） | **Trae** | `harness/packages/plugin-s4-memory/**` ＋ profile 依赖布局 | 🟢 **已交付（Trae 2026-10-31 22:20）** ⇒ 见〈✅ 交付 · P0②〉节；P1–P7 部署件 21 判据全绿 ＋ 真实 dsh 装配面 2 判据全绿，待 WB 复验。⚠️ 部署件已同步（`lib/index.js` sha256 `72f2845c…`）；J5 旧装置 EEXIST 为既有老化，未改装置 | 2026-10-31 |
 | — | — | — | ✅ **本区无其他在飞块**。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」；适配判断／剪枝复检已随 `docs/la-space/` 定稿承接；**硬件分项账已承接 → `local-env.md` §14 ＋ `production-env.md` §2.5**。⚠️ **唯一活账＝〈📥 过程观察 · DS 通道复测〉末两条待处置**（该段是 2026-10-28 现场观察，⛔ 非在飞任务） | — |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -27,6 +27,50 @@
   7. **自加判据的取证方法须先自证** —— 探针 API 的语义坑（如 `CreateSemaphoreW` = "创建或打开"会**自造对象**）会产生**恒定假读数**，看起来完全自洽。
   8. **工具输出的"原文"不得手工改写 ／ 意译** —— ⛔ **本条后半句已作废（2026-09-20 WB 复验实测推翻）**：原文写「本地化文字被英文化 ⇒ 证据链失去可采信性（原文本该是 GBK `成功: …`，**出现英文即非本机原始产物**）」—— **「出现英文即非本机产物」不成立**：本机实测 `icacls` 92 次采样中 **2 次英文**；PS 5.1 在**带 DSH 编码前导码**的形态下 **11/12 出英文**（而系统／用户 UI 语言实测是 zh-CN）。⇒ **保留前半**（⛔ 不得人工改写 ／ 意译），**撤掉后半的推论**。**替代纪律**：判「原文」只认**字节级**核对（按 ACP 936 解 GBK，或直接比原始字节），并**注明该段取自哪条通道**；**语言 ／ 编码不得作"证据是否被后处理过"的判据**。详见 `docs/local-env.md` §12.6。
   9. **文件不是证据，运行自报的标识才是**（.pnpm 截断名 ／ 会话 id ／ pid 一律以自报为准）。
+
+---
+
+## ✅ 交付 · P0② 向量召回 · 第一期（Trae · 2026-10-31 22:20）
+
+> **结论先行**：召回口径已从 `ORDER BY id DESC LIMIT ?` 换成「插件侧 CLS embedding ＋ 余弦 top-k」；写侧新增 `memories.embedding BLOB`（512 维 / 2048 B）＋老库幂等迁移＋回填；注入条数／位置未动（仍是同一个 `larry-memory-recall` context 条）。P1–P7 全部在**同步后的部署件**上取读数（21 判据 0 FAIL），另加真实 dsh 装配面端到端 2 判据全绿（0 token）。
+> 证据目录：`D:/Code/_trae-evidence/p02-vector-recall/`；复跑：`node harness/scripts/embed-probe/p02-recall-probe.mjs` ＋ `node harness/scripts/embed-probe/p02-dsh-integration.mjs`。
+
+### 一、P1–P7 读数（部署件 = `.dsh-home/profiles/sdk/node_modules/@larryagent/plugin-s4-memory/lib/index.js`，19,948 B，sha256 `72f2845cbf54b728e810c755eef1494a9734a26a4b4a08eadd1e72c3a4bd5370`）
+
+| 判据 | 结论 | 证据 |
+|---|---|---|
+| **P1 依赖可达** | 🟢 | 从部署件实体目录 `import.meta.resolve('@huggingface/transformers')` ⇒ `file:///D:/Code/LarryAgent/.dsh-home/profiles/sdk/node_modules/@huggingface/transformers/dist/transformers.node.mjs`；`P1-resolve.txt`。实现选**甲**：依赖装进 profile（`hoisted`），插件向上查找命中；⛔ 未 bundle（`onnxruntime-node` 原生二进制） |
+| **P7 部署件同步** | 🟢 | 构建→同步 `lib/`＋`package.json`→部署件命中新增哨兵 `p02-vector-recall-v1` ×1；`OUTSIDE_HOME_DENY_MARK` ×2（10-30 隔离断言已进入运行件）。旧件留档 `plugin-s4-memory.bak-20261031-2135`（8846 B / 10-18） |
+| **P2 模型落点** | 🟢 | `modelCacheDir=D:/Code/_models`（绝对路径）；加载后 profile `node_modules/.cache` 0 B→0 B、harness `.cache` 95,292,085 B→同值；用户数据目录模型文件在（`model.onnx` 94,851,877 B）。**未配读数组**：`resolveModelCacheDir('')=null`；transformers 默认 `env.cacheDir=<profile>/node_modules/@huggingface/transformers/.cache`；`defaultModelCacheDir()` 同路径 |
+| **P3 向量落库** | 🟢 | 经插件 `session/event` 写入 1 行：`memories.embedding` 列（BLOB），`count(*)=1`、非空=1、`length=2048/2048`、`typeof(embedding)='blob'`、向量 norm=1.000000（L2） |
+| **P4 语义召回** | 🟢 | 24 行老 schema（无 embedding 列）⇒ 迁移＋回填全完成；query「家里的猫总挑有日光的窗边打盹…」⇒ 余弦 top-3 ids=`[25,1,21]`，目标 id=1 在 top-3；同一目标按时间倒序第 **25** 位（>20）⇒ 新旧口径可区分。装配注入条含「语义 top-」＋目标 id=1 正文，8 行 |
+| **P4 真实 dsh 装配面** | 🟢 | 实际 sdk profile ＋ SDK 客户端（0 token）：context 面 synthetic `user/message` 含「语义 top-」＋目标正文；召回块标题仅 1 次（替换而非追加）。证据 `P4-dsh-integration.json` |
+| **P5 降级（3 臂）** | 🟢 | 未就绪（空 cacheDir）／`import` 失败（临时复制件无 transformers）／cacheDir 指向普通文件：三臂均返回 8 条时间倒序、日志恰 1 行（`DEGRADED_MARK`＋`EMBED_RECALL_FALLBACK`＋哨兵）、墙上时间 **2.0 / 1.1 / 1.2 ms**（≤1000ms，⛔ 无阻塞等待） |
+| **P6 Tier0 红线 4** | 🟢 | P3/P4/P5 共 5 个库全部在临时目录 `D:\Temp\Sys\p02-recall-…`；故意指向真库 `…/.dsh-home/larry-memory.db` ⇒ exit=1，stderr 含 `OUTSIDE_HOME_DENY_MARK`，真库 sha256 前后相同；断言在部署件 `lib/index.js:93` |
+
+### 二、改了哪些
+
+- **新增 `src/embedding.ts`**：CLS pooling ＋ L2 normalize ＋ `max_length:512` ＋ lowercase（与 `ts-embed.mjs` 逐项对齐）；`resolveModelCacheDir`／`defaultModelCacheDir`／`isModelReady`／懒加载 `createEmbedder`（失败不粘死，下次重试）。
+- **新增 `src/recall.ts`**：Float32 ↔ BLOB 编解码、余弦 top-k。
+- **`src/index.ts`**：
+  - 写侧：`memories.embedding BLOB` ＋ 老库 `ALTER TABLE` 幂等迁移；入库后异步 `ingestEmbedding`，老库 `startBackfill`；**Chroma 的 `getChroma`／`doubleWrite` 原样保留**（默认关，⛔ 未启用）。
+  - 读侧：`agent/inbox/claimed`（claim 在装配**之前**，带 agent）记当前 prompt；`session/event` map ＋ `session.deriveMessages()` 回退；`system-prompt/assemble` 瀑布把**同一个注入条**的文本替换成语义 top-k，⛔ 不增删条、不改位置。
+  - 降级：未就绪／import 失败／编码失败 ⇒ 直接回时间倒序 ＋ 1 行统一降级日志 ＋ 后台预取（不等待）；`pooling:'mean'` 的旧 `getEmbed` 已移除，语义与 Chroma 共用同一 CLS 编码器。
+- **环境（⛔ 不在 git）**：profile `package.json` 加 `@huggingface/transformers: 4.3.1`（甲案）；`pnpm-workspace.yaml` 的 `allowBuilds` 放行 `onnxruntime-node: true`；`pnpm install --offline` exit 0；部署件同步留旧件备份。
+
+### 三、自曝与过程观察
+
+1. **第一版真实 dsh 集成是红的，原因不在代码而在取 query 的通道**：`session/event` 是 post-commit，`deriveMessages()` 在装配时还是 0 条——首轮只拿到 fallback。改成监听 `agent/inbox/claimed`（claim 同步发生在 `systemPrompt.assemble` 之前，payload 自带 `agent`）后转绿。这与今天上午「检查的份 ≠ 干活的份」同族：**我监听的通道不在装配的关键路径上**。第一版读数（调试日志）：`assemble: listener fired`＋`contexts=sandbox:policy,approval:policy,larry-memory-recall`＋`semantic: sessionQueryLen=0 mapQueryLen=0 ready=true`。
+2. **`defaultModelCacheDir()` 第一版返回 null**：先 `require.resolve('@huggingface/transformers/package.json')` 被 exports 挡（`ERR_PACKAGE_PATH_NOT_EXPORTED`）；改为解析入口文件再向上找 `package.json`，P2 附读数现已返回真实默认路径。
+3. **部署件旧了 12 天**：旧件 8846 B / 10-18，缺 10-30 的隔离断言；P7 已同步，部署件现在 19,948 B 并命中哨兵。这是 WB「假完成」B 半的一个实例（源码已落地 ≠ 运行件已落地）。
+4. **J5 旧装置 EEXIST 是既有老化**：`run-36-memory.mjs` 的 `mountPlugin` 在临时 home 已有插件实体目录时再 `symlinkSync` ⇒ `EEXIST`；`mountPlugin` 本次未改。为了不碰共享装置，改用独立的 `p02-dsh-integration.mjs` 做真实 dsh 装配面验证。若 WB 要复跑旧装置，需在 `mountPlugin` 里先 `rmSync` 目标（一行；⛔ 本单未擅自改）。
+5. **真库回填未在测试里实跑**：Tier0 要求测试只用临时库；真库 54 行的回填会在下一次真实 dsh 会话启动时由 `startBackfill` 完成（模型已在 `D:/Code/_models`）。P4 用 24 行老 schema 临时库证明了同一路径。
+6. **P2 未配的边界**：若有人显式把 `modelCacheDir` 置空，默认落点 = profile 自己的 `node_modules/@huggingface/transformers/.cache`（当前 0 B）；模型不在那里时语义召回持续走 fallback，不会崩。默认配置仍指 `D:/Code/_models`。
+
+### 四、未闭合
+
+- J5 旧装置 EEXIST（上述第 4 条）—— 属既有老化，等 WB 决定是否修装置。
+- 真库老行回填只有设计路径，未在真库实测（Tier0 边界）。
 
 ---
 
