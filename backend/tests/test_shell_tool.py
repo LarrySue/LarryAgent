@@ -247,7 +247,13 @@ class TestShellTool(unittest.TestCase):
 
         result = asyncio.get_event_loop().run_until_complete(run())
         self.assertTrue(result.success)
-        self.assertIn("Volume", result.content)
+        # ⚠️ 原断言 `assertIn("Volume")` 在中文 Windows 上恒红（2026-11-01 WB 实测 chcp=936）。
+        # 但根因不只是语言：本机 `dir` 输出是 GBK 字节、被上层按 UTF-8 解码，
+        # 结果**中英文都拿不到原字面**（实测形如「锟斤拷…」/「������ D �еľ�」）⇒ 任何按自然语言
+        # 写的断言都不可靠。这里只断言 **ASCII 特征**：`<DIR>`（`dir` 输出里中英文一致、
+        # 且当前目录含子目录时必有）。⚠️ 若将来测一个无子目录的空目录，这条需改用别的方式。
+        # 📌 顺带记一条产品缺陷（不在本单）：shell 工具返回的中文输出是乱码，见 TODO。
+        self.assertIn("<DIR>", result.content)
         print(f"[PASS] Test 7: Windows dir 命令正常")
 
 
