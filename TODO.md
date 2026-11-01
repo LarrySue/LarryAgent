@@ -164,7 +164,10 @@
           - **正确的观测口径**：⛔ **别用 `kept/candidates` 这个比值**（叫「吸收率」「保留率」都不对——分母随库大小变、分子随"库里恰好有几条真相关"变，同一套参数在不同库上比值乱跳，不是稳定指标）。有意义的是三个**绝对量**：`candidates` ／ `kept` ／ `blocked_top` 与 `top1` 的**落差**。产品真问题是「**被挡掉的条里有没有本该进的**」——这只能靠 ②.2.2（分数＋来源可见）落地后人工抽看，**比值帮不上**。
           - ⇒ **②.2.2 优先级上升这个结论仍成立，但理由换了**：不是因为"真实分布更狠"，而是**当前没有任何可抽看被挡条目的机制**，「挡得对不对」谁回答都只能靠猜。
           - ✅ **已裁（老大 2026-11-01 13:49）：`delta` 先按 `0.20` 走，后面再调** —— ⛔ 不现在动，待真实 gate 行分布积累后再定是否朝 0.15。其余参数口径已由 2026-11-01 01:21 裁「召回优先」覆盖。⇒ ②.2.1 **本块无待裁项**，可整块判结。
-          - **增量待办（3 条，未派）**：① gate 行缺 `truncated=`（k 截掉的那部分既不在 kept 也不在 blocked，`candidates=kept+blocked` 只在未截断时成立）；② `recallMinTop` 声明＋进 `CONFIG_KEYS` 但**零读取** ⇒ 须标「预留不生效」，否则是假配置键；③ P4 判据名 `semantic-top3` 与实际注入 2 行不符（第 3 名落差 0.26 > delta）⇒ 应改「目标条在被注入集合内」。
+          - **增量三条：① ✅ ／ ② ✅ 已落地（Trae `073541b`，WB 2026-11-01 16:20 复验成立）／ ③ ❌ 已撤回（我判错了）**：
+            - ① **gate 行补 `truncated=`** ✓ 实测 `candidates=5 kept=2 blocked=3 truncated=0 …`；恒等式 `candidates == kept + blocked + truncated` **四场景全成立**（`truncated=0` **恒写**、空池全 0、k 截断正证 `5=2+1+2`）。改前／改后对照＝除新增 ` truncated=` 外逐字相同（我自己两次跑的 log 即前后对照）。
+            - ② **`recallMinTop` 已标「预留不生效」** ✓（`src/index.ts` 声明处注释）。⚠️ **我原稿两处写错，Trae 自曝、我复核成立**：仓内**无 `CONFIG_KEYS` 符号**；`src/index.ts:142` 是 `DEFAULTS: Required<Pick<Config,…>>`，且**列表不含 `recallMinTop`** ⇒ 准确表述是「**仅声明、全文件零读取**」。
+            - ③ **P4 判据名「不符」—— 我判错了，已撤回**：`p02-recall-probe.mjs:387` 的 `P4-semantic-top3` 测的是 `:373` `cosineTopK(…,8)` 的**裸余弦前 3 名**（不过门），**名字与断言本就匹配**；我引的「行数=2」出自 `:398–399` **另一条**判据 `P4-assembly-semantic-text`。⇒ **探针零改动**。⚠️ 且若改成判「目标在 `kept` 里」会**恒真**（top1 必过门），正是 `R-6′` 所守的那类假判据。
           - **未闭合 6 条（执行方如实自报，成立）**：`minTop` 仅留键未实现 ／ 门只加语义路径（降级路径无分数）／ gate 默认仅 stderr（SDK pipe 会吞）／ `recallLimit` 可被 profile 覆盖 ／ 未做 480 条扩样复测 ／ 空池 gate 行属新增正常日志。
           - 证据：`_trae-evidence/p221-recall-gate/`（执行方）＋ `_trae-evidence/wb-reverify-p221/`（我三跑原始 log）。⚠️ 过程细节**不回指活日志**（`log-trae.md` 会清），需要的走 `git log -p -- exchange/log-trae.md`。
         - ⭐ **设计已按实测读数修正（WB 2026-11-01 00:22，探针 `harness/scripts/embed-probe/p02b-score-dist.mjs`）**：原设想「加一个 `minScore` 绝对阈值」**被读数推翻**，见下方〈分数分布实测〉。现口径改为三条同时成立才注入：
