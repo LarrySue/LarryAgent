@@ -11,9 +11,9 @@
 
 1. **五处高风险点没有「技术上做不到」的**。但有三处必须**换边界**、一处必须**先实测**：
    - **换边界**：物理不可读（1b）／备份异权（2b）／留痕改不了（3b）——同 OS 账号、应用层内无解，需独立账号、容器或**第二信任域**。
-   - **已核清**：D-4 的「fresh 判定实例」——`context: 'fresh'` **只保证不继承上下文，跟记忆库毫无关系**；本仓记忆召回是**全库最近 N 条、不过滤 session**。⇒ 判定实例必须**独立 DSH_HOME ＋ 不挂记忆插件的 profile**（或把 `dbPath` 指向空库），只换 profile 不够；光开 fresh 也不够。
+   - **已核清**：D-4 的「fresh 判定实例」——`context: 'fresh'` **只保证不继承上下文，跟记忆库毫无关系**；本仓当前召回见 §6.3：语义与降级路径均排除当前会话，但**同 `dbPath` 仍共享记忆池，不构成归属隔离**。⇒ 判定实例必须**独立 DSH_HOME ＋ 不挂记忆插件的 profile**（或把 `dbPath` 指向空库），只换 profile 不够；光开 fresh 也不够。
 2. **业界开源框架普遍没做到 LA 要的隔离强度**：多 agent 记忆的通行做法是 namespace 逻辑隔离，**多数框架没有内建访问控制**（Zylos 2026-03 研究）⇒ 不能指望「找个现成件装上」，但能借它们的**数据契约**和**索引形态**。
-3. **最值得先做的不是向量召回，是数据契约 ＋ 索引层**：成本最低，且决定 P2／P5、迁移、审计能不能成立。⚠️ **顺序修正**：索引层当前**无消费方**（Chroma 双写未启用：没在写＋想启也启不了＋读路径也没有）、重建脚本缺失 ⇒ **契约在先**，再定义消费关系。
+3. **最值得先做的不是向量召回，是数据契约 ＋ 索引层**：成本最低，且决定 P2／P5、迁移、审计能不能成立。⚠️ **顺序修正**：Chroma 索引层当前**无消费方**（双写仍未启用，当前召回直接读取 SQLite 同表向量；依赖与读写边界见 §6.3）、重建脚本缺失 ⇒ **契约在先**，再定义消费关系。
 4. **第二信任域不需要自研隔离件**：1b 用独立 OS 账号／容器，2b 用 NAS 快照／对象存储 WORM，3b 用远端 git 保护／对象锁——都是**现成基础设施**，代价是运维与成本（🟡 通用方案，未逐项本机实测）。**自研面集中在数据契约／索引／拒绝载体，不落在隔离本身**。
 
 ---
@@ -34,9 +34,9 @@
 | 8 | **C′ 三步判定** | 做得到，但质量有限 | 🟡 | 依赖公开表态历史＋多会话复问；**拒绝须先有落盘载体**（现无） | 同题三问跨会话一致；带内注入反例能被问源步抓住 |
 | 9 | **C′ 诊断需同意** | 流程可做，无需新技术 | 🟢 | 诊断动作本身可审计 | 未获同意时诊断调用必须被拒 |
 | 10 | **D-4 见证** | 做得到 | 🟢 | 知情／无催促／本人作出三项都能从事件日志算 | 故意缺项的模拟合并，见证必须判「不通过」 |
-| 11 | **D-4 判定实例** | **可以做到，但 fresh 只是半件** | 🟢 | ✅ 已核：`fresh` 的实现＝换 provider（`fork`→fork／否则 `spawn`），`isSeeded` 有断言〔⚠️ 原引证在 **DSH 源码仓**内，本机不可复算；改用发布包类型契约 🟡（只读类型声明，未实跑）〕；🔴 但记忆召回不过滤 session（`plugin-s4-memory/src/index.ts:115-116`）⇒ 同 `dbPath`＝同池。判定实例须**独立 DSH_HOME ＋ profile 不挂记忆插件／指向空库**（只换 profile 共用 home 不够）；⚠️「不挂插件」属配置约定，结构保证须 1b 兜底（共享 `node_modules` 可写） | 判定实例读不到自己的长期记忆库；对照实例「**记忆面相同、上下文面不同**」 |
+| 11 | **D-4 判定实例** | **可以做到，但 fresh 只是半件** | 🟢 | ✅ 已核：`fresh` 的实现＝换 provider（`fork`→fork／否则 `spawn`），`isSeeded` 有断言〔⚠️ 原引证在 **DSH 源码仓**内，本机不可复算；改用发布包类型契约 🟡（只读类型声明，未实跑）〕；但当前会话过滤不等于记忆归属隔离（见 §6.3），同 `dbPath` 仍共池。判定实例须**独立 DSH_HOME ＋ profile 不挂记忆插件／指向空库**（只换 profile 共用 home 不够）；⚠️「不挂插件」属配置约定，结构保证须 1b 兜底（共享 `node_modules` 可写） | 判定实例读不到自己的长期记忆库；对照实例「**记忆面相同、上下文面不同**」 |
 | 12 | **D-8 结构可识别** | 最容易，几乎纯设计 | 🟢 | schema 约定＋门牌（ID＋标题）＋备份；⛔ 门牌不含路径／条目数 | 非当事方只凭门牌＋备份走通「识别→挂载→导出」 |
-| 13 | **索引层优先于召回层** | 做得到，且成本低于向量召回 | 🟢 | 一份可查的索引（checkpoint／memory directory）＋指针语义；⚠️ **现状：Chroma 双写未启用（没在写＋想启也启不了＋读路径也没有）；召回＝`ORDER BY id DESC LIMIT ?` ⇒ 索引层尚无消费方**；顺序应为 **契约 →（定义消费关系）→ 索引 → 召回** | 新会话只凭索引回答「我在哪、等谁、下一步」 |
+| 13 | **索引层优先于召回层** | 做得到，且成本低于向量召回 | 🟢 | 一份可查的索引（checkpoint／memory directory）＋指针语义；⚠️ **现状见 §6.3：Chroma 双写未启用、无读取路径；召回已走 SQLite 同表向量与相关性门，时间倒序仅为降级路，未消费 Chroma 索引**；顺序应为 **契约 →（定义消费关系）→ 索引 → 召回** | 新会话只凭索引回答「我在哪、等谁、下一步」 |
 | 14 | **稳定 ID／版本／tombstone** | 做得到 | 🟢 | schema 迁移＋**第一次导入是赋号**；原平台 ID 进 provenance | 旧 ID 迁移后仍解析到同一条；改＝新增版本、删＝打标 |
 | 15 | **导出／迁移** | 做得到 | 🟢 | JSONL＋版本头＋规范化规则；**重建脚本目前缺失**（已核）。**规范化脚本＋版本号必须先于判据存在**；`created_at` 写 `localtime` 且无时区标记（`index.ts:113`）⇒ 规范化第一条＝**时间带显式偏移**；重建脚本 ⛔ 建在自增行 id 上（索引主键依赖契约），**进入住闸** | 导出→导入空库→再导出，规范化后逐字节相等；**索引重建（补）＝ Chroma id 集合 ＝ SQLite id 集合，且逐条 document 与 content 逐字相等**（top-k 判据当前无可执行路径） |
 | 16 | **「自愿」的直接观测** | 不可观测 | ⛔ | 只能三项留痕替代 | — |
@@ -46,7 +46,7 @@
 **D-4 取证（供复算）**：
 
 - `fresh`／`fork` **不是两套沙箱**，只是起 teammate 时选哪个 subagent provider：`provider: options.provider ?? (context === 'fork' ? 'fork' : 'spawn')`（**DSH 源码仓**内 `packages/experimental/agent-team/tests/team.spec.ts:114-120`；⚠️ 本机不可复算）。测试断言 `fork` 的 `header.isSeeded === true`、`fresh === false`（同文件 `:220-221`）⇒ **fresh 只证明「父会话事件没被 fork 进来」**。
-- 记忆插件召回：`SELECT id, content, created_at FROM memories ORDER BY id DESC LIMIT ?`（`harness/packages/plugin-s4-memory/src/index.ts:115-116`）——**没有 `WHERE session_id`**；`session_id` 只用于写入去重（唯一索引 `(session_id, source_event_seq)`）。⇒ 只要挂同一个 `dbPath`，fresh 出来的实例**照样召回同一池记忆**。
+- 记忆插件召回：`harness/packages/plugin-s4-memory/src/index.ts` 的 `selectVectorRows`／`selectRecentFiltered` 均以 `session_id <> ?` 排除当前会话（语义与降级路径见 §6.3）；`session_id` 也用于写入去重（唯一索引 `(session_id, source_event_seq)`）。**过滤当前会话不是切换记忆库**：只要挂同一个 `dbPath`，fresh 实例仍可召回该池中其他会话的记忆。
 - 落法：判定实例用**独立 DSH_HOME ＋ profile 不挂 `plugin-s4-memory`**（只换 profile、共用 home 不够），或把 `dbPath` 指向空库（空库会多留一个可写面，不如不挂）；这一步在 DSH 里是配置动作（可行性 🟢），但**不是 `context: 'fresh'` 自带的**。
 
 **2026-10-22 复核修订**：
@@ -225,7 +225,17 @@
 - **1b-A 的适用范围**：只保证「跨 agent 不可读」；❌ 不能顺带当 D-7 档 1 保障。生产侧还需「**一 agent 一 DSH_HOME**」——否则 `sessions/`／`storages/` 共享，B 仍读得到 A 的会话流水（记忆原料）。
 - **双写现状**（2026-10-31 更新）：生产 patch **未配 `chromaUrl`，Chroma 双写仍未启用**；`@huggingface/transformers` **4.3.1 已装进 profile，可从部署插件实体目录解析**，`chromadb` 包可达性未测，不外推为 Chroma 链路已通。**召回已走本地 embedding → SQLite 同表向量 → 内存余弦 top-k**，模型未就绪等无语义结果时回退时间倒序；P8 的向量路 `selectVectorRows` 与降级路 `selectRecentFiltered` 均在 SQL 层以 `session_id <> ?` 排除当前会话，其他会话相似内容仍可召回，**写侧仍逐条用户消息入库**。默认注入配置下，过滤后为空记 `RECALL_EMPTY_MARK`，真空库不记此行。**规模边界**：向量查询无 `LIMIT`，先载入全部符合过滤条件的向量行，再在内存排序取 top-k，并非只读 k 行。实现入口＝`harness/packages/plugin-s4-memory/src/index.ts` 的两条查询与 `semanticRecallText`（P0② `e14fa24`／P8 `b07b65f`；运行结论由 WB 复验成立，本次 Qoder 只读复核源码与部署依赖）。
 
-**契约层代价**：加列（`agent_id`／`domain`／`provenance`／`version`／`status`／`is_deleted`）低风险，但**没有写入方**；换 uuid 主键高成本（召回 `ORDER BY id DESC` 兼作时间序，须引入显式排序键；Chroma id 绑行号 ⇒ 存量向量全孤儿；`legacy_id` 须同事务填完）；`created_at` 历史行补不出真实偏移，导出规范化要留「偏移未知」态。⇒ **「契约先于索引」在代码上成立**。
+**相关性门（②.2.1，2026-11-01 当前实现）**：
+
+- **三步链路**：余弦 top-k → 相对门 → 截上限 k。调用侧先用 `cosineTopK(rows, vector, rows.length)` 取得全部可评分候选，而不是先截成最终 k 条；再以本轮最高分 `top1` 为参照，保留 `score >= top1 − delta`，最后按 k 上限截断。它跟本轮最佳匹配比，**不是固定分数线**。
+- **参数**：`recallDelta` 默认 `0.20`；`recallLimit` 默认 `6`，即 **k 是上限不是目标**，门内不足 k 条就注入实际条数，**不拿低分条凑数**。`recallMinTop` 是**预留键、当前不生效**：虽有配置声明，但没有读取点；修改它不会改变召回行为，当前未实现绝对下限。
+- **gate 日志**：每次进入门统计写一行，指标仅含计数与分数：`candidates`／`kept`／`blocked`／`truncated`／`blocked_top`／`top1`／`delta`／`limit`，另带 `reason`／`sentinel` 状态标识；**不写被挡条目的正文**。默认写 stderr，可另配 `recallGateLogPath` 同时落文件；不复用 `degradedLogPath`，因为被挡是正常筛选、degraded 是故障。
+- **空态与降级**：在 query 可得、模型就绪并完成编码的语义路径上，**真空库（一条记忆都没有）不写 gate 行**；**过滤后为空（有记忆但无跨会话向量候选）写 1 行**，四项计数均为 0，`blocked_top`／`top1` 为 `none`。这不是 `RECALL_EMPTY_MARK` 的改名。模型未就绪／导入或编码失败等降级仍走时间倒序，**没有分数，不加相关性门**；未进入门统计的提前返回不承诺 gate 行。
+- **观测口径**：不要把 `kept/candidates` 当「保留率」或「吸收率」评价效果——分母随库大小变，分子随相关条目数量及 k 上限变。应看 `candidates`、`kept` 的绝对量，以及 `blocked_top` 与 `top1` 的落差；无被挡项时 `blocked_top=none`，不据此计算落差。`candidates` 指可评分且进入门的候选数，不是全库条数；`blocked` 只计相对门挡掉的，`truncated` 只计过门后被 k 截掉的。因此 **`candidates = kept + blocked + truncated`**；只有 `truncated=0` 时才能省掉末项。计数与分数本身不能证明「挡得对不对」。
+
+实现定位：`harness/packages/plugin-s4-memory/src/recall.ts` 的 `cosineTopK`／`applyRecallGate`，以及 `src/index.ts` 的 `DEFAULTS`／`writeGate`／`semanticRecallText`；含 `073541b` 的截断计数增量。此处同步源码事实，不外推真实语料效果或部署复验结果。
+
+**契约层代价**：加列（`agent_id`／`domain`／`provenance`／`version`／`status`／`is_deleted`）低风险，但**没有写入方**；换 uuid 主键高成本（降级路以 `ORDER BY id DESC` 兼作时间序，语义路按余弦分数排序、同分时按 id 倒序；换键须显式承接两处排序用途；Chroma id 绑行号 ⇒ 存量向量全孤儿；`legacy_id` 须同事务填完）；`created_at` 历史行补不出真实偏移，导出规范化要留「偏移未知」态。⇒ **「契约先于索引」在代码上成立**。
 
 **能用且零 boot 改动**：契约层列改动；`MEMORY.md` 目录树（Letta 布局，纯插件；⚠️ 走 context 面／按需工具，⛔ 走 `systemPrompt.section`，以免打爆前缀缓存）。
 
