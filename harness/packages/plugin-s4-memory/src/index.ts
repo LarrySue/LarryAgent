@@ -276,7 +276,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     'SELECT id, content, created_at FROM memories WHERE session_id <> ? ORDER BY id DESC LIMIT ?'
   )
   const selectVectorRows = db.prepare(
-    'SELECT id, content, created_at, embedding FROM memories WHERE embedding IS NOT NULL AND session_id <> ? ORDER BY id DESC'
+    'SELECT id, session_id, content, created_at, embedding FROM memories WHERE embedding IS NOT NULL AND session_id <> ? ORDER BY id DESC'
   )
   const selectMissingVectors = db.prepare(
     'SELECT id, content FROM memories WHERE embedding IS NULL ORDER BY id ASC'
@@ -448,13 +448,39 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   const RECALL_NAME = 'larry-memory-recall'
   const RECALL_TITLE_PREFIX = '## LarryAgent 记忆召回'
 
-  /** 统一渲染；semantic 与否只影响标题，行格式不变 */
-  function formatRecall(rows: RecallRow[], semantic: boolean): string {
-    if (rows.length === 0) return '' // 空库 → 空贡献（不产生注入块）
+  /**
+   * 来源短标识：`session_id` 最后一个 `-` 之后的前 8 位。
+   * ⚠️ 不能取整串前 8 位：实库里 session_id 均以 `session-` 开头（`session-391-*` 多个），
+   * 前 8 位恒为 `session-`，没有任何可别性（②.2.2 实测）。
+   * `unknown0` 为不可达兜底（schema 里 session_id NOT NULL）——它**不匹配**注入格式正则，
+   * 一旦出现会让探针判红，而不是静默产出假标识。
+   */
+  function shortSourceOf(sessionId: string | undefined): string {
+    if (!sessionId) return 'unknown0'
+    const tail = sessionId.slice(sessionId.lastIndexOf('-') + 1)
+    return tail.slice(0, 8)
+  }
+
+  /**
+   * 统一渲染（②.2.2 起两条路共用，入参差异在此收口）：
+   *   - `semantic=true`（语义路）：行格式 `- [时间] (0.687, 0a898fc3) 正文`，score 必由
+   *     `cosineTopK` 返回的 `ScoredRecall` 带进来（⛔ 不在本函数重算余弦）；
+   *   - `semantic=false`（时间倒序降级路）：**格式一字不改**，仍 `- [时间] 正文`，
+   *     ⛔ 不接受 score，也绝不拼 `(0.000, …)`。
+   * 标题行只随 semantic 变（`语义 top-N` / `最近 N 条`），⛔ 不重排。
+   */
+  function formatRecall(entries: Array<{ row: RecallRow; score?: number }>, semantic: boolean): string {
+    if (entries.length === 0) return '' // 空库 → 空贡献（不产生注入块）
     // 时间戳以本地时刻呈现（数据层已 localtime）。召回只走 context 面（动态区），
     // ⇒ 时间戳不会进入 system prompt 前缀，不影响缓存命中。
-    const lines = rows.map((r) => `- [${r.created_at}] ${r.content.replace(/\n/g, ' ')}`)
-    const label = semantic ? `语义 top-${rows.length}` : `最近 ${rows.length} 条`
+    const lines = entries.map(({ row, score }) => {
+      const content = row.content.replace(/\n/g, ' ')
+      if (!semantic) return `- [${row.created_at}] ${content}`
+      // 语义路 score 必存在（ScoredRecall）；`no-score` 是不可达兜底（不匹配格式正则 ⇒ 探针判红）
+      const scoreText = typeof score === 'number' && Number.isFinite(score) ? score.toFixed(3) : 'no-score'
+      return `- [${row.created_at}] (${scoreText}, ${shortSourceOf(row.session_id)}) ${content}`
+    })
+    const label = semantic ? `语义 top-${entries.length}` : `最近 ${entries.length} 条`
     return `${RECALL_TITLE_PREFIX}（${label}）\n${lines.join('\n')}`
   }
 
@@ -468,7 +494,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   /** 过滤后的时间倒序回退（P8：两条召回路径都在 SQL 层排除本会话） */
   function fallbackRecallText(sessionId: string): string {
     const rows = selectRecentFiltered.all(sessionId, cfg.recallLimit) as unknown as RecallRow[]
-    return rows.length ? formatRecall(rows, false) : ''
+    return rows.length ? formatRecall(rows.map((row) => ({ row })), false) : ''
   }
 
   /**
@@ -565,7 +591,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
         `${RECALL_GATE_MARK} candidates=${scoredAll.length} kept=${gate.kept.length} blocked=${gate.blockedCount} truncated=${gate.truncatedCount} blocked_top=${blockedTopText} top1=${top1Text} delta=${delta} limit=${limit} reason=ok sentinel=${P221_DEPLOY_SENTINEL}`,
       )
       if (gate.kept.length === 0) return { text: '', emptyReason: 'all-below-gate' }
-      return { text: formatRecall(gate.kept.map((entry) => entry.row), true) }
+      return { text: formatRecall(gate.kept, true) }
     } catch (err: unknown) {
       const reason = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, ' ')
       writeDegraded(`${DEGRADED_MARK} ${EMBED_RECALL_FALLBACK} reason=${P02_DEPLOY_SENTINEL} cause=${reason}`)

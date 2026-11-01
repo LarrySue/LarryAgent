@@ -133,7 +133,10 @@ function recallIds(text, rows) {
     if (!line.startsWith('- [')) continue
     const close = line.indexOf('] ')
     if (close < 0) continue
-    const content = line.slice(close + 2)
+    // ②.2.2 起语义路行首多了 `(0.xxx, src) ` 前缀；本函数只负责取正文，
+    // ⛔ 断言本体不变——不剥前缀会把括号段算进正文，导致内容匹配全部落空。
+    // ⚠️ 源标识取 [^)]+：本探针 fixture 的会话 id 是单字符（`B`），短标识不是 8 位 hex。
+    const content = line.slice(close + 2).replace(/^\([0-9]\.[0-9]{3}, [^)]+\) /, '')
     const id = byContent.get(content)
     if (id !== undefined) ids.push(id)
   }

@@ -13,6 +13,8 @@ export interface RecallRow {
   id: number
   content: string
   created_at: string
+  /** 来源会话 id（②.2.2 注入可见化用；时间倒序老调用方可不提供） */
+  session_id?: string
 }
 
 /** 带向量的行面（embedding 列原样，由 decodeVector 校验） */
@@ -75,7 +77,7 @@ export function cosineTopK(rows: RecallVectorRow[], query: number[], limit: numb
     const vNorm = Math.sqrt(vNormSq)
     if (!vNorm) continue
     scored.push({
-      row: { id: row.id, content: row.content, created_at: row.created_at },
+      row: { id: row.id, content: row.content, created_at: row.created_at, session_id: row.session_id },
       score: dot / (vNorm * qNorm),
     })
   }
