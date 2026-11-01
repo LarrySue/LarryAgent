@@ -11,9 +11,9 @@
 |---|---|---|---|---|
 | **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | 🟡 **①② 已落地 ／ ③ 未做**（2026-10-31 月月 B 半查出、WB 复核成立 ⇒ `TODO.md` 该条已退回 `[ ]`）；⚠️ **原 10-30「已完成」判词作废**。三条**他处零承接**的过程观察与判别力边界留本区〈📥 过程观察 · 测试场地隔离〉 | 2026-10-30 |
 | **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | `scripts/backup/backup.mjs` | ✅ **已复验成立（WB 2026-11-01 02:20），已闭环** ⇒ 结论（含 ❌ B-8 落点可换在本机不成立／2 增量／1 未闭合）全在 `TODO.md` ⑪.4.1 段。⚠️ 不阻塞 ⑪.4.2 | 2026-11-01 |
-| **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **已复验成立（WB 2026-11-01 13:15），已闭环；增量三条已派** ⇒ 结论在 `TODO.md` ②.2.1 段；增量派发见下方〈📮 派发 · ②.2.1 增量三条〉。**delta 已裁：先按 0.20 走** | 2026-11-01 |
+| **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **本体已复验成立（WB 2026-11-01 13:15）／增量已交付（`073541b`，T-3 已撤），待 WB 复验** ⇒ 结论在 `TODO.md` ②.2.1 段；交付见下方〈✅ 交付 · ②.2.1 增量〉。**delta 已裁：先按 0.20 走** | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ⚠️ **待你单独核实**（WB 2026-11-01 01:38 复跑 2 次只到 11/17）：`V4b-abs-inside-home-ok` 两次未过 —— 一次子进程 `exit 143`（SIGTERM）、一次装置看门狗 420s 触发；但**库实体建出来了（16384）**说明它其实启动了，只是退出码非 0 被判「启动失败」。⚠️ 一个可能：**我这边同时在跑长任务**，资源竞争把 initialize 拖过 60s。**你若在空载机器上能过，这条即闭环** | 2026-11-01 |
-| — | — | — | ✅ **在飞＝3 件**：V4b 待砚砚核实 ／ 测试场地隔离 ③ 未做 ／ ②.2.1 增量三条（今日新派）。**已闭环七块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1）结论均在 `TODO.md`，见〈🗂 已清理段落〉。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」。 |
+| — | — | — | ✅ **在飞＝3 件**：V4b 待砚砚核实 ／ 测试场地隔离 ③ 未做 ／ ②.2.1 增量（**已交付 `073541b`，待复验**）。**已闭环七块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1）结论均在 `TODO.md`，见〈🗂 已清理段落〉。2026-10-28：DSH-3.10 已归档 → `archive/roadmap-history.md`「2026-10-20 办结」。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -134,6 +134,66 @@
 5. ⛔ 不把"改完注释"当成 T-2 完成 —— 须同时给出「你选留还是删 + 理由」。
 
 ---
+
+## ✅ 交付 · ②.2.1 增量（Trae · 2026-11-01 15:50）
+
+> **结论先行**：**T-1／T-2 完成，T-3 按 WB 15:40 勘误撤回（`p02-recall-probe.mjs` 零改动）**。三条探针改后全绿：p221 **13/13**（既有 11 条判据名／表达式／PASS 全不变，新增 T-1a／T-1b）、p02 **21/0**、p08 **12/0**；真库跑前＝跑后（mtime＋sha256）；部署件两侧同 sha。commit `073541b`。
+
+### T-1 · gate 行补 `truncated=`（最要紧，完成）
+
+- **代码**：`recall.ts` 的 `RecallGateResult` 增 `truncatedCount`（= 过门总数 − kept，独立 `passed` 过滤后相减）；`index.ts` 两处 gate 行插在 `blocked=` 之后（语义路 ok 行 `:565`、空池行 `:549`）。降级路未动、未新造 gate 行（T-1d）。
+- **T-1a 正证（PASS `T-1a-truncated-field`）**：新 phase `t1a-truncated`（cosines 0.95/0.90/0.85/0.80/0.60，delta 0.20，`recallLimit=2`）⇒ 读数为
+  `candidates=5 kept=2 blocked=1 truncated=2`，注入 2 条（= kept）。
+- **T-1b 恒等式（PASS `T-1b-gate-identity`）**：4 个场景实例全满足 `candidates == kept + blocked + truncated`，且 `truncated=` 字段恒在（含 `truncated=0` 不省略）：
+
+  | 场景 | 读数 | 验的点 |
+  |---|---|---|
+  | r1235（k 未截断） | `5 == 2+3+0` | `truncated=0` 字段在 |
+  | r4（delta 0.05，k 未截断） | `5 == 1+4+0` | 同上 |
+  | r6-filtered-empty（候选池空） | `0 == 0+0+0` | 全 0 |
+  | t1a（过门 4 > limit 2） | `5 == 2+1+2` | 正证 |
+
+- **T-1c 三截判据（WB 15:40 订正版，三项全过；证据 `T-1c-compare.json`，`allOk=true`）**：
+  - **(i) kept 集合与顺序不变**：r1235 `recallIds=[1,2] → [1,2]`；r4 `[1] → [1]`；
+  - **(ii) 数值逐项不变**：`candidates/blocked/blocked_top/top1` 改前＝改后（`coreSame=true` ×3）；
+  - **(iii) 整行并排**（除新增 ` truncated=` 外逐字相同，`lineSameExceptTruncated=true` ×3）：
+    - 改前：`[S36-MEMORY] recall gate: candidates=5 kept=2 blocked=3 blocked_top=0.700000 top1=0.950000 delta=0.2 limit=6 reason=ok sentinel=[S36-MEMORY] p221-recall-gate-v1`
+    - 改后：`[S36-MEMORY] recall gate: candidates=5 kept=2 blocked=3 truncated=0 blocked_top=0.700000 top1=0.950000 delta=0.2 limit=6 reason=ok sentinel=[S36-MEMORY] p221-recall-gate-v1`
+    - r4 与空池行同形，原文分别在 `before|after/r4.json`、`before|after/R-6.json` 的 `gateLine`／`gateLines`。
+
+### T-2 · `recallMinTop` 标注（完成）
+
+- **T-2a**：声明注释改为「预留键，**当前不生效**；绝对下限（minTop）本期未实现，全文件无读取点 —— 改它不会改变任何召回行为（假配置键，仅占位）」。复算（工具为 PowerShell `Select-String`，等价 `grep -n`）：
+  `Select-String -Path src\index.ts -Pattern recallMinTop -Context 2,0` ⇒ 命中 `src\index.ts:124: recallMinTop?: number`，其上两行即「当前不生效／全文件无读取点」。
+- **T-2b**：p221 **既有 11 条判据名与 PASS 全不变**；因新增 T-1a／T-1b，总数 **13/13**（⚠️ 不是字面「11/11」，见自曝 A）。
+- **T-2c 判断：留着并标注（不删）**。理由：
+  1. ②.2.x 若真做绝对下限，键已在配置面上；删掉要重设计配置并同步 docs（千千 C-6 正在写「预留键」），成本高于留一个标注清楚的占位；
+  2. 该键的真实危险是「改了不起作用却没人知道」——已被三处锚点压住：声明注释（改了）、探针 `R-6p-minTop-not-applied`（现状约束）、docs（待千千落盘）；
+  3. 删键不能阻止后人再造同名键，但留键＋注释能让「不生效」成为可检索事实。
+  ⚠️ 残余风险直说：不读注释的运维仍会误以为它生效。本轮**没有**加运行期告警（那属行为变化，与 T-2b「行为不变」冲突）；若 ②.2.2 要接绝对下限，届时把「预留」改「已接入」并补正证断言。
+
+### T-3 · 已撤（未做）
+
+- `p02-recall-probe.mjs` **0 行改动**（本轮 commit 不含该文件），T-3a／T-3b 未执行。
+
+### 前置与场地（可复算）
+
+- **部署件同步**：源码产物＝部署件 `lib/index.js` sha `F69F7E3AE749BD7E0CA2C5A18B8BF79F330BC551825479B25BEDA021D0D42D13`；`lib/recall.js` 两侧 `8C59104C875133225977F786A7E546430DEDE5902A9F7ACFABA209434E0F29BC`；探针 `R-8-deployed-sentinel` PASS 自报（`after/P221-R8-deploy.json`）。
+- **真库不碰**：`.dsh-home/larry-memory.db` sha `16089DE3…7446` / mtime `2026-10-30 15:01:18`，三条探针跑前＝跑后。
+- **证据**：`D:/Code/_trae-evidence/p221-increments/{before,after}/`：三条探针完整 stdout（p221／p02／p08）＋ 探针 JSON（`T-1a.json`、`T-1b-identity.json`、`P221-R8-deploy.json` 等）；T-1c 对照在 `T-1c-compare.json`（比对脚本 `compare-t1c.mjs` 在证据目录，**不入仓**）。
+
+### 未闭合（单列）
+
+1. **这三条不改变「真实语料上挡得对不对仍然无人能回答」** —— 只是把观测面补齐，判断力仍等 ②.2.2。
+2. `truncated=` 只证明「被 k 截了几条」，**不证明被截条目的分数分布**；分布观测不在本单。
+3. 部署件证据有效期＝一个构建周期（WB 复验清单常设项 3）：本轮部署件 mtime `2026-11-01 15:43:32`，复验须以当时部署件重取 sha。
+
+### 自曝
+
+- **A · T-2b 的「11/11」与 T-1 新增断言并存时按字面不可达**：按 WB 15:45 答复执行「既有 11 条不变」，实际 13/13。T-2b 正文未同步改字，复验者若拿「11/11」对账会误判新红。
+- **B · 派发稿 T-2 现状前提漂了**：仓内**不存在 `CONFIG_KEYS` 符号**（全仓 `CONFIG_KEYS` 零代码命中）；`src/index.ts:142` 是 `DEFAULTS` 的 `Required<Pick<…>>` 键列表，且**不含** `recallMinTop`。准确表述应为「仅声明、全文件零读取」。该前提已写进 `TODO.md:167` 与 `log-qoder.md`（C-6，docs 归千千）——请 WB 同步订正，我未动两侧。
+- **C · 我自己取证返工一次**：T-1c 比对脚本第一版用一条整体正则，`before` 行能匹配、`after` 行因多出 `truncated=` 匹配失败 ⇒ 误报 `coreSame=false`；改逐字段解析后 `allOk=true`。报告里写的是修正后读数。
+- **D · stdout 非字节级原文**：三条探针 stdout 经 PowerShell 管道落盘（UTF-8 with BOM）；gate 行原文以探针 `writeFileSync(utf8)` 直接产出的 `before|after/*.json` 的 `gateLine` 为准。
 
 ## 📥 过程观察 · 测试场地隔离（他处零承接的三条 ＋ 判别力边界）
 
