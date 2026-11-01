@@ -1,0 +1,21 @@
+# larry-s4-memory 落盘配置 · 版本控制正本片段（2026-11-01 场地隔离③）
+#
+# 为什么有这个文件：
+#   `.dsh-home/` 在仓库根 `.gitignore:40` 整目录忽略 ⇒ profile 里的
+#   `.dsh-home/profiles/sdk/cordis.patch.yml` **不入库**，直接改它无法进版本控制。
+#   本文件是那一小段的 tracked 载体：改这里 → 再把这段合并进 profile 的 patch。
+#
+# 用法：
+#   1) 编辑本文件（dbPath 必须用 ${DSH_HOME} 占位，⛔ 不写 C:/D: 盘符绝对路径）
+#   2) 把 `- insert:` 整段合并进 `.dsh-home/profiles/sdk/cordis.patch.yml`
+#      （该文件里已有同名条目时是替换 config，⛔ 不要再插一条重复 id）
+#   3) 改配置**不需要**重建 lib/；插件在下次 dsh 启动时读取
+#
+# ⚠️ 配置语义见 harness/packages/plugin-s4-memory/src/index.ts 的 resolveDbPath：
+#    `${DSH_HOME}` 替换为当前 home（$DSH_HOME ＞ ~/.dsh）；非绝对路径按 home 解析；
+#    解析结果落在 home 之外且未开 allowOutsideHome ⇒ 启动即 fail（stderr 断言行）。
+- insert:
+    - id: larry-s4-memory
+      name: '@larryagent/plugin-s4-memory'
+      config:
+        dbPath: '${DSH_HOME}/larry-memory.db'
