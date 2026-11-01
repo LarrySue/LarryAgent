@@ -12,7 +12,10 @@
  *   R-6′ 结果第一条必须是该 query 的 top1
  *   R-7 由 P0②/P8 两个既有探针回归（本脚本不重复）
  *   R-8 部署件内命中本单哨兵（源码产物不算）
+ *   T-1a `truncated=` 正证：过门 4 条 > limit 2 ⇒ truncated=2
+ *   T-1b 恒等式 candidates == kept + blocked + truncated（截断／未截断／候选池空三种场景）
  *
+ * 判据总数 = 既有 11 条（R-*）＋ 新增 2 条（T-1a／T-1b）。
  * 全部在临时 home；不写真实库；退出码 0 全绿 ／ 1 判据红 ／ 2 前置缺失。
  */
 
@@ -135,6 +138,11 @@ function recallIds(text, rows) {
     if (id !== undefined) ids.push(id)
   }
   return ids
+}
+function parseGateCounts(line) {
+  const m = /candidates=(\d+) kept=(\d+) blocked=(\d+) truncated=(\d+)/.exec(line)
+  if (!m) return null
+  return { candidates: Number(m[1]), kept: Number(m[2]), blocked: Number(m[3]), truncated: Number(m[4]) }
 }
 
 // ── 向量构造：给定 query 向量与目标余弦，造一条精确分数的行 ──────────────
@@ -307,6 +315,78 @@ async function phaseGate(tag, delta) {
 
 const base = await phaseGate('r1235', 0.20)
 const narrow = await phaseGate('r4', 0.05)
+
+// ══════════════════════════════════════════════════════════════════════════
+// T-1a：过门条数 > limit ⇒ gate 行必须出现 truncated=，且值 = 过门总数 − kept
+// ══════════════════════════════════════════════════════════════════════════
+async function phaseTruncated(tag) {
+  const home = makeHome(tag)
+  process.env.DSH_HOME = home
+  const dbPath = join(home, 'memory.db')
+  const degradedLog = join(home, 'degraded.log')
+  const gateLog = join(home, 'gate.log')
+  const ctx = applyPlugin(plugin, {
+    dbPath,
+    modelCacheDir: MODEL_DIR,
+    degradedLogPath: degradedLog,
+    recallGateLogPath: gateLog,
+    recallLimit: 2, // 上限 2 < 过门条数 4 ⇒ 必须有 2 条被截
+    recallDelta: 0.20,
+  })
+  const labels = [
+    'T1-1：top1（0.95）',
+    'T1-2：过门（0.90）',
+    'T1-3：过门（0.85）',
+    'T1-4：过门（0.80）',
+    'T1-5：被挡（0.60）',
+  ]
+  const cosines = [0.95, 0.90, 0.85, 0.80, 0.60]
+  const vectors = cosines.map((c, i) => vectorWithCosine(queryVector, c, i + 1))
+  const seeded = labels.map((content, i) => ({
+    sessionId: 'T1',
+    seq: i + 1,
+    content,
+    embedding: recall.encodeVector(vectors[i]),
+  }))
+  try {
+    seedRows(dbPath, seeded)
+    emitUserMessage(ctx, 'A', 1, QUERY)
+    const assembly = await runAssembly(ctx, 'A')
+    const rows = dbAll(dbPath, 'SELECT id, content, session_id FROM memories ORDER BY id')
+    const ids = recallIds(assembly.text, rows)
+    const gateLines = logLines(gateLog)
+    const lastGate = gateLines[gateLines.length - 1] ?? ''
+    const counts = parseGateCounts(lastGate)
+    const result = {
+      tag,
+      cosines,
+      recallLimit: 2,
+      recallDelta: 0.20,
+      seededIds: rows.filter((r) => r.session_id === 'T1').map((r) => ({ id: r.id, content: r.content })),
+      recallIds: ids,
+      gateLine: lastGate,
+      counts,
+      assemblyText: assembly.text,
+    }
+    saveJson('T-1a.json', result)
+    return { result, ids, gateLines }
+  } finally {
+    ctx.dispose()
+  }
+}
+
+const trunc = await phaseTruncated('t1a-truncated')
+const truncLine = trunc.gateLines[trunc.gateLines.length - 1] ?? ''
+const truncCounts = parseGateCounts(truncLine)
+judge('T-1a-truncated-field',
+  truncCounts !== null
+    && truncCounts.candidates === 5
+    && truncCounts.kept === 2
+    && truncCounts.blocked === 1
+    && truncCounts.truncated === 2
+    && trunc.ids.length === 2,
+  `gate 行=${truncLine || '（缺）'}；观测 candidates=${truncCounts?.candidates ?? '?'} kept=${truncCounts?.kept ?? '?'} blocked=${truncCounts?.blocked ?? '?'} truncated=${truncCounts?.truncated ?? '?'}，注入 ${trunc.ids.length} 条（期望 5/2/1/2）`)
+
 judge('R-4-delta-configurable', narrow.ids.length < base.ids.length,
   `delta 0.20 ⇒ kept/ids=${base.ids.length}；delta 0.05 ⇒ kept/ids=${narrow.ids.length}（明显减少）`)
 judge('R-4-gate-line', (narrow.result.gateLine.match(/delta=0.05/) ?? []).length === 1,
@@ -354,6 +434,50 @@ const vacMarkerHits = vacuum.degraded.filter((l) => l.includes(plugin.RECALL_EMP
 const vacGateHits = vacuum.gateLines.filter((l) => l.includes(plugin.RECALL_GATE_MARK)).length
 judge('R-6-vacuum-control', vacuum.text === '' && vacMarkerHits === 0 && vacGateHits === 0,
   `真空库（库里没有任何记忆）⇒ 正文空=${vacuum.text === ''}，RECALL_EMPTY_MARK=${vacMarkerHits}，gate 行=${vacGateHits}（P8-d 控制臂保持 0）`)
+
+// ══════════════════════════════════════════════════════════════════════════
+// T-1b：恒等式 candidates == kept + blocked + truncated（覆盖 4 个场景实例：截断／未截断 ×2／候选池空）
+// ══════════════════════════════════════════════════════════════════════════
+const identityScenarios = [
+  ['r1235（k 未截断 ⇒ truncated=0）', base.gateLines],
+  ['r4（delta 0.05，k 未截断 ⇒ truncated=0）', narrow.gateLines],
+  ['r6-filtered-empty（候选池空 ⇒ 全 0）', filteredEmpty.gateLines],
+  ['t1a（过门>limit ⇒ truncated>0）', trunc.gateLines],
+]
+const identityFailures = []
+const identityRows = []
+for (const [name, lines] of identityScenarios) {
+  if (lines.length === 0) {
+    identityFailures.push(`${name}: 无 gate 行`)
+    identityRows.push({ name, lines: [], counts: null, ok: false })
+    continue
+  }
+  for (const line of lines) {
+    const counts = parseGateCounts(line)
+    const hasField = line.includes('truncated=')
+    const identityOk = counts !== null && counts.candidates === counts.kept + counts.blocked + counts.truncated
+    if (!hasField) identityFailures.push(`${name}: gate 行缺 truncated= 字段`)
+    if (!counts) identityFailures.push(`${name}: 计数解析失败`)
+    else if (!identityOk) {
+      identityFailures.push(`${name}: ${counts.candidates} != ${counts.kept}+${counts.blocked}+${counts.truncated}`)
+    }
+    identityRows.push({ name, line, counts, hasField, identityOk })
+  }
+}
+const baseCounts = parseGateCounts(base.result.gateLine)
+const narrowCounts = parseGateCounts(narrow.result.gateLine)
+const emptyCounts = parseGateCounts(filteredEmpty.gateLines[0] ?? '')
+if (!(baseCounts && baseCounts.truncated === 0)) identityFailures.push('r1235: truncated 应为 0')
+if (!(narrowCounts && narrowCounts.truncated === 0)) identityFailures.push('r4: truncated 应为 0')
+if (!(emptyCounts && emptyCounts.candidates === 0 && emptyCounts.kept === 0 && emptyCounts.blocked === 0 && emptyCounts.truncated === 0)) {
+  identityFailures.push('r6-filtered-empty: candidates=0 应 kept=blocked=truncated=0')
+}
+if (!(truncCounts && truncCounts.truncated === 2)) identityFailures.push('t1a: truncated 应为 2')
+saveJson('T-1b-identity.json', { scenarios: identityRows, failures: identityFailures })
+judge('T-1b-gate-identity', identityFailures.length === 0,
+  identityFailures.length === 0
+    ? `四种场景 ${identityRows.length} 条 gate 行均满足 candidates == kept + blocked + truncated；r1235/r4 truncated=0，空池全 0，t1a truncated=2`
+    : `恒等式/特值不符：${identityFailures.join('；')}`)
 
 saveJson('findings.json', findings)
 if (KEEP_TEMP) console.log(`P221_KEEP_TEMP=1 ⇒ 保留 ${TEMP_ROOT}`)

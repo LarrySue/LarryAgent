@@ -117,7 +117,10 @@ export interface Config {
   recallLimit?: number
   /** ②.2.1 相对门宽度：只保留 score >= top1 - recallDelta；默认 0.20 */
   recallDelta?: number
-  /** ②.2.1 绝对下限 **预留键**：本期 ⛔ 不实现过滤，默认 0（仅占位） */
+  /**
+   * ②.2.1 绝对下限 **预留键，当前不生效**：绝对下限（minTop）本期未实现，
+   * 全文件无读取点 —— 改它不会改变任何召回行为（假配置键，仅占位）。
+   */
   recallMinTop?: number
   /**
    * ②.2.1 被挡记录文件（被挡条数 ＋ 被挡最高分，⛔ 不写内容）。
@@ -543,7 +546,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
         const anyRows = selectRecent.all(1) as unknown as RecallRow[]
         if (anyRows.length > 0) {
           writeGate(
-            `${RECALL_GATE_MARK} candidates=0 kept=0 blocked=0 blocked_top=none top1=none delta=${delta} limit=${limit} reason=no-cross-session-vectors sentinel=${P221_DEPLOY_SENTINEL}`,
+            `${RECALL_GATE_MARK} candidates=0 kept=0 blocked=0 truncated=0 blocked_top=none top1=none delta=${delta} limit=${limit} reason=no-cross-session-vectors sentinel=${P221_DEPLOY_SENTINEL}`,
           )
         }
         return { text: '', emptyReason: 'no-cross-session-vectors' }
@@ -559,7 +562,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
       const top1Text = gate.top1 === null ? 'none' : gate.top1.toFixed(6)
       // 每轮召回都写：被挡条数 ＋ 被挡最高分（⛔ 不写内容；全挡/空池也写）
       writeGate(
-        `${RECALL_GATE_MARK} candidates=${scoredAll.length} kept=${gate.kept.length} blocked=${gate.blockedCount} blocked_top=${blockedTopText} top1=${top1Text} delta=${delta} limit=${limit} reason=ok sentinel=${P221_DEPLOY_SENTINEL}`,
+        `${RECALL_GATE_MARK} candidates=${scoredAll.length} kept=${gate.kept.length} blocked=${gate.blockedCount} truncated=${gate.truncatedCount} blocked_top=${blockedTopText} top1=${top1Text} delta=${delta} limit=${limit} reason=ok sentinel=${P221_DEPLOY_SENTINEL}`,
       )
       if (gate.kept.length === 0) return { text: '', emptyReason: 'all-below-gate' }
       return { text: formatRecall(gate.kept.map((entry) => entry.row), true) }

@@ -94,6 +94,8 @@ export interface RecallGateResult {
   blockedTop: number | null
   /** 本轮 top1 分数；无候选时为 null */
   top1: number | null
+  /** 过门但被 k 上限截掉的条数（= 过门总数 − kept）；k 未截断时为 0 */
+  truncatedCount: number
 }
 
 /**
@@ -106,18 +108,18 @@ export interface RecallGateResult {
  */
 export function applyRecallGate(scored: ScoredRecall[], delta: number, limit: number): RecallGateResult {
   if (scored.length === 0) {
-    return { kept: [], blockedCount: 0, blockedTop: null, top1: null }
+    return { kept: [], blockedCount: 0, blockedTop: null, top1: null, truncatedCount: 0 }
   }
   const top1 = scored[0].score
   const threshold = top1 - delta
   const blocked = scored.filter((entry) => entry.score < threshold)
-  const kept = scored
-    .filter((entry) => entry.score >= threshold)
-    .slice(0, Math.max(0, limit))
+  const passed = scored.filter((entry) => entry.score >= threshold)
+  const kept = passed.slice(0, Math.max(0, limit))
   return {
     kept,
     blockedCount: blocked.length,
     blockedTop: blocked.length > 0 ? Math.max(...blocked.map((entry) => entry.score)) : null,
     top1,
+    truncatedCount: passed.length - kept.length,
   }
 }
