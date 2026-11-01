@@ -263,7 +263,7 @@ const LABELS = [
   { text: 'P222-L5：更低分（0.55）', cos: 0.55, session: SESSION_B },
 ]
 
-async function phaseSemantic(tag, pluginToUse) {
+async function phaseSemantic(tag, pluginToUse, labels = LABELS) {
   const home = makeHome(tag)
   process.env.DSH_HOME = home
   const dbPath = join(home, 'memory.db')
@@ -277,9 +277,9 @@ async function phaseSemantic(tag, pluginToUse) {
     recallLimit: 6,
     recallDelta: 0.20,
   })
-  const vectors = LABELS.map((l, i) => vectorWithCosine(queryVector, l.cos, i + 1))
+  const vectors = labels.map((l, i) => vectorWithCosine(queryVector, l.cos, i + 1))
   try {
-    seedRows(dbPath, LABELS.map((l, i) => ({
+    seedRows(dbPath, labels.map((l, i) => ({
       sessionId: l.session,
       seq: i + 1,
       content: l.text,
@@ -391,6 +391,51 @@ saveJson('W-6-leaks.json', { leaks, blockedContents: blockedRows.map((r) => r.co
 judge('W-6-no-new-leak', leaks.length === 0, leaks.length === 0
   ? `无完整 session_id、无被挡正文（${blockedRows.length} 条）、无 undefined/null/NaN`
   : `泄露项：${leaks.join('；')}`)
+
+// ══════════════════════════════════════════════════════════════════════════
+// C 组（2026-11-01 三处补洞）：src 退化形态守卫
+// ══════════════════════════════════════════════════════════════════════════
+// C-1 正常形态不变：真实 session_id 的取法结果与 ②.2.2 基线一致
+const normalSrcByContent = new Map(parsed.parsed.map((p) => [p.content, p.src]))
+const c1 = [
+  { content: LABELS[0].text, expected: '0a898fc3' },
+  { content: LABELS[1].text, expected: '0b48c8cc' },
+].map((item) => ({ ...item, actual: normalSrcByContent.get(item.content), ok: normalSrcByContent.get(item.content) === item.expected }))
+saveJson('C-1-normal-src.json', c1)
+judge('C-1-normal-src-unchanged', c1.every((item) => item.ok),
+  `正常形态：${c1.map((item) => `${item.expected}→${item.actual ?? '（缺）'}`).join('，')}（期望与 ②.2.2 基线一致）`)
+
+// 退化样本：末段不是 8 位小写 hex ⇒ 必须走 sha256 前 8 位
+const DEG_LABELS = [
+  { text: 'P222-D1：退化会话最相关（0.95）', cos: 0.95, session: 'seed-session' },
+  { text: 'P222-D2：另一退化会话（0.80）', cos: 0.80, session: 'seed-session-b' },
+  { text: 'P222-D3：应被挡（0.70）', cos: 0.70, session: 'seed-session' },
+]
+const degenerate = await phaseSemantic('degenerate', plugin, DEG_LABELS)
+const degText = degenerate.assembly.contexts.find((c) => c.name === RECALL_NAME)?.text ?? ''
+save('C-degenerate-context.txt', degText)
+const degParsed = parseInjection(degText)
+const degKept = parseGateKept(degenerate.gateLine)
+const degSrcByContent = new Map(degParsed.parsed.map((p) => [p.content, p.src]))
+const c2 = [
+  { content: DEG_LABELS[0].text, expected: '70f6bbd7' },
+  { content: DEG_LABELS[1].text, expected: '3a88e3f7' },
+].map((item) => ({ ...item, actual: degSrcByContent.get(item.content), ok: degSrcByContent.get(item.content) === item.expected }))
+saveJson('C-2-degenerate-src.json', { checks: c2, parsed: degParsed.parsed, gateLine: degenerate.gateLine })
+judge('C-2-degenerate-sha256', c2.every((item) => item.ok),
+  `退化形态：${c2.map((item) => `${item.content.slice(0, 12)}… expected=${item.expected} actual=${item.actual ?? '（缺）'}`).join('；')}（sha256(session_id) 前 8）`)
+
+// C-3 负证：两个不同退化 id ⇒ src 必须不同（防塌成同一个值）
+const degSrcSet = new Set(c2.map((item) => item.actual))
+judge('C-3-degenerate-distinct', degSrcSet.size === 2 && c2.every((item) => item.actual !== undefined),
+  `两个退化 session（seed-session / seed-session-b）⇒ src=${JSON.stringify([...degSrcSet])}（须 2 个不同值）`)
+
+// C-4 格式仍合规：每一行仍匹配 ②.2.2 的注入格式正则
+judge('C-4-degenerate-format',
+  degParsed.unmatched.length === 0
+    && degParsed.parsed.length === (degKept?.kept ?? -1)
+    && degParsed.parsed.every((p) => /^[0-9a-f]{8}$/.test(p.src)),
+  `退化臂注入 ${degParsed.parsed.length} 行（gate kept=${degKept?.kept ?? '?'}）；未匹配=${degParsed.unmatched.length}；src 全为 8 位 hex=${degParsed.parsed.every((p) => /^[0-9a-f]{8}$/.test(p.src))}`)
 
 // ══════════════════════════════════════════════════════════════════════════
 // 改前注入块（旧件，同一装置）——W-4 的「改前」参照

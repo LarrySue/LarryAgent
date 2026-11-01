@@ -21,6 +21,7 @@
  *
  * key 纪律：0 token，全程无凭据接触。
  */
+import { createHash } from 'node:crypto'
 import { appendFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { isAbsolute, join, relative, resolve } from 'node:path'
@@ -449,16 +450,20 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   const RECALL_TITLE_PREFIX = '## LarryAgent 记忆召回'
 
   /**
-   * 来源短标识：`session_id` 最后一个 `-` 之后的前 8 位。
+   * 来源短标识：`session_id` 最后一个 `-` 之后的前 8 位；若这段不是 8 位小写 hex，
+   * 改用 `sha256(session_id)` 的前 8 位（②.2.2 C 组守卫）。
    * ⚠️ 不能取整串前 8 位：实库里 session_id 均以 `session-` 开头（`session-391-*` 多个），
    * 前 8 位恒为 `session-`，没有任何可别性（②.2.2 实测）。
+   * ⚠️ 退化样本如 `seed-session` ⇒ 末段 `session`（8 字符但非 hex，零判别力）⇒ 必须走哈希，
+   * 否则格式正则不匹配、且不同退化 id 可能塌成同一 src。
    * `unknown0` 为不可达兜底（schema 里 session_id NOT NULL）——它**不匹配**注入格式正则，
    * 一旦出现会让探针判红，而不是静默产出假标识。
    */
   function shortSourceOf(sessionId: string | undefined): string {
     if (!sessionId) return 'unknown0'
-    const tail = sessionId.slice(sessionId.lastIndexOf('-') + 1)
-    return tail.slice(0, 8)
+    const tail = sessionId.slice(sessionId.lastIndexOf('-') + 1).slice(0, 8)
+    if (/^[0-9a-f]{8}$/.test(tail)) return tail
+    return createHash('sha256').update(sessionId, 'utf8').digest('hex').slice(0, 8)
   }
 
   /**
