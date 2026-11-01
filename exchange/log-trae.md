@@ -9,12 +9,12 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | 🟡 **①② 已落地 ／ ③ 未做**（2026-10-31 月月 B 半查出、WB 复核成立 ⇒ `TODO.md` 该条已退回 `[ ]`）；⚠️ **原 10-30「已完成」判词作废**。三条**他处零承接**的过程观察与判别力边界留本区〈📥 过程观察 · 测试场地隔离〉 | 2026-10-30 |
-| **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | `scripts/backup/backup.mjs` | ✅ **已复验成立（WB 2026-11-01 02:20），已闭环** ⇒ 结论（含 ❌ B-8 落点可换在本机不成立／2 增量／1 未闭合）全在 `TODO.md` ⑪.4.1 段。⚠️ 不阻塞 ⑪.4.2 | 2026-11-01 |
+| **测试场地隔离 · 工程化**（W1 相对解析 ／ W2 启动断言 ／ W3 自检可证伪） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `run-36-memory.mjs`（iso 相） | ✅ **①②③ 已全部落地（③ 于 `bec0502` 交付，待 WB 复验）**：③ = profile `dbPath` 改 `${DSH_HOME}/larry-memory.db` ＋ tracked 正本片段。⚠️ 线上 profile 文件在 `.gitignore:40`，改动本身不入库。三条**他处零承接**的过程观察留本区〈📥 过程观察 · 测试场地隔离〉 | 2026-10-30 |
+| **⑪.4.1 备份脚本**（记忆库／会话流水／审计留痕／全量存档 → 单文件包） | **Trae** | `scripts/backup/backup.mjs` | ✅ 本体已复验成立（WB 02:20）；**B-8 于 `74e40f5` 补 GNU 通道 `--force-local`（待复验）** ⇒ 结论在 `TODO.md` ⑪.4.1 段。⚠️ 不阻塞 ⑪.4.2 | 2026-11-01 |
 | **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **本体已复验成立（WB 13:15）＋ 增量 T-1／T-2 已落地并复验成立（`073541b`，WB 16:20；T-3 已撤回）⇒ 本块整块闭环** | 2026-11-01 |
-| **②.2.2 注入文本可见化**（分数 ＋ 来源 ＋ 降级路兼容 ＋ 位置约束） | **Trae** | `plugin-s4-memory/src/index.ts`（`formatRecall`） | ✅ **已复验成立（WB 2026-11-01 16:55），已闭环** ⇒ 自己跑 p222 8/8、p221 13/13、p02 21-0、p08 12-0。⚠️ **一个真隐患**：`src` 在 `seed-session` 上退化成 `session`（零判别力）⇒ 建议加**格式守卫**（不匹配 `^[0-9a-f]{8}$` 时退化为哈希前 8 位） | 2026-11-01 |
+| **②.2.2 注入文本可见化**（分数 ＋ 来源 ＋ 降级路兼容 ＋ 位置约束） | **Trae** | `plugin-s4-memory/src/index.ts`（`formatRecall`） | ✅ 已复验成立（WB 16:55）；**C 组 src 退化守卫于 `26886ab` 补上（待复验）** ⇒ 支撑件在 `p222` 探针。 | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
-| — | — | — | 🔵 **在飞＝1 单（三块）**：〈📮 派发 · 三处补洞〉＝ 场地隔离 ③ ／ B-8 ／ src 守卫（2026-11-01 19:30 派发）。**已闭环十块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
+| — | — | — | ✅ **在飞＝1 单（三块）· 已交付待复验**：〈📮 派发 · 三处补洞〉＝ 场地隔离 ③（`bec0502`）／ B-8（`74e40f5`）／ src 守卫（`26886ab`）—— **三件分开 commit，可单独放行**。**已闭环十块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1 本体／②.2.1 本体／②.2.1 增量／②.2.2／V4b）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -118,6 +118,51 @@
 3. ⛔ 不动 `TODO.md`／`docs/`／其它 AI 的 `log-*`。
 4. ⛔ 不清 `D:\Code\_backups\` 里已有的包。
 5. ⛔ 不把三件混进一个 commit。
+
+---
+
+## ✅ 交付 · 三处补洞 A／B／C（Trae · 2026-11-01 19:50）
+
+> **三件分开 commit，可单独放行**：A＝`bec0502`／B＝`74e40f5`／C＝`26886ab`。证据根 `D:/Code/_trae-evidence/patch-3holes/`（`A-probe.log`／`B-dest-alt*.log`／`C-p222.log`／`C-p221.log`／`C-p02.log`／`C-p08.log` ＋ 各 JSON／注入全文）。
+
+### A 组 · 测试场地隔离 ③（完成，待复验）
+
+- **A-1 PASS**：`dbPath: '${DSH_HOME}/larry-memory.db'`，该行不含盘符（`[A-Za-z]:[\/]` 零命中）。
+- **A-2 PASS**：不设 `DSH_HOME` ⇒ 库落 `C:\Users\SuLarry\.dsh\larry-memory.db`（存在）；同一次装配召回成功（gate `candidates=2 kept=2`，正文含目标与「语义 top-」）。
+- **A-3 PASS**：`DSH_HOME=<临时>` ⇒ `larry-memory.db` 落在新 home；**真库 `.dsh-home/larry-memory.db` 跑前跑后 sha256 `16089DE3…`／mtime `2026-10-30 15:01:18`／size 24576 全部不变**（探针自算 ＋ PowerShell 外部复算同值）。
+- **A-4 PASS**：配置 `${DSH_HOME}/../outside.db` ⇒ 启动抛错，错误含 `[S36-MEMORY] dbPath outside home (denied):`；逃出路径**未建库**。
+- **A-5（版本控制口径）**：`.dsh-home/` 在仓库根 `.gitignore:40` 整目录忽略；`harness/.gitignore:2` 只忽略 `lib/`。⇒ **线上 profile 的配置改动无法直接入库**。进出办法：新增 tracked 正本片段 `harness/scripts/s4-memory/larry-s4-memory.mount.patch.yml`（内容＝该 `- insert:` 段 ＋ 合并步骤），改那边再同步进 profile。⚠️ 本单只改配置，**未重建 lib/**。
+
+### B 组 · B-8「落点可换」（完成，待复验）
+
+- **B-1 PASS**：`--dest "D:\Code\_backups\alt-dest"` ⇒ 打包成功，包落该目录（非原落点）：`larryagent-backup-20261101-194832-637-b95e.tar.gz`（479,380 B）。改代码前的首跑同样成功（`…194408-643-8923.tar.gz`，479,378 B）。
+- **B-2 PASS**：包内 `SHA256SUMS` 34 行全 OK（`checked=34`，`data_files=33/33` 对账）；MANIFEST 四类逐类点名（记忆库／会话流水／审计留痕空类理由／全量存档）。
+- **B-3 PASS（默认落点行为不变）**：`destDir = resolve(args.dest || LARRY_BACKUP_DIR || DEFAULT_DEST)` 未改；`_backups/larryagent` 既有包一件未动。
+- **B-4（两条 tar 通道）**：代码新增方言探测 —— `--version` 含 `gnu tar` ⇒ 打包／解包两个方向都追加 `--force-local`（bsdtar 不加）。本机实测：`where.exe tar` **只有** `C:\Windows\System32\tar.exe`（bsdtar 3.8.9）；GNU tar **不在本机**（`C:\Program Files\Git\usr\bin\tar.exe` 不存在）⇒ **GNU 臂未能正跑**（见未闭合①）。可复算：`LARRY_BACKUP_TAR=<GNU tar> node scripts/backup/backup.mjs --dest <绝对路径>`。
+- **B-5 PASS**：失败路径非零退出码未被改回（本次全部成功路径；`2e09ba5` 的非零退出逻辑 `process.exit(1)` 原样在 `tarCreate/tarExtract` 失败分支）。
+
+### C 组 · `src` 格式守卫（完成，待复验）
+
+- **C-1 PASS**：正常形态不变：`session-391-0a898fc33f8e → 0a898fc3`；`session-0b48c8ccea4f4f378689b2704e6ee5cb → 0b48c8cc`。
+- **C-2 PASS**：退化形态走 `sha256(session_id)` 前 8 —— `seed-session → 70f6bbd7`、`seed-session-b → 3a88e3f7`（期望值由 `node:crypto` 独立复算，与探针读数一致）。
+- **C-3 PASS**：两个不同退化 id ⇒ `src=["70f6bbd7","3a88e3f7"]`（2 个不同值，未塌成一个）。
+- **C-4 PASS**：退化臂注入 2 行仍全部匹配 `^- \[时间\] \((0\.\d{3}), ([0-9a-f]{8})\) `（未匹配=0，src 全为 8 位 hex）。
+- **C-5 PASS（同一轮回归）**：`p222` **12/12**（既有 W-0～W-6 ＋ 新增 C-1～C-4）、`p221` **13/13**、`p02` **21 judgments / 0 FAIL**、`p08` **12 / 0 FAIL**；部署件与源码产物同 sha `05D2BC86…`；真库 sha/mtime 不变。
+
+### 未闭合（单列）
+
+1. **B-4 的 GNU 通道未在本机正跑**（本机无 GNU tar 二进制）；代码已按方言检测加 `--force-local`，需在你的 GNU 通道用 `LARRY_BACKUP_TAR` 复算一次才算正证。
+2. **A 的线上配置与 tracked 片段是两处**（`.dsh-home` 被忽略）⇒ 将来改配置必须同步两边，存在漂移风险；本单只能保证「片段在库 ＋ 线上已改」。
+3. **C 的 8 位哈希前缀碰撞概率未评估** —— 与 ②.2.2 未闭合同源（2^-32 量级，不是 0）。
+4. **A-2 在默认 home 新建了 `C:\Users\SuLarry\.dsh\larry-memory.db`**（约 24 KB，含两条探针种子）；留作证据，不需要可删。
+
+### 自曝
+
+- **A 探针首跑失败**：我按 `includes('dbPath')` 取行，把配置里的注释行当成 dbPath 行 ⇒ `rawDbPath=''` ⇒ 插件抛 `config.dbPath is required`。改成 `trim().startsWith('dbPath:')` 后 4/4。
+- **A 首次提交信息写错**：PowerShell 双引号把 `${DSH_HOME}` 展开成空，提交信息成了「改 \ 占位」；本地 `reset --soft` 后重提为 `bec0502`（**未推送，无他人影响**）。
+- **B-8 的前提已过期**：`--dest` 在 `e95cdad` 后本来就能成（首跑即 8/8）；本轮真正补的是 GNU 通道 `--force-local`，不是「落点可换」本身。
+- **C 探针首跑 exit 2**：换证据目录后 `old-lib` 不在默认路径 ⇒ 前置缺失；用 `P222_OLD_LIB` 指回旧证据目录后 12/12。
+- **B 组新增两个包**：`D:\Code\_backups\alt-dest\` 下两个包（19:44／19:48），未清 `_backups/larryagent` 既有资产；若要清这两个测试包，你处置。
 
 ---
 
