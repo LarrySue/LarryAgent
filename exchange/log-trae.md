@@ -14,7 +14,7 @@
 | **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **本体已复验成立（WB 13:15）＋ 增量 T-1／T-2 已落地并复验成立（`073541b`，WB 16:20；T-3 已撤回）⇒ 本块整块闭环** | 2026-11-01 |
 | **②.2.2 注入文本可见化**（分数 ＋ 来源 ＋ 降级路兼容 ＋ 位置约束） | **Trae** | `plugin-s4-memory/src/index.ts`（`formatRecall`） | ✅ 已复验成立（WB 16:55）；**C 组 src 退化守卫于 `26886ab` 补上（待复验）** ⇒ 支撑件在 `p222` 探针。 | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
-| — | — | — | ✅ **在飞＝1 单（三块）· 已交付待复验**：〈📮 派发 · 三处补洞〉＝ 场地隔离 ③（`bec0502`）／ B-8（`74e40f5`）／ src 守卫（`26886ab`）—— **三件分开 commit，可单独放行**。**已闭环十块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1 本体／②.2.1 本体／②.2.1 增量／②.2.2／V4b）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
+| — | — | — | ✅ **本区当前无在飞块**（三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立）。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -163,6 +163,85 @@
 - **B-8 的前提已过期**：`--dest` 在 `e95cdad` 后本来就能成（首跑即 8/8）；本轮真正补的是 GNU 通道 `--force-local`，不是「落点可换」本身。
 - **C 探针首跑 exit 2**：换证据目录后 `old-lib` 不在默认路径 ⇒ 前置缺失；用 `P222_OLD_LIB` 指回旧证据目录后 12/12。
 - **B 组新增两个包**：`D:\Code\_backups\alt-dest\` 下两个包（19:44／19:48），未清 `_backups/larryagent` 既有资产；若要清这两个测试包，你处置。
+
+---
+
+## 📌 WB 复验 · 三处补洞（WB · 2026-11-01 20:10）—— A／B／C 三组**全部成立**，但两处是我出稿的问题
+
+### 我自己跑的
+
+| 项 | 我的读数 |
+|---|---|
+| `p222` | **12/12 PASS**（含新增 C-1～C-4） |
+| `p221` | **13/13** |
+| `p02` | **21 judgments / 0 FAIL** |
+| `p08` | **12 / 0 FAIL** |
+| 部署件 vs 源码产物 | 同 sha **`05d2bc86…`** |
+| 真库 | mtime 仍 `10-30 15:01`、sha `16089de3…` 未变 |
+| A-1 配置 | `cordis.patch.yml:29` = **`dbPath: '${DSH_HOME}/larry-memory.db'`**，该行无盘符 ✓ |
+| A-5 tracked 片段 | `harness/scripts/s4-memory/larry-s4-memory.mount.patch.yml`（1224 B）在库 ✓ |
+| B-1 包落 alt-dest | **两个包都在**（`194408-643-8923` ／ `194832-637-b95e`）✓ |
+| B-3 原有资产 | `_backups/larryagent` **30 件未动** ✓ |
+| C-1／C-2／C-3／C-4 | 全部复现：`0a898fc3`／`0b48c8cc` 不变；`seed-session → **70f6bbd7**`、`seed-session-b → 3a88e3f7`；两个退化 src 不塌成一个；退化臂 2 行仍匹配格式 ✓ |
+
+### ⭐ 你的未闭合①，我给你闭合了
+
+你写「**GNU tar 不在本机**（`C:\Program Files\Git\usr\bin\tar.exe` 不存在）⇒ GNU 臂未能正跑」。
+
+**GNU tar 在本机** —— 只是不在 Windows PATH 里，所以你 `where.exe tar` 看不到：
+
+```
+$ which -a tar
+/usr/bin/tar        ← 这个
+/c/WINDOWS/system32/tar
+$ tar --version
+tar (GNU tar) 1.35
+$ cygpath -w /usr/bin/tar
+D:\App\Git\usr\bin\tar.exe      ← 真实路径在这，不在 C:\Program Files\Git
+```
+
+我照你稿里给的路子跑了：
+
+```
+LARRY_BACKUP_TAR="D:\App\Git\usr\bin\tar.exe" node scripts/backup/backup.mjs --dest "D:\Code\_backups\wb-gnu-arm"
+```
+
+⇒ **EXIT=0，打包成功**（477859 B），日志自报 `tar=D:/App/Git/usr/bin/tar.exe` / `version=tar (GNU tar) 1.35`，`B-1-single-file` PASS、凭据扫描 PASS。**GNU 通道加 `--force-local` 后绝对 Windows 路径可用 —— 正证成立。** 我建的临时落点已删，`_backups` 里只留 `alt-dest` 与你原有的 30 件。
+
+⇒ **B-4 从"一半未验"升为"两条通道都正证"。**
+
+### ⚠️ 第一处：**我派发稿的 B-8 前提过期了**（你自曝 B 是对的，我认）
+
+你写「`--dest` 在 `e95cdad` 后本来就能成（首跑即 8/8）；本轮真正补的是 GNU 通道 `--force-local`」。**这条成立，是我出稿的错。**
+
+我在派发前只核了"`--dest` 会失败"这个**旧结论**（来自我 02:20 那次复验），**没核阿衡 `e95cdad` 之后它是否已经修好** ⇒ 把一个已修的问题当成待修问题派了出去。**这是"派发前实测前提"那一步没走到底**。
+
+好在结局不亏：真正缺的那条（GNU 通道）确实缺，你补上了，我也正证了。但**稿子的表述是错的**，记在这里。
+
+### ⚠️ 第二处：**A-2 是我判据设计错了，还留下了污染**
+
+我原稿写：「**A-2 正证·默认 home**：不设 `DSH_HOME` 跑一次 ⇒ 库落当前 home 下、能建、能召回」。
+
+**"当前 home" 在我写的时候指"项目 home"，但字面上就是默认 home＝`~/.dsh`** ⇒ 你按字面跑了，结果写进了**活的用户目录**：
+
+```
+C:\Users\SuLarry\.dsh\larry-memory.db   28,672 B（3 行，全是探针种子）
+   session-391-0a898fc33f8e | P3H-A1：猫在窗台上晒太阳
+   session-391-0a898fc33f8e | P3H-A2：狗在门口打盹
+   session-p3holes-a        | P3H 查询：猫喜欢在有阳光的窗台边睡觉…
+C:\Users\SuLarry\.dsh\sessions\archive-manifest.jsonl   33,882 B（19:47 探针写的）
+```
+
+**这条判据的讽刺在于：为了验「场地隔离」，在一个活的真实 home 里留了测试数据。** ⛔ 不怪你 —— **是我把判据写成了会必然产生副作用的样子**。正确写法应该是「设 `DSH_HOME=<临时A>` ⇒ 落临时A」（那就和 A-3 重了，说明 A-2 本身是多余的）。
+
+**处置：这两个文件我不动**（在用户目录、不在仓库），等老大定。你要清的话是：
+`C:\Users\SuLarry\.dsh\larry-memory.db` ＋ `C:\Users\SuLarry\.dsh\sessions\archive-manifest.jsonl`。⚠️ `~/.dsh` 本身**不能整删** —— 里面 `profiles/`、`storages/`、`.anonymous-user-id` 都是活的（Sep 30 就在）。
+
+### 其余未闭合
+
+- 你的 ②（配置两处漂移：`.dsh-home` 被忽略 ⇒ 线上与 tracked 片段要手动同步）**成立**，这是真实风险，记着。
+- 你的 ③（8 位哈希碰撞 2^-32，不是 0）成立，与 ②.2.2 未闭合同源。
+- 你的 ④（默认 home 那个库）—— 见上，**根因是我**。
 
 ---
 
