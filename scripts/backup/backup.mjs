@@ -59,6 +59,20 @@ function resolveTar() {
 }
 const TAR_BIN = resolveTar()
 
+/**
+ * tar 方言探测（B-4，2026-11-01）：GNU tar 会把 `C:`／`D:` 当远程主机（host:path），
+ * 但 GNU 的 `--force-local` 可强制按本地文件解析 ⇒ 两条通道都能跑绝对 Windows 路径。
+ * bsdtar（System32）不接受该开关、也本就不需要 ⇒ 只对 GNU 加。
+ * `LARRY_BACKUP_TAR` 故障注入指向 GNU 时同样生效。
+ */
+function tarVersionOf(bin) {
+  const result = spawnSync(bin, ['--version'], { encoding: 'utf8' })
+  return ((result.stdout || result.stderr || 'unknown').split(NL)[0] || 'unknown').trim()
+}
+const TAR_VERSION = tarVersionOf(TAR_BIN)
+const TAR_IS_GNU = TAR_VERSION.toLowerCase().includes('gnu tar')
+const TAR_LOCAL_FLAGS = process.platform === 'win32' && TAR_IS_GNU ? ['--force-local'] : []
+
 const findings = []
 const say = (line = '') => console.log(line)
 const judge = (id, ok, detail) => {
@@ -361,7 +375,7 @@ function buildManifest(context) {
   push('```bash', NL)
   push(`# 1) 解包到空目录（⛔ 不要原地解开覆盖）`, NL)
   push(`tar -xzf ${packageName} -C /path/to/empty/restore`, NL)
-  push(`# Windows：若 PATH 里的 tar 是 GNU（Git/MSYS），改用系统 bsdtar，⛔ 不要用 GNU tar 解绝对盘符路径`, NL)
+  push(`# Windows：若 PATH 里的 tar 是 GNU（Git/MSYS），可加 --force-local，或改用系统 bsdtar`, NL)
   push(`# & "$env:SystemRoot\\System32\\tar.exe" -xzf ${packageName} -C <绝对解包目录>`, NL, NL)
   push(`# 2) 校验（Linux/macOS 自带 sha256sum；Windows 用下面的 PowerShell 等价）`, NL)
   push(`cd /path/to/empty/restore`, NL)
@@ -487,17 +501,17 @@ function buildManifest(context) {
 
 function tarCreate(packagePath, stageDir) {
   // ⚠️ 所有路径参数（-f 包路径 / -C 工作目录）都走 TAR_BIN（Windows 优先 bsdtar）；
-  // 成员名固定为相对 `.`，⛔ 不传绝对盘符成员名。GNU tar 会把 C:/D: 当远程主机。
-  const result = spawnSync(TAR_BIN, ['-czf', packagePath, '-C', stageDir, '.'], { encoding: 'utf8' })
+  // 成员名固定为相对 `.`，⛔ 不传绝对盘符成员名。GNU tar 会把 C:/D: 当远程主机
+  // ⇒ 走 GNU 时额外加 `--force-local`（TAR_LOCAL_FLAGS）。
+  const result = spawnSync(TAR_BIN, [...TAR_LOCAL_FLAGS, '-czf', packagePath, '-C', stageDir, '.'], { encoding: 'utf8' })
   if (result.error) return { ok: false, detail: `tar 不可用：${result.error.message}` }
   if (result.status !== 0) return { ok: false, detail: `tar 退出 ${result.status}：${result.stderr}` }
   return { ok: true, detail: `tar -czf ${basename(packagePath)}` }
 }
 
 function tarExtract(packagePath, extractDir) {
-  // 解包方向同样两个路径参数（-f 包路径 / -C 解包目录）都走 TAR_BIN；
-  // 不指定成员名 ⇒ 不触发 GNU tar 的绝对盘符/远程主机分支。
-  const result = spawnSync(TAR_BIN, ['-xzf', packagePath, '-C', extractDir], { encoding: 'utf8' })
+  // 解包方向同样两个路径参数（-f 包路径 / -C 解包目录）都走 TAR_BIN；走 GNU 时带 `--force-local`。
+  const result = spawnSync(TAR_BIN, [...TAR_LOCAL_FLAGS, '-xzf', packagePath, '-C', extractDir], { encoding: 'utf8' })
   if (result.error) return { ok: false, detail: `tar 不可用：${result.error.message}` }
   if (result.status !== 0) return { ok: false, detail: `tar 退出 ${result.status}：${result.stderr}` }
   return { ok: true, detail: 'tar -xzf' }
@@ -561,9 +575,7 @@ function main() {
   say(`⚠️ D: 与 C: 同属 Disk 0，此落点不防盘坏；请另拷到外部介质。`)
   say(`repo=${repoRoot}`)
   say(`dest=${destDir}`)
-  const tarVersionResult = spawnSync(TAR_BIN, ['--version'], { encoding: 'utf8' })
-  const tarVersion = ((tarVersionResult.stdout || tarVersionResult.stderr || 'unknown')
-    .split(NL)[0] || 'unknown').trim()
+  const tarVersion = TAR_VERSION
   say(`tar=${TAR_BIN}`)
   say(`  version=${tarVersion}`)
 
