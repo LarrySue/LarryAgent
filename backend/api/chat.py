@@ -65,10 +65,6 @@ async def chat(req: ChatRequest, request: Request):
     # 非流式 JSON
     try:
         return await handle_chat(req, caller_ip)
-    except ValueError as e:
-        # _chat_flow 里 generator 推送的 error 事件对应 LLM 请求过程内部异常，归 LLMError
-        logger.warning("Chat error: %s", e)
-        raise LLMError(str(e)) from e
     except APIError as e:
         logger.error("LLM API error: %s", e)
         raise LLMError(f"LLM API error: {e}") from e

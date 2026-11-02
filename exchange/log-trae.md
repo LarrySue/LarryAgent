@@ -14,7 +14,7 @@
 | **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **本体已复验成立（WB 13:15）＋ 增量 T-1／T-2 已落地并复验成立（`073541b`，WB 16:20；T-3 已撤回）⇒ 本块整块闭环** | 2026-11-01 |
 | **②.2.2 注入文本可见化**（分数 ＋ 来源 ＋ 降级路兼容 ＋ 位置约束） | **Trae** | `plugin-s4-memory/src/index.ts`（`formatRecall`） | ✅ 已复验成立（WB 16:55）；**C 组 src 退化守卫于 `26886ab` 补上（待复验）** ⇒ 支撑件在 `p222` 探针。 | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
-| 删 `api/chat.py` ValueError 残留分支 | **Trae** | `backend/api/chat.py`（单文件） | 🔵 **已派发（2026-11-02 20:05）** ⇒ 〈📮 派发 · 删 `api/chat.py` 的 ValueError 残留分支〉，判据 **K-1～K-3**。⚠️ **前置**：先核 `LLMError` 与 `except Exception` 的对外状态码差别，**会变则停手报 WB** | 2026-11-02 |
+| 删 `api/chat.py` ValueError 残留分支 | **Trae** | `backend/api/chat.py`（单文件） | 🔵 **已交付（2026-11-02 20:26）待 WB 复验** ⇒ K-1 读数经 WB 20:25 放行；K-2 = 0 增 4 删；K-3 删前后 27 passed 持平。详见〈✅ Trae 交付 · K-1～K-3〉 | 2026-11-02 |
 | — | — | — | ✅ **本区当前无在飞块**（三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立）。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -83,6 +83,27 @@
 - **日志 warning → exception** 是**服务端内部**、不出门；带 traceback **反而更利于排查** ⇒ 可接受。
 
 **附一条（K-3 的具体化）**：删后跑相关测试，**重点核有没有用例按 detail 的精确串断言**（`assert detail == …` 一类）。**若有 ⇒ 报我**，⛔ 别改测试让它过。
+
+### ✅ Trae 交付 · K-1～K-3（2026-11-02 20:26）—— 待 WB 复验
+
+**改动**：删 `backend/api/chat.py` 的 `except ValueError` 分支（4 行，含旧归因注释），其余未动。
+
+**K-1 读数**（20:20 已报，WB 20:25 放行）：
+- `backend/main.py:92-97` — LarryException handler：`status_code=exc.status_code`，body = `{"error": exc.error_type, "detail": exc.detail}`
+- `backend/exceptions.py:38-42` — `LLMError`：`error_type="LLM_ERROR"`、`status_code=502`
+- 删前 `chat.py:68-71` ⇒ `LLMError(str(e))`；删后落 `chat.py:71-73` ⇒ `LLMError(f"LLM request failed: {e}")`
+- 结论：502→502、LLM_ERROR→LLM_ERROR，机器可读契约不变；detail 前缀变化经 WB 裁为「不算会变」
+- 补充读数：流式路径的异常发生在 `StreamingResponse` 迭代期内（响应头已发出），**两版都不经过该分支**；该分支只历史性地服务非流式路径
+
+**K-2**：`git diff --numstat -- backend/api/chat.py` ⇒ `0	4	backend/api/chat.py`
+
+**K-3**：
+- 删前基线 `python -m pytest tests/test_exceptions.py tests/test_chat_service.py -q` ⇒ **27 passed**；删后同命令 ⇒ **27 passed**（无新增红）
+- 追加 `python -m pytest tests/test_conversations.py tests/test_auth_middleware.py -q` ⇒ **25 passed**
+- 精确串断言核（`backend/tests/` grep `LLM request failed|Chat error` ＋ `detail` 断言）：**零命中**；仅两处包含式断言（`test_conversations.py:177` "Conversation not found"、`test_archive.py:244` "trash"），与该分支无关
+- 未改任何测试
+
+**提交**：本日志与代码同笔 commit。
 
 ---
 
