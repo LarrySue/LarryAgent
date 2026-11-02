@@ -21,6 +21,7 @@
 > ✅ **20:05 两单收妥**：
 > ① **Qoder docs 升格一批**（`6d89009`）**复验成立**：砚砚三条进 `local-env.md` §8.8（含负向约束写法）；正本过期句已订正；方法论六条进 `doc-audit-criteria.md` §八。
 > ② **ZCode 题面答复**：② 题面补全（**ValueError** 残留，WB 转抄丢关键词），WB 独立复算成立 ⇒ **已派 Trae 删 `api/chat.py:68-71`**（判据 K-1～K-3，前置＝核对外状态码差别）；③ **老大裁作废** ⇒ 销账。
+> ✅ **20:30 砚砚单复验成立**（`f9fc0bc`）：删 `api/chat.py` ValueError 残留分支，K-2 0 增 4 删、K-3 WB 独立跑 **27 passed**、精确串断言零命中。**三件旧账至此全办结**。
 > 历史闭环块回溯 `git log -p -- exchange/log-workbuddy.md`。
 
 ---
