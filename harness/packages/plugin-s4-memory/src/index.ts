@@ -39,7 +39,7 @@ import {
   resolveManifestPath,
   type SessionEventStats,
 } from './manifest.js'
-import { applyRecallGate, cosineTopK, encodeVector, type RecallRow, type RecallVectorRow } from './recall.js'
+import { applyRecallGate, cosineTopK, dedupeNearDuplicates, encodeVector, type RecallRow, type RecallVectorRow } from './recall.js'
 
 export const name = 'larry-s4-memory'
 export const inject = ['sessions', 'systemPrompt']
@@ -54,6 +54,10 @@ export const P08_DEPLOY_SENTINEL = '[S36-MEMORY] p08-recall-session-filter-v1'
 export const P221_DEPLOY_SENTINEL = '[S36-MEMORY] p221-recall-gate-v1'
 /** ②.2.1 被挡记录：正常操作日志，⛔ 不混入 degraded（那是故障语义） */
 export const RECALL_GATE_MARK = '[S36-MEMORY] recall gate:'
+/** ②.2.3 本单新增部署哨兵（部署件内必须命中） */
+export const P223_DEPLOY_SENTINEL = '[S36-MEMORY] p223-recall-dedup-v1'
+/** ②.2.3 近似去重日志：正常操作日志，同 gate 口径（只看计数，⛔ 不写内容） */
+export const RECALL_DEDUP_MARK = '[S36-MEMORY] recall dedup:'
 /** 语义召回降级原因（与 DEGRADED_MARK 共用同一 stderr／degradedLogPath 通道） */
 export const EMBED_RECALL_FALLBACK = 'recall fallback to time-order'
 /** P8-d 空召回 OBS 行（与降级共用同一通道；⛔ 不冒充降级） */
@@ -119,6 +123,19 @@ export interface Config {
   /** ②.2.1 相对门宽度：只保留 score >= top1 - recallDelta；默认 0.20 */
   recallDelta?: number
   /**
+   * ②.2.3 近似去重阈值：候选之间余弦 >= 该值即视为「说同一件事」，只留 score 高者。
+   * ⚠️ 独立键，⛔ 不与 recallDelta／recallMinTop 共用（那是 query 相关性口径）。
+   * 默认 0.86，依据 2026-11-02 分布扫描：同义改写实测 0.757～0.967，跨主题最高 0.540。
+   * ⭐ 取扫描区间的保守端：误合并（丢信息）代价高于漏合并（多一条注入）。
+   */
+  recallDedupThreshold?: number
+  /**
+   * ②.2.3 去重记录文件（removed 计数，⛔ 不写内容）。
+   * 缺省只写 stderr；⛔ 不复用 recallGateLogPath／degradedLogPath ——
+   * 「相关性门挡掉」「近似合并」「故障降级」三种语义分开，混写会让解析器无法区分。
+   */
+  recallDedupLogPath?: string
+  /**
    * ②.2.1 绝对下限 **预留键，当前不生效**：绝对下限（minTop）本期未实现，
    * 全文件无读取点 —— 改它不会改变任何召回行为（假配置键，仅占位）。
    */
@@ -143,12 +160,13 @@ export interface Config {
 }
 
 const DEFAULTS: Required<Pick<Config,
-  'embedModel' | 'modelCacheDir' | 'recallLimit' | 'recallDelta' | 'collectionName' | 'injectSection' | 'injectContext' | 'manifestPath'
+  'embedModel' | 'modelCacheDir' | 'recallLimit' | 'recallDelta' | 'recallDedupThreshold' | 'collectionName' | 'injectSection' | 'injectContext' | 'manifestPath'
 >> = {
   embedModel: 'Xenova/bge-small-zh-v1.5',
   modelCacheDir: 'D:/Code/_models',
   recallLimit: 6,
   recallDelta: 0.20,
+  recallDedupThreshold: 0.86,
   collectionName: 'larry_memories',
   injectSection: false,
   injectContext: true,
@@ -198,6 +216,19 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
     process.stderr.write(text)
     if (cfg.recallGateLogPath) {
       try { appendFileSync(cfg.recallGateLogPath, text) } catch { /* 诊断失败不得反噬业务 */ }
+    }
+  }
+
+  /**
+   * ②.2.3 去重记录通道：stderr ＋ 可选 recallDedupLogPath。
+   * 口径同 gate 行（只写计数不写内容），但⛔ 不复用 gate 文件——
+   * 「被门挡掉」与「近似合并」是两个原因，混写就无法回答「少的那条去哪了」。
+   */
+  function writeDedup(line: string): void {
+    const text = line.endsWith('\n') ? line : `${line}\n`
+    process.stderr.write(text)
+    if (cfg.recallDedupLogPath) {
+      try { appendFileSync(cfg.recallDedupLogPath, text) } catch { /* 诊断失败不得反噬业务 */ }
     }
   }
 
@@ -588,12 +619,25 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
       const scoredAll = cosineTopK(rows, cached.vector, rows.length)
       if (scoredAll.length === 0) return { text: '', emptyReason: 'no-candidates' }
 
-      const gate = applyRecallGate(scoredAll, delta, limit)
+      // ②.2.3：全量候选之后、相关性门之前先做近似去重——
+      // 去重管「候选彼此是不是说同一件事」，门管「跟 query 够不够相关」，两件事不混。
+      const dedupThreshold = Number.isFinite(cfg.recallDedupThreshold)
+        ? cfg.recallDedupThreshold
+        : 0.86
+      const dedup = dedupeNearDuplicates(scoredAll, rows, dedupThreshold)
+      // 每轮都写（removed=0 也写）：少了条必须能解释，否则会和「被门挡掉」混在一起
+      writeDedup(
+        `${RECALL_DEDUP_MARK} candidates=${scoredAll.length} removed=${dedup.removedCount} threshold=${dedupThreshold} sentinel=${P223_DEPLOY_SENTINEL}`,
+      )
+
+      const gate = applyRecallGate(dedup.kept, delta, limit)
       const blockedTopText = gate.blockedTop === null ? 'none' : gate.blockedTop.toFixed(6)
       const top1Text = gate.top1 === null ? 'none' : gate.top1.toFixed(6)
       // 每轮召回都写：被挡条数 ＋ 被挡最高分（⛔ 不写内容；全挡/空池也写）
+      // ⚠️ candidates 记「进入门的条数」（= 去重后），保持 T-1b 恒等式
+      // candidates == kept + blocked + truncated 在去重场景下仍成立。
       writeGate(
-        `${RECALL_GATE_MARK} candidates=${scoredAll.length} kept=${gate.kept.length} blocked=${gate.blockedCount} truncated=${gate.truncatedCount} blocked_top=${blockedTopText} top1=${top1Text} delta=${delta} limit=${limit} reason=ok sentinel=${P221_DEPLOY_SENTINEL}`,
+        `${RECALL_GATE_MARK} candidates=${dedup.kept.length} kept=${gate.kept.length} blocked=${gate.blockedCount} truncated=${gate.truncatedCount} blocked_top=${blockedTopText} top1=${top1Text} delta=${delta} limit=${limit} reason=ok sentinel=${P221_DEPLOY_SENTINEL}`,
       )
       if (gate.kept.length === 0) return { text: '', emptyReason: 'all-below-gate' }
       return { text: formatRecall(gate.kept, true) }

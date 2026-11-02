@@ -125,3 +125,71 @@ export function applyRecallGate(scored: ScoredRecall[], delta: number, limit: nu
     truncatedCount: passed.length - kept.length,
   }
 }
+
+/** 近似去重结果（只留计数，内容不外传——日志口径同 gate 行） */
+export interface DedupeResult {
+  /** 去重后保留的行（保持输入序＝分数降序） */
+  kept: ScoredRecall[]
+  /** 被判为近似重复而移除的条数 */
+  removedCount: number
+}
+
+/** 两向量余弦；维度不符或零模长返回 null（调用方按「不可比」处理，⛔ 不当作相似） */
+function cosineOf(a: Float32Array, b: Float32Array): number | null {
+  if (a.length !== b.length || a.length === 0) return null
+  let dot = 0
+  let aNormSq = 0
+  let bNormSq = 0
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i]
+    aNormSq += a[i] * a[i]
+    bNormSq += b[i] * b[i]
+  }
+  if (!aNormSq || !bNormSq) return null
+  return dot / (Math.sqrt(aNormSq) * Math.sqrt(bNormSq))
+}
+
+/**
+ * ②.2.3 近似去重：候选之间余弦 >= threshold 的只留一条（留先出现的＝score 高者）。
+ *
+ * 口径：
+ *   - 输入 `scored` 必须已按 score 降序（cosineTopK 的返回值）⇒ 先出现的必是高分者；
+ *   - ⭐ 只与**已保留**的条目比，不是任意两两：链式近似（A≈B、B≈C、A≉C）保留 A、删 B、留 C，
+ *     避免把「传递重复」整簇压成一条；
+ *   - 拿不到向量的条目一律保留（⛔ 不因缺向量误删）；
+ *   - threshold 由调用方传，不与 recallDelta／recallMinTop 共用（那是 query 相关性口径）。
+ */
+export function dedupeNearDuplicates(
+  scored: ScoredRecall[],
+  rows: RecallVectorRow[],
+  threshold: number,
+): DedupeResult {
+  if (scored.length <= 1) return { kept: scored, removedCount: 0 }
+  const vectorById = new Map<number, Float32Array>()
+  for (const row of rows) {
+    const vector = decodeVector(row.embedding)
+    if (vector) vectorById.set(row.id, vector)
+  }
+  const kept: ScoredRecall[] = []
+  let removedCount = 0
+  for (const entry of scored) {
+    const vector = vectorById.get(entry.row.id)
+    if (!vector) {
+      kept.push(entry)
+      continue
+    }
+    let duplicate = false
+    for (const existing of kept) {
+      const existingVector = vectorById.get(existing.row.id)
+      if (!existingVector) continue
+      const cosine = cosineOf(vector, existingVector)
+      if (cosine !== null && cosine >= threshold) {
+        duplicate = true
+        break
+      }
+    }
+    if (duplicate) removedCount++
+    else kept.push(entry)
+  }
+  return { kept, removedCount }
+}

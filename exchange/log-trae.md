@@ -14,7 +14,7 @@
 | **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **本体已复验成立（WB 13:15）＋ 增量 T-1／T-2 已落地并复验成立（`073541b`，WB 16:20；T-3 已撤回）⇒ 本块整块闭环** | 2026-11-01 |
 | **②.2.2 注入文本可见化**（分数 ＋ 来源 ＋ 降级路兼容 ＋ 位置约束） | **Trae** | `plugin-s4-memory/src/index.ts`（`formatRecall`） | ✅ 已复验成立（WB 16:55）；**C 组 src 退化守卫于 `26886ab` 补上（待复验）** ⇒ 支撑件在 `p222` 探针。 | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
-| **②.2.3 近似去重**（P0 地基最后一块） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `index.ts` ＋ 新探针 `p223-dedup-probe.mjs` | 🔵 **已派发（2026-11-02 20:40）** ⇒ 〈📮 派发 · ②.2.3 近似去重〉，判据 **D-1～D-8**（正证／负证／参数独立／插入点／降级路不动／可观测／部署件／回归）。⚠️ 阈值初值**拍的**，须先扫分布再定 | 2026-11-02 |
+| **②.2.3 近似去重**（P0 地基最后一块） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `index.ts` ＋ 新探针 `p223-dedup-probe.mjs` | 🔵 **已交付（2026-11-02 21:00）待 WB 复验** ⇒ D-1～D-7 全绿；D-8 四探针回归全绿（p02 21／p08 12／p221 13／p222 12 判据 0 FAIL）。⚠️ **交付版阈值 0.86 只覆盖同义改写 22%，是否降到 0.80 待裁**（见交付段〈自曝②〉） | 2026-11-02 |
 | 删 `api/chat.py` ValueError 残留分支 | **Trae** | `backend/api/chat.py`（单文件） | ✅ **已交付并复验成立（WB 20:30，`f9fc0bc`）**：K-2 0 增 4 删；K-3 **WB 独立跑 27 passed**；精确串断言零命中。⭐ 她补的增量：流式路径异常发生在响应头已发出之后 ⇒ **结构上够不着该分支** | 2026-11-02 |
 | — | — | — | ✅ **本区当前无在飞块**（三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立）。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
@@ -99,6 +99,43 @@
 ### 7 · 回报格式
 
 结论先行 ＋ D-1～D-8 逐条读数 ＋ **阈值分布扫描结果** ＋ **自曝**（判据不适用／要订正就直接写，「成因未知」可接受，⛔ 别编）。
+
+### ✅ Trae 交付 · D-1～D-8（2026-11-02 21:00）—— 待 WB 复验
+
+**结论**：本体已落地并通过 D-1～D-7；D-8 四探针回归全绿。**交付版默认阈值 0.86，但扫描显示它只覆盖同义改写的 22%——是否下调见〈自曝②〉，请你裁。**
+
+**改动**：
+- `recall.ts`：新增 `dedupeNearDuplicates(scored, rows, threshold)` 纯函数（＋`DedupeResult`）；只与**已保留**条目比（链式近似保留簇内多条），无向量条目一律保留
+- `index.ts`：`recallDedupThreshold`（默认 0.86）＋ `recallDedupLogPath`（独立通道）；调用点在 `cosineTopK` 之后、`applyRecallGate` 之前；gate 行 `candidates` 改为去重后条数（保 T-1b 恒等式）
+- 新探针 `harness/scripts/embed-probe/p223-dedup-probe.mjs`（10 判据）
+- 部署件 `.dsh-home/…/plugin-s4-memory/lib/` 已同步（index.js／recall.js 与源码产物同 sha）
+
+**D 判据逐条**：
+
+| # | 读数 |
+|---|---|
+| D-1 | 近似三条（真实 embedding 两两 0.8385／0.901／0.8794）⇒ 注入 1 条（id=3），独立 cosineTopK top1 也是 id=3；dedup removed=2 |
+| D-2 | 不相关三条（两两 0.2842／0.4466／0.3046）⇒ 注入 3 条；removed=0 |
+| D-3 | a) 只改 recallDelta 0.20↔0.90 ⇒ removed=2／注入 1，两臂相同；b) 只改阈值 0.86↔0.70（边界对 0.7703）⇒ removed 0↔1；c) 独立键＋默认 0.86＋独立日志通道（静态） |
+| D-4 | 静态：`dedupeNearDuplicates(scoredAll` @22288 < `applyRecallGate(dedup.kept` @22596；行为（人工向量 A1=0.95／A2≈0.99／B1=0.80／B2=0.55，k=2）⇒ 注入 A1＋B1 两条（若门后去重只会剩 1 条） |
+| D-5 | 降级臂（空 cache ＋ 不可达 HF_ENDPOINT）⇒ 时间倒序 2 行、无分数前缀、无 dedup／gate 行；`fallbackRecallText` 在 git diff 中零触碰 |
+| D-6 | dedup 行 `[S36-MEMORY] recall dedup: candidates=3 removed=2 threshold=0.86 …`；D-1 removed=2／D-2 removed=0；行内无正文 |
+| D-7 | 部署件哨兵 ×1；index.js／recall.js 与源码产物同 sha |
+| D-8 | p02 21 judgments 0 FAIL／p08 12 judgments 0 FAIL／p221 13/13 PASS／p222 12/12 PASS；p223 10/10 PASS；⛔ 未改任何既有探针断言 |
+
+**阈值分布扫描**（`D:/Code/_trae-evidence/p223-dedup/scan-distribution.json`）：
+- 组内（同义改写，18 对）：min 0.7567／max 0.9674／mean 0.8344
+- 跨组（不同主题，135 对）：max 0.5401
+- 间隙 = 0.2166
+- 覆盖率：≥0.75 ⇒ 18/18（100%）；≥0.80 ⇒ 11/18（61%）；≥0.86 ⇒ 4/18（22%）；≥0.95 ⇒ 1/18
+
+**自曝**：
+① **阈值第一版 0.80 时 p221 T-1a 红**：该臂人工向量 0.95／0.90 两两余弦 = 0.855 > 0.80 ⇒ 去重删 2 条，candidates 5→3、truncated 2→0。根因是 p221 的人工向量是「分数梯度」不是「语义多样性」，去重对它们生效属正常行为。
+② **交付版 0.86 是取保守端**：只覆盖同义改写的 22%（0.95 档只抓近乎逐字），`cat` 类「同主题、措辞差异大」（0.757～0.784）不会被合并。**若要达到 ②.2.3 目标（6 条里 3 条说同一件事），0.80 更合适；代价是 p221 T-1a 臂必须显式隔离去重（该臂传 `recallDedupThreshold: 1.01`）——那是装置适配不是改断言，但 p221 是既有件，我不自行改。请你裁：保持 0.86（p221 零改动）／降到 0.80＋p221 加隔离配置。我倾向后者，但听你的。**
+③ **dedup 日志改用独立通道**（新增 `recallDedupLogPath`）：第一版混写 `recallGateLogPath` 时 p221 T-1b 把 dedup 行当 gate 行解析 ⇒ 红。D-6「同 gate 行口径」我理解为「只写计数不写内容」，通道独立是为让「被门挡掉／近似合并」可区分——正是你 D-6 理由里说的别混在一起。若你要的就是同一文件，我改回。
+④ 小项：gate 行 `candidates` 语义改为「去重后进入门的条数」以保 T-1b 恒等式；p221 各臂 removed=0 时数值不变。
+
+**提交**：本日志与代码同笔 commit。
 
 ---
 
