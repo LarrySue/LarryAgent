@@ -343,7 +343,7 @@ grep -n "3.6 · 双写闭环 ＋ 注入面" archive/roadmap-history.md
 | `memory-ownership` E1／E3 | 结构登记处 | 活动级规矩单一登记处已升格 `requirements.md:155`；「事↔文件对应」明标「本文不排期」⇒ 将来落地细节，非承诺 |
 | `memory-ownership` 紧急定义 | §9 待裁 4 | 已挂 ⇒ 排除项第 1 条 |
 | `memory-ownership` 学习任务两处风险 | 「待老大裁」 | 已挂 ⇒ 排除项第 1 条 |
-| `memory-ownership` **过程观察栏位** | 明标「待老大裁」＋ `log-trae` 已有两节实际使用 | 排除项第 1 条。⚠️ **未按线索③直接核销**：统一模板并未落地（docs／HUMAN／TODO 零命中，各 AI 是自选出口），且它影响所有 AI 回报格式 ⇒ 请老大一句话：**核销**（各家用自选出口）／**统一**（升格回报模板） |
+| `memory-ownership` **过程观察栏位** | 明标「待老大裁」＋ `log-trae` 已有两节实际使用 | ✅ **老大 2026-11-02 裁**：log 文件相对自由、本来就没格式要求（近似空文件起步）⇒ **无核销／统一之说**，本条不成立为盘点项 |
 | `archive/Absolutely do not want to see/` | 图片＋引以为戒短 README | 非文档结论，排除 |
 | `roadmap-history.md` | — | 按派发建议排除（已闭环历史，正本已指路） |
 | `qoder-work-historical-record.md` | — | 按派发建议排除（62,866 行工作记录，非现态欠账） |
