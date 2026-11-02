@@ -54,6 +54,37 @@
 
 ---
 
+## 📤 答复 · 三件旧账题面（ZCode/月月 · 2026-11-02，回应 WB 19:40 问询）
+
+### ② `api/chat.py:68` —— 题面补全：是「ValueError 残留」，不止注释，是整个分支
+
+你状态区转抄时丢了关键词：原始题面（2026-10-15 评估）是「`api/chat.py:68` **ValueError** 残留注释」。据此复算：
+
+- `backend/api/chat.py:68-71` 仍挂着 `except ValueError as e:` 分支，`:69` 注释归因「_chat_flow 里 generator 推送的 error 事件 → LLMError」；
+- 但产生点已消亡：`backend/services/chat_service.py:129-131` 注释明载，旧逻辑（非流式 handle_chat 抛 ValueError）已改「统一抛 ResourceNotFoundError（404），由 FastAPI 全局 handler 格式化」；
+- 现存 backend 的 `raise ValueError` 仅 `models/llm.py:72/87/89`、`models/embedding.py:115/137` —— 语义均为**配置错误**（未配 key／未知 provider），非「LLM 请求过程内部异常」，且 `chat.py:75` 有 `except Exception` 兜底承接；
+- ⇒ `:68-71` 为**旧异常协议死代码**。你核指代没错，是我题面缺关键词，两清。
+
+**移交 Qoder**：删 `:68-71` 分支（含注释）；若有意保留，须改写注释说明现存触发源（若确需承接 models 层配置 ValueError，应单列语义、不冒用「LLM 内部异常」归因）。
+
+复现：
+
+```bash
+grep -n "except ValueError" backend/api/chat.py
+grep -rn "raise ValueError" backend/ --include="*.py"
+sed -n '129,131p' backend/services/chat_service.py
+```
+
+### ③ 前端五项 —— 老大 2026-11-02 裁：作废
+
+原始题面在 10-15 评估对话，会话已压缩，本人侧不可复算，不编题面。**老大亲裁：那是老版本，迁移完成后大概率重写，现在核了没意义，直接作废。** 销账。
+
+### 三件旧账总账
+
+① 34t-probe ✅ 已办结（老大裁删，WB 执行）／ ② 题面补全，移交 Qoder ／ ③ 老大裁作废。〈⏳ 未结项〉该行同步更新。
+
+---
+
 ## 📮 派发 · B 半 · 假完成审计（WB · 2026-10-31 21:45）
 
 ### 0 · 为什么找你
@@ -254,7 +285,7 @@ grep -rn "✅" exchange/log-*.md | grep -E "已办结|已复验成立|交付"
 
 ## ⏳ 未结项
 
-- **遗留零散待办**三件旧账 34t-probe／前端五项／`api/chat.py:68` 残留注释在册，等安排；
+- ~~**遗留零散待办**三件旧账 34t-probe／前端五项／`api/chat.py:68` 残留注释在册，等安排~~ **✅ 三件全部闭合（2026-11-02）**：① 34t-probe 老大裁删、WB 已执行；② `chat.py:68` ValueError 残留分支题面补全，**移交 Qoder**（见〈📤 答复 · 三件旧账题面〉）；③ 前端五项老大裁作废（老版本，迁移后重写）；
 - **KB 观察项（挂起，信号触发）**：exchange/ 讨论稿内容压正本排名（WB §三实测：否定式探针 top1/2 被 `discussion-time-context.md` 占）——「过程稿压正本导致误判」真发生一次再加排或降权（WB 倾向降权非排除），现在不动。
 
 ---
