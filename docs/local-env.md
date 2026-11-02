@@ -453,6 +453,14 @@ Error: [safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":57,"threshold":
    - **现象**：依赖 `installPlugin` 的装置（如 `run-s0-e2e.mjs` 的各变体）报 `plugin add: exit=1` ／ `dsh: pnpm failed in profile directory <临时home>\profiles\sdk`，**看着像工程坏了、实为复制姿势**。
    - ✅ **已实施（2026-09-20，`4a2bb5b`）**：`cpSync` 出副本后**删掉副本的 `node_modules/.modules.yaml`**，交给 pnpm 重建（`s0-e2e.test.ts`：定义 `:128-141`／调用 `:276`）⇒ 本机五变体 5/5 全绿（Trae 两轮 ＋ Claude 两轮，判据字段逐条一致）。**成因 = pnpm 的平台分支**（Windows 写绝对 ／ POSIX 写相对）**＋ pnpm store 按卷回落 —— 机制见 §12.1 ／ §12.2**。⚠️ 本机 `.dsh-home` 的 profile 现场建于 `2026-09-17 00:11`（早于 3.7.3 的依赖清理约 19.7 h）⇒ **该失效非本次清理所致**。
 
+### 8.8 ⭐ SDK 通道的判别力边界（2026-11-02 自 `log-trae` 过程观察升格）
+
+> 来源：3.6 记忆插件测试（`run-36-memory.mjs`）的通道实测。⚠️ 与 `docs/dsh/dsh-migration.md` 的「`-32603` 间歇出现、成因未知」**不是同一件事**：那条是症状留痕，本条是**工具通道的判别力边界**，⛔ 别合并。
+
+1. **⛔ 不能用 SDK 通道判「失败是否由断言引起」**：`DeepSeekHarness.run()` 在子进程因断言退出时只抛 `cannot create effect on inactive context` —— **既无退出码、也无 stderr 尾部**；必须**裸起 ＋ `dsh-driver`** 直接取 stderr 原文与退出码，否则会得到「失败了但说不清为什么」的假读数。
+2. **断言触发时 dsh 是 fail-loud**：stderr 一行断言 ＋ 退出码 1，不重试、不静默继续。
+3. **复算与判别力边界**：`cd harness && $env:S36_PHASE='iso'; node scripts/run-36-memory.mjs`（退出码 0=全绿／1=有红／2=前置缺失；**不联网、不调模型**，`DEEPSEEK_API_KEY` 在 child env 显式删除）。该用例验的是「插件加载 ＋ 落盘路径 ＋ 协议握手」，**不含**「模型真的说了一句话」（V3／V4 0 token）。
+
 ## 9. Vue/Tauri ↔ DSH 连通复跑（DSH-2.3）
 
 > **来源**：原文为 Trae 实测报告 `docs/dsh/dsh-23-vue-tauri-connect-trae.md`（2026-09-09，基线 `dsh-v0.1.2-rc.1`）。2026-09-11 吸收至本节，独立报告文件随之删除（内容等价）。
