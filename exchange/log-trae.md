@@ -14,6 +14,7 @@
 | **②.2.1 相关性门**（相对门 ＋ 上限 ＋ 被挡记录） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `src/index.ts` | ✅ **本体已复验成立（WB 13:15）＋ 增量 T-1／T-2 已落地并复验成立（`073541b`，WB 16:20；T-3 已撤回）⇒ 本块整块闭环** | 2026-11-01 |
 | **②.2.2 注入文本可见化**（分数 ＋ 来源 ＋ 降级路兼容 ＋ 位置约束） | **Trae** | `plugin-s4-memory/src/index.ts`（`formatRecall`） | ✅ 已复验成立（WB 16:55）；**C 组 src 退化守卫于 `26886ab` 补上（待复验）** ⇒ 支撑件在 `p222` 探针。 | 2026-11-01 |
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
+| 删 `api/chat.py` ValueError 残留分支 | **Trae** | `backend/api/chat.py`（单文件） | 🔵 **已派发（2026-11-02 20:05）** ⇒ 〈📮 派发 · 删 `api/chat.py` 的 ValueError 残留分支〉，判据 **K-1～K-3**。⚠️ **前置**：先核 `LLMError` 与 `except Exception` 的对外状态码差别，**会变则停手报 WB** | 2026-11-02 |
 | — | — | — | ✅ **本区当前无在飞块**（三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立）。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -31,6 +32,43 @@
   9. **文件不是证据，运行自报的标识才是**（.pnpm 截断名 ／ 会话 id ／ pid 一律以自报为准）。
 
 ---
+
+---
+
+## 📮 派发 · 删 `api/chat.py` 的 ValueError 残留分支（WB · 2026-11-02 20:05）—— 小活，先核再删
+
+### 0 · 这是什么
+
+月月答我问询时题面补全了：原题面是「`api/chat.py:68` **ValueError** 残留」（我转抄丢了「ValueError」这个关键词，导致我第一轮核不出来）。
+
+**我独立复算过，判定成立**：
+- `except ValueError` 全 `backend/api/chat.py` 仅 `:68` 一处；
+- `chat_service.py:129-131` 注释明载旧逻辑已改抛 `ResourceNotFoundError`（404）⇒ **原产生点消亡**；
+- 现存 `raise ValueError` 仅 `models/llm.py:72/87/89`、`models/embedding.py:115/137`，**语义全是配置错误**（未配 key／未知 provider）。
+
+### 1 · ⚠️ 先核一件再动手（前置，不满足就停手报我）
+
+**这个分支不是零影响删除。** 现存那些配置错误 `ValueError` 若传到这里，**现在会被归成 `LLMError`**；删掉后它们会落到 `:75` 的 `except Exception` 兜底。
+
+⇒ **先报一条读数**：`LLMError` 与通用 `Exception` 兜底在**对外 HTTP 状态码／响应体**上差多少（读 `backend/` 的异常 handler 与 `except Exception` 分支）。
+- 若**对外表现一致** ⇒ 直接删 `:68-71`（含 `:69` 那句旧归因注释）。
+- 若**会变**（如 502 → 500）⇒ **停手报我**，那是可观察的 API 行为变化，得老大点头。
+
+⛔ 别为了让判据变绿去改别处（如顺手改 `llm.py` 的 raise 类型）。
+
+### 2 · 判据
+
+| # | 判据 |
+|---|---|
+| **K-1** | 前置读数已报：两种路径的**对外状态码／响应体**是否一致（贴代码行号） |
+| **K-2** | 若删：`git diff --numstat -- backend/api/chat.py` ⇒ **0 增 4 删**（`:68-71` 四行），⛔ 不动其他行 |
+| **K-3** | 删后 `backend/tests/` 相关用例**不新增红**（若原有 `test_exceptions.py` 覆盖该分支，报它的读数，⛔ 别改测试让它过） |
+
+### 3 · 边界
+
+- 只动 `backend/api/chat.py` 一个文件。
+- ⛔ 不改 `chat_service.py`、不改 `models/`。
+- 若你认为**该保留但改写注释**（把分支语义单列成「配置错误」），那是另一条路 ⇒ 先报我，⛔ 不自行选。
 
 ---
 
