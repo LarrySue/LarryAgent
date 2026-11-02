@@ -49,8 +49,6 @@ importers:
 
   packages/plugin-34-probe: {}
 
-  packages/plugin-34t-probe: {}
-
   packages/plugin-approval-answerer: {}
 
   packages/plugin-approval-probe: {}

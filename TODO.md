@@ -447,7 +447,7 @@
 
 - [ ] ⏸ **A-1 token 用量未入库 ⇒ 成本不可见**（2026-11-02 · A 半首批）—— `product-positioning.md` 2.8.3 自认「至今未补」「当前无排期」；实核 `backend/db/schema.py` 四张表**无 token/usage 字段**。**老大 2026-11-02 裁「先放」**：成本主要由他本人控制、目前目测还好、做着看 ⇒ ⛔ 不立项，留此备回头。
 - [ ] ⏸ **A-2 ChromaDB 重建工具未实现**（2026-11-02 · A 半首批）—— `product-positioning.md:243`「可由 SQLite 重建」是写进产品的**结构承诺**，而 `backend/**/*.py` grep 重建实现**零条**；且所指「2.4.4 计划」对不上（那是记忆失效机制）。WB 建议**随 Chroma 启用时一并做**（现 0 向量 ⇒ 做了无对象可重建、无从验）。**老大未单独裁**，待确认。
-- [ ] ⏸ **E-3 zcode 三件旧账**（2026-11-02 · 第三批；**19:40 WB 已逐条核**）—— **① 34t-probe**：装置仍在（`harness/scripts/run-34t-probe.mjs`），`:518` `rmSync(join(sub,'home'))` **恒 no-op**（`sub` 是证据子目录、其下无 home）⇒ 方案已备（照 `run-34-compaction.mjs:232-241` 改回收＋加 `S34_KEEP_HOME`），⏳ **待老大定装置去留**（留则派 Trae 修／不留随 DSH-6 测试重建核销）；**② `api/chat.py:68`**：WB **核不出问题**（`_chat_flow` 实存于 `chat_service.py:11`，注释有意义）；**③ 前端五项**：全仓无出处。②③ 已请 ZCode 补题面，⛔ 不替她编。
+- [ ] ⏸ **E-3 zcode 三件旧账**（2026-11-02 · 第三批；**19:40 WB 已逐条核**）—— **① 34t-probe**：✅ **老大 2026-11-02 19:47 裁「直接删」，WB 已删** —— `harness/scripts/run-34t-probe.mjs` ＋ `harness/packages/plugin-34t-probe/` 整包（3 文件，**无 node_modules**，已核）＋ `pnpm-lock.yaml` 登记行；⚠️ 包内 `lib/index.js` 是**未跟踪构建产物**（不在 git），随删消失、可再生；**② `api/chat.py:68`**：WB **核不出问题**（`_chat_flow` 实存于 `chat_service.py:11`，注释有意义）；**③ 前端五项**：全仓无出处。②③ 已请 ZCode 补题面，⛔ 不替她编。
 - [ ] ⏸ **E-4 ＝ `log-qoder.md` #48③「一次提交不混两层」**（2026-11-02 · 第三批）—— 治理层改动与产品层改动是否分笔提交，**明标待老大裁**。⚠️ WB 今日提交全为混笔，若立此条即改习惯。
 - [ ] 🔵 **archive 类源盘点在 Qoder 手上**（2026-11-02 派，老大裁「文档整理交给千千」）—— 判据 G-1～G-5；产出回来后**逐条进本区**，⛔ 不在 exchange 落。
 

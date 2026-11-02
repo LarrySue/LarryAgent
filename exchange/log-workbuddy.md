@@ -17,7 +17,7 @@
 > 🔵 **19:40 推主线 · 两件新动**：
 > ① **docs 升格一批 → Qoder**（〈📮 派发 · docs 升格一批〉）：J-1 砚砚三条过程观察升格（主件）／J-2 正本过期句订正／J-3 方法论六条升格。
 > ② **三件旧账题面问询 → ZCode**（〈📥 WB 问询 · 三件旧账的题面〉）：②③ 需她补题面。
-> ⏸ **34t-probe 装置去留待老大定**：留则派 Trae 修 `:518` 回收（方案已备），不留则随 DSH-6 测试重建核销。
+> ✅ **34t-probe 已删（老大 19:47 裁「直接删」，WB 执行）**：`harness/scripts/run-34t-probe.mjs` ＋ `harness/packages/plugin-34t-probe/` 整包 ＋ `pnpm-lock.yaml` 登记行。包内仅 3 文件、**无 node_modules**；`lib/index.js` 为未跟踪构建产物。
 > 历史闭环块回溯 `git log -p -- exchange/log-workbuddy.md`。
 
 ---
