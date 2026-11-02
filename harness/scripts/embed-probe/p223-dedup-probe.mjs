@@ -6,8 +6,8 @@
  *   D-1 正证：3 条近似（真实 embedding，彼此余弦 ≥ 默认阈值）⇒ 只留 1 条，且是独立算出的 top1
  *   D-2 负证：3 条不相关 ⇒ 3 条全在（⛔ 防「去重」做成「清空」）
  *   D-3a 反向独立：只改 recallDelta（0.20 ↔ 0.90）⇒ 去重行为不变（removed / 注入条数相同）
- *   D-3b 正向独立：只改 recallDedupThreshold（0.86 ↔ 0.70）⇒ 去重行为变化（removed 0 ↔ 1）
- *   D-3c 默认键：部署件含独立键 recallDedupThreshold，默认 0.86（静态）
+ *   D-3b 正向独立：只改 recallDedupThreshold（0.80 ↔ 0.70）⇒ 去重行为变化（removed 0 ↔ 1）
+ *   D-3c 默认键：部署件含独立键 recallDedupThreshold，默认 0.80（静态）
  *   D-4 插入点与留谁：人工向量精确构造（A1 0.95 / A2≈A1 0.99 / B1 0.80 / B2 0.55，k=2）
  *                       去重在全量候选之后、applyRecallGate 之前 ⇒ 注入 A1＋B1（2 条）
  *                       若顺序反转（门后去重）⇒ 只注入 1 条，可区分
@@ -242,10 +242,10 @@ judge('D-4-static-order', dedupCallAt >= 0 && gateCallAt > dedupCallAt,
 
 // D-3c 静态：独立配置键与默认值
 const hasDedupKey = deployedText.includes('recallDedupThreshold')
-const defaultLine = /recallDedupThreshold:\s*0\.86/.test(deployedText)
+const defaultLine = /recallDedupThreshold:\s*0\.80/.test(deployedText)
 const dedupChannel = deployedText.includes('recallDedupLogPath')
 judge('D-3c-default-key', hasDedupKey && defaultLine && dedupChannel,
-  `部署件含独立键 recallDedupThreshold=${hasDedupKey}，默认值 0.86=${defaultLine}，独立日志通道 recallDedupLogPath=${dedupChannel}`)
+  `部署件含独立键 recallDedupThreshold=${hasDedupKey}，默认值 0.80=${defaultLine}，独立日志通道 recallDedupLogPath=${dedupChannel}`)
 
 const embedder = createEmbedder({ modelId: MODEL_ID, cacheDir: MODEL_DIR })
 
@@ -339,12 +339,12 @@ judge('D-3a-delta-independent',
   `只改 recallDelta：0.20 ⇒ removed=${deltaSmall.dedup?.removed ?? '?'} 注入 ${deltaSmall.ids.length}；0.90 ⇒ removed=${deltaBig.dedup?.removed ?? '?'} 注入 ${deltaBig.ids.length}（两臂必须相同）`)
 
 // D-3b 正向：只改 recallDedupThreshold ⇒ 去重行为变化
-const borderHigh = await realArm('d3-threshold-086', { query: QUERY, texts: BORDER_TEXTS, recallDelta: 1.0, dedupThreshold: 0.86 })
+const borderHigh = await realArm('d3-threshold-080', { query: QUERY, texts: BORDER_TEXTS, recallDelta: 1.0, dedupThreshold: 0.80 })
 const borderLow = await realArm('d3-threshold-070', { query: QUERY, texts: BORDER_TEXTS, recallDelta: 1.0, dedupThreshold: 0.70 })
 judge('D-3b-threshold-key',
   borderHigh.dedup?.removed === 0 && borderHigh.ids.length === 2
     && borderLow.dedup?.removed === 1 && borderLow.ids.length === 1,
-  `边界对余弦=${JSON.stringify(borderHigh.result.pairwise)}；阈值 0.86 ⇒ removed=${borderHigh.dedup?.removed ?? '?'} 注入 ${borderHigh.ids.length}；阈值 0.70 ⇒ removed=${borderLow.dedup?.removed ?? '?'} 注入 ${borderLow.ids.length}`)
+  `边界对余弦=${JSON.stringify(borderHigh.result.pairwise)}；阈值 0.80 ⇒ removed=${borderHigh.dedup?.removed ?? '?'} 注入 ${borderHigh.ids.length}；阈值 0.70 ⇒ removed=${borderLow.dedup?.removed ?? '?'} 注入 ${borderLow.ids.length}`)
 
 // ══════════════════════════════════════════════════════════════════════════
 // D-4 行为：人工向量精确构造，验证插入点与「留高分者」

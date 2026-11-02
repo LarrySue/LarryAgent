@@ -125,8 +125,8 @@ export interface Config {
   /**
    * ②.2.3 近似去重阈值：候选之间余弦 >= 该值即视为「说同一件事」，只留 score 高者。
    * ⚠️ 独立键，⛔ 不与 recallDelta／recallMinTop 共用（那是 query 相关性口径）。
-   * 默认 0.86，依据 2026-11-02 分布扫描：同义改写实测 0.757～0.967，跨主题最高 0.540。
-   * ⭐ 取扫描区间的保守端：误合并（丢信息）代价高于漏合并（多一条注入）。
+   * 默认 0.80，依据 2026-11-02 分布扫描：同义改写 min 0.7567／跨主题 max 0.5401／0.80 覆盖 61%。
+   * ⭐ 老大 2026-11-02 裁「可以，先降低是可以的」：覆盖优先于保守。
    */
   recallDedupThreshold?: number
   /**
@@ -166,7 +166,7 @@ const DEFAULTS: Required<Pick<Config,
   modelCacheDir: 'D:/Code/_models',
   recallLimit: 6,
   recallDelta: 0.20,
-  recallDedupThreshold: 0.86,
+  recallDedupThreshold: 0.80,
   collectionName: 'larry_memories',
   injectSection: false,
   injectContext: true,
@@ -623,7 +623,7 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
       // 去重管「候选彼此是不是说同一件事」，门管「跟 query 够不够相关」，两件事不混。
       const dedupThreshold = Number.isFinite(cfg.recallDedupThreshold)
         ? cfg.recallDedupThreshold
-        : 0.86
+        : 0.80
       const dedup = dedupeNearDuplicates(scoredAll, rows, dedupThreshold)
       // 每轮都写（removed=0 也写）：少了条必须能解释，否则会和「被门挡掉」混在一起
       writeDedup(

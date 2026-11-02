@@ -335,6 +335,10 @@ async function phaseTruncated(tag) {
     recallGateLogPath: gateLog,
     recallLimit: 2, // 上限 2 < 过门条数 4 ⇒ 必须有 2 条被截
     recallDelta: 0.20,
+    // ②.2.3 装置隔离：本臂测相关性门，人工向量是「分数梯度」不是语义多样性
+    // （0.95×0.90 两两余弦 0.855 ⇒ 默认阈值 0.80 下会被去重）⇒ 显式关掉去重
+    // （阈值 1.01 > 余弦上界 1.0 ⇒ 永不可达；断言零改动）
+    recallDedupThreshold: 1.01,
   })
   const labels = [
     'T1-1：top1（0.95）',
