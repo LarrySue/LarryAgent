@@ -20,7 +20,6 @@
 - `discussion-time-context.md` — 时间上下文（时间对齐）专题讨论（结论区+讨论区两段式，各方在讨论区给意见）
 - `deployment-architecture.md` — 云部署架构**未决四条**（本地工具下沉路径 A/B/C ／ 记忆系统分层 ／ 多端设备身份 ／ 移动端能力不对称）｜⭐ **已定稿部分见 `../docs/deployment-architecture.md`**（2026-10-29 老大拍 B 案三层拆分：已落地事实＋已定原则＋已定目标态入 `docs/`，真未决留本区、标**未定案**）。⚠️ 两处**同名**：本区那份只含未决项，`docs/` 那份是正本
 - `web-search-design.md` — 网络搜索技术选型与设计规格（**尚未展开讨论**，停在讨论稿阶段；稿内已有多 provider 按角色路由方案，未定案）
-- `discussion-terminology-candidates.md` — ⚠️ **已并入 `../docs/terminology.md`（2026-11-03 定稿）**，仅因 `TODO.md:374` 仍引用而暂留；WB／老大改指后即删
 
 > **已收口（2026-10-24）**：记忆归属边界专题（原四册）定稿移入 `../docs/la-space/`；讨论史料（详解／原话）在 `../archive/memory-ownership/`，可引作出处、⛔ 不作现行依据。
 

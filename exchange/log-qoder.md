@@ -176,7 +176,7 @@ grep -c "知识库"   docs/ai-governance.md  → 2   ← 既有内容，不属�
 
 ### 未闭合／转办
 
-- **candidates 稿清退**：留待老大一句话（含三段他人回帖）。
+- **candidates 稿清退**：✅ 已清退（2026-11-03）。清退前核：稳定引用仅剩 `exchange/README.md` 索引行（已删）；三段他人回帖的实质内容已进正本 §1.2／§1.3／§四，原文留 git `98ac360`；独有细节抽查 6／6 命中 `docs/terminology.md`。⇒ 术语四稿全部退役，`exchange/` 无残留。
 - **`TODO.md`**：WB 已改，未动。
 
 ---
