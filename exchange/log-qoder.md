@@ -14,6 +14,7 @@
 > - **退役**：`discussion-terminology.md`／`-cross-layer.md`／`-unified.md` 已清退（git 留底）；`-candidates.md` 因 `TODO.md:374` 引用暂留，头部已标退役。
 > - **转办 WB／老大**：① `TODO.md:374` 的稿指针改指 `docs/terminology.md` §1.2（改完即删 candidates 稿）；② `TODO.md:373` 撤「建议直接改名 `source_role_id`；若改名，须同步 DSH-6」半句，保留语义句。
 > - **可复算判据**：`ls docs/terminology.md` 存在；三份稿 `ls` 为空；`git log --oneline -1` 为本笔。
+> - **复检（doc-governance-recheck）**：承接 6 ／ 引用 3 ／ 面板 4 ／ 编辑卫生 11 四组全过；被删三稿 15 个独有细节在定稿逐条命中；反向引用只剩 `candidates.md:166`（知砚讨论区原文，按「只新增不代改」保留，随该稿一并退役）；连续空行 `log-qoder:126` 为既有格式、非本笔引入。
 
 > ✅ **2026-11-02 两批派发均已交付并复验成立（WB）**：
 > - **3.6 双写口径订正 ＋ 两处脱钩**（`a0a61ef`，WB 17:45；D／E／F 十二判据逐条复算全绿）
