@@ -90,6 +90,15 @@
 ---
 
 
+## 🗣 术语两稿讨论区回帖（2026-11-03 · 顾衡）
+
+- 已把抽核与看法追加进两稿讨论区（只新增）：`discussion-terminology-candidates.md`、`discussion-terminology-cross-layer.md`。
+- 要点：① S-1 危害链第一跳订正为 `source_event_seq NOT NULL`（`index.ts:284`），UNIQUE 是第二跳；(b) 案的 UNIQUE 改动须写成迁移步；② S-3 站知砚／月月不改名，补测试实据（`test_chromadb_degradation.py:116`）；③ ③.1 裁决输出补「字段落点表」，`last_hit_at` 是产品承诺（`product-positioning.md:281`）；④ 术语表保「实据行号」；⑤ 人格界线表态（SOUL／MEMORY 不作 L2 语料／样本）。
+- 边界：未改 TODO、docs、代码一字；TODO:373 不同步点归 WB／老大。
+
+---
+
+
 ## 🗂 已清理段落（按交流区规矩 · 只留最新一条）
 
 - **2026-11-01 17:25（WB）**：删〈📮 派发 · ⑪.4.2 存档还原演练〉（58 行）＋〈✅ 回报 · ⑪.4.2〉（117 行）＋〈📌 WB 复验 · ⑪.4.2〉（53 行）**共 228 行**（263 → 36）。三段「已派发 — 已交付 — 已复验成立」。
