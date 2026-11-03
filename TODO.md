@@ -400,7 +400,18 @@
         - 🔴 **顺序约束：召回改造 ⛔ 不得与写侧同批落地**。③.1 落地那一刻库里**一条 `memory` 都没有**（全是 transcript）⇒ 若同批改召回，召回立刻全空、触发 `RECALL_PLACEHOLDER`，而现象上会和「写侧没写进去」混成一团、无法归因。⇒ **顺序**：① 先通写侧并**实测写出过 `memory` 行**；② 再改召回；③ 或先做 ④.1 把老 backend 那 54 条摘要搬过来、库里先有 memory。
         - ⚠️ **判据抠歧义**：主判据「记忆走**新路径**入库」⛔ **不是"把 `insertRow` 换掉"** —— `insertRow`（流水，`kind='transcript'`）**继续留着**；本块要做的是**新增一条摘要写入路径**（`kind='memory'`，落在 ③.2 人审闸之后）。两条写路径并存。
         - ⚠️ **同表方案的固有代价（如实留痕）**：每个新增查询都必须记得带 `kind` 过滤，**这是靠自觉**。⇒ 缓解要求：① 上述 2／3 两条用「部分索引 ＋ 负证」把漏过滤变成**可观测失败**，而不是靠人记得；② 后续任何新增读路径，判据里必须显式写它看哪个 `kind`。
-      - [ ] **③.2 · 人审闸**：**确认（可编辑）后才入库**。判据：未确认 ⇒ ⛔ 不入库；**编辑后确认 ⇒ 入编辑后的版本**（⛔ 不许入原文）；⛔ 不许出现「默认全入」的旁路。
+      - 🔀 **③.2 → 拆 ③.2a ／ ③.2b（2026-11-03 22:44 WB 拆，老大「按这个落」）**
+        - **为什么拆**：WB 2026-11-03 实证 `ctx.get('llm')` 返回 `LlmRuntime`，其方法全表只有**目录／路由／计费／发现**类 —— `registerAdapter`／`listProviders`／`listModels`／`resolveModelInfo`／`registerConfigurableProviders`／`discoverModels`／`remoteDiscoverModels`／`providerRetryPolicy`／`imageRequestPricing`／`fileRequestText`，**一个 `generate`／`complete`／`stream` 都没有** ⇒ **插件拿不到「给一段 messages 出文本」的入口**。⛔ 不先定这条，③.2b 的判据全建立在空输入上。
+        - [ ] **③.2a · 摘要生成路径选定**（⛔ 先做这块）—— 三选一，**须实测后定，⛔ 凭推断**：
+          - **(a) subagent**：依赖里存在 `@deepseek-ai/dsh-subagent` ⇒ 插件起一个小 agent 读会话生成摘要。须核：对插件开放的 API 是什么／能否指定 prompt 与输入／能否取回纯文本／是否也要过审批。**最像产品该有的样子**。
+          - **(b) agent 自产**：主 agent 自己产出摘要（tool 或 `ctx.commands` 触发），插件只负责接住。取决于产品形态要不要「可见的生成过程」。
+          - **(c) 留 backend**：⚠️ **会破坏 ③.1「⛔ 不经老 backend」**，等于白做 ⇒ 若选这条须**老大另裁**。
+          - **判据**：给出 (a)(b) 的**可执行性实测**（跑通，或明证不可行 ＋ 具体阻塞点）；选定一条并写明理由。⛔ 只报「看过文档」。
+          - **诚实边界**：本块 ⛔ 不产出生成实现，**只选定路径**。
+        - [ ] **③.2b · 人审闸**（**前置＝③.2a 选定**）：**确认（可编辑）后才入库**。
+          - **判据**：未确认 ⇒ ⛔ 不入库；**编辑后确认 ⇒ 入编辑后的版本**（⛔ 不许入原文）；⛔ 不许出现「默认全入」的旁路。
+          - ⭐ **有现成范式**：`plugin-approval-probe` 的 `ctx.approval.request({ agent, toolName, callId, reason, signal })`，`reason` 可带 `case=<名>` 供本地策略答者作答 ⇒ **可先用本地答者验机制**，真人前端点击那条随 `DSH-3.8`（⛔ 不必等它才能开工）。
+          - ⚠️ **接线位置**：`write.ts` 的 `writeMemorySummary(db, input, hooks)` —— 只在批准后调用；`afterInsert` 钩子留给向量／双写（见 ③.1 边界 4）。
       - [ ] **③.3 · 语义字段写入**：`is_active`／`last_hit_at`／`source_role` 在写入路径上的**赋值与更新**。判据：字段有值且**语义不降级**；⛔ 不许写 NULL／空串占位充数。
         - ⚠️ **`source_role` 的指向须钉死（2026-11-03 WB 补，术语扫描 S-3）**：指**人格角色**（`roles` ／ `product-positioning.md` §3「角色 ≈ 专家」），⛔ **非 `messages.role`**（`user`／`assistant`／`system`／`tool`，那是**消息发送方**，见 `backend/db/schema.py:28`）。二者同形不同义，且字段名与 `messages.role` 近似 ⇒ **按错的那个做，不会报错、字段有值、语义全错**。
           - ⚠️ **解法＝钉语义，⛔ 不改名（2026-11-03 术语表定稿，三家同向）**：WB 原建议「改名 `source_role_id`」**已被推翻并撤回** —— 该字段实为**字符串角色 key**（`backend/api/memory.py:49` `source_role: str = "default"`），加 `_id` 会暗示整数外键，且反撞产品约定「代码一律 `role`/`roles`」（`product-positioning.md:551`）；改名成本三层（API 契约 ／ 测试 `test_chromadb_degradation.py:116` ／ 文档）。词条与界线见 `docs/terminology.md` §1.2 `role／source_role`。
