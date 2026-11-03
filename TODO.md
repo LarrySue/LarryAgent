@@ -393,6 +393,17 @@
         - ⚠️ **`source_role` 的指向须钉死（2026-11-03 WB 补，术语扫描 S-3）**：指**人格角色**（`roles` ／ `product-positioning.md` §3「角色 ≈ 专家」），⛔ **非 `messages.role`**（`user`／`assistant`／`system`／`tool`，那是**消息发送方**，见 `backend/db/schema.py:28`）。二者同形不同义，且字段名与 `messages.role` 近似 ⇒ **按错的那个做，不会报错、字段有值、语义全错**。
           - ⚠️ **解法＝钉语义，⛔ 不改名（2026-11-03 术语表定稿，三家同向）**：WB 原建议「改名 `source_role_id`」**已被推翻并撤回** —— 该字段实为**字符串角色 key**（`backend/api/memory.py:49` `source_role: str = "default"`），加 `_id` 会暗示整数外键，且反撞产品约定「代码一律 `role`/`roles`」（`product-positioning.md:551`）；改名成本三层（API 契约 ／ 测试 `test_chromadb_degradation.py:116` ／ 文档）。词条与界线见 `docs/terminology.md` §1.2 `role／source_role`。
         - ⚠️ **`is_active` 的落地前提（2026-11-03 补）**：该列**只存在于 backend 的 `memories`**（`backend/db/schema.py:44`），**插件侧 `memories` 表无此列**（`plugin-s4-memory/src/index.ts:281-291`）⇒ 本块开工前须先定"落在哪张表"，与 ③.1 的表结构裁决（词条与界线见 `docs/terminology.md` §1.2 `memories` 条 ＋ §三①三件套；⚠️ **裁决本身仍未定**，术语表只登记不从裁）**同批解决**，⛔ 不各做各的。
+      - [ ] **③.4 · 读侧分流（`kind` 过滤落地）**（⚠️ 编号暂定：由 ③.1 的 B 案派生；若要归 ② 系列可改）
+        - **硬前提**：③.1 已交付且**实测写出过 `kind='memory'` 行**。⛔ 未满足就动召回 ⇒ 召回全空，且现象与「写侧没写进去」混成一团、无法归因（③.1 L-8 同源）。
+        - **改什么**：两条召回路都加 `WHERE kind='memory'`
+          - `selectRecentFiltered`（时间倒序降级路，`index.ts:307`）
+          - `selectVectorRows`（语义 top-k，`index.ts:310`）
+        - **⛔ 明确不改**：`selectRecent`（整库非空探针，`index.ts:304`）—— 它判的是「这个库有没有东西」，**不是**「有没有可召回的」。B 案后库里只有 transcript 时它仍返回有行 ⇒ 上层据此判「过滤后为空」（写被挡记录），而非「真空库」（P8-d 控制臂不写）。⚠️ **这条区分必须保住**，否则 P8-d 那两个控制臂会合并成一个、失去诊断力。
+        - **判据**：
+          1. **混合数据实测**（库里同时有 transcript 与 memory 行）：召回结果里**只出现 memory 行**，transcript 行 **0 条**（逐条核对内容，⛔ 只看计数）。
+          2. **负证**：库里**只有 transcript** 时 ⇒ 召回返回空 ＋ 触发 `RECALL_PLACEHOLDER`，且被挡记录写 `reason=no-cross-session-vectors`（证明走的是「过滤后为空」而非「真空库」）。
+          3. **P8-d 两控制臂仍可分**：真空白库 ⇒ 不产生注入条；有 transcript 无 memory ⇒ 产出占位符。两条现象须分别复现。
+        - **场地**：临时 DSH home；**构造混合数据后跑**，⛔ 拿真实库直接测（会污染）。
     - **④ 记忆迁移**（数据侧）：
       - [ ] **④.1 · 数据迁移 ＋ 召回等价性验收**：**无需全量重嵌**（DSH-2.5 ⑤ 实测漂移 `2.2e-7`）＋ **预处理严格对齐校验**（⚠️ 硬前提：任一项不对齐会产生 0.77 级假漂移 ⇒ 须写成**判据**，⛔ 不是备注）＋ 迁移前后**召回抽样比对**。
       - ⚠️ **⛔ 别重复派已被 P8-e 覆盖的部分**：`embedding` 列出现 ＋ 54 行 `id`／`content` 逐行 sha 不变 ＋ 回填 = 54 **已在 P8 复验里做过**（`b07b65f`）⇒ 本块只补**语义字段在迁移中的保留**，不重演那部分。
