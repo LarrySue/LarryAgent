@@ -16,7 +16,8 @@
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
 | **②.2.3 近似去重**（P0 地基最后一块） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `index.ts` ＋ 新探针 `p223-dedup-probe.mjs` | ✅ **已交付并复验成立（WB 2026-11-02 21:15，`2ce6060`）**：WB 独立复跑 p223 **10/10** ＋ 四探针回归全绿；部署件同 sha。✅ **追加项亦复验成立（WB 21:45，`8201ce3`）**：阈值 0.80，L-1～L-4 **WB 独立复算全绿** ⇒ **本块全闭环，P0 地基全齐** | 2026-11-02 |
 | 删 `api/chat.py` ValueError 残留分支 | **Trae** | `backend/api/chat.py`（单文件） | ✅ **已交付并复验成立（WB 20:30，`f9fc0bc`）**：K-2 0 增 4 删；K-3 **WB 独立跑 27 passed**；精确串断言零命中。⭐ 她补的增量：流式路径异常发生在响应头已发出之后 ⇒ **结构上够不着该分支** | 2026-11-02 |
-| — | — | — | ✅ **本区当前无在飞块**（三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立）。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
+| **③.1 写侧挂点 ＋ B 案表结构**（`kind` 列／部分索引／摘要写入路径） | **Trae** | `plugin-s4-memory/src/index.ts` | 🆕 **2026-11-03 21:20 派发，待开工**（L-1～L-8，见本区第一节）。⚠️ **本单 ⛔ 禁改召回**（顺序约束 L-8） | 2026-11-03 |
+| — | — | — | ⚠️ **本区有一块在飞**（上格 ③.1）。其余 —— 三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -33,6 +34,89 @@
   9. **文件不是证据，运行自报的标识才是**（.pnpm 截断名 ／ 会话 id ／ pid 一律以自报为准）。
 
 ---
+
+---
+
+## 📮 派发 · ③.1 写侧挂点 ＋ B 案表结构（WB · 2026-11-03 21:20）—— 单件 L-1～L-8
+
+> **来源**：老大 2026-11-03 21:12 拍 **B 案**（单表 ＋ `kind` 列）；`TODO.md` ③.1 段已定稿，含〈读写路径 kind 归属表〉六行。
+> **一句话目标**：让「提炼后的记忆」能走 TS 插件这条新路径入库（`kind='memory'`），⛔ 不经老 backend；同批把 B 案的表结构改造做掉。
+
+### ⚠️ 先拆开三件事（⛔ 别当成一件事做）
+
+- **A · 表结构改造**：`kind` 列 ＋ 部分唯一索引 —— **本单必做**
+- **B · 新增摘要写入路径**：`kind='memory'` —— **本单必做**
+- **C · 召回改造**：`selectRecentFiltered`／`selectVectorRows` 加 `kind='memory'` —— **⛔ 本单禁止做**（顺序约束见 L-8）
+
+### 0 · 前置实况（WB 2026-11-03 21:14 实测）
+
+- 插件侧 6 条 SQL 全部覆盖，kind 归属逐条定在 `TODO.md` ③.1〈读写路径 kind 归属表〉
+- SQLite 版本 **3.51.2**（`node:sqlite` 实测）
+- ⚠️ **已知硬约束**：`ALTER TABLE ADD COLUMN` **不能**把「无 DEFAULT 的 NOT NULL 列」加到**有数据的表**上（报 `Cannot add a NOT NULL column with default value NULL`）⇒ 有数据时必须走表重建，见 L-1。
+
+### 1 · 判据
+
+- **L-1 · 表结构（`kind` 列）**：`kind TEXT NOT NULL`，**⛔ 无 DEFAULT**。
+  **判据**：`PRAGMA table_info(memories)` 中 `kind` 行 `notnull=1` 且 `dflt_value=NULL`。
+  ⚠️ **两条路，按库里有没有数据选**（⛔ 别一律走重建）：
+  - **库为空** ⇒ `CREATE TABLE` 直接带 `kind`
+  - **库有数据** ⇒ **表重建法**：`CREATE TABLE memories_new(...)` → `INSERT INTO memories_new SELECT ..., 'transcript' FROM memories` → `DROP TABLE memories` → `ALTER TABLE memories_new RENAME TO memories`。**老行一律回填 `'transcript'`**（它们全是流水）
+  **判据（两条都适用）**：重建后 `COUNT(*)` 与重建前**相等**；`COUNT(*) WHERE kind IS NULL` = **0**。
+
+- **L-2 · 部分唯一索引**：`DROP INDEX idx_memories_session_seq` → `CREATE UNIQUE INDEX idx_memories_session_seq ON memories(session_id, source_event_seq) WHERE kind='transcript'`。
+  **判据**：`SELECT sql FROM sqlite_master WHERE name='idx_memories_session_seq'` 含 `WHERE kind='transcript'`。
+  **负证**：插两条 `kind='memory'` 且 `source_event_seq` **相同**的行 ⇒ **两条都要成功**（不被唯一索引拦）。
+
+- **L-3 · 流水写入带 kind**：`insertRow` 显式写 `kind='transcript'`。
+  **判据**：跑一次真实会话 ⇒ 新行 `kind='transcript'` 且非 NULL（给行内容）。
+
+- **L-4 · 摘要写入路径（本单核心）**：新增一条写 `kind='memory'` 的路径，**落在人审确认之后**（③.2 的闸）。
+  **判据**：**实测**库里出现 `kind='memory'` 的行（给出内容与来源会话）。⛔ 只给代码不认。
+  ⚠️ 若 ③.2 尚未实现，本单可先用「程序内直接调用写入函数」证明路径通，但**必须在回报里写明这是绕过人审的验证手段**，⛔ 不得留成产品默认路径。
+
+- **L-5 · 负证：老 backend 写路径不再被调用**
+  **判据**：L-4 那次会话的全程日志里，`POST /api/memory/archive` 与 `/archive/confirm` **零调用**（贴 grep 原文）。
+  ⚠️ **边界**：本单只证「新路径能写通」；「老路径彻底摘除」属 backend 退役的活，⛔ 本单不删 backend 代码。
+
+- **L-6 · `transcript` 不再算向量**：`selectMissingVectors` 加 `kind='memory'`；新流水行不触发 embedding。
+  **判据**：写入 N 条流水后，`COUNT(*) WHERE kind='transcript' AND embedding IS NOT NULL` 的**增量 = 0**；老库已有向量的行 ⛔ 不删。
+
+- **L-7 · 诚实边界**：本单 ⛔ 不得声称「长期记忆功能已可用」——③.2 人审闸、③.3 语义字段、④.1 迁移均未做。
+
+- **L-8 · ⛔ 禁改召回（顺序约束）**：`selectRecentFiltered`／`selectVectorRows` **本单不许动**。
+  **理由**：本单落地那一刻库里几乎没有 `memory` 行 ⇒ 若同批改召回，召回立刻近乎全空并触发 `RECALL_PLACEHOLDER`，现象上会和「写侧没写进去」混成一团、无法归因。
+  ⇒ 召回改造另立一块，**排在本单 L-4 实测写出过 `memory` 行之后**。
+
+### 2 · 判据前置
+
+- 先跑 `PRAGMA table_info(memories)` 报当前表结构，**据此选 L-1 哪条路**。
+- ⚠️ **动库前先备份**：`larry-memory.db` 拷一份到临时路径（本块要 `DROP TABLE`，不可逆）。
+- **场地隔离**：`DSH_HOME` 指临时目录，⛔ 动真实 `~/.dsh`（Tier 0 第 4 条）。
+
+### 3 · 交付物
+
+代码改动 ＋ **一段可复跑的探针脚本**（`harness/scripts/` 或 `_trae-evidence/`）＋ 回报。
+回报须含：`PRAGMA table_info` 改前改后 ／ `sqlite_master` 里的索引 SQL ／ 库行数与 kind 分布 ／ L-4 那条 memory 行的完整内容。
+
+### 4 · 参考件四要素
+
+① **路径**：`TODO.md` ③.1 整段（含〈读写路径 kind 归属表〉六行）／`docs/terminology.md` §1.2 `memories` 条
+② **怎么参考**：归属表**逐行照做**，⛔ 自己判断哪条该加 `kind`
+③ **参考程度**：可直接照做
+④ **⛔ 不可参考**：§1.2 里 A 案（拆表）的描述 —— **已否决**，只看 B 案
+
+### 5 · 场地器材
+
+本机 Windows ＋ `node:sqlite`（SQLite 3.51.2，已实测）。DSH 临时 home；`LARRY_CONFIG` 指向临时 yaml。
+⚠️ **假绿坑**：`INSERT OR IGNORE` 会吞掉唯一约束冲突 ⇒ 测 L-2 负证时**⛔ 别用 `insertRow` 那条语句**，用裸 `INSERT` 才能看出冲突是否真不触发。
+
+### 6 · 回报格式
+
+结论先行（L-1～L-8 各自成立／未闭合）＋ 逐条证据（命令 ＋ 读数 ＋ 原文）＋ 未闭合项单列 ＋ **自曝**（判歪了／判据要订正／发现矛盾直接写；「成因未知」是可接受结论，⛔ 别为叙事完整编一个）。
+
+### 7 · 禁区
+
+⛔ 改召回（L-8）｜⛔ 给 `kind` 加 DEFAULT ｜⛔ 删老库数据（`DROP` 前必须备份）｜⛔ 动 `backend/` 代码（L-5 只证不删）｜⛔ 动真实 `~/.dsh` ｜⛔ 改 `TODO.md`／`docs/`（WB／Qoder 区）
 
 ---
 
