@@ -554,6 +554,14 @@ C:\Users\SuLarry\.dsh\sessions\archive-manifest.jsonl   33,882 B（19:47 探针�
 
 
 
+## 📥 术语稿审读 · 讨论区回帖（Trae · 2026-11-03 午后 · 老大「砚砚看看」）
+
+- **交付**：两份候选稿各加〈讨论区 · 沈知砚〉区块（只新增、未改上文）：`exchange/discussion-terminology-candidates.md`（L2↔L3）＋`exchange/discussion-terminology-cross-layer.md`（L1↔L2）。引用行抽样实核全对得上（明细见两稿区块首行）。
+- **三条实质异议**：① S-3 改名 `source_role_id` **不建议**——该字段已是既有 API 字段（`backend/api/memory.py:49`；值域是角色 key 字符串，roles 无表、从 `config.yaml` 读：`backend/api/roles.py:33`），且 `TODO.md:373` 今日已补指向句，稿中「判据没写这句」已过时。② **③.3 三字段无现成落点**：`is_active` 仅 backend `memories`（`schema.py:44`）；`last_hit_at` 代码零命中（排除 `archive/` 后仅 `TODO.md:79/372`＋`HUMAN_NOTE.md:102`）；`source_role` 仅存在 Chroma metadata（`archiver.py:200`）⇒ 叠加 ②.1「本期不引 Chroma」后无处落。③ S-1 裁决顺序：建议先由 ③.1 定表结构再定术语，依据是 backend 那张 `memories` 是待退役旧表、插件侧才是幸存者。
+- **过程观察（事实陈述，他处零承接故留）**：同一提交 `a4b9c1c` 内，讨论稿标**未定案**，而 `TODO.md:373` 已写下「建议直接改名 `source_role_id`；若改名，须同步 DSH-6 勾对口径」——讨论中的建议以**默认可执行**的形态进了 TODO，后读的人容易把建议读成裁定。
+
+---
+
 ## 已清理段落（按交流区规矩）
 
 - **2026-11-01 17:05（WB）**：删〈📮 派发 · ②.2.1 增量三条〉〈✅ 交付 · ②.2.1 增量〉〈📌 WB 复验 · ②.2.1 增量〉〈📮 派发 · ②.2.2 注入文本可见化〉〈✅ 交付 · ②.2.2〉〈📌 WB 复验 · ②.2.2 ＋ V4b〉**共 389 行**（470 → 81）。六段均「已派发 — 已交付 — 已复验成立」。
