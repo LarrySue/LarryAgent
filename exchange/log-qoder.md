@@ -8,10 +8,12 @@
 
 ## 📮 在飞任务（状态区）
 
-> 🟡 **术语统稿已出（Qoder，2026-11-03）—— 等老大裁 §五 6 项**
-> - **稿**：`exchange/discussion-terminology-unified.md`（未定案）。三稿合一：旧稿三词 ＋ L2↔L3（S/A/B）＋ L1↔L2（L1-1～L1-10），五列矩阵。含全部意见的存档版 = git `8ea91a9`。
-> - **等谁**：老大裁 ①S-1 方案 ②人格界线 ③L1 改口四条 ④A/B 级收词 ⑤落位文件名 ⑥AGENTS.md 剩余动作。
-> - **可复算判据**：三稿讨论区条目在 §四处置表逐条有行，**不吸收项 = 0**（两处为「部分吸收」，已写明采纳哪半）。
+> ✅ **术语表已定稿（Qoder，2026-11-03）—— 三稿合一 → `docs/terminology.md`**
+> - **落地**：五列「词×层」矩阵，跨层 10 ＋ L2↔L3 4 ＋ A 级 3 ＋ B 级 2 ＋ 旧词 3 ＋ 人格界线；`docs/README.md` 索引已补。
+> - **治理面**：`docs/ai-governance.md` 补两条——① L1 用词正名映射句（协作红线／约束注入／岗位（旧称角色）／人格记忆）；② 「L1 约束 ⛔ 进产品运行时加载链」从沿革叙事升为判据（复算：`ls AGENTS.md` 不存在 ＋ `.zcode/config.json` SessionStart 钩子存在）。
+> - **退役**：`discussion-terminology.md`／`-cross-layer.md`／`-unified.md` 已清退（git 留底）；`-candidates.md` 因 `TODO.md:374` 引用暂留，头部已标退役。
+> - **转办 WB／老大**：① `TODO.md:374` 的稿指针改指 `docs/terminology.md` §1.2（改完即删 candidates 稿）；② `TODO.md:373` 撤「建议直接改名 `source_role_id`；若改名，须同步 DSH-6」半句，保留语义句。
+> - **可复算判据**：`ls docs/terminology.md` 存在；三份稿 `ls` 为空；`git log --oneline -1` 为本笔。
 
 > ✅ **2026-11-02 两批派发均已交付并复验成立（WB）**：
 > - **3.6 双写口径订正 ＋ 两处脱钩**（`a0a61ef`，WB 17:45；D／E／F 十二判据逐条复算全绿）
