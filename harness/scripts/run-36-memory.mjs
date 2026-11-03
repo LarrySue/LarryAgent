@@ -25,7 +25,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, isAbsolute, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
 
@@ -70,16 +70,55 @@ function childEnvOf(home) {
  * 挂载插件：junction ＋ --patch overlay（insert entry，形态 = plugin-probe 样本）。
  * @returns overlay 文件路径
  */
+/**
+ * 临时 home 的 profile 副本里若已含 larry-s4-memory 的 insert 块（③.1 起部署件进了源 profile），
+ * 本装置再 insert 会撞 duplicate loader entry ⇒ 先在副本里剥掉，再由本装置统一挂载。
+ * ⚠️ 只改临时副本；源 `.dsh-home` 不动。
+ */
+function stripMemoryInsert(patchPath) {
+  if (!existsSync(patchPath)) return
+  const lines = readFileSync(patchPath, 'utf8').split('\n')
+  const out = []
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() !== '- insert:') { out.push(lines[i]); continue }
+    let j = i + 1
+    const block = []
+    while (j < lines.length && !lines[j].startsWith('- ')) { block.push(lines[j]); j++ }
+    if (block.some((line) => line.trim() === '- id: larry-s4-memory')) { i = j - 1; continue }
+    out.push(lines[i], ...block)
+    i = j - 1
+  }
+  writeFileSync(patchPath, out.join('\n'), 'utf8')
+}
+
+/** child 是否落在 parent 之内（含 parent 自身；win32 下 path.relative 忽略大小写） */
+function isWithinPath(parent, child) {
+  const rel = relative(parent, child)
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+}
+
 function mountPlugin(home, tag, config) {
+  stripMemoryInsert(join(home, 'profiles', 'sdk', 'cordis.patch.yml'))
+  // 场地隔离断言（10-30）要求 dbPath 落在 home 内；本装置的证据库在 OUT（home 之外）
+  // ⇒ 显式豁免（插件会留一行审计 stderr），⛔ 不指真实 ~/.dsh。
+  const effective = { ...config }
+  if (typeof effective.dbPath === 'string' && isAbsolute(effective.dbPath) && !isWithinPath(home, effective.dbPath)) {
+    effective.allowOutsideHome = true
+  }
   const nmDir = join(home, 'profiles', 'sdk', 'node_modules', '@larryagent')
   mkdirSync(nmDir, { recursive: true })
+  // 源 profile 现已含部署件副本（③.1 起同步）；临时 home 的 cpSync 会把它一起带进来
+  // ⇒ 先删副本再 junction，语义仍是「被测代码 ≡ 本次构建」
+  rmSync(join(nmDir, 'plugin-s4-memory'), { recursive: true, force: true })
   symlinkSync(PLUGIN_DIR, join(nmDir, 'plugin-s4-memory'), 'junction')
   const lines = ['- insert:', `    - id: larry-s4-memory`, `      name: '@larryagent/plugin-s4-memory'`]
-  if (config && Object.keys(config).length > 0) {
+  if (effective && Object.keys(effective).length > 0) {
     lines.push('      config:')
-    for (const [k, v] of Object.entries(config)) {
-      const val = String(v).replaceAll('\\', '/').replaceAll("'", "''")
-      lines.push(`        ${k}: '${val}'`)
+    for (const [k, v] of Object.entries(effective)) {
+      // allowOutsideHome 是 strict boolean（插件按 === true 判）；YAML 的 'true' 是字符串 ⇒ 不加引号
+      const val = typeof v === 'boolean' ? String(v) : String(v).replaceAll('\\', '/').replaceAll("'", "''")
+      const rendered = typeof v === 'boolean' ? val : `'${val}'`
+      lines.push(`        ${k}: ${rendered}`)
     }
   }
   const overlayName = `overlay-${tag}.yml`
@@ -389,19 +428,19 @@ function spawnChroma(port, dataDir, logName) {
   }
 }
 
-/** 装置侧本地向量（与插件同源：bge-small-zh-v1.5 ＋ mean pooling ＋ normalize；模型缓存离线可跑） */
+/** 装置侧本地向量（与插件同源：bge-small-zh-v1.5 ＋ CLS pooling ＋ normalize；模型缓存离线可跑） */
 let embedPipeline = null
 async function localEmbed(text) {
+  // ⚠️ 必须用插件同一套预处理（CLS pooling ＋ 同 tokenizer），否则 J3-e 的余弦比对
+  //    会混入「mean pooling vs CLS」的伪漂移（实测 0.829 级），不是真差异。
   if (!embedPipeline) {
     embedPipeline = (async () => {
-      const { pipeline, env } = await import('@huggingface/transformers')
-      env.cacheDir = MODEL_CACHE
-      return pipeline('feature-extraction', 'Xenova/bge-small-zh-v1.5')
+      const mod = await import(pathToFileURL(join(PLUGIN_DIR, 'lib', 'embedding.js')).href)
+      return mod.createEmbedder({ modelId: 'Xenova/bge-small-zh-v1.5', cacheDir: MODEL_CACHE })
     })()
   }
-  const extractor = await embedPipeline
-  const out = await extractor([text], { pooling: 'mean', normalize: true })
-  return (out.tolist())[0]
+  const embedder = await embedPipeline
+  return await embedder.encode(text)
 }
 function cosine(a, b) {
   let dot = 0, na = 0, nb = 0
@@ -589,15 +628,16 @@ async function phaseJ5() {
     session_id TEXT NOT NULL,
     source_event_seq INTEGER NOT NULL,
     content TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    kind TEXT NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_seq ON memories(session_id, source_event_seq);`)
-      db.prepare('INSERT INTO memories(session_id, source_event_seq, content) VALUES(?,?,?)')
+      db.prepare("INSERT INTO memories(session_id, source_event_seq, content, kind) VALUES(?,?,?,'memory')")
         .run('j5-seed-session', 0, `${nonce} J5 预置行：注入面正向臂应把此行渲染进装配产物。`)
     } finally { db.close() }
   }
   const posPrompt = '请只回复两个字：收到。本句不含任何代号或标记。' // V10 ①：B 会话自身输入不得含 nonce
-  const { result: rPos } = await runOnce('j5-positive', { dbPath: seedDb }, posPrompt)
+  const { result: rPos } = await runOnce('j5-positive', { dbPath: seedDb, injectSection: true }, posPrompt)
   const posFrames = rPos.events.filter((e) => e.type === 'system/message')
   saveJson('J5-positive-system-message.json', posFrames)
   const posText = frameText(rPos, 'system/message')
@@ -615,7 +655,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_seq ON memories(session_i
   // ── 负向臂：全新空库 → 注入块不得含 nonce（结果态可分）──
   const negDb = join(OUT, 'larry-memory-j5-empty.db')
   const negPrompt = '请只回复两个字：明白。本句同样不含任何代号或标记。'
-  const { result: rNeg } = await runOnce('j5-negative', { dbPath: negDb }, negPrompt)
+  const { result: rNeg } = await runOnce('j5-negative', { dbPath: negDb, injectSection: true }, negPrompt)
   const negFrames = rNeg.events.filter((e) => e.type === 'system/message')
   saveJson('J5-negative-system-message.json', negFrames)
   const negText = frameText(rNeg, 'system/message')

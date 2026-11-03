@@ -276,28 +276,75 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   }
 
   // ── SQLite 真相源（node:sqlite · Node 24 内置，零外部依赖）─────────────────
-  const db = new DatabaseSync(dbPath)
-  db.exec(`
+  // ③.1 · B 案（老大 2026-11-03 21:12 拍）：单表 ＋ kind 列
+  //   transcript＝用户消息流水（原 insertRow）／memory＝提炼摘要（③.2 人审后写入）
+  //   ⛔ kind 不得有 DEFAULT：漏写 kind 的 INSERT 必须响亮报错，不能静默落进某一边。
+  const MEMORIES_TABLE_SQL = `
     CREATE TABLE IF NOT EXISTS memories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL,
       source_event_seq INTEGER NOT NULL,
       content TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-      embedding BLOB
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_seq
-      ON memories(session_id, source_event_seq);
-  `)
+      embedding BLOB,
+      kind TEXT NOT NULL
+    );`
+  const db = new DatabaseSync(dbPath)
+  db.exec(MEMORIES_TABLE_SQL)
   // ⚠️ CREATE TABLE IF NOT EXISTS 对**已存在**的老库不生效 ⇒ embedding 列须显式迁移（幂等）。
   const memoryColumns = db.prepare('PRAGMA table_info(memories)').all() as unknown as Array<{ name?: string }>
   if (!memoryColumns.some((column) => column.name === 'embedding')) {
     db.exec('ALTER TABLE memories ADD COLUMN embedding BLOB')
   }
+  // ⚠️ kind 列迁移（同上：老库的 CREATE 不生效）：ADD COLUMN 不能加「无 DEFAULT 的 NOT NULL」
+  //    到有数据的表 ⇒ 有数据必须表重建；空库直接 DROP＋重建（不复制任何行）。
+  const hasKindColumn = memoryColumns.some((column) => column.name === 'kind')
+  if (!hasKindColumn) {
+    const rowCount = Number((db.prepare('SELECT COUNT(*) AS n FROM memories').get() as { n: number | bigint }).n)
+    if (rowCount === 0) {
+      db.exec('DROP TABLE memories')
+      db.exec(MEMORIES_TABLE_SQL)
+    } else {
+      db.exec('BEGIN IMMEDIATE')
+      try {
+        db.exec(`
+          CREATE TABLE memories_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            source_event_seq INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            embedding BLOB,
+            kind TEXT NOT NULL
+          );
+          INSERT INTO memories_new (id, session_id, source_event_seq, content, created_at, embedding, kind)
+            SELECT id, session_id, source_event_seq, content, created_at, embedding, 'transcript' FROM memories;
+          DROP TABLE memories;
+          ALTER TABLE memories_new RENAME TO memories;
+        `)
+        db.exec('COMMIT')
+      } catch (err) {
+        db.exec('ROLLBACK')
+        throw err
+      }
+    }
+  }
+  // ③.1 · 部分唯一索引：流水按「会话＋事件序号」唯一；摘要不是「某一条事件」、不受该约束。
+  //   老库若已有非部分索引 ⇒ 先 DROP 再按新口径建（幂等）。
+  const existingIndex = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_memories_session_seq'")
+    .get() as { sql?: string } | undefined
+  if (existingIndex?.sql && !/WHERE\s+kind\s*=\s*'transcript'/i.test(existingIndex.sql)) {
+    db.exec('DROP INDEX idx_memories_session_seq')
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_session_seq
+      ON memories(session_id, source_event_seq) WHERE kind='transcript';
+  `)
   // ⚠️ 显式写 created_at 而不是依赖列 DEFAULT：CREATE TABLE IF NOT EXISTS 对**已存在**的表不生效，
   //    老库的 DEFAULT 仍是 UTC。显式 localtime 对新旧库行为一致（本机时区，便于人读）。
   const insertRow = db.prepare(
-    "INSERT OR IGNORE INTO memories(session_id, source_event_seq, content, created_at) VALUES(?,?,?, datetime('now','localtime'))"
+    "INSERT OR IGNORE INTO memories(session_id, source_event_seq, content, kind, created_at) VALUES(?,?,?,'transcript', datetime('now','localtime'))"
   )
   // P8：两条召回路径的最终过滤都在 SQL 层（⛔ 别一边 SQL 一边 JS）。
   //   selectRecent 保留为「库非空」探针（不过滤），用于区分「过滤后为空」与「真空白库」。
@@ -310,8 +357,9 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   const selectVectorRows = db.prepare(
     'SELECT id, session_id, content, created_at, embedding FROM memories WHERE embedding IS NOT NULL AND session_id <> ? ORDER BY id DESC'
   )
+  // ③.1：向量只服务召回（召回只看 kind='memory'）⇒ 回填只挑摘要；流水老行不返工、不删。
   const selectMissingVectors = db.prepare(
-    'SELECT id, content FROM memories WHERE embedding IS NULL ORDER BY id ASC'
+    "SELECT id, content FROM memories WHERE embedding IS NULL AND kind='memory' ORDER BY id ASC"
   )
   const updateEmbedding = db.prepare(
     'UPDATE memories SET embedding = ? WHERE id = ?'
@@ -469,7 +517,8 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
       lastInsertRowid: number | bigint
     }
     if (Number(info.changes) === 0) return // 重复事件（重放/重跑）—— 幂等跳过
-    void ingestEmbedding(Number(info.lastInsertRowid), text)
+    // ③.1 · L-6：流水行（kind='transcript'）不写 embedding —— 召回只看 kind='memory'，
+    //   流水的向量没有消费方。⚠️ Chroma 双写未在本单收窄（本期默认关），见回报「边界」。
     void doubleWrite(String(info.lastInsertRowid), text)
   })
 

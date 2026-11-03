@@ -293,25 +293,14 @@ async function phaseP3() {
     recallLimit: 8,
   })
   try {
-    emitUserMessage(ctx, 'p3-session', 1, 'P3 探针：这是一条进入 SQLite 真相源并需要落向量的记忆。')
-    const ok = await waitForAllVectors(dbPath, 1, 120_000)
+    emitUserMessage(ctx, 'p3-session', 1, 'P3 探针：这是一条进入 SQLite 真相源的流水行（③.1 起不再落向量）。')
+    await sleep(1500)
     const stats = dbGet(dbPath,
-      "SELECT COUNT(*) AS n, SUM(embedding IS NOT NULL) AS m, MIN(length(embedding)) AS minLen, MAX(length(embedding)) AS maxLen, MIN(typeof(embedding)) AS type FROM memories")
-    let norm = 0
-    let first = []
-    try {
-      const row = dbGet(dbPath, 'SELECT embedding FROM memories LIMIT 1')
-      const vec = recall.decodeVector(row.embedding)
-      if (vec) {
-        first = Array.from(vec.slice(0, 4))
-        for (const x of vec) norm += x * x
-        norm = Math.sqrt(norm)
-      }
-    } catch { /* 统计不足时下面判红 */ }
-    saveJson('P3-row.json', { dbPath, stats, norm, firstFour: first })
-    judge('P3-vector-persisted', ok && Number(stats.n) === 1 && Number(stats.m) === 1 &&
-      Number(stats.minLen) === 2048 && Number(stats.maxLen) === 2048 && String(stats.type) === 'blob' && norm > 0,
-      `memories.embedding BLOB；count(*)=${stats.n}，向量非空=${stats.m}，length=${stats.minLen}/${stats.maxLen}，typeof=${stats.type}，norm=${norm.toFixed(6)}`)
+      "SELECT COUNT(*) AS n, SUM(embedding IS NOT NULL) AS m, COUNT(*) FILTER (WHERE kind='transcript') AS t FROM memories")
+    const first = dbGet(dbPath, 'SELECT id, session_id, source_event_seq, content, kind, embedding FROM memories LIMIT 1')
+    saveJson('P3-row.json', { dbPath, stats, first })
+    judge('P3-transcript-no-vector', Number(stats.n) === 1 && Number(stats.m) === 0 && Number(stats.t) === 1,
+      `③.1 B 案取代原「P3-vector-persisted」：流水行 kind='transcript'，embedding 非空=${stats.m}（期望 0）`)
   } finally {
     ctx.dispose()
   }
@@ -355,6 +344,16 @@ async function phaseP4() {
   const dbPath = join(home, 'memory.db')
   const degradedLog = join(home, 'degraded.log')
   const seeded = seedOldSchema(dbPath, contents)
+  // ③.1 B 案：老 schema 行迁移后一律 transcript；本臂验「记忆回填＋召回」⇒
+  //   先把夹具声明为长期记忆（memory），再重启插件让回填只挑 memory。
+  const emptyCache = join(home, 'empty-cache')
+  mkdirSync(emptyCache, { recursive: true })
+  const migrator = applyPlugin(plugin, { dbPath, modelCacheDir: emptyCache, degradedLogPath: degradedLog, recallLimit: 8 })
+  migrator.dispose()
+  {
+    const db = openDb(dbPath)
+    try { db.exec("UPDATE memories SET kind='memory'") } finally { db.close() }
+  }
   const ctx = applyPlugin(plugin, {
     dbPath,
     modelCacheDir: MODEL_DIR,

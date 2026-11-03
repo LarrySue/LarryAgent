@@ -124,6 +124,19 @@ function emitUserMessage(ctx, sessionId, seq, text) {
     })
   }
 }
+/** ③.1 起：召回候选＝kind='memory'（长期记忆）；流水（transcript）不再算向量。
+ *  本探针验的是「召回排除本会话」，故夹具直接种 memory 行（embedding 由插件回填）。 */
+function seedMemoryRows(dbPath, rows) {
+  const db = new DatabaseSync(dbPath)
+  try {
+    const stmt = db.prepare(
+      "INSERT INTO memories(session_id, source_event_seq, content, kind, created_at) VALUES(?,?,?,'memory',?)",
+    )
+    for (const row of rows) stmt.run(row.sessionId, row.seq, row.content, '2026-11-01 00:00:00')
+  } finally {
+    db.close()
+  }
+}
 async function runAssembly(ctx, sessionId) {
   const provider = ctx.contexts.find((c) => c.name === RECALL_NAME)
   if (!provider) throw new Error('recall context provider missing')
@@ -222,11 +235,15 @@ async function phaseP8AB(tag, ready) {
     recallLimit: 8,
   })
   try {
-    emitUserMessage(ctx, 'A', 1, A1)
-    emitUserMessage(ctx, 'B', 1, B1)
-    emitUserMessage(ctx, 'B', 2, B2)
-    emitUserMessage(ctx, 'C', 1, C1)
-    emitUserMessage(ctx, 'A', 2, A2) // 第二条：触发召回
+    // ③.1：夹具改成「长期记忆」行（memory）；A2 作为本会话 query 经事件流进入。
+    seedMemoryRows(dbPath, [
+      { sessionId: 'A', seq: 1, content: A1 },
+      { sessionId: 'A', seq: 2, content: A2 },
+      { sessionId: 'B', seq: 1, content: B1 },
+      { sessionId: 'B', seq: 2, content: B2 },
+      { sessionId: 'C', seq: 1, content: C1 },
+    ])
+    emitUserMessage(ctx, 'A', 2, A2) // 本会话 query（流水行，不参与召回）
     if (ready) await waitForAllVectors(dbPath, 5)
     const assembly = await runAssembly(ctx, 'A')
     const rows = dbAll(dbPath, 'SELECT id, content, session_id FROM memories ORDER BY id')
@@ -273,9 +290,12 @@ async function phaseP8D() {
   let emptyText = ''
   let emptyWarns = []
   try {
-    emitUserMessage(ctx, 'A', 1, A1)
+    // ③.1：仅本会话的 memory 行 ⇒ 语义候选被会话过滤为空，降级路同样为空。
+    seedMemoryRows(dbPath, [
+      { sessionId: 'A', seq: 1, content: A1 },
+      { sessionId: 'A', seq: 2, content: A2 },
+    ])
     emitUserMessage(ctx, 'A', 2, A2)
-    await waitForAllVectors(dbPath, 2)
     const assembly = await runAssembly(ctx, 'A')
     emptyText = assembly.text
     emptyWarns = logLines(degradedLog)
@@ -334,14 +354,16 @@ async function phaseP8E() {
     recallLimit: 8,
   })
   try {
-    const backfilled = await waitForAllVectors(copyDb, countBefore)
+    // ③.1 · B 案：真库 54 行全是流水（transcript）⇒ 迁移只加列，⛔ 不再回填向量。
+    await sleep(1500)
     const colsAfter = dbAll(copyDb, 'PRAGMA table_info(memories)')
-    const rowsAfter = dbAll(copyDb, 'SELECT id, content FROM memories ORDER BY id')
+    const rowsAfter = dbAll(copyDb, 'SELECT id, content, kind FROM memories ORDER BY id')
     const hashesAfter = rowsAfter.map(rowHash)
     const row = dbGet(copyDb, 'SELECT COUNT(*) AS n, SUM(embedding IS NOT NULL) AS m FROM memories')
     const realHashAfter = sha256File(REAL_DB)
     const colNamesAfter = colsAfter.map((c) => c.name)
     const hashesEqual = JSON.stringify(hashesBefore) === JSON.stringify(hashesAfter)
+    const allTranscript = rowsAfter.every((r) => r.kind === 'transcript')
     saveJson('P8-e-migration.json', {
       realDb: REAL_DB,
       copyDb,
@@ -353,17 +375,18 @@ async function phaseP8E() {
       rowHashesAfter: hashesAfter,
       rowHashesEqual: hashesEqual,
       embeddingNotNull: Number(row.m),
-      backfilled,
+      allTranscript,
       realDbSha256Before: realHashBefore,
       realDbSha256After: realHashAfter,
       realDbUnchanged: realHashBefore === realHashAfter,
     })
-    judge('P8-e-column-added', colsBefore.length === 5 && colsAfter.length === 6 && colNamesAfter.includes('embedding'),
-      `PRAGMA table_info：${colsBefore.length} 列 → ${colsAfter.length} 列，含 embedding`)
+    judge('P8-e-column-added',
+      colNamesAfter.includes('embedding') && colNamesAfter.includes('kind'),
+      `PRAGMA table_info：${colsBefore.length} 列 → ${colsAfter.length} 列，含 embedding＋kind`)
     judge('P8-e-original-rows-unchanged', hashesEqual && rowsAfter.length === countBefore,
       `${countBefore} 行：id/content 逐行 sha ${hashesEqual ? '全同' : '不同'}（行数 ${rowsAfter.length}）`)
-    judge('P8-e-backfill-54', Number(row.m) === countBefore && Number(row.n) === countBefore,
-      `embedding 非空 ${row.m} / 总 ${row.n}（期望 ${countBefore}）`)
+    judge('P8-e-backfill-54', allTranscript && Number(row.m) === 0,
+      `B 案：真库老行全为 transcript=${allTranscript}；embedding 非空 ${row.m} / 总 ${row.n}（期望 0 —— 流水不再回填；老库有向量的行保留不删）`)
     judge('P8-e-real-db-untouched', realHashBefore === realHashAfter,
       `真库 sha256 前后${realHashBefore === realHashAfter ? '相同' : '不同'}（${realHashBefore.slice(0, 12)}…）`)
   } finally {

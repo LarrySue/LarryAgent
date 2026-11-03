@@ -191,9 +191,11 @@ function vectorWithCosine(qInput, cosine, seed) {
 function seedRows(dbPath, rows) {
   const db = new DatabaseSync(dbPath)
   try {
-    const stmt = db.prepare(
-      'INSERT INTO memories(session_id, source_event_seq, content, created_at, embedding) VALUES(?,?,?,?,?)',
-    )
+    // 改前件（old-lib 对照臂）没有 kind 列；当前件有 ⇒ 同一函数按实际 schema 适配
+    const cols = db.prepare('PRAGMA table_info(memories)').all().map((c) => c.name)
+    const stmt = cols.includes('kind')
+      ? db.prepare("INSERT INTO memories(session_id, source_event_seq, content, kind, created_at, embedding) VALUES(?,?,?,'memory',?,?)")
+      : db.prepare('INSERT INTO memories(session_id, source_event_seq, content, created_at, embedding) VALUES(?,?,?,?,?)')
     for (const row of rows) {
       stmt.run(row.sessionId, row.seq, row.content, '2026-11-01 00:00:00', row.embedding)
     }
@@ -204,9 +206,10 @@ function seedRows(dbPath, rows) {
 function seedRowsPlain(dbPath, contents, sessionId) {
   const db = new DatabaseSync(dbPath)
   try {
-    const stmt = db.prepare(
-      'INSERT INTO memories(session_id, source_event_seq, content, created_at) VALUES(?,?,?,?)',
-    )
+    const cols = db.prepare('PRAGMA table_info(memories)').all().map((c) => c.name)
+    const stmt = cols.includes('kind')
+      ? db.prepare("INSERT INTO memories(session_id, source_event_seq, content, kind, created_at) VALUES(?,?,?,'memory',?)")
+      : db.prepare('INSERT INTO memories(session_id, source_event_seq, content, created_at) VALUES(?,?,?,?)')
     contents.forEach((content, i) => stmt.run(sessionId, i + 1, content, '2026-11-01 00:00:00'))
   } finally {
     db.close()

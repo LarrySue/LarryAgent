@@ -145,7 +145,7 @@ function seedRows(dbPath, rows) {
   const db = new DatabaseSync(dbPath)
   try {
     const stmt = db.prepare(
-      'INSERT OR IGNORE INTO memories(session_id, source_event_seq, content, created_at, embedding) VALUES(?,?,?,?,?)',
+      "INSERT OR IGNORE INTO memories(session_id, source_event_seq, content, kind, created_at, embedding) VALUES(?,?,?,'memory',?,?)",
     )
     for (const row of rows) stmt.run(row.sessionId, row.seq, row.content, '2026-11-01 00:00:00', row.embedding)
   } finally {

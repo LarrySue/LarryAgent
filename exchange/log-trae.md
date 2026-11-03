@@ -16,7 +16,7 @@
 | **V4b 回归未复现**（`run-36` iso 第 12 条） | **Trae** | `harness/scripts/run-36-memory.mjs`（只读复跑） | ✅ **已闭环（Trae 空载复跑 16:05；WB 亲手复现 16:52）**：`S36_PHASE=iso` ⇒ `[36] 判定：iso PASS`，`V4b-abs-inside-home-ok` PASS、库 16384。前两次未过＝资源竞争（非断言拒绝），已定性 | 2026-11-01 |
 | **②.2.3 近似去重**（P0 地基最后一块） | **Trae** | `plugin-s4-memory/src/recall.ts` ＋ `index.ts` ＋ 新探针 `p223-dedup-probe.mjs` | ✅ **已交付并复验成立（WB 2026-11-02 21:15，`2ce6060`）**：WB 独立复跑 p223 **10/10** ＋ 四探针回归全绿；部署件同 sha。✅ **追加项亦复验成立（WB 21:45，`8201ce3`）**：阈值 0.80，L-1～L-4 **WB 独立复算全绿** ⇒ **本块全闭环，P0 地基全齐** | 2026-11-02 |
 | 删 `api/chat.py` ValueError 残留分支 | **Trae** | `backend/api/chat.py`（单文件） | ✅ **已交付并复验成立（WB 20:30，`f9fc0bc`）**：K-2 0 增 4 删；K-3 **WB 独立跑 27 passed**；精确串断言零命中。⭐ 她补的增量：流式路径异常发生在响应头已发出之后 ⇒ **结构上够不着该分支** | 2026-11-02 |
-| **③.1 写侧挂点 ＋ B 案表结构**（`kind` 列／部分索引／摘要写入路径） | **Trae** | `plugin-s4-memory/src/index.ts` | 🆕 **2026-11-03 21:20 派发，待开工**（L-1～L-8，见本区第一节）。⚠️ **本单 ⛔ 禁改召回**（顺序约束 L-8） | 2026-11-03 |
+| **③.1 写侧挂点 ＋ B 案表结构**（`kind` 列／部分索引／摘要写入路径） | **Trae** | `plugin-s4-memory/src/index.ts` ＋ `src/write.ts` ＋ `embed-probe/p31-kind-probe.mjs` | ✅ **2026-11-03 22:11 交付，待 WB 复验**（L-1～L-8 全绿，见本区〈✅ 交付 · ③.1〉）。回归：p31／p02／p08／p221／p222／p223／p3holes-a ＋ run-36 j1j2/j3/j4/j5 全绿。⚠️ 召回未动（L-8） | 2026-11-03 |
 | — | — | — | ⚠️ **本区有一块在飞**（上格 ③.1）。其余 —— 三处补洞 A／B／C 已于 2026-11-01 20:10 全部复验成立。**已闭环十三块**（CoT 存档／P0② 一期／P8／shell 编码／⑪.1／⑪.4.1／②.2.1 本体／②.2.1 增量／②.2.2／V4b／⑪.4.2／场地隔离③／B-8／src 守卫）结论均在 `TODO.md`，见〈🗂 已清理段落〉。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
@@ -117,6 +117,39 @@
 ### 7 · 禁区
 
 ⛔ 改召回（L-8）｜⛔ 给 `kind` 加 DEFAULT ｜⛔ 删老库数据（`DROP` 前必须备份）｜⛔ 动 `backend/` 代码（L-5 只证不删）｜⛔ 动真实 `~/.dsh` ｜⛔ 改 `TODO.md`／`docs/`（WB／Qoder 区）
+
+---
+
+## ✅ 交付 · ③.1 写侧挂点 ＋ B 案表结构（Trae · 2026-11-03 22:11）
+
+**结论先行**：L-1～L-8 **全部成立**；召回（`selectRecentFiltered`／`selectVectorRows`）**未动**（L-8）。新探针 `p31-kind-probe.mjs` 16 判 ＋ 2 OBS 全绿；回归 7 个探针 ＋ run-36 四相全绿。
+
+### 落地
+- `src/index.ts`：表 DDL 加 `kind TEXT NOT NULL`（⛔ 无 DEFAULT）；老库无 kind ⇒ 空库 DROP＋建、有数据表重建（回填 `'transcript'`，`id/content` 逐行不变）；索引改 `WHERE kind='transcript'` 部分唯一；`insertRow` 显式 `kind='transcript'`；`selectMissingVectors` 只挑 `kind='memory'`；user/message 落库后**不再调 `ingestEmbedding`**（L-6）。
+- `src/write.ts`（新）：`insertMemoryRow` ／ `writeMemorySummary(db, input, hooks)` —— ③.2 人审闸通过后调用；**本单不挂自动触发**（无事件挂点、无「默认全入」）。
+- 部署件已同步（`.dsh-home/profiles/sdk/.../lib`，含 `write.js`）；p31 L0 判源／部署件同 sha。
+
+### 判据读数（证据 `D:/Code/_trae-evidence/p31-kind/`）
+| 判据 | 读数 |
+|---|---|
+| L-1 空库 | `kind` 存在、notnull=1、dflt=null、行数 0 |
+| L-1 有数据老库 | 列 5→7；3 行 id/content 全同；kind 全 transcript、embedding 全 NULL；二次 apply 幂等 |
+| L-2 | 索引 SQL 含 `WHERE kind='transcript'`；两条 memory 同 seq 均插入成功；transcript 同 seq 第二条被拦（**裸 INSERT**，⛔ 未用 `OR IGNORE`） |
+| L-3 | 3 条 user/message ⇒ kind='transcript' |
+| L-4 | `insertMemoryRow` 直调 ⇒ id=4、kind='memory'、session='session-flow'（⚠️ 程序内验证，非产品路径） |
+| L-5 | 插件 index.js＋write.js 中 `/api/memory`=0、`archive/confirm`=0（⚠️ 边界：fake-ctx 臂，未跑 backend 服务端日志） |
+| L-6 | 新 transcript 行 embedding 非空=0；回填 SQL 含 `kind='memory'`、旧 SQL 零残留 |
+| L-8 | 两条召回 SQL 原样命中 |
+
+### 回归
+- `p31` 16 PASS ／ `p02-recall` 21 PASS ／ `p08` 12 PASS ／ `p221` 13 PASS ／ `p222` 12 PASS ／ `p223` 10 PASS ／ `p3holes-a` 4 PASS
+- `run-36`：`j1j2` 6 PASS ／ `j3` 10 PASS ／ `j4` 10 PASS ／ `j5` 5 PASS
+
+### 自曝（判据／装置改动，需 WB 眼过）
+1. **旧探针随 B 案改判**（不是产品判据放宽）：`p02` P3 由「流水落向量」反转为「流水不落向量」；`p08` 召回夹具由「事件流流水」改为「memory 行」，P8-e 回填期望 54→0（真库老行全 transcript）；`p222` 种子按实际 schema 自适应（old-lib 对照臂无 kind）。
+2. **run-36 装置五处存量问题**（与 ③.1 无关，跑起来才暴露）：① 源 profile 现含插件条目 ⇒ 临时 home 复制后 insert 撞 `duplicate loader entry id`；② J1/J3/J4/J5 的 dbPath 在 evidence（home 外）⇒ 撞 10-30 场地隔离断言；③ 配置里 `allowOutsideHome: 'true'` 是字符串，插件按 `=== true` 拒；④ J5 断言 system/message 帧但默认 `injectSection=false`；⑤ J3 本地向量用 mean pooling，插件是 CLS ⇒ 伪漂移 0.829。已在装置侧修（剥副本条目／显式豁免＋审计行／布尔不加引号／J5 开 injectSection／改用插件 embedding）。
+3. ⚠️ **`p3holes-a` A-2 仍写真实 `~/.dsh/larry-memory.db`**（存量行为，非本单引入）：本次实跑把该库迁到 7 列（3 行探针夹具：2 memory ＋ 1 transcript）。属 Tier0 测试隔离隐患，**建议另立一块修／或老大裁定**。
+4. **边界未闭合**：Chroma 双写未随 L-6 一起收窄（本期默认关）；③.2 接入时须走 `writeMemorySummary(..., { afterInsert: ingestEmbedding/doubleWrite })` 才带向量。
 
 ---
 
