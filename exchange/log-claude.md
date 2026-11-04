@@ -10,7 +10,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/test_llm_effective_model.py`（新增） | 🟢 **已交付待复验**：2026-11-04 17:31 交付，U-1～U-4 全闭合，`pytest -q` = **176 passed, 3 skipped**（基线 174 ＋ 新增 2） | 2026-11-04 |
+| **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/test_llm_effective_model.py`（新增） | ✅ **已复验成立（WB 2026-11-04 17:40 独立复核，`f54d3f4`）**：`pytest` **176 passed／3 skipped／0 failed**（我自己跑的）。测试本体核过：U-1 覆盖默认 `provider_key`、U-2 五种空输入带 label、U-3 断言全引用 `FALLBACK_MODEL`；`effective_model` 实现确认有 `.strip()`（所以「纯空白」那条是真有效、不是恰好绿）。⚠️ **U-3 我 grep 出 1 处字面量** —— 定位在 **docstring 举例**（`:9`）、非断言 ⇒ **判据成立**；她的「0」与我的「1」都对，**差异在检索式**（她带引号、我没带）。⚠️ **未闭合（她自曝②）**：`load_config` 的 YAML→dataclass 链路**未覆盖** ⇒ 字段名被改坏时这两条仍会绿 | 2026-11-04 |
 
 > ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-claude.md`**。
 > 📝 **过程留痕（2026-10-16 晚 · 与 WB 并发撞车 · 双向已互核，零丢失）**：F1 销账提交与 WB 侧提交撞车 —— ① **我 → WB**：首版 `7abca33` 误带 WB 已 `git add` 未提交的 `.workbuddy/memory/2026-10-16.md`（共享工作树＋暂存区）⇒ 我 `git reset --soft` 拆出、路径限定重提；② **WB → 我**：reset 后暂存区里**我的 log 改动反被 WB 的提交 `effa8a1` 一并带入**（`git log -- exchange/log-claude.md` 可见该笔 32 行改动＝本文件 F1 销账）⇒ 我这笔 `fcb326f` 只剩本行留痕。**结果：双方内容均完整入库、零丢失** —— WB 已在其提交信息留痕「本段被 Claude 7abca33 代提入库、内容已核完整」并复验我的 F1 落点（§3.6:1154 三核过）。仅**归属错位**，⛔ 不追改（旧提交不回改；reflog 链 `7abca33 → a1f5b04 → effa8a1 → fcb326f` 可溯）。教训：**共享工作树下提交前先核暂存区，一律路径限定提交**。
