@@ -825,3 +825,18 @@ $env:DEEPSEEK_API_KEY = "<key>"; cd client; npm run dev:tauri
 3. **常驻 Windows 与生产 Linux 容器须配套**：原设想为 Docker Desktop＋WSL2 后端，DSH 在 Linux 侧；须给 vhdx 增长设上限，并考虑 7×24 自动启动（计划任务／服务）与日志轮转，均非已完成部署。
 
 原评估建议「短期不升级」，另提内存到 96 GB、加盘做快照的未来选项；仅保留为未采纳建议，不构成采购要求，也不新立待办。
+
+---
+
+## 15. 探针的真实 home 守卫（新探针必带）
+
+> **性质**：工程实践约束，不是协作机制。适用于任何会碰 `DSH_HOME`／用户 home 的探针（`harness/scripts/**`），⛔ 不限 `p3holes-a` 这一个。
+
+- **守卫本体**：`harness/scripts/embed-probe/probe-guard.mjs`（2026-11-04 复验成立）。文件头自带由来／用法／负证；⛔ 不在此抄代码全文，改守卫以文件头为准。默认盯 `larry-memory.db` 与 `sessions/archive-manifest.jsonl`，也支持传 `watchFiles`。
+- **用法三要点**：
+  1. `root` **必填、无默认值**，且必须在改 `USERPROFILE`／`HOME` **之前**算好 —— 守卫盯的是真实 home，而 `os.homedir()` 会被假 home 改掉；若给默认值，忘传的新探针会盯着假 home 报全绿。
+  2. 入口快照（`createHomeGuard`）在**改环境变量之前**做。
+  3. 出口 `verify()` 在**清临时目录之前**做；`ok=false` 时打印 `diffs` 并以非零退出，⛔ 不吞。
+- **为什么**：`p3holes-a` 的 A-2 臂曾不设 `DSH_HOME` ⇒ 真写 `~/.dsh`，**11-01／11-03 各污染一次**；改假 home 只治那一次，且留下「瞄错靶报全绿」的假绿形态 —— 守卫是兜底层。
+- **对新探针的要求**：**必须**自带此守卫（import ＋ 显式传 `root` ＋ 入口／出口各一次）；**没有守卫的新探针不算合规**。⛔ 不写成「建议」。
+- **相关（不同层）**：`.codebuddy/skills/verify-ai-delivery/SKILL.md` 的「交付的单测别污染真实环境」管**单测零配置路径**；本条管**探针入口／出口的实 home 防线**，两者不互相替代。
