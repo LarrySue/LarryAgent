@@ -423,7 +423,11 @@
           - 🔴 **三条实现硬坑（探针踩实，⛔ 落地时别踩）**：① **探针/插件包必须有 `package.json`**（缺则 `turn/end` 报 `REQUEST_EXTENSION`、根轮次空响应 —— 与插件代码无关，是包形态）② **委派时机**：⛔ 别在 `turn/start` 里立刻起，改为**捕获 parent ＋ 等根 `turn/end` + 200ms** 再委派 ③ **关闭顺序**：`harness.close()` 必须等子 agent 落 `done` 帧，否则子 run 被掐成 `aborted`。
           - **未闭合**：`turn/start` 直起是否真冲突**未单独复测**（坑 1 排除后未再验；按稳妥时序选型，不影响 (a) 成立）。
           - ⛔ **诚实边界不变**：本块只定路径，**不产出生成实现**。原 (b)(c) 两选项**不再评估**（(a) 已可执行）。
-        - [ ] **③.2b · 人审闸**（**前置＝③.2a 选定**）：**确认（可编辑）后才入库**。
+        - [ ] **③.2b · 人审闸**（**前置＝③.2a 选定 ✅**）：**确认（可编辑）后才入库**。🔵 **已派发（2026-11-04 20:30 → Trae，判据 W-1～W-8，见 `exchange/log-trae.md`〈📮 派发 · ③.2b〉）**
+          - 🔴 **「可编辑」这三个字经接口实测已改判**（WB 2026-11-04 20:26，读类型定义非注释）：`ApprovalService.request(req)` 返回 **`Promise<ApprovalOutcome>`**，`ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'`（`allowed-once` 为唯一授权），`ApprovalRequest` 字段只有 `agent／toolName／callId／reason／signal`。
+            ⇒ **审批闸只能表决，⛔ 回传不了任何内容** ⇒ 「编辑后确认」**必须拆成两个通道**：审批只答过/不过；**编辑后的内容走独立暂存通道**（暂存文件／staging 表，形状由执行人定、只要可验）。⚠️ 原措辞预设了接口不存在的能力，⛔ 别按原字面实现。
+          - 🔴 **第二条硬约束：没有 open turn 时 ask 直接被拒**（同段类型文档原文：*"The request requires an open turn … an idle ask rejects before appending anything"*）⇒ 闸**只能挂在 turn 内**的事件上；turn 外（异步收尾／定时）调用拿不到 `allowed-once`。这是设计、不是 bug。
+          - 🔴 **第三条：`write.ts` 目前是孤岛**（`grep -rn "writeMemorySummary\|insertMemoryRow" src/*.ts` ⇒ 仅 `write.ts` 内部互调，`index.ts` 零引用）⇒ 本单的活正是**把它接进真实写入路径并把闸包在中间**。
           - **判据**：未确认 ⇒ ⛔ 不入库；**编辑后确认 ⇒ 入编辑后的版本**（⛔ 不许入原文）；⛔ 不许出现「默认全入」的旁路。
           - ⭐ **有现成范式**：`plugin-approval-probe` 的 `ctx.approval.request({ agent, toolName, callId, reason, signal })`，`reason` 可带 `case=<名>` 供本地策略答者作答 ⇒ **可先用本地答者验机制**，真人前端点击那条随 `DSH-3.8`（⛔ 不必等它才能开工）。
           - ⚠️ **接线位置**：`write.ts` 的 `writeMemorySummary(db, input, hooks)` —— 只在批准后调用；`afterInsert` 钩子留给向量／双写（见 ③.1 边界 4）。

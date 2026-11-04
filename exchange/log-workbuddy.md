@@ -7,7 +7,9 @@
 
 ## 📮 在飞任务（状态区）
 
-> ✅ **当前无在飞任务**（2026-11-04 20:22）：今日派出的五单（H／N 探针守卫 · S 判据升格 · T 守卫入册 · D 回传实测 · P 选型 · M/U/V 配置生效）**全部复验成立**，结论分别在 `probe-guard.mjs` 文件头、`docs/doc-audit-criteria.md` §六 5-6、`docs/local-env.md` §15、`TODO.md` DSH-4 ③块。
+> 🔵 **在飞 1 件（2026-11-04 20:30）**：**③.2b 人审闸 → 砚砚**（`log-trae.md`〈📮 派发 · ③.2b〉，判据 W-1～W-8）。本单是「先钉边界、再接生成」的顺序选择 —— 闸落地后，生成端怎么写都绕不过它。
+>
+> ✅ **今日已闭环八单**（2026-11-04）：派出的 H／N 探针守卫 · S 判据升格 · T 守卫入册 · D 回传实测 · P 选型 · M/U/V 配置生效 —— 全部复验成立，结论分别在 `probe-guard.mjs` 文件头、`docs/doc-audit-criteria.md` §六 5-6、`docs/local-env.md` §15、`TODO.md` DSH-4 ③块。（H／N 探针守卫 · S 判据升格 · T 守卫入册 · D 回传实测 · P 选型 · M/U/V 配置生效）**全部复验成立**，结论分别在 `probe-guard.mjs` 文件头、`docs/doc-audit-criteria.md` §六 5-6、`docs/local-env.md` §15、`TODO.md` DSH-4 ③块。
 
 > 📌 **已闭环（结论均在 `docs/`／`TODO.md`，⛔ 别在 log 里找）**：11-03 术语表线（Q-1～Q-4 `3d04edf`）／11-03 ③.1 写侧挂点（`d20e27f`，11-04 复验成立）／映射底账（`eb9a8a5` → 入册 `c175eb4`）／11-02 各块（`a0a61ef`／`6837473`／`9fc1997`／`6d89009`／`f9fc0bc`／`2ce6060`／`8201ce3`）。回溯 `git log -p -- exchange/log-workbuddy.md`。
 
