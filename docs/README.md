@@ -37,6 +37,7 @@
 - `local-env.md` — **本机（Windows）环境唯一真相源**：**⭐ 三种角色（开发环境 / C 侧测试环境 / PC 侧生产使用环境）**、profile 启动锁、`--patch` 引本地包撞锁、windows-acl runner 直调格式、**⭐ 拒绝方言缺口三层 + 方言修复件与挂载范式（§4.3）**、**⭐ 连通性 / 凭据四组对照判据矩阵**、DSH 工程搭建与短路点复跑、Vue/Tauri ↔ DSH 连通复跑、本机环境变量与工具链基线、**§11 PC 侧生产使用环境的口径（🟡 推论）**
 - `dsh/` — **DSH 迁移决策区**：`dsh-migration.md` 为决策文档，另有专题文档、三份含实测报告与**永久保留的证据**，及 0.1.5 笔记扫描稿、上游 `AGENTS.md` 参考件、上游欠账与能力面盘点，及**插件参考清单**（`dsh-plugin-reference-catalog.md`——⭐ 例外活文档：Qoder 长期维护、老大触发制）。细则见 `dsh/README.md`
 - `product-positioning.md` — **产品功能边界能力树**：8 域 / 31 子项，含每条落地方式与现状状态。根目录 `README.md` 与 `dsh/dsh-migration.md` 均存指针，勿另立副本
+- `test-asset-inventory.md` — **测试资产 ↔ 31 子项映射底账（定稿）**：191 条已注册用例 × 31 子项的账面（`backend/tests` ＋ `harness/tests` ＋ 2 个插件 smoke）；含反向视角（14 个零用例／4 个仅间接／6 个覆盖薄）、14 个零用例子项的拆类与实现证据、六条盘点建议去向、诚实边界。**DSH-6 测试重建的输入件**；⛔ 不是验收依据，处置全「待裁」
 - `deployment-architecture.md` — **云部署架构（定案）**：云/端边界（云脑＋本地手）、两形态对比、配置两环境表、隔离手段、打包部署、落地顺序；⭐ 含**§5.1 鉴权机制定性**（Bearer 对称共享密钥／**Bearer 不配 TLS 等于没设**／`/health` 永不鉴权属契约）、**§5.3 前端出口唯一**（`chat.html` 已退役）、**§5.4 CVM 判定**、**§八 目标态一览（🔒 逐条未实施 ＋ 复算入口）**。⛔ 未决四条不在本档 ⇒ `exchange/deployment-architecture.md`（**未定案**）
 - `la-space/` — **LA 空间与人格模型**：需求总纲（长期规矩）、搬家与入住方案（一次性）、技术参考（立项附件）。细则见 `la-space/README.md`
 - `ui-reference.md` — UI 设计单一权威参考（组件 / 交互 / 视觉 token，所有 AI 以它为准）
