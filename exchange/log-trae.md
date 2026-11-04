@@ -226,6 +226,27 @@
 
 ---
 
+## ✅ 交付 · DS `reasoning_content` 回传规则实测（Trae · 2026-11-04）—— D-1～D-7
+
+**结论先行：文档所述「带 tools 的后续请求不回传 `reasoning_content` ⇒ 400」在本机实测 **未触发** —— `deepseek-reasoner`／`deepseek-flash`／`deepseek-v4-pro` 三模型全部 **HTTP 200 正常完成**。产品当前配置（`deepseek-chat`、非思考模型）下，**不存在因"不回传"导致的报错风险**（它本身不产出 reasoning_content）。**
+
+- **D-1 成立（旧名仍可用）**：`deepseek-reasoner` 最小请求 ⇒ `http=200`、`finish_reason=stop`、`content="OK"`、`reasoning_content` 有值（70 字符）。另查 `/models` 只列 `['deepseek-flash','deepseek-v4-pro']`（旧名不在列表但调用仍成功）。
+- **D-2 成立（核心，带 tools ＋ 剥离 reasoning）**：首轮 `200 / tool_calls`（reasoning 77 字符，已记但第 2 轮**未回传**）⇒ 第 2 轮 `http=200`、`finish_reason=stop`、`content="已完成：调用 ping，参数 x=\"1\"，返回 {\"ok\":true}"`。**未报 400。**
+- **D-3 成立（带 tools ＋ 回传原值）**：同构造、回传 729 字符 reasoning ⇒ 第 2 轮 `200 / stop`，正常拿到终稿。两组**结果无差异**。
+- **D-4 成立（无 tools ＋ 传 reasoning）**：两轮均 `200`；第 2 轮正常答复「好」。⚠️ 文档称"被忽略"——**无法区分忽略与采纳**（不可直接观测），按派发口径报为合格结论。
+- **D-5 成立（新模型同样规则）**：`deepseek-flash` ＋ `thinking:{type:enabled}` ＋ `reasoning_effort:medium` 重跑 D-2／D-3 ⇒ 首轮 `200 / tool_calls`（reasoning 74／92 字符），第 2 轮剥离版与回传版**均 `200 / stop` 正常完成**。两代结论一致、无差异。
+  - **补测（超出原 flash 口径，单列不合并）**：`deepseek-v4-pro` 同构造 ⇒ 两臂首轮均 `200 / tool_calls`；第 2 轮**均 `http=200`、`finish_reason=length`（`max_tokens=512` 被思考占满，未产出终稿）** ⇒ 无 400，但该臂不足以比较终稿质量；未再加预算（成本控制）。
+- **D-6 成立（错误码归一表）**：D-1～D-5 **错误表为空**（无任何错误响应）。另单列一条**不属于本规则**的观测：首轮试验用 `tool_choice` 强制指定时，四臂均返回 `400 / error.code=invalid_request_error / "Thinking mode does not support this tool_choice"`（request_id 见 `20261104T155800.json`）⇒ 改用 auto 才取得 `tool_call`。
+- **D-7 成立（不碰产品代码）**：`git status --short` 仅 `?? scripts/ds-probe/`。
+  - 🔴 **对 4028 的纪律**：本单观测到的码是 `400/invalid_request_error`，**与 4028 不同**；未写"确认 4028 根因"。
+
+**证据**：`_trae-evidence/ds-reasoning/20261104T160120.json`（最终一轮，含各场景原始请求消息与响应）；首轮工具选择试验 `20261104T155800.json`。
+**未闭合**：文档所述 400 **触发条件**未确定（本机未复现）——只报观测，不推断原因。
+**自曝**：① `tool_choice` 强制在 thinking 模式下直接 400，第一次构造四臂全废，改用 auto ＋ 强提示才拿到 tool_call（这是通道/构造问题，已修正后重跑）。② `deepseek-v4-pro` 两臂 `length` 截断，未达终稿——**本轮不据此对 v4-pro 下"完全通过"结论**。③ 断言"被忽略"不可观测，只报了不报错。
+**凭据**：仅经 `get_config()` 读取，脚本与输出**无 key**；唯一打印的配置信息是 provider 域名（`api.deepseek.com`），非凭据。
+
+---
+
 ## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口（Trae · 2026-10-28）
 
 > **事实层已结案（WB 2026-10-31 实测补证）**：`deepseek-reasoner` 流式 `delta` **确实返回** `reasoning_content`（53 chunk 中 48 个带、143 字符，而 `content` 仅 3 字符）；`deepseek-chat` 对照**不返回** ⇒ 是模型特性、不是我方取法错。`llm.py:498` 只取 `delta.content`，**实测丢弃 97.9% 的输出**。读数已落 `TODO.md` P0②〈取证挂账〉。
