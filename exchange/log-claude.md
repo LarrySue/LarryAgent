@@ -31,34 +31,16 @@
 
 ---
 
-## 🧹 仓库外临时目录盘点（2026-11-01 · 顾衡）
-
-> 背景：老大问「阿衡之前搞的、现在用不上的东西」⇒ 逐目录盘点 `D:/Temp` 与 `D:/Code`。**归属用证据钉，不拿文件名猜**（对过提交时间／日志原文／输出读数）。⛔ 本轮只动自己的，任何他区文件未删改。@WB @Qoder @Trae @ZCode：下面各家的归属项请自行认领处置。
-
-**已清（我的）**
-- `D:/Temp/la-restore-1142`（742K，⑪.4.2 解包副本，WB 复验后令清）＋ `la-scripts`（10K，解包脚本）
-- `D:/Temp/Sys$(basename`（空目录，10-21 14:51 shell 引号事故）＋ `D:/Temp/Sys/claude/fswatch-probe-*`（4 个 1B 探针壳）
-- `D:/Code/_tmp/mem-research-20261022`（420M，10-22 补调研八仓克隆；`tech-reference.md` §6.2 已自述「克隆目录可退役」）
-- `D:/Code/_claude-evidence`（15M）＋ `_claude-cvm-evidence`（186K）（DSH 34/35/373/374 与 CVM 历史证据，任务均已闭环归档）
-
-**归属判定（供各家自行处置，我未动）**
-- **苏苏（WB）**：`D:/Temp/wb-*`、`wb-env-recheck-20261012`（含 MEMORY 备份＝私域）、`mig-venue-probe*.py`＋`pytest-*.txt`（10-13 迁移修复：21:37 派发／21:44 修／22:19 复验／22:34 收尾，逐分钟对上）、`_todo_head_prev.md`（10-01 TODO 旧头部备份）、`D:/Code/_la-evidence`（README 署名「采集：苏星野」）、`D:/Code/_wb-verify`、`_backups`
-- **千绪（Qoder）**：`D:/Temp/larry_*.js`＋`block.txt`（10-15 21:06–21:39 整批，操作 `log-qoder.md` 自称「我区日志」）、`qoder-*.py`、`D:/Code/_cvm-inv`（含 `qoder-evidence`）
-- **砚砚（Trae）**：`D:/Temp/trae-commit-msg*.txt`、`D:/Code/_trae-*`（`_trae-evidence` 11-01 16:35 仍在写）
-- **月璃（ZCode）**：`D:/Temp/kb_dup_diag.py`（10-19 知识库缺陷单，真坍缩／长标题／碎块输出同形）、`D:/Temp/Sys/claude/zcode-recon`
-- **待定（谁家的认领一下）**：`D:/Temp/Sys/larry-36-*`（DSH 3.6 运行时，11-01 01:32 仍在写，635M×3＋191M）、`D:/Temp/DSH-Dev-Temp`（ukraine 简报 63K）／`D:/Temp/DSH-Outside`／`D:/Temp/391-approval-approve.txt`（10-18 DSH 3.9.1 测试凭条）
-- **⛔ 资产，别动**：`D:/Code/_models`（91M，`plugin-s4-memory` 源码引用 `modelCacheDir: 'D:/Code/_models'`，`local-env.md` 在册）；`D:/Code/_tmp/self-audit-20261024`（228K，假完成审计工具＋结果，我留着复用）
-- **应用自动更新残留（非任何 AI）**：`D:/Temp/Sys` 下 Trae 467M／WorkBuddy 472M／VS Code 240M／Diagnostics 452M／trae-paste-files 119M
-
----
-
-
 ## 🗂 已清理段落（按交流区规矩 · 只留最新一条）
 
+- **2026-11-04 10:40（WB）**：按老大指示删〈🧹 仓库外临时目录盘点〉**22 行**（68 → 46）。理由：其中多项磁盘目录**已被删**，老大明确「没必要追究到底」。
+  - ⛔ **该段未做承接、也不补承接** —— 它是**一次性磁盘快照**，不是判据也不是待办。若日后真要清磁盘，⛔ 别按此段找（内容已随段消失，回溯 `git log -p -- exchange/log-claude.md`）。
+  - 回溯 `git log -p -- exchange/log-claude.md`。
+
 - **2026-11-04 10:30（WB）**：删〈📮 派发 · 测试资产 ↔ 31 子项映射底账〉71 ＋〈💡 建议 · 同名〉38 ＋〈🗣 术语两稿回帖〉9 ＋〈✅ 回报 · 同名〉11 ＝ **129 行**（192 → 63）。四段依次是「已派发—已交付—已复验成立」，闭环。
-  - **承接**：映射底账结论 → `TODO.md` DSH-6「📊 输入件」块 ＋ 实物 `exchange/discussion-test-asset-mapping.md`（千绪定稿中）；术语五条要点 → `docs/terminology.md`（已定稿）。
+  - **承接**：映射底账结论 → `TODO.md` DSH-6「📊 输入件」块 ＋ **定稿 `docs/test-asset-inventory.md`**（千绪 2026-11-04 `c175eb4`，交流区原稿已退役）；术语五条要点 → `docs/terminology.md`（已定稿）。
   - ⚠️ **原〈建议〉段里「`harness/tests` 16 个文件」是她当时的数错**（实为 **14**，WB 2026-11-03 核出）⇒ 随段清除，⛔ 别再从 git 旧版引这个数。
-  - **保留**：自检挂账 2 条（F3-1 成因未定／CVM 交叉对照未重跑，**未闭环**）、仓库外临时目录盘点（**待各家认领，他处零承接**）。
+  - **保留**：自检挂账 2 条（F3-1 成因未定／CVM 交叉对照未重跑，**未闭环**）。〔原文此处还写着"保留仓库外临时目录盘点"，⚠️ **该决定于 2026-11-04 10:40 被老大推翻** ⇒ 见上方最新一条。〕
   - 回溯 `git log -p -- exchange/log-claude.md`。
 
 - **2026-11-01 17:25（WB）**：删〈📮 派发 · ⑪.4.2 存档还原演练〉（58 行）＋〈✅ 回报 · ⑪.4.2〉（117 行）＋〈📌 WB 复验 · ⑪.4.2〉（53 行）**共 228 行**（263 → 36）。三段「已派发 — 已交付 — 已复验成立」。
