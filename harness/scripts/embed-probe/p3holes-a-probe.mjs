@@ -4,19 +4,23 @@
  *
  * 判据：
  *   A-1  profile 配置里 dbPath 不含盘符（[A-Za-z]:[\/]）
- *   A-2  不设 DSH_HOME ⇒ 库落默认 home（~/.dsh），可建库、可召回
+ *   A-2  不设 DSH_HOME ⇒ 库落默认 home（homedir()/.dsh），可建库、可召回
+ *        ——默认 home 由 USERPROFILE／HOME 指向临时假 home，语义不变、落点全假
  *   A-3  DSH_HOME=<临时> ⇒ 库落新 home；真库 mtime＋sha256 跑前跑后不变
  *   A-4  配置逃出 home（`${DSH_HOME}/../outside.db`）⇒ fail（stderr 断言行），不建库
  *
- * 全部在仓库外临时 home（除 A-2 的默认 home 臂）；不写真库；退出码 0/1/2。
+ * 全部在仓库外临时 home（含 A-2 的默认 home 臂）；不写真库；退出码 0/1/2。
+ * 全程守卫：入口记真实 home（C:/Users/<user>/.dsh）指纹，出口再取一次比对，
+ * 不一致即判红（probe-guard.mjs，H-4/H-5）。
  */
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { homedir, tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { pathToFileURL } from 'node:url'
+import { createHomeGuard } from './probe-guard.mjs'
 
 const HERE = import.meta.dirname
 const HARNESS = resolve(HERE, '..', '..')
@@ -24,12 +28,16 @@ const REPO = resolve(HARNESS, '..')
 const DEPLOYED = join(REPO, '.dsh-home', 'profiles', 'sdk', 'node_modules', '@larryagent', 'plugin-s4-memory')
 const CONFIG = join(REPO, '.dsh-home', 'profiles', 'sdk', 'cordis.patch.yml')
 const REAL_DB = join(REPO, '.dsh-home', 'larry-memory.db')
+// 真实用户 home：必须在任何 USERPROFILE／HOME 改动之前定下来（守卫要盯的是它）
+const USER_HOME_ROOT = join(homedir(), '.dsh')
 const MODEL_ID = 'Xenova/bge-small-zh-v1.5'
 const MODEL_DIR = 'D:/Code/_models'
 const RECALL_NAME = 'larry-memory-recall'
 const EVIDENCE = process.env.P3HOLES_A_EVIDENCE ?? 'D:/Code/_trae-evidence/patch-3holes'
 const TEMP_ROOT = mkdtempSync(join(tmpdir(), 'p3holes-a-'))
 const NL = String.fromCharCode(10)
+// H-4 入口快照：此时 env 尚未改动，homedir() 指向真实 home
+const homeGuard = createHomeGuard({ root: USER_HOME_ROOT })
 
 const SESSION_ROWS = 'session-391-0a898fc33f8e'
 const SESSION_QUERY = 'session-p3holes-a'
@@ -179,9 +187,18 @@ saveJson('A-1-config.json', { dbPathLine, rawDbPath, hasDrive })
 judge('A-1-no-drive-letter', dbPathLine.length > 0 && rawDbPath.length > 0 && !hasDrive,
   `dbPath 行=${dbPathLine.trim()}；含盘符=${hasDrive}`)
 
-// A-2 默认 home：不设 DSH_HOME ⇒ ~/.dsh/larry-memory.db，可建库、可召回
-const defaultHome = join(homedir(), '.dsh')
+// A-2 默认 home：不设 DSH_HOME ⇒ homedir()/.dsh/larry-memory.db，可建库、可召回
+// 假 home：USERPROFILE（Windows）／HOME（POSIX）指向临时目录 ⇒ os.homedir() 随之改变。
+// 被测语义不变（仍是「不设 DSH_HOME ⇒ 落默认 home」），只是默认 home 本身是假的。
+const envUserProfile = process.env.USERPROFILE
+const envHome = process.env.HOME
 delete process.env.DSH_HOME
+const a2FakeUserHome = makeHome('a2-fake-home')
+process.env.USERPROFILE = a2FakeUserHome
+process.env.HOME = a2FakeUserHome
+const a2Homedir = homedir()
+const defaultHome = join(a2Homedir, '.dsh')
+mkdirSync(defaultHome, { recursive: true })
 const a2Home = mkdtempSync(join(TEMP_ROOT, 'a2-logs-'))
 const a2Ctx = applyPlugin(plugin, {
   dbPath: rawDbPath,
@@ -204,11 +221,22 @@ try {
   a2Text = await runAssembly(a2Ctx, SESSION_QUERY)
 } finally {
   a2Ctx.dispose()
+  // 恢复 env：后续臂不依赖 homedir()，但不留脏状态
+  if (envUserProfile === undefined) delete process.env.USERPROFILE
+  else process.env.USERPROFILE = envUserProfile
+  if (envHome === undefined) delete process.env.HOME
+  else process.env.HOME = envHome
 }
 save('A-2-default-home-context.txt', a2Text)
+// H-3 自证＋H-1 落点关系：homedir() 必须是临时假 home，库必须与它在同一临时根下
+const a2HomedirIsFake = resolve(a2Homedir) === resolve(a2FakeUserHome)
+const a2UnderTempRoot = resolve(defaultHome).startsWith(`${resolve(TEMP_ROOT)}${sep}`)
+saveJson('A-2-fake-home.json', { a2FakeUserHome, a2Homedir, a2HomedirIsFake, defaultHome, a2Db, a2UnderTempRoot })
+judge('A-2-fake-home-effective', a2HomedirIsFake && a2UnderTempRoot,
+  `设 USERPROFILE／HOME=${a2FakeUserHome} ⇒ homedir()=${a2Homedir}（生效=${a2HomedirIsFake}）；默认 home=${defaultHome}；与临时根同源=${a2UnderTempRoot}`)
 const a2Ok = existsSync(a2Db) && a2Text.includes('语义 top-') && a2Text.includes(SEED[0].text)
 judge('A-2-default-home', a2Ok,
-  `不设 DSH_HOME ⇒ 库=${a2Db} 存在=${existsSync(a2Db)}；召回含目标＝${a2Text.includes(SEED[0].text)}；标题语义＝${a2Text.includes('语义 top-')}`)
+  `不设 DSH_HOME ⇒ homedir()=${a2Homedir}；库=${a2Db} 存在=${existsSync(a2Db)}；召回含目标＝${a2Text.includes(SEED[0].text)}；标题语义＝${a2Text.includes('语义 top-')}`)
 
 // A-3 换 home ⇒ 库落新 home；真库不动
 const a3Home = makeHome('a3-home')
@@ -253,8 +281,17 @@ saveJson('A-4-escape-denied.json', { a4Home, escapePath, error: a4Error, denied:
 judge('A-4-escape-denied', a4Denied && !a4Created,
   `配置 \${DSH_HOME}/../outside.db ⇒ 抛错=${a4Error !== null}；含断言行=${a4Denied}；逃出路径建库=${a4Created}（期望 false）`)
 
+// H-4 出口比对：真实 home 指纹零变化（⚠️ 必须在清理临时根之前）
+const guardResult = homeGuard.verify()
+saveJson('guard-real-home.json', guardResult)
+judge('guard-real-home-untouched', guardResult.ok,
+  `真实 home 根=${guardResult.root}；跑前跑后指纹一致=${guardResult.ok}；差异数=${guardResult.diffs.length}${guardResult.diffs.length > 0 ? `；${guardResult.diffs.join(' | ')}` : ''}`)
+
 saveJson('A-findings.json', findings)
 const failed = findings.filter((item) => !item.ok)
 console.log(`${NL}summary: ${findings.length - failed.length}/${findings.length} PASS；证据 ${EVIDENCE}`)
+if (!guardResult.ok) {
+  console.error(`[P3HOLES-A] ❌ 真实 home 被改动，明细：${NL}${guardResult.diffs.join(NL)}`)
+}
 rmSync(TEMP_ROOT, { recursive: true, force: true })
 process.exit(failed.length === 0 ? 0 : 1)

@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **探针不再碰真实 home**（A-2 假 home ＋ 全程守卫） | **Trae** | `harness/scripts/embed-probe/p3holes-a-probe.mjs` | 🔵 **在飞**：判据 H-1～H-8（下方第一节） | 2026-11-04 |
+| **探针不再碰真实 home**（A-2 假 home ＋ 全程守卫） | **Trae** | `harness/scripts/embed-probe/p3holes-a-probe.mjs` ＋ 新件 `probe-guard.mjs` | ✅ **已交付（待 WB 复验）**：H-1～H-8 全闭合，6/6 PASS（下方交付段） | 2026-11-04 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -94,6 +94,33 @@
 - ⛔ 不放宽／删改任何既有判据（含 A-1／A-3／A-4）
 - ⛔ 不改其他探针的判据（H-6 只报不改）
 - ⛔ 不改部署件与 `plugin-s4-memory` 源码
+
+---
+
+## ✅ 交付 · 探针不再碰真实 home（Trae · 2026-11-04）—— H-1～H-8
+
+**结论先行：H-1～H-8 全闭合；探针 6/6 PASS、退出码 0；真实 home 跑前跑后逐项一致（两个盯防文件三态均＝不存在）。**
+
+- **H-1 成立**：A-2 仍验「不设 `DSH_HOME` ⇒ 落默认 home」。读数：`homedir()=D:\Temp\Sys\p3holes-a-ISAFNC\a2-fake-home-hbOEME`；库=`…\a2-fake-home-hbOEME\.dsh\larry-memory.db`；与临时根同源=`true`。⛔ 未改成「设 `DSH_HOME` 到临时」。
+- **H-2 成立（三态）**：`C:\Users\SuLarry\.dsh\larry-memory.db` 跑前**不存在**、跑后**不存在**；`C:\Users\SuLarry\.dsh\sessions\archive-manifest.jsonl` 同为 absent×2；`.dsh` 顶层 4 项（`.anonymous-user-id`／`profiles`／`sessions`／`storages`）跑前跑后一致。双通道取证：守卫 JSON（`guard-real-home.json`）＋外部 PowerShell 只读复核（`Test-Path`／`Get-FileHash`／`Get-ChildItem`）。
+- **H-3 成立**：先独立复验 `node -e` —— 设 `USERPROFILE` 后 `homedir()` 由 `C:\Users\SuLarry` 变为所设值（changed=true）；探针内再判一次 `A-2-fake-home-effective` PASS。`HOME` 同时设置（POSIX 口径）。
+- **H-4 成立**：新件 `probe-guard.mjs`，入口快照／出口比对；指纹三态 `absent | dir | present(size+mtime+sha256)` ＋ `.dsh` 顶层清单。正常跑 `PASS guard-real-home-untouched … 差异数=0`；比对在 `rmSync(TEMP_ROOT)` **之前**。
+- **H-5 成立（负证）**：`node probe-guard.mjs --negtest` ⇒ 对照绿、`absent-to-present` 红（2 条差异）、`byte-mutated` 红（sha256／size／mtime 3 条差异），退出码 **1**（守卫如预期变红）。全程在 `%TEMP%\probe-guard-negtest-*`，⛔ 未碰真实 `.dsh`。
+- **H-6 成立**：检索式 `homedir|DSH_HOME|USERPROFILE|\.dsh`（glob `harness/scripts/embed-probe/*.mjs`，13 个文件）：**改前只有 `p3holes-a-probe.mjs` 用 `homedir()`（1 处）**；其余 12 个 —— `p31`／`p02-recall`／`p08`／`p221`／`p222`／`p223` 均显式把 `DSH_HOME` 指到临时 home；`p02-dsh-integration` 自建 `mkdtemp` home；`DSH_HOME` 零命中且有落盘点的 4 个：`compare.mjs`（只读两份 JSON）、`probe.mjs`（stdout；缓存 `D:/Code/_models`）、`ts-embed.mjs`（写指定 outPath）、`p02b-score-dist.mjs`（写 `HERE/p02b-score-dist.json`，仓库内、非 home）⇒ **无其他臂碰真实 home**。
+- **H-7 成立**：A-1／A-3／A-4 改前（11-03 21:45 证据 `A-findings.json`）与改后逐条一致（全 PASS，detail 仅临时路径不同）。
+- **H-8 遵守**：对 `C:\Users\SuLarry\.dsh\` 零写零删；外部复核全部只读动作。
+
+**改前／改后 A-2 行为对比**
+
+| 项 | 改前（11-03 21:45） | 改后（11-04） |
+|---|---|---|
+| `homedir()` | `C:\Users\SuLarry`（真） | `%TEMP%\p3holes-a-*\a2-fake-home-*` |
+| 库落点 | `C:\Users\SuLarry\.dsh\larry-memory.db`（真写） | `<假 home>\.dsh\larry-memory.db` |
+| 判定 | PASS（代价：写真实 home） | PASS（零副作用）＋守卫 PASS |
+
+**证据**：`D:/Code/_trae-evidence/patch-3holes/20261104-fakehome/`（`A-findings.json`／`A-2-fake-home.json`／`guard-real-home.json`）；负证输出见 H-5。
+**未闭合**：无。
+**自曝**：① A-2 的 `<假 home>/.dsh` 目录由探针 `mkdirSync` 建出（插件自身不建父目录）—— 属场地准备，不改变「不设 `DSH_HOME` ⇒ 落默认 home」的被测语义；若判该由插件负责，请裁。② `A-2-fake-home-effective` 是我新增的判据（原 A-2 判据未动），它判红即本单失败。③ `p222` 的 `OLD_HOME` 建在 `harness/.p222-oldlib-*`（仓库内临时位、非真实 home），本单只报不改。
 
 ---
 
