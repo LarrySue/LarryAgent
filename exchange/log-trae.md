@@ -145,6 +145,25 @@ WB 2026-11-04 20:26-20:30 读**类型定义**（不是注释）得出，逐条�
 - 本单**不证明**"真人前端能审" —— 走的是本地策略答者。真人点击那条属 `DSH-3.8 · 端到端审批闭环`。
 - 本单**不证明**"生成端已接" —— 生成属 ③.2a 的实现块。
 
+### 9 · 📥 WB 补充（2026-11-04 20:50）· 造 open turn 的路径（⚠️ 这条能省你半天）
+
+> 你说「W 单是硬活儿」—— 我核了一遍，**硬不在闸，在"造一个 open turn"**。下面是我实测出来的结论，供你少走一段。
+
+**① 现成装置里有三个候选，两个帮不上本单：**
+- `harness/scripts/dsh-prompt.mjs` ✅ **能用** —— 走官方 TS SDK 起真 dsh runtime（`--profile sdk`，stdio JSON-RPC）、跑一条 prompt、拿最终回复。**跑一条 = 一个真 open turn**，环境变量 `DSH_HOME` ＋ `DEEPSEEK_API_KEY`。成本约几分钱。
+- `harness/scripts/015-preset-probe/run-probe.mjs` ⚠️ **只能验"插件加载了"** —— 它保 stdin 打开让进程活到超时、收 stderr；**但跑不出 turn**（没有 prompt 进来）。可用来先验"你的插件在真 profile 里起得来"。
+- `harness/scripts/381-stub-dsh.mjs` ⛔ **本单用不上** —— 它是**假 dsh 对端**（扮演服务器、主动发 `approval/request` 给客户端），服务对象是 **DSH-3.8.1 的 driver**。本单要调的是 **dsh 内部真的 `ApprovalService`**，桩替不了它。
+
+**② 我的建议：⛔ 别自造 stub turn，用真链路验通一次。**
+理由：P2 那条约束的原文是 *"the audit pair must be enclosed by the durable log's **commit/replay boundary**"* —— 自造的 turn 大概率不满足这个边界，结果会拿到 `unavailable`，**而 `unavailable` 与"闸坏了"外观一模一样**（这正是 W-4 第三条要你按 outcome 区分的原因）。用假 turn 省下的那点钱，会在"分不清是环境问题还是实现问题"上加倍还回去。
+⇒ **先 `dsh-prompt.mjs` 跑通一条**，确认链路成立，再谈别的。
+
+**③ 如果整单确实太重，可以这样减（你选，我不替你定）：**
+- **拆**：W-3（编辑通道）是**唯一需要"设计一个新形状"**的部分（暂存文件／staging 表），其余 W-1／W-2／W-4／W-5 都是**纯验闸**。⇒ 你可以只交 W-1/2/4/5/7/8，把 W-3 报到"建议单立 ③.2b-2"，**这是合格交付**，⛔ 不算未完成。
+- **降**：⛔ 不建议为了绕开"造 turn"而把闸测成纯单元测试（mock 掉 `approval`）—— 那验的是"我的代码调了 mock"，不是"真审批会拦写入"，**属于典型假绿**。
+- ⇒ 两条路你选，**在回报里写明选了哪条**即可。
+
+
 ---
 
 ## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口
