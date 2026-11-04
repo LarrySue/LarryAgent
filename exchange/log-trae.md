@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **探针不再碰真实 home**（A-2 假 home ＋ 全程守卫） | **Trae** | `harness/scripts/embed-probe/p3holes-a-probe.mjs` ＋ 新件 `probe-guard.mjs` | ✅ **已交付（待 WB 复验）**：H-1～H-8 全闭合，6/6 PASS（下方交付段） | 2026-11-04 |
+| **探针不再碰真实 home**（A-2 假 home ＋ 全程守卫） | **Trae** | `harness/scripts/embed-probe/p3holes-a-probe.mjs` ＋ 新件 `probe-guard.mjs` | ✅ **已复验成立（WB 2026-11-04 11:30 独立复核，`d952fc9`）**：H-1～H-8 全成立。WB 自己跑：探针 **6/6 PASS**、exit 0；**三次独立取 `~/.dsh` 指纹**（跑前／跑后／负证后）全一致 —— 两个盯防文件 **absent×3**、顶层 4 项不变；负证 `--negtest` **对照绿 ＋ 两红、exit 1**，全程在 `%TEMP%`；平行处 13 个探针只有 `p3holes` 与守卫本体引 `homedir()`（后者只读）。⚠️ **带 1 条增量**：`createHomeGuard` 的 `root` 有默认值 `homedir()/.dsh` ⇒ 新探针若忘传且在建守卫前改过 `USERPROFILE`，会**盯假 home 而全绿**；建议改必填（待裁） | 2026-11-04 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
