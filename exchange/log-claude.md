@@ -11,6 +11,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/test_llm_effective_model.py`（新增） | ✅ **已复验成立（WB 2026-11-04 17:40 独立复核，`f54d3f4`）**：`pytest` **176 passed／3 skipped／0 failed**（我自己跑的）。测试本体核过：U-1 覆盖默认 `provider_key`、U-2 五种空输入带 label、U-3 断言全引用 `FALLBACK_MODEL`；`effective_model` 实现确认有 `.strip()`（所以「纯空白」那条是真有效、不是恰好绿）。⚠️ **U-3 我 grep 出 1 处字面量** —— 定位在 **docstring 举例**（`:9`）、非断言 ⇒ **判据成立**；她的「0」与我的「1」都对，**差异在检索式**（她带引号、我没带）。⚠️ **未闭合（她自曝②）**：`load_config` 的 YAML→dataclass 链路**未覆盖** ⇒ 字段名被改坏时这两条仍会绿 | 2026-11-04 |
+| **`load_config` 级测试**（YAML→dataclass 链路） | **顾衡** | `backend/tests/`（并入 `test_llm_effective_model.py` 或新建） | 🔵 **在飞**：2026-11-04 17:45 派发，判据 V-1～V-4。补你自曝②那个缺口 | 2026-11-04 |
 
 > ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-claude.md`**。
 > 📝 **过程留痕（2026-10-16 晚 · 与 WB 并发撞车 · 双向已互核，零丢失）**：F1 销账提交与 WB 侧提交撞车 —— ① **我 → WB**：首版 `7abca33` 误带 WB 已 `git add` 未提交的 `.workbuddy/memory/2026-10-16.md`（共享工作树＋暂存区）⇒ 我 `git reset --soft` 拆出、路径限定重提；② **WB → 我**：reset 后暂存区里**我的 log 改动反被 WB 的提交 `effa8a1` 一并带入**（`git log -- exchange/log-claude.md` 可见该笔 32 行改动＝本文件 F1 销账）⇒ 我这笔 `fcb326f` 只剩本行留痕。**结果：双方内容均完整入库、零丢失** —— WB 已在其提交信息留痕「本段被 Claude 7abca33 代提入库、内容已核完整」并复验我的 F1 落点（§3.6:1154 三核过）。仅**归属错位**，⛔ 不追改（旧提交不回改；reflog 链 `7abca33 → a1f5b04 → effa8a1 → fcb326f` 可溯）。教训：**共享工作树下提交前先核暂存区，一律路径限定提交**。
@@ -92,6 +93,31 @@
 2. **本单只覆盖 `llm.py` 的解析分支**；「YAML 里写 `model:` 能正确读进 `ModelConfig.model`」这条 `load_config` 的 YAML→dataclass 链路**未入仓覆盖**（既有测试无专门覆盖；砚砚 M 单用临时脚本＋WB 复验过，但那是运行时自证，不会在将来回归时报警）。如需长期防「`config.py` 字段名被改坏」类回归，建议另派一条 `load_config` 级测试 —— 不自行扩范围。
 3. **复核了「FALLBACK_MODEL 唯一定义」**：作为**兜底默认值**只有 `llm.py:72` 一处 ✅；另两处同名字符串用途不同、不冲突 —— `llm.py:61`（模型名→provider 映射键）、`token_counter.py:39`（模型名→tiktoken 编码映射键）。
 4. 未改 `test_windows_dir`、未改任何产品代码、测试不读实例 `config.yaml`（monkeypatch 构造 `Config`，凭据零涉及）。
+
+---
+
+## 📮 派发 · `load_config` 级测试（WB · 2026-11-04 17:45）—— 小活，V-1～V-4
+
+> **来路**：你自己在 U 单自曝②里提的缺口 —— 现有两条测试直接构造 `ModelConfig`，**不经过 YAML 解析** ⇒ `config.py` 字段名被改坏（`model` → `modle`）时它们**照样全绿**。老大 17:43 裁「可以简单搞一下」。
+
+### 判据
+
+- **V-1 · YAML 写了就能读到**（核心）：用 `tmp_path` 写一个最小 YAML（含 `models.deepseek.model: "<测试值>"`）⇒ `load_config(该路径).models["deepseek"].model == "<测试值>"`。
+  - ⚠️ **不许读真实 `backend/config.yaml`**（含凭据）。
+- **V-2 · 不写 model 也不崩**：同一 YAML 去掉 `model` 键 ⇒ 能读出来、该字段为空值，**不抛异常**。
+- **V-3 · 不许污染全局 `_config`**（⚠️ **这条是关键，别漏**）：`load_config()` 会 `global _config` 赋值 ⇒ 跑完必须**还原**（`monkeypatch.setattr(config, "_config", 原值)` 或等价），否则会串到后续测试。
+  - 取证据：**跑完整个 `pytest` 全绿**（串了就会红，这条靠回归自证）。
+- **V-4 · 回归**：`python -m pytest -q` 全绿。基线（WB 17:40 实跑）：**176 passed / 3 skipped**；你新增后应为 **178 passed**（若你写成 1 条则为 177，按实际报）。
+
+### 边界
+
+- 位置你定：并入 `test_llm_effective_model.py` 或新建，⭐ 倾向**并入**（同一个被测主题，少一个文件）。
+- ⛔ 不改产品代码、⛔ 不改 `test_windows_dir`、⛔ 不写死模型名（同 U-3）。
+- 若你发现 `load_config` 有别的全局副作用（不止 `_config`），**报上来**，⛔ 别默默绕过。
+
+### 回报
+
+V-1～V-4 读数 ＋ `pytest` 原文 ＋ 还原手法的具体写法。
 
 ---
 
