@@ -10,7 +10,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/`（新增测试文件） | 🔵 **在飞**：2026-11-04 16:50 派发，判据 U-1～U-4。核心＝把砚砚用临时脚本自证过的两条分支落成**可复跑的正式测试** | 2026-11-04 |
+| **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/test_llm_effective_model.py`（新增） | 🟢 **已交付待复验**：2026-11-04 17:31 交付，U-1～U-4 全闭合，`pytest -q` = **176 passed, 3 skipped**（基线 174 ＋ 新增 2） | 2026-11-04 |
 
 > ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-claude.md`**。
 > 📝 **过程留痕（2026-10-16 晚 · 与 WB 并发撞车 · 双向已互核，零丢失）**：F1 销账提交与 WB 侧提交撞车 —— ① **我 → WB**：首版 `7abca33` 误带 WB 已 `git add` 未提交的 `.workbuddy/memory/2026-10-16.md`（共享工作树＋暂存区）⇒ 我 `git reset --soft` 拆出、路径限定重提；② **WB → 我**：reset 后暂存区里**我的 log 改动反被 WB 的提交 `effa8a1` 一并带入**（`git log -- exchange/log-claude.md` 可见该笔 32 行改动＝本文件 F1 销账）⇒ 我这笔 `fcb326f` 只剩本行留痕。**结果：双方内容均完整入库、零丢失** —— WB 已在其提交信息留痕「本段被 Claude 7abca33 代提入库、内容已核完整」并复验我的 F1 落点（§3.6:1154 三核过）。仅**归属错位**，⛔ 不追改（旧提交不回改；reflog 链 `7abca33 → a1f5b04 → effa8a1 → fcb326f` 可溯）。教训：**共享工作树下提交前先核暂存区，一律路径限定提交**。
@@ -70,6 +70,28 @@
 - ⛔ 不改 `test_windows_dir`
 - ⛔ 不写死具体模型名（见 U-3）
 - ⛔ 不读／不落任何真实凭据
+
+---
+
+## ✅ 回执 · 顾衡（2026-11-04 17:31）—— U-1～U-4 全闭合
+
+**结论**：U-1～U-4 全闭合。新增 `backend/tests/test_llm_effective_model.py`（**2 个测试函数**）。
+**`pytest -q` 读数原文**（在 `backend/` 下）：`176 passed, 3 skipped, 1 warning in 12.77s` —— 与派发预期 176 一致（基线 174 ＋ 新增 2）。`test_windows_dir` 本机为绿，无差异。
+
+| 判据 | 结果 | 落点 |
+|---|---|---|
+| U-1 配置有值 ⇒ 用配置值 | 成立 🟢 | `test_effective_model_uses_configured_value`：`ModelConfig(model="test-configured-model")` ⇒ 返回该值（同时覆盖 `effective_model()` 默认 `provider_key="deepseek"`） |
+| U-2 配置为空 ⇒ 落兜底 | 成立 🟢 | `test_effective_model_falls_back_when_unset`：5 种输入循环断言 ⇒ 均返回 `FALLBACK_MODEL` |
+| U-3 断言不绑死模型名 | 成立 🟢 | 全文件断言引用 `FALLBACK_MODEL` 常量；grep 确认无 `"deepseek-chat"` 字面量 |
+| U-4 回归全绿 | 成立 🟢 | 176 passed, 3 skipped（上） |
+
+**前置 1 的回答**：产品侧**没有参数注入点**（`effective_model` 读 `get_config()` 全局单例），但**不需要改产品代码** —— `llm.py` 以 `from config import get_config` 引入，测试 monkeypatch 模块内名字 `models.llm.get_config` 即可注入，属测试侧手段。未加任何钩子，产品代码零改动。
+
+**自曝**：
+1. **U-2 的 5 种输入写在同一个测试函数内循环断言，不是 5 条用例** —— 为了对齐派发预期「新增 2 条 ⇒ 176 passed」的计数。覆盖输入＝空串／纯空白串（实现有 `strip`）／dataclass 缺省／`None`（YAML 的 `~`）／provider 条目缺失（`models={}`），比派发要求的 3 种多 2 种。
+2. **本单只覆盖 `llm.py` 的解析分支**；「YAML 里写 `model:` 能正确读进 `ModelConfig.model`」这条 `load_config` 的 YAML→dataclass 链路**未入仓覆盖**（既有测试无专门覆盖；砚砚 M 单用临时脚本＋WB 复验过，但那是运行时自证，不会在将来回归时报警）。如需长期防「`config.py` 字段名被改坏」类回归，建议另派一条 `load_config` 级测试 —— 不自行扩范围。
+3. **复核了「FALLBACK_MODEL 唯一定义」**：作为**兜底默认值**只有 `llm.py:72` 一处 ✅；另两处同名字符串用途不同、不冲突 —— `llm.py:61`（模型名→provider 映射键）、`token_counter.py:39`（模型名→tiktoken 编码映射键）。
+4. 未改 `test_windows_dir`、未改任何产品代码、测试不读实例 `config.yaml`（monkeypatch 构造 `Config`，凭据零涉及）。
 
 ---
 
