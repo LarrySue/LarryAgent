@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| — | — | — | ⚠️ **本区当前无在飞任务**。已闭环块见〈🗂 已清理段落〉，原文回溯 `git log -p -- exchange/log-trae.md`。 |
+| **③.2a 生成路径可执行性实测**（选型探针） | **Trae** | `harness/scripts/embed-probe/`（新建） | 🔵 **在飞**：2026-11-04 15:30 派发，判据 P-1～P-6（见下方同名片发节）。核心＝`currentInitiator()` 在 `session/` 钩子里有没有值 | 2026-11-04 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -28,6 +28,72 @@
 ---
 
 > ✅ **WB 2026-11-04 12:25 · 探针两单已闭环并清退**：〈探针不再碰真实 home（H-1～H-8）〉＋〈守卫 `root` 改必填（N-1～N-4）〉均**复验成立**（老大原话「这种问题就是要在根本上改」）。四段派发／交付已清，结论在 `probe-guard.mjs` 文件头与 `p3holes-a-probe.mjs:191-236`，读数见〈🗂 已清理段落〉12:25 条。
+
+## 📮 派发 · ③.2a 生成路径可执行性实测（WB · 2026-11-04 15:30）—— 选型探针，P-1～P-6
+
+> **来路**：`TODO.md` ③.2a「摘要生成路径选定」判据要求「给出 (a)(b) 的**可执行性实测**（跑通，或明证不可行 ＋ 具体阻塞点），⛔ 只报『看过文档』」。WB 已把**装配层**查清（见 §0），本单只验**运行时层**。
+> **一句话**：验「插件在 `session/` 事件钩子里，能不能拿到父 Agent 并起一个 subagent 取回纯文本」。**⛔ 本单不产出实现、不改 `plugin-s4-memory`** —— 只出可执行性结论。
+
+### 0 · WB 已实测的前提（🟢 装配层，你不必重查，但动手前可复核）
+
+- `dsh-base` **直接依赖** 5 个 subagent 包（`dsh-subagent`／`-fork-in-process`／`-spawn-in-process`／`tool-subagent`／`tool-subagent-control`）。
+- **`dsh --profile sdk --dump-config` 实读**（零副作用，`harness/` 下）：下列插件**已装配、未被禁用** ——
+  `subagent`（`@deepseek-ai/dsh-subagent`）／`subagent-spawn-in-process`／`subagent-fork-in-process`／`tool-subagent-control`／`tool-subagent-list-agents`。
+- 契约（读 `.d.ts`）：`SubagentStartRequest = { prompt: ContentBlock[], parent: Agent, signal: AbortSignal, label?, agentOptions? }`；取回纯文本 = `finalAssistantOutput(events)`（选最后一条非空 assistant message）／`subagent/end.lastAssistantMessage`。
+- ⚠️ **装配层 ≠ 运行时层**（本项目铁律）：上面只证明「树里有」，**不证明「插件运行时能调到」**。这正是本单要验的。
+
+### 1 · 判据
+
+- **P-1 · `ctx.subagents` 在插件 ctx 上存在**：插件 `apply(ctx)` 之后，`ctx.get('subagents')`（或等价 seam）**非 undefined**，且能列出可用 provider 名。取证据：provider 列表原文。
+- **P-2 · `currentInitiator()` 在 `session/` 事件钩子里有值**（⭐ **本单核心**）：注册一个 `session/` 事件监听，在回调里调 `ctx.agents.currentInitiator()`。
+  - **期望 A**（若 (a) 可行）：返回一个 `Agent` 对象（有 id/channel 之类可打印标识）。
+  - **期望 B**（若拿不到）：返回 `undefined` 或 `requireInitiator()` 抛错 —— **这也是有效结论**，直接决定 ③.2a 选 (b)。
+  - 取证据：**两个分支都要报**（不能只报碰巧成立的那个），并说明是在哪个事件名／哪个时机取的。
+- **P-3 · 有 initiator 时能起 subagent**：用 P-2 拿到的 Agent 作 `parent`，`ctx.subagents.start({ prompt, parent, signal })` 能起、能跑完。
+  - ⚠️ **成本控制**：prompt 用**极小内容**（如「只回复一个词：OK」），⛔ 不要跑真摘要 ⇒ 本单 token 消耗应接近零级。
+- **P-4 · 能取回纯文本**：跑完后能拿到子 agent 的最终文本（`finalAssistantOutput` 或 `subagent/end` 事件里的 `lastAssistantMessage`），并打印原文。
+- **P-5 · 无 initiator 的负证**：在**没有** initiator 边界的时机（如插件 `apply()` 顶层、或 `setTimeout` 里）调同样 API ⇒ **明确返回 undefined／抛错**，⛔ 不是崩溃、也不是"看起来能用"。
+  - ⚠️ **这条是防"假可用"的**：若两个时机表现一样（都有值或都崩），说明 P-2 的结论不可信，须先证 P-2。
+- **P-6 · 不碰产品代码**：`git status` 只应有探针新增／改动；⛔ `plugin-s4-memory`／`backend` 零改动。取证据：`git status --short` 原文。
+
+### 2 · 判据前置
+
+- **前置 1**：**别用 `dsh-tool-subagent` 当"替身"** —— 它是**模型面**的委派工具（模型发起的 tool call），与你这条「插件主动起子 agent」**不是同一条路**。可以**参考它怎么取 parent**（读它的源码找 `parent` 来源），但 ⛔ 不能拿它的存在当 P-3 的证据。
+- **前置 2**：探针路径放 `harness/scripts/embed-probe/` 下新建（与既有探针同目录），**复用 `probe-guard.mjs`** —— 若你的探针会碰 `~/.dsh`（不该碰），守卫会当场红。
+- **前置 3**：跑前先 `dsh --profile sdk --dump-config | grep -i subagent` 自证装配仍在（⛔ 不采信我上面那段）。
+
+### 3 · 交付物
+
+1. 探针脚本（可复跑）
+2. **结论一段话**：③.2a 该选 (a) 还是 (b)，**附 P-2 的实际读数**
+3. 用例外的边界：你观察到的任何"能起但取不回文本""能取回但不是纯文本"之类
+
+### 4 · 参考件四要素
+
+- **① 路径**：`harness/node_modules/.pnpm/@deepseek-ai+dsh-subagent@*/node_modules/@deepseek-ai/dsh-subagent/lib/types/`（`types.d.ts` 请求契约 ／ `assistant-output.d.ts` 取回规则 ／ `child-agent.d.ts`）；`@deepseek-ai/dsh-agent/lib/types/index.d.ts:199+`（`AgentRegistry`：`currentInitiator`／`requireInitiator`）；`harness/node_modules/.pnpm/@deepseek-ai+dsh-tool-subagent@*/…`（**现成调用范式**）
+- **② 怎么参考**：先读 `dsh-tool-subagent` 的实现找 `parent` 从哪来，再读 `AgentRegistry` 的两个方法注释
+- **③ 参考程度**：可照抄形状（同仓同代）
+- **④ 不可参考**：⛔ 别用 `@deepseek-ai/dsh-subagent` 的包级 `import` —— 它在 `.pnpm` 深层、不在本工程 `package.json` 里，**直接 import 会 `ERR_MODULE_NOT_FOUND`**（本项目实测过的坑）。走 `ctx` 拿。
+
+### 5 · 场地器材
+
+- 本机 bash ＋ Node；`harness/` 下跑。
+- ⚠️ **探针会加载部署件** `.dsh-home/profiles/sdk/node_modules/…` —— 那是真的，⛔ 不改。
+- ⚠️ **P-3/P-4 会调模型** ⇒ prompt 写死成极小内容，⛔ 别让它生成任何长文本。
+
+### 6 · 回报格式
+
+结论先行（**③.2a 选 (a) 还是 (b) ＋ 一句话理由**）＋ P-1～P-6 各自读数（命令 ＋ 观测原文）＋ 未闭合单列 ＋ **自曝**。
+⚠️ 「拿不到 initiator，所以只能走 (b)」**是完全可接受的结论**，⛔ 别为了让它跑通去绕道（绕道 = 选出一个产品上不存在的路径）。
+
+### 7 · 禁区
+
+- ⛔ 不改 `plugin-s4-memory` / `backend` / 部署件
+- ⛔ 不写产品实现（本单只出结论）
+- ⛔ 不为「让探针跑通」而改 DSH 源码或 patch 部署件
+- ⛔ 不采信 WB 的装配层读数当自己的证据（前置 3 要求自证）
+
+---
 
 ## 📥 过程观察 · DS 通道复测 ＋ `reasoning_content` 回传缺口（Trae · 2026-10-28）
 
