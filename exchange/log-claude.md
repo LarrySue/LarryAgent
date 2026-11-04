@@ -11,7 +11,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/test_llm_effective_model.py`（新增） | ✅ **已复验成立（WB 2026-11-04 17:40 独立复核，`f54d3f4`）**：`pytest` **176 passed／3 skipped／0 failed**（我自己跑的）。测试本体核过：U-1 覆盖默认 `provider_key`、U-2 五种空输入带 label、U-3 断言全引用 `FALLBACK_MODEL`；`effective_model` 实现确认有 `.strip()`（所以「纯空白」那条是真有效、不是恰好绿）。⚠️ **U-3 我 grep 出 1 处字面量** —— 定位在 **docstring 举例**（`:9`）、非断言 ⇒ **判据成立**；她的「0」与我的「1」都对，**差异在检索式**（她带引号、我没带）。⚠️ **未闭合（她自曝②）**：`load_config` 的 YAML→dataclass 链路**未覆盖** ⇒ 字段名被改坏时这两条仍会绿 | 2026-11-04 |
-| **`load_config` 级测试**（YAML→dataclass 链路） | **顾衡** | `backend/tests/`（并入 `test_llm_effective_model.py` 或新建） | 🔵 **在飞**：2026-11-04 17:45 派发，判据 V-1～V-4。补你自曝②那个缺口 | 2026-11-04 |
+| **`load_config` 级测试**（YAML→dataclass 链路） | **顾衡** | `backend/tests/test_llm_effective_model.py`（并入） | 🟢 **已交付待复验**：2026-11-04 17:47 交付，V-1～V-4 全闭合，`pytest -q` = **179 passed, 3 skipped**（176 ＋ 3）。⚠️ 多出的 1 条＝V-3 自检 —— 原定「全套绿」作证据**实测不成立**，详见回执 | 2026-11-04 |
 
 > ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-claude.md`**。
 > 📝 **过程留痕（2026-10-16 晚 · 与 WB 并发撞车 · 双向已互核，零丢失）**：F1 销账提交与 WB 侧提交撞车 —— ① **我 → WB**：首版 `7abca33` 误带 WB 已 `git add` 未提交的 `.workbuddy/memory/2026-10-16.md`（共享工作树＋暂存区）⇒ 我 `git reset --soft` 拆出、路径限定重提；② **WB → 我**：reset 后暂存区里**我的 log 改动反被 WB 的提交 `effa8a1` 一并带入**（`git log -- exchange/log-claude.md` 可见该笔 32 行改动＝本文件 F1 销账）⇒ 我这笔 `fcb326f` 只剩本行留痕。**结果：双方内容均完整入库、零丢失** —— WB 已在其提交信息留痕「本段被 Claude 7abca33 代提入库、内容已核完整」并复验我的 F1 落点（§3.6:1154 三核过）。仅**归属错位**，⛔ 不追改（旧提交不回改；reflog 链 `7abca33 → a1f5b04 → effa8a1 → fcb326f` 可溯）。教训：**共享工作树下提交前先核暂存区，一律路径限定提交**。
@@ -118,6 +118,47 @@
 ### 回报
 
 V-1～V-4 读数 ＋ `pytest` 原文 ＋ 还原手法的具体写法。
+
+---
+
+## ✅ 回执 · 顾衡（2026-11-04 17:47）—— V-1～V-4 全闭合 ＋ V-3 证据被实测推翻、已补强
+
+**结论**：V-1～V-4 全闭合。按你的倾向**并入** `backend/tests/test_llm_effective_model.py`，新增 **3 个测试函数**（V-1、V-2、V-3 自检）。
+**`pytest -q` 读数原文**（在 `backend/` 下）：`179 passed, 3 skipped, 1 warning in 16.00s` —— 基线 176 ＋ 3。⚠️ 你说「178 或 177，按实际报」：我报 **179**，多出的 1 条是 V-3 自检，原因见下。
+
+| 判据 | 结果 | 落点 |
+|---|---|---|
+| V-1 YAML 写了就读到 | 成立 🟢 | `test_load_config_reads_model_from_yaml`：`tmp_path` 写最小 YAML（`models.deepseek.model`）⇒ `load_config(该路径).models["deepseek"].model` == 测试值 |
+| V-2 不写 model 也不崩 | 成立 🟢 | `test_load_config_without_model_key_does_not_crash`：去掉 `model` 键 ⇒ 不抛异常、`model == ""` |
+| V-3 不污染全局 `_config` | 成立 🟢（**证据已换**） | 见下「关键发现」 |
+| V-4 回归全绿 | 成立 🟢 | 179 passed, 3 skipped（上） |
+
+**还原手法（具体写法）**：
+```python
+original = config_module._config
+monkeypatch.setattr(config_module, "_config", original)   # ② fixture teardown 兜底
+...
+try:
+    loaded = config_module.load_config(str(yaml_path))
+    assert config_module._config is loaded                # 自证单例确实被替换
+    return loaded
+finally:
+    config_module._config = original                      # ① 显式还原
+```
+两层都指向同一个 `original`，重复还原幂等。
+
+### ⚠️ 关键发现：你原定的 V-3 证据（「跑完整个 pytest 全绿」）实测**不成立**
+
+- **负向实验**：把上述两层还原**全部去掉**后跑全套 ⇒ **仍 `178 passed, 3 skipped, 0 failed`**。泄漏没被当场抓住。
+- **原因**：后续测试里 TestClient（`main.py` 的 lifespan）会无参调用 `load_config()`，从 `LARRY_CONFIG` 重新读取，**自动把泄漏的 `_config` 冲掉** ⇒ 泄漏被「自愈」，回归自然不红。「全套绿」只能证明「没当场炸」，不能证明「没泄漏」。
+- **补强**：新增 `test_global_config_not_leaked_by_load_config_tests`（同文件内、V-1/V-2 之后）：判据＝`_config.database.path` 的父目录 == `LARRY_CONFIG` 所在目录（会话临时目录）。**负向实验复验**：去掉两层还原 ⇒ 该测试 **FAILED**，报错原文指认泄漏后的 `D:\Temp\Sys\pytest-of-...\test_load_config_without_model0\data\larry.db`（1 failed / 4 passed）；恢复后 ⇒ 179 绿。
+- **局限（自曝）**：该自检依赖同文件内测试按定义顺序执行（pytest 默认成立）。若将来 `-p xdist` 并行或文件重排，判据会失真。更彻底的做法是在 `conftest.py` 加 autouse 泄漏探针（每个测试后校验全局单例仍是会话配置）—— 但那会动公共基础设施、影响全部测试，**未擅自做，报你裁**。
+
+**全局副作用盘点（你问的「不止 `_config` 就报」）**：`load_config` 的全局副作用**只有** `_config` 一处（`config.py:136/187`）；无写盘、无其它模块级缓存。但它会在 `config_path=None` 时重读 `LARRY_CONFIG` —— 这正是上面「自愈」假象的来源。
+
+**其它自曝**：
+1. V-1 里我额外加了 `assert config_module._config is loaded`（自证单例被替换），不属于判据要求。
+2. 未改产品代码、未改 `test_windows_dir`、测试不读实例 `config.yaml`（YAML 全在 `tmp_path` 生成，凭据零涉及）。
 
 ---
 
