@@ -95,10 +95,16 @@
     - **📤 已派（2026-10-30 23:55）**：**J5 → Qoder**（派发稿已按交流区规矩清退 ⇒ 回溯 `git log -p -- exchange/log-qoder.md`）＝ 需求面三态语义；**J6 → Trae**（派发稿已清退 ⇒ 回溯 `git log -p -- exchange/log-trae.md`）＝ raw 全量落盘 ＋ 三态显式标注。⚠️ **对上面「A ＝ 解析＋schema 加位」的修正**：`schema.py` 全 `CREATE TABLE IF NOT EXISTS`，**对已有 `larry.db` 加位不生效**（须迁移）⇒ J6 **改判「raw 全量落盘即满足 ③」**，⛔ 不动 `messages` 表。**B 回传侧未派**（⚠️ 2026-10-31 20:25 更新：**技术前提已被取证收掉** —— provider 确返 ＋ SDK 保留 ＋ 非流式亦返，见下方〈✅ 取证已收〉；⇒ B 从「同源未证」升为「**可排期**」，但仍 ⛔ 与 A 并成一单、⛔ 借用 10-26 DS 4028 那条因果，顺序仍等 A 落地后再判）。
     - **✅ B 侧口径已由官方文档定死（WB 2026-11-04 15:23 查 `api-docs.deepseek.com`；原「三选一待裁」作废，老大同日认）**：
       - **文档原文**（`/zh-cn/guides/thinking_mode`）：「**携带了 `tools` 参数的请求，在后续所有请求中，必须完整回传 `reasoning_content` 给 API** —— 即使该轮模型未实际进行工具调用。若您的代码中未正确回传 `reasoning_content`，**API 会返回 400 报错**。」；「**未携带 `tools`** ⇒ 无需回传；**即使传入 API，也会被忽略**，不会拼接进上下文。」
-      - ⇒ **回传侧无裁量空间**：LA 是**带 tools** 的场景 ⇒ **必须回传原值**。原选项 **①「回传空串」违反文档、会 400，作废**。
+      - ⇒ **回传侧按文档无裁量空间**：LA 是**带 tools** 的场景 ⇒ 文档要求**必须回传原值**；原选项 ①「回传空串」**违反文档**，作废。
+      - 🔴 **⚠️ 但实测未复现该 400（Trae `82a1472`，WB 2026-11-04 16:47 独立复跑＋读证据，⛔ 非采信自报）**：D 单构造「带 tools、第 2 轮剥离 `reasoning_content`」，在 **`deepseek-reasoner`／`deepseek-flash`（＋`thinking`）／`deepseek-v4-pro`** 三模型上 **9 组场景全部 `http=200`、零错误**；回传版与剥离版**结果无差异**。
+        - ⇒ **两通道并列留痕、⛔ 不合并**（本项目铁律：「文档层 ≠ 运行时层」）：**文档是契约、实测是当下**。文档说的 400 **触发条件未确定**（探针未复现，⛔ 不推断原因）。
+        - ⚠️ **对产品的实际影响＝零**：当前生效模型 `deepseek-chat` 是**非思考模型**、本身不产 `reasoning_content` ⇒ B 侧风险只在新模型/思考模式下才存在。
+        - **口径**：仍**按文档回传**（保守，因为它是契约，且实测只证明"当下不炸"，不证明"将来不炸"）；⛔ 但**不得**据此写"不回传必崩"。
+        - 📌 **v4-pro 两臂未达终稿**（`finish_reason=length`，思考占满 `max_tokens`）⇒ 该模型**不足以比较终稿质量**，⛔ 不据此对它下"完全通过"结论。
+        - 📌 **另一条实测约束（真实且文档也对上了）**：`tool_choice` **强制指定**在思考模式下直接 **`400 / invalid_request_error / "Thinking mode does not support this tool_choice"`** ⇒ 思考模式只能用 `auto`。⛔ 此条与上面的 `reasoning_content` 规则不是同一件事。
       - **真正待裁的只剩一件（落库侧，与回传解耦）**：`reasoning` 要不要进 `messages` 表（`backend/db/schema.py:25–34` 无此位）。⚠️ **不落库 ≠ 没留痕** —— 存档侧 J6 已把 raw 全量落到 `backend/data/cot_archive/<日期>/`（三态齐）⇒ 落库只影响「对话表里能不能回看」，不影响合规留痕。
-      - ⚠️ **两代模型差异待实测**：文档已是 V4 架构（`model` 允许值仅 **`deepseek-flash`／`deepseek-v4-pro`**；思考模式改由 `thinking:{type: enabled|disabled}` ＋ `reasoning_effort` 控制，不再是独立模型），而本项目代码与 2026-10-31 取证用的都是旧名 `deepseek-reasoner`／`deepseek-chat` ⇒ **该强制规则在旧模型名下是否同样成立，未验**。⚠️ 另：`deepseek-reasoner`／`deepseek-chat` **已不在文档的 `model` 允许值里**。
-      - 🔴 **一条待验线索（⛔ 不宣布为根因）**：文档「带 `tools` ＋ 不回传 ⇒ **400**」与 2026-10-26 的 **DS 4028** 形状相近。⚠️ 但 4028 是另一个错误码、且那次是 **Trae 客户端**调用（与本仓 `chat_service.py` 非同一链）⇒ **只能构造实测**，⛔ 不得写进因果（原纪律不变）。
+      - ✅ **两代模型差异已实测（D 单，见上方）**：`deepseek-reasoner`（旧名）与 `deepseek-flash`＋`thinking`（新架构）**结论一致** —— 均未触发 400、剥离与回传无差异。⚠️ `deepseek-v4-pro` 两臂 `length` 截断，未达终稿 ⇒ 该模型**不据此下结论**。⚠️ 另：旧名 `deepseek-reasoner`／`deepseek-chat` **仍可调用**（WB 16:30 实测 `http=200`），但**已不在 `/models` 返回列表**、也不在文档 `model` 允许值内。
+      - 🔴 **4028 线索已部分收束（D 单 2026-11-04）**：本次探针观测到的唯一错误是 `400/invalid_request_error`（`tool_choice` 强制那条），**与 4028 不同码**；且**未复现**"带 tools 不回传 ⇒ 报错"⇒ **4028 与本规则无关的证据增加，但仍 ⛔ 不宣布根因**（不同调用链，原纪律不变）。
       - 出处：砚砚 2026-10-28 过程观察（原载 `exchange/log-trae.md`，已随清理清退；**本条为承接正本**）。
     - **✅ 取证已收（2026-10-31 20:25 · WB 自跑 · 3 次真实调用共 229 token）**：`provider 返 reasoning_content` —— **返，但只在 reasoner 模型上返**。证据 `D:/Code/_la-evidence/2026-10-31-reasoning-probe/probe.json`（脚本同目录无，源在会话临时区，读数已全录于下）。**场地**：仅 `deepseek` 配了 key（`qwen`／`gpt` 空 ⇒ 未测，不是"不返"）。
       - **P1 · `deepseek-reasoner` 流式**：`delta` 非空键 ＝ `[content, reasoning_content, role]`；53 chunk 中 **48 个含 `reasoning_content`**、共 **143 字符**，而 `content` 仅 **3 字符**。usage 100。
@@ -409,12 +415,13 @@
         - ⚠️ **同表方案的固有代价（如实留痕）**：每个新增查询都必须记得带 `kind` 过滤，**这是靠自觉**。⇒ 缓解要求：① 上述 2／3 两条用「部分索引 ＋ 负证」把漏过滤变成**可观测失败**，而不是靠人记得；② 后续任何新增读路径，判据里必须显式写它看哪个 `kind`。
       - 🔀 **③.2 → 拆 ③.2a ／ ③.2b（2026-11-03 22:44 WB 拆，老大「按这个落」）**
         - **为什么拆**：WB 2026-11-03 实证 `ctx.get('llm')` 返回 `LlmRuntime`，其方法全表只有**目录／路由／计费／发现**类 —— `registerAdapter`／`listProviders`／`listModels`／`resolveModelInfo`／`registerConfigurableProviders`／`discoverModels`／`remoteDiscoverModels`／`providerRetryPolicy`／`imageRequestPricing`／`fileRequestText`，**一个 `generate`／`complete`／`stream` 都没有** ⇒ **插件拿不到「给一段 messages 出文本」的入口**。⛔ 不先定这条，③.2b 的判据全建立在空输入上。
-        - [ ] **③.2a · 摘要生成路径选定**（⛔ 先做这块）—— 三选一，**须实测后定，⛔ 凭推断**：
-          - **(a) subagent**：依赖里存在 `@deepseek-ai/dsh-subagent` ⇒ 插件起一个小 agent 读会话生成摘要。须核：对插件开放的 API 是什么／能否指定 prompt 与输入／能否取回纯文本／是否也要过审批。**最像产品该有的样子**。
-          - **(b) agent 自产**：主 agent 自己产出摘要（tool 或 `ctx.commands` 触发），插件只负责接住。取决于产品形态要不要「可见的生成过程」。
-          - **(c) 留 backend**：⚠️ **会破坏 ③.1「⛔ 不经老 backend」**，等于白做 ⇒ 若选这条须**老大另裁**。
-          - **判据**：给出 (a)(b) 的**可执行性实测**（跑通，或明证不可行 ＋ 具体阻塞点）；选定一条并写明理由。⛔ 只报「看过文档」。
-          - **诚实边界**：本块 ⛔ 不产出生成实现，**只选定路径**。
+        - [x] ✅ **③.2a · 摘要生成路径选定 —— 已定 (a) subagent**（2026-11-04 探针实证，Trae `69e0c0d`；WB 复核成立）
+          - **核心读数**：`ctx.agents.currentInitiator()` 在 `session/` 事件回调里**有值**（`{"kind":"agent","id":"session-…","ctor":"ReactLoopAgent","hasSession":true}`）；`ctx.subagents.start('spawn', {prompt,parent,signal})` 能起、能跑完、能取回纯文本 `"OK"`。
+          - ⚠️ **时序硬约束**：**从 `turn/start` 起**才有 parent；此前 4 个事件（`permission/preset`／`sandbox/mode`／`approval/policy`／`agent/inbox/spliced`）**均为 `undefined`**。另：`ctx.inject` 时服务可见但 **provider 未注册**（`providers=[]`），首个会话事件才见 `["spawn","fork"]`。
+          - ✅ **负证已做**：`setTimeout` 内 `currentInitiator=undefined`、`requireInitiator` 抛 `no initiating agent is active`；注入回调内亦 `undefined` ⇒ 证明"有值"**不是恒假读数**。
+          - 🔴 **三条实现硬坑（探针踩实，⛔ 落地时别踩）**：① **探针/插件包必须有 `package.json`**（缺则 `turn/end` 报 `REQUEST_EXTENSION`、根轮次空响应 —— 与插件代码无关，是包形态）② **委派时机**：⛔ 别在 `turn/start` 里立刻起，改为**捕获 parent ＋ 等根 `turn/end` + 200ms** 再委派 ③ **关闭顺序**：`harness.close()` 必须等子 agent 落 `done` 帧，否则子 run 被掐成 `aborted`。
+          - **未闭合**：`turn/start` 直起是否真冲突**未单独复测**（坑 1 排除后未再验；按稳妥时序选型，不影响 (a) 成立）。
+          - ⛔ **诚实边界不变**：本块只定路径，**不产出生成实现**。原 (b)(c) 两选项**不再评估**（(a) 已可执行）。
         - [ ] **③.2b · 人审闸**（**前置＝③.2a 选定**）：**确认（可编辑）后才入库**。
           - **判据**：未确认 ⇒ ⛔ 不入库；**编辑后确认 ⇒ 入编辑后的版本**（⛔ 不许入原文）；⛔ 不许出现「默认全入」的旁路。
           - ⭐ **有现成范式**：`plugin-approval-probe` 的 `ctx.approval.request({ agent, toolName, callId, reason, signal })`，`reason` 可带 `case=<名>` 供本地策略答者作答 ⇒ **可先用本地答者验机制**，真人前端点击那条随 `DSH-3.8`（⛔ 不必等它才能开工）。
@@ -556,7 +563,7 @@
   - 📌 **2026-11-04 的实证背景（为什么值得单列）**：WB 当天查文档发现 `model` 允许值已只剩 `deepseek-flash`／`deepseek-v4-pro`，
     而本项目代码默认值仍是 `deepseek-chat`、配置里的 `model` 字段因 `ModelConfig` 无该字段而**从未生效**（9-10 改过一次、静默落空）。
     ⚠️ 同时思考模式的形态也变了（`thinking:{type}` ＋ `reasoning_effort`，不再是独立模型名）⇒ **改名的同时可能要接新参数**，两件事别混为一谈。
-  - **相关**：B 案（`config.models.*.model` 真生效）解决"配置能不能配"；**本条解决"配的值还对不对"**。
+  - **相关**：B 案（`config.models.*.model` 真生效）✅ **已落地（2026-11-04，Trae `7fc5fe6`）** —— WB 复验：`effective_model("deepseek")` ⇒ `deepseek-chat`（**行为不变**）、`FALLBACK_MODEL` 全文唯一定义、映射表含 `deepseek-flash`／`deepseek-v4-pro`、`pytest` **174 passed／3 skipped／0 failed**；⏳ 两条单测待入仓（已派顾衡 U-1～U-4）。⇒ B 案解决"配置能不能配"；**本条解决"配的值还对不对"**。
   - ⚠️ 承接纪律：将来若真做代际升级，须**先核 D 单结论**（`reasoning_content` 回传规则在旧模型名下是否同样适用），⛔ 别在不清楚回传规则时切模型。
 
 > **为什么单列这一段**（2026-09-20 老大裁）：DSH-3.7.4 有两条未闭合项**已判定"不影响本块结论"**，但**成因 / 覆盖确有缺口** ⇒ 不删、也不留在 3.7.4 段里当尾巴，挪到此处占位。

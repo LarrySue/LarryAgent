@@ -10,13 +10,68 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| — | — | — | ⚠️ **本区当前无在飞任务**。已闭环块见〈🗂 已清理段落〉，原文回溯 `git log -p -- exchange/log-claude.md`。 |
+| **B 案单测入仓**（`config.models.*.model` 生效） | **顾衡** | `backend/tests/`（新增测试文件） | 🔵 **在飞**：2026-11-04 16:50 派发，判据 U-1～U-4。核心＝把砚砚用临时脚本自证过的两条分支落成**可复跑的正式测试** | 2026-11-04 |
 
 > ⚠️ **不要把本区当承接目标**（活日志会被随时清理 ⇒ 引用必成断链）；**回溯一律 `git log -p -- exchange/log-claude.md`**。
 > 📝 **过程留痕（2026-10-16 晚 · 与 WB 并发撞车 · 双向已互核，零丢失）**：F1 销账提交与 WB 侧提交撞车 —— ① **我 → WB**：首版 `7abca33` 误带 WB 已 `git add` 未提交的 `.workbuddy/memory/2026-10-16.md`（共享工作树＋暂存区）⇒ 我 `git reset --soft` 拆出、路径限定重提；② **WB → 我**：reset 后暂存区里**我的 log 改动反被 WB 的提交 `effa8a1` 一并带入**（`git log -- exchange/log-claude.md` 可见该笔 32 行改动＝本文件 F1 销账）⇒ 我这笔 `fcb326f` 只剩本行留痕。**结果：双方内容均完整入库、零丢失** —— WB 已在其提交信息留痕「本段被 Claude 7abca33 代提入库、内容已核完整」并复验我的 F1 落点（§3.6:1154 三核过）。仅**归属错位**，⛔ 不追改（旧提交不回改；reflog 链 `7abca33 → a1f5b04 → effa8a1 → fcb326f` 可溯）。教训：**共享工作树下提交前先核暂存区，一律路径限定提交**。
 
 ---
 
+
+## 📮 派发 · B 案单测入仓（WB · 2026-11-04 16:50）—— 单件 U-1～U-4
+
+> **来路**：砚砚交付 M 单（B 案：`config.models.*.model` 真生效，`7fc5fe6`）时**自曝**：M-2 要的两条单测，她只能用**临时脚本运行时自证**（脚本在 `%TEMP%`、不入仓），因为 `TRAE.md` 规定**测试文件由 Claude 负责** ⇒ 入仓要你。
+> **一句话目标**：把「解析点两条分支」的行为**落成可复跑的正式测试**，进 `backend/tests/`。⛔ 这不是重做验证，是把已验证的东西变成**将来能自动发现回归**的东西。
+
+### 0 · 被测对象（WB 已独立复验，🟢 你可复核）
+
+- `models/llm.py:72` `FALLBACK_MODEL = "deepseek-chat"`（**全文唯一定义**，WB 实测 `grep` 计数 = 1）
+- `models/llm.py:75-82` `effective_model(provider_key="deepseek") -> str`：**配置非空则用配置值，否则返回 `FALLBACK_MODEL`**
+- `config.py` `ModelConfig` 已加 `model` 字段（WB 实测 `hasattr(...)` = True；实例配置读到长度 13）
+- WB 实测：`effective_model("deepseek")` ⇒ `deepseek-chat`（**行为不变**，与 B 案前一致）
+
+### 1 · 判据
+
+- **U-1 · 分支一：配置有值 ⇒ 用配置值**。构造一个 `ModelConfig(model="<某测试值>")` 的场景，断言 `effective_model()` 返回**该值**而非兜底。
+  - ⚠️ **不许依赖实例 `config.yaml`**（它含真实凭据、且值会被改）—— 用**构造的 config 对象／monkeypatch**，让测试**自足**。
+- **U-2 · 分支二：配置为空 ⇒ 落兜底**。`model=""` ／ 缺省 ／ `None` 三种输入，断言都返回 `FALLBACK_MODEL`。⚠️ **三种都要测**，因为"空串"和"没配"在 YAML 里是两回事。
+- **U-3 · 断言不许绑死具体模型名**：写 `assert result == FALLBACK_MODEL`（引用常量），⛔ **不要写 `== "deepseek-chat"`** —— 否则将来切 `deepseek-flash` 时这个测试会假红（那正是 M 单要防的形状：**改一处、平行处没改**）。
+- **U-4 · 回归**：`python -m pytest -q` 全绿。基线（WB 2026-11-04 16:47 实跑、⛔ 非采信自报）：**174 passed, 3 skipped, 0 failed**。你新增两条后应为 **176 passed**。
+  - ⚠️ 已知坏测 `test_shell_tool::test_windows_dir`（断言 `dir` 输出含 `"Volume"`，本机 chcp=936 出中文）—— 本次跑它是**绿的**（WB 复跑原话：`174 passed`），若你跑红**先报差异、⛔ 别改它**。
+
+### 2 · 判据前置
+
+- **前置 1**：先读 `models/llm.py:72-90`，看清 `effective_model` 的实现形态（是不是读 `get_config()`、有没有可注入点）。⛔ 别为了好测去改产品代码 —— 若**没有**可注入点，**报我**，别自己加钩子。
+- **前置 2**：测试文件命名与位置照既有惯例（`backend/tests/test_*.py`）。
+
+### 3 · 交付物
+
+1. 新增测试文件（或并入既有相关测试，你判）
+2. `pytest -q` 读数原文
+
+### 4 · 参考件
+
+- **路径**：`backend/models/llm.py:72-90`（被测）、`backend/tests/test_conversations.py`（本项目测试风格／fixture 惯例）、`backend/tests/conftest.py`（隔离机制）
+- **不可参考**：⛔ `backend/config.yaml`（实例，含凭据）
+
+### 5 · 场地器材
+
+- 本机 `python -m pytest -q`（在 `backend/` 下）。
+- ⚠️ **凭据纪律**：测试**不得读取真实 `config.yaml` 的 key**；如必须构造 config，⛔ 不许把任何真实凭据写进测试文件。
+
+### 6 · 回报格式
+
+结论先行（U-1～U-4 各自成立／未闭合）＋ 测试文件路径 ＋ `pytest` 读数原文 ＋ **自曝**。
+⚠️ 「前置 1 发现没有可注入点」是**有效结论**，报上来即可。
+
+### 7 · 禁区
+
+- ⛔ 不改 `models/llm.py` / `config.py` 等产品代码（本单只加测试）
+- ⛔ 不改 `test_windows_dir`
+- ⛔ 不写死具体模型名（见 U-3）
+- ⛔ 不读／不落任何真实凭据
+
+---
 
 ## 🔍 自检 · 挂账（2026-10-13 自检 → 2026-10-16 全部销账后）
 
