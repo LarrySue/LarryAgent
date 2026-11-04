@@ -9,6 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
+| **B 案 · 让 `config.models.*.model` 真生效** | **Trae** | `backend/config.py` ＋ `models/llm.py` ＋ `token_counter.py` ＋ 测试 | 🔵 **在飞**：2026-11-04 15:35 派发，判据 M-1～M-9。核心＝配一个唯一解析点，且**行为不变**（仍 `deepseek-chat`） | 2026-11-04 |
 | **DS `reasoning_content` 回传规则实测** | **Trae** | 新建独立探针目录（勿塞 `embed-probe/`） | 🔵 **在飞**：2026-11-04 15:35 派发，判据 D-1～D-7。核心＝旧模型名下"带 tools 不回传"是否报错、报的是不是 4028 | 2026-11-04 |
 | **③.2a 生成路径可执行性实测**（选型探针） | **Trae** | `harness/scripts/embed-probe/`（新建） | 🔵 **在飞**：2026-11-04 15:30 派发，判据 P-1～P-6（见下方同名片发节）。核心＝`currentInitiator()` 在 `session/` 钩子里有没有值 | 2026-11-04 |
 
@@ -93,6 +94,71 @@
 - ⛔ 不写产品实现（本单只出结论）
 - ⛔ 不为「让探针跑通」而改 DSH 源码或 patch 部署件
 - ⛔ 不采信 WB 的装配层读数当自己的证据（前置 3 要求自证）
+
+---
+
+## 📮 派发 · B 案：让 `config.models.*.model` 真的生效（WB · 2026-11-04 15:35）—— 单件 M-1～M-9
+
+> **来路**：老大 2026-11-04 15:25「按照 B 走」。WB 15:26 侦察确认病灶，15:30 已把实例配置解耦（见 §0）。
+> **一句话**：`config.yaml` 里写的 `model` 字段**当前完全不生效**（`ModelConfig` 都没这个字段）⇒ 让它生效，并把旧模型名的硬编码收敛到**一处**。
+
+### 0 · WB 已完成的现场准备（⛔ 你不要动 `config.yaml`）
+
+- 实例配置 `backend/config.yaml:17` 的 `model` 值，WB 15:26 已从 `deepseek-flash` **改回 `deepseek-chat`**（＝当前实际生效值），并加了注释。
+  ⇒ **这是本单的安全护栏**：B 案落地后**行为不变**（仍用旧名）。切 `deepseek-flash` 是**另一件事**，等 D 单（`reasoning_content` 回传）结论再定，⛔ **本单不许切**。
+- ⚠️ `backend/config.yaml` 在 `.gitignore:17`，**不进 git、含真实凭据** ⇒ ⛔ 不许读它的值、⛔ 不许打印、⛔ 不许复制到任何地方。
+
+### 1 · 病灶（WB 已实测，🟢）
+
+| 事实 | 证据 |
+|---|---|
+| `ModelConfig` **无 `model` 字段** | `backend/config.py:20-22` 只有 `api_key`／`base_url`；WB 15:30 实跑 `hasattr(cfg.models['deepseek'],'model')` ⇒ **False** |
+| 真正决定模型名的是**三处硬编码默认值** `deepseek-chat` | `services/chat_service.py:49`／`api/memory.py:35`／`memory/archiver.py:67` |
+| 映射表**没有** `deepseek-flash`，且解析是**硬抛无 fallback** | `models/llm.py:57-66` `_MODEL_PROVIDER_MAP`；`:68-76` `_resolve_provider_key` `raise ValueError` |
+| `token_counter` 也无新名 | `models/token_counter.py:36-44` |
+
+### 2 · 判据
+
+- **M-1 · `ModelConfig` 有 `model` 字段且能读到**：YAML 里写了就能读出来。取证据：`bool(...)` ＋ `len(...)`（⚠️ **⛔ 不打印值本身**，只打长度与布尔）。
+- **M-2 · 有**唯一**解析点，优先级明确**：形如 `effective_model(provider_key)` —— **配置非空 ⇒ 用配置值；配置为空／缺 ⇒ 落兜底常量**。取证据：该函数路径 ＋ **两条单测**（配置有值／配置为空各一条）。
+- **M-3 · 兜底默认值**全文只有一处定义**：现有三处 `model: str = "deepseek-chat"` 要么改引用该常量、要么改为空串由 M-2 解析。取证据：`grep -c` 该常量定义 = **1**，附检索式。
+- **M-4 · 映射表含新名，旧名保留并标注**：`_resolve_provider_key("deepseek-flash")` ⇒ `"deepseek"`（**不抛错**）；`deepseek-chat`／`deepseek-reasoner` **保留但加注释**（⚠️ 文档已不列这两个名为允许值，注释须写明「已下线，仅兼容」）。取证据：三个名字各调一次的返回值。
+- **M-5 · `token_counter` 含新名**：`deepseek-flash` 有 encoding 映射。取证据：调一次的返回值。
+- **M-6 · 行为不变（本单最重要的安全判据）**：落地后，一次真实调用**实际发出去的模型名仍是 `deepseek-chat`**。取证据：打印**实际使用的 model 名**（⛔ 不是 key）＋ `finish_reason`。
+- **M-7 · `config.example.yaml` 与实例键集同构**：`models.*` 段的**键集**一致（⚠️ **比键不比值**）。取证据：两侧键路径集合 ＋ 差集。
+- **M-8 · 回归**：`backend/tests` 全绿，**除已知坏测 `test_shell_tool::test_windows_dir`**（绑死英文 `Volume`、本机 chcp=936；与本单无关，⛔ **不许去改它**）。取证据：`pytest -q` 的 passed／failed 计数原文。
+- **M-9 · 测试里的旧名要处置**：`test_conversations.py:397`（断言 `"deepseek-chat" in body["models"]`）等硬编码处 —— **要么改成读配置，要么明确保留并注明原因**。⛔ 不许为了过测试放宽断言。
+
+### 3 · 判据前置
+
+- **前置 1**：先读 `models/llm.py:57-100`（映射表 ＋ `_get_client`）与 `config.py:20-22`，看清**改哪一层**再动手 —— ⛔ 别在 `_get_client` 里打补丁绕过 M-2。
+- **前置 2**：确认没有别的地方也在读 `models.*.model`（WB 只查到"零消费"，你要独立复核一次，附检索式）。
+- **前置 3**：`chat_service.py` 的默认值是**函数参数**，改它会影响 `estimate_tokens`／`truncate_messages` 等调用方 —— ⛔ 别只改签名不看调用点。
+
+### 4 · 参考件四要素
+
+- **① 路径**：`backend/config.py`（`ModelConfig`）／`backend/models/llm.py:57-100`／`backend/models/token_counter.py:36-44`／`backend/config.example.yaml` 的 `models:` 段
+- **② 怎么参考**：按 `_MODEL_PROVIDER_MAP` 上方注释说的"新增模型时在此处添加一行即可"的既定姿势扩展
+- **③ 参考程度**：可照抄既有形状（同一文件的既定风格）
+- **④ 不可参考**：⛔ `config.yaml`（实例，含凭据）—— 只可参考 `config.example.yaml`
+
+### 5 · 场地器材
+
+- 本机；真实 API **只需一次**（M-6），prompt 极小。
+- ⚠️ **凭据纪律（本单高压线）**：读 `config.yaml` 只经 `get_config()`，**⛔ 不打印它的任何值**；调试输出只打布尔／长度／模型名。🔴 今天 WB 在这上面栽过一次（`sed` 打印整段 + 正则遮罩失效）⇒ 你要打印配置片段时，**先确认那行不含凭据**。
+
+### 6 · 回报格式
+
+结论先行（M-1～M-9 各自成立／未闭合）＋ 每条读数 ＋ **M-6 的实际模型名** ＋ 未闭合单列 ＋ **自曝**。
+⚠️ 「M-9 我判该保留旧断言，理由是…」**是可接受的结论**，⛔ 别为过测试放宽。
+
+### 7 · 禁区
+
+- ⛔ **不动 `backend/config.yaml`**（含凭据、且已被 WB 解耦；你改了会破坏 M-6 的前提）
+- ⛔ **不切 `deepseek-flash`**（等 D 单）
+- ⛔ 不改 `test_windows_dir`
+- ⛔ 不动 DSH 侧（`harness/`）与 `plugin-s4-memory`
+- ⛔ 不打印／不落盘任何凭据
 
 ---
 
