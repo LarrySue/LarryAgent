@@ -379,6 +379,7 @@
         - ✅ **已交付并复验成立（Trae `d20e27f`，WB 2026-11-03 22:34 独立复核，⛔ 非采信自报）**。WB 回源读数：`kind!` 无默认值 ✅ ／ 索引 SQL 实读含 `WHERE kind='transcript'` ✅ ／ `insertRow` 带 `'transcript'` ✅ ／ 新文件 `write.ts` 的 `insertMemoryRow` 带 `'memory'` 且注释明写「⛔ 不挂任何自动触发」✅ ／ `selectMissingVectors` 带 `kind='memory'` ✅ ／ **两条召回 SQL 一字未改（L-8 守住）** ✅ ／ `selectRecent` 未被多加过滤 ✅。六条 SQL 与〈kind 归属表〉逐行对过。
         - ⚠️ **两条边界（照实记，⛔ 别读成"全闭合"）**：① **L-4 是程序内直调**（`insertMemoryRow` 直接调用），**非产品路径** —— 她已如实标注；真实人审闸在 ③.2。② **L-5 只用 fake-ctx 臂**验证"老 backend 零调用"，**未跑 backend 服务端日志** ⇒ 未达到原判据要求的强度，属**边界未闭合**，待 ③.2 接线时补真。
 
+        - ⚠️ **B 案表重建的两条前置（④.1 迁移必读 · WB 2026-11-04 从 `log-trae` 派发稿承接过来，该段已清）**：① **本机 SQLite 3.51.2（Node 内嵌 `node:sqlite`）不能给有数据的表加「无 DEFAULT 的 NOT NULL 列」** ⇒ 加 `kind` 必须走**表重建**（建新表 → 搬数据 → 改名），⛔ 不是 `ALTER TABLE ADD COLUMN`。② **`INSERT OR IGNORE` 会静默吞掉唯一冲突** ⇒ 验唯一性的负证用例须用**裸 `INSERT`**，否则负证永远"绿"。
         - ⚠️ **探针改判已核（不是放宽）**：`p02` 的 `P3-vector-persisted` **反转为** `P3-transcript-no-vector`（`n===1 && m===0 && t===1` 三条件同锁，**比原断言更严**），非删除；`p08` 夹具由"事件流流水"改为直种 `memory` 行（理由：召回候选＝长期记忆）。⚠️ 但 **`p08` 当前不能证明"召回只看 memory"** —— 召回过滤属 ③.4，届时须另补负证。
         - ⚠️ **表结构裁决已定（B 案 · 老大 2026-11-03 21:12 拍）**：`memories` **单表 ＋ 新增 `kind` 列**（`transcript`＝原始消息流水 ／ `memory`＝提炼摘要）。⛔ 不拆表、⛔ 不改表名。背景与两案对比见 `docs/terminology.md` §1.2 `memories` 条。
         - 🔴 **B 案必须与写侧同批定死的三条**（缺任一条 ⇒ 本块做完＝把隐患焊死）：

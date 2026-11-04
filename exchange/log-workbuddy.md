@@ -37,7 +37,7 @@
 
 > 🔵 **19:40 推主线 · 两件新动**：
 > ① **docs 升格一批 → Qoder**（〈📮 派发 · docs 升格一批〉）：J-1 砚砚三条过程观察升格（主件）／J-2 正本过期句订正／J-3 方法论六条升格。
-> ② **三件旧账题面问询 → ZCode**（〈📥 WB 问询 · 三件旧账的题面〉）：②③ 需她补题面。
+> ② **三件旧账题面问询 → ZCode**（〈📥 WB 问询 · 三件旧账的题面〉 ⚠️ **该段 2026-11-04 已随 `log-zcode` 清理，成果见该区〈🗂 已清理段落〉**）：②③ 需她补题面。
 > ✅ **34t-probe 已删（老大 19:47 裁「直接删」，WB 执行）**：`harness/scripts/run-34t-probe.mjs` ＋ `harness/packages/plugin-34t-probe/` 整包 ＋ `pnpm-lock.yaml` 登记行。包内仅 3 文件、**无 node_modules**；`lib/index.js` 为未跟踪构建产物。
 > ✅ **20:05 两单收妥**：
 > ① **Qoder docs 升格一批**（`6d89009`）**复验成立**：砚砚三条进 `local-env.md` §8.8（含负向约束写法）；正本过期句已订正；方法论六条进 `doc-audit-criteria.md` §八。
