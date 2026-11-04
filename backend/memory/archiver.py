@@ -34,7 +34,7 @@ from db.memories import (
 )
 from exceptions import ResourceNotFoundError, ValidationError
 from models.embedding import embed_batch
-from models.llm import chat_completion
+from models.llm import chat_completion, effective_model
 from rag.chunker import chunk_text
 from rag.vector_store import insert, delete_by_memory_id
 
@@ -64,18 +64,20 @@ SUMMARY_SYSTEM_PROMPT = """\
 
 async def generate_summary(
     conversation_id: int,
-    model: str = "deepseek-chat",
+    model: str = "",
 ) -> str:
     """
     为指定会话生成摘要。
 
     Args:
         conversation_id: 会话 ID
-        model: 用于生成摘要的模型
+        model: 用于生成摘要的模型；留空 ⇒ 由 effective_model("deepseek") 解析
 
     Returns:
         摘要文本
     """
+    if not model:
+        model = effective_model("deepseek")
     conv = await get_conversation(conversation_id)
     if conv is None:
         raise ResourceNotFoundError(f"Conversation not found: {conversation_id}")

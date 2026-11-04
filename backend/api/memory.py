@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/memory", tags=["memory"])
 class ArchiveRequest(BaseModel):
     """归档请求体"""
     conversation_id: int
-    model: str = "deepseek-chat"
+    model: str = ""  # 留空 ⇒ 由 generate_summary 内部 effective_model("deepseek") 解析
 
 
 class ArchiveResponse(BaseModel):

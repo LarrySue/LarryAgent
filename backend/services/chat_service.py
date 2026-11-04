@@ -29,7 +29,7 @@ from config import get_config
 from db import conversations as conv_db
 from exceptions import ResourceNotFoundError
 from memory.engine import build_memory_context, get_long_term_memory, get_short_term_memory
-from models.llm import chat_completion, chat_completion_stream, chat_completion_stream_events
+from models.llm import chat_completion, chat_completion_stream, chat_completion_stream_events, effective_model
 from models.token_counter import estimate_tokens_messages, truncate_messages
 from tools.registry import get_openai_tools, get_tool, list_tools
 
@@ -46,7 +46,7 @@ class ChatRequest(BaseModel):
     conversation_id: int | None = None  # None 表示新建会话
     message: str = Field(..., min_length=1)
     role: str = "default"
-    model: str = "deepseek-chat"
+    model: str = ""  # 留空 ⇒ 由 effective_model("deepseek") 解析（M-2 唯一解析点）
     stream: bool = False
     temperature: float = 0.7
 
@@ -112,6 +112,8 @@ async def _chat_flow(req: ChatRequest, caller_ip: str) -> AsyncGenerator[dict, N
     - done: 流结束
     """
     cfg = get_config()
+    if not req.model:
+        req.model = effective_model("deepseek")
 
     logger.info(
         "Chat request conv=%s model=%s msg_len=%d caller_ip=%s",

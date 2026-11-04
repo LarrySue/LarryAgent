@@ -34,6 +34,8 @@ except Exception:
 # 模型名 → tiktoken encoding 名的映射（尽量贴近）
 # DeepSeek 等非 OpenAI 模型用 cl100k_base 作为近似
 _MODEL_ENCODING_MAP: dict[str, str] = {
+    "deepseek-flash": "cl100k_base",
+    "deepseek-v4-pro": "cl100k_base",
     "deepseek-chat": "cl100k_base",
     "deepseek-reasoner": "cl100k_base",
     "qwen-turbo": "cl100k_base",

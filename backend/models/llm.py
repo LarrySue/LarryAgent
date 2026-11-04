@@ -55,6 +55,9 @@ class LLMResponse:
 # 模型名 → provider 配置键的显式映射
 # 新增模型时在此处添加一行即可，无需修改解析逻辑
 _MODEL_PROVIDER_MAP: dict[str, str] = {
+    "deepseek-flash": "deepseek",
+    "deepseek-v4-pro": "deepseek",
+    # 旧名：已下线，仅兼容（官方 /models 已不再列出，历史配置/调用仍可用）
     "deepseek-chat": "deepseek",
     "deepseek-reasoner": "deepseek",
     "qwen-turbo": "qwen",
@@ -63,6 +66,20 @@ _MODEL_PROVIDER_MAP: dict[str, str] = {
     "gpt-4o": "gpt",
     "gpt-4o-mini": "gpt",
 }
+
+# 兜底模型名（唯一一处定义）：配置 models.<provider>.model 为空/缺时使用。
+# ⚠️ 这是"当前实际生效值"的兜底，不随配置值变化；改这里等于改默认行为。
+FALLBACK_MODEL = "deepseek-chat"
+
+
+def effective_model(provider_key: str = "deepseek") -> str:
+    """唯一解析点：配置非空 ⇒ 用配置值；配置为空/缺 ⇒ 兜底常量。
+
+    ⛔ 不要在别处再写 "deepseek-chat" 字面量作默认值——都从这里取。
+    """
+    model_cfg = get_config().models.get(provider_key)
+    configured = (model_cfg.model or "").strip() if model_cfg is not None else ""
+    return configured or FALLBACK_MODEL
 
 
 def _resolve_provider_key(model_name: str) -> str:

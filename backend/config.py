@@ -19,6 +19,7 @@ import yaml
 @dataclass
 class ModelConfig:
     api_key: str = ""
+    model: str = ""
     base_url: str = ""
 
 
@@ -148,6 +149,7 @@ def load_config(config_path: str | None = None) -> Config:
     for name, cfg in raw.get("models", {}).items():
         models[name] = ModelConfig(
             api_key=cfg.get("api_key", ""),
+            model=cfg.get("model", ""),
             base_url=cfg.get("base_url", ""),
         )
 
