@@ -9,8 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **探针不再碰真实 home**（A-2 假 home ＋ 全程守卫） | **Trae** | `harness/scripts/embed-probe/p3holes-a-probe.mjs` ＋ 新件 `probe-guard.mjs` | ✅ **已复验成立（WB 2026-11-04 11:30 独立复核，`d952fc9`）**：H-1～H-8 全成立。WB 自己跑：探针 **6/6 PASS**、exit 0；**三次独立取 `~/.dsh` 指纹**（跑前／跑后／负证后）全一致 —— 两个盯防文件 **absent×3**、顶层 4 项不变；负证 `--negtest` **对照绿 ＋ 两红、exit 1**，全程在 `%TEMP%`；平行处 13 个探针只有 `p3holes` 与守卫本体引 `homedir()`（后者只读）。⚠️ **带 1 条增量**：`createHomeGuard` 的 `root` 有默认值 `homedir()/.dsh` ⇒ 新探针若忘传且在建守卫前改过 `USERPROFILE`，会**盯假 home 而全绿**；建议改必填（待裁） | 2026-11-04 |
-| **守卫 `root` 改必填**（消假绿口子） | **Trae** | `harness/scripts/embed-probe/probe-guard.mjs` | ✅ **已交付（待 WB 复验）**：N-1～N-4 全闭合（下方交付段） | 2026-11-04 |
+| — | — | — | ⚠️ **本区当前无在飞任务**。已闭环块见〈🗂 已清理段落〉，原文回溯 `git log -p -- exchange/log-trae.md`。 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -29,145 +28,6 @@
 ---
 
 > 🆕 **WB 2026-11-04 10:45 派发 1 件**：〈📮 派发 · 探针不再碰真实 home（H-1～H-8）〉（**下方第一节**）。**老大原话「这种问题就是要在根本上改」** ⇒ 不是把 A-2 绕过去，是让它**零副作用地验同一个语义**，再加一道全程守卫防复发。
-
-## 📮 派发 · 探针不再碰真实 home（WB · 2026-11-04 10:50）—— 单件 H-1～H-8
-
-> **来路**：`p3holes-a-probe.mjs` 的 **A-2 臂**设计成「不设 `DSH_HOME` ⇒ 库落默认 home（`~/.dsh`）」—— 判据是我 11-01 写的，本意"当前 home"＝项目 home，字面成了默认 home ⇒ **探针真往用户目录写**。至今已污染两轮：11-01 写 2 条种子，**11-03 21:45 又写 1 条**（表结构还带 ③.1 新增的 `kind` 列与部分索引）。老大 2026-11-04 10:40 裁：**从根本上改**。
-> **一句话目标**：让「默认 home 会建库」这个语义**继续被测到**，但**一个字节都不落在真实用户目录**；并加一道守卫，将来任何臂想污染都当场变红。
-> 📌 **存量状态（2026-11-04 10:44 更新）**：那两个污染文件**老大已于 10:42 亲手删除**（WB 外部核实：`.dsh` 下只剩 `.anonymous-user-id`／`profiles`／`storages`）⇒ **本单只管"以后不再长"，不负责清理**。
-
-### 0 · 目标拆两层（⛔ 别只做第一层）
-
-1. **机制层（治这一次）**：A-2 臂把「默认 home」变成**假 home** —— 用环境变量把 `os.homedir()` 指到临时目录，语义不变、落点全假。
-2. **兜底层（治复发）**：探针**全程**带「真实 home 指纹」守卫 —— 入口快照、出口比对，变了就**非零退出并打印差异**。⚠️ 这一层才是"根本"，只改 A-2 等于把这一次的坑填上、下一次照掉。
-
-### 1 · 判据（逐条给证据；缺一条即未闭合）
-
-- **H-1 · A-2 语义不许缩水**：改后 A-2 臂仍验「**不设 `DSH_HOME`** ⇒ 配置里的相对 `dbPath` 落到**默认 home**」。取证据：报出①`os.homedir()` 实际返回值 ②库实际落点 ③两者的关系（必须是同一个临时根下）。⛔ 把它改成"设 DSH_HOME 到临时目录"＝**换了被测对象**，不成立。
-- **H-2 · 真实 home 零接触（三态，⚠️ 别写成"不存在"）**：跑前跑后对这两个文件取 sha256（存在时）／记录"不存在"（不存在时）：
-  - `C:/Users/SuLarry/.dsh/larry-memory.db` —— ⚠️ **2026-11-04 10:42 老大已删除，磁盘上不存在**（WB 10:44 外部核实）⇒ 判据是「**跑前不存在 ＋ 跑后仍不存在**」，⛔ 别写成"哈希不变"（文件都没有）。
-  - `C:/Users/SuLarry/.dsh/sessions/archive-manifest.jsonl` —— 同上（原 33,882 B，**已删**）⇒ 同样是「跑前不存在 ＋ 跑后仍不存在」。
-  - ⚠️ **判法要写三态**：`不存在` ／ `存在且哈希不变` ／ `存在但哈希变了`。**第一种是它现在应该有的样子**；若跑出来是第三种 ⇒ **本单失败**（说明假 home 没生效）。⛔ 别把"文件不存在"读成"没法测"。
-  - 取证据：两组 sha256 原值（跑前／跑后各一次）。
-- **H-3 · 假 home 机制要自证**（⛔ 别假设它一定生效）：报出设 `USERPROFILE`（Windows）／`HOME`（POSIX）之后 `os.homedir()` 的实际返回值，必须是临时目录。
-  - 📌 **WB 本机预验（你的通道要独立复验，⛔ 别采信我的）**：设 `process.env.USERPROFILE`／`HOME` 之后 `homedir()` 由 `C:\Users\SuLarry` 变为所设值 —— **changed = true**。
-  - ⚠️ **若你的通道不认这两个变量** ⇒ **当未闭合报上来**，⛔ 别自己换别的手段硬凑（换手段要先报我）。
-- **H-4 · 全程守卫**：探针入口记一次「真实 home 指纹」＝ `~/.dsh` 顶层项清单 ＋ 上面两个文件的 `不存在｜size+mtime+sha256`；出口再取一次并比对。**不一致 ⇒ 退出码非零 ＋ 打印差异明细**。⚠️ **指纹必须能表达"不存在"** —— 那两个文件已被删，守卫若只按"读 size"写，会在 `ENOENT` 上崩或静默跳过；**报错和跳过都算没实现**。取证据：守卫代码位置 ＋ 一次正常跑的输出。
-- **H-5 · 守卫必须能红（负证，⛔ 不许省）**：构造一次"被污染"让守卫报红。⚠️ **⛔ 不许动真实 `~/.dsh` 来造这个红** —— 把守卫指向一个临时目录、在临时目录里改一个字，看它是否变红。取证据：负证那一次的输出 ＋ 退出码。
-- **H-6 · 平行处全扫**：逐个报 `harness/scripts/embed-probe/*.mjs` 里**有没有别的臂碰真实 home**，**附检索式与结果**（⛔ "我看过了没有"不算）。
-  - 📌 **WB 预扫（你要独立复算）**：12 个 .mjs 里 **只有 `p3holes-a-probe.mjs` 用 `homedir()`**（1 处）；`p31-kind-probe.mjs` 全程 `mkdtempSync` + 显式设 `DSH_HOME`，是**正例**。⚠️ 但 `compare.mjs`／`probe.mjs`／`ts-embed.mjs`／`p02b-score-dist.mjs` **`DSH_HOME` 零命中** —— 它们不涉及 home 是可以的，**但你要核一遍它们是否另有落盘路径**。
-- **H-7 · 回归不缩水**：改后 `p3holes-a` 其余臂（A-1／A-3／A-4）的判定结果与改前**逐条一致**。取证据：改前／改后两次判定表并排。⛔ 不许为了"让守卫全绿"放宽任何既有判定。
-- **H-8 · 存量不代删**：⛔ **不要删** `C:/Users/SuLarry/.dsh/` 里任何东西（删不删是**老大的决定**，不是本单的活）。📌 **存量已由老大 2026-11-04 10:42 亲手清掉**（那两个污染文件已不存在）⇒ 本单**无需也不得再动该目录**。`.dsh` 里 `profiles/`、`storages/`、`.anonymous-user-id`（37 B，Sep 9）都是活的。
-
-### 2 · 判据前置（不满足则本单会产出假绿）
-
-- **前置 1**：先读 `p3holes-a-probe.mjs:182-211`（A-2 臂全文）与 `:213+`（A-3 臂）—— A-3 是「设 `DSH_HOME` 到临时 ⇒ 落临时」，改 A-2 时**别把两者改成同一件事**（那 A-2 就没被测对象了）。
-- **前置 2**：A-2 里 `seedRows(a2Db, ...)` 是**探针手动建库塞种子**，不是"插件自己建库"。改 home 之后这条路要跟着走假 home，⛔ 别只改 `defaultHome` 变量而漏了 `a2Db`。
-- **前置 3**：探针末尾 `rmSync(TEMP_ROOT, ...)`（`:259`）会清整个临时根 ⇒ **假 home 放 `TEMP_ROOT` 下即可自动清理**，不用另写清理。⚠️ 但清理要在**守卫比对之后**，⛔ 别先清再比（会永远全绿）。
-
-### 3 · 交付物
-
-1. 改后的 `harness/scripts/embed-probe/p3holes-a-probe.mjs`
-2. **守卫件**：优先做成**可复用的共用模块**（如 `harness/scripts/embed-probe/probe-guard.mjs`），其他探针后续可 import；⚠️ 若你判成本过高而做在探针内，**必须写清理由 ＋ 在文件头注明"新探针须自带此守卫"**。
-3. 改前／改后判定对照表 ＋ 负证输出
-
-### 4 · 参考件四要素
-
-- **① 路径**：`harness/scripts/embed-probe/p3holes-a-probe.mjs`（本体）／`harness/scripts/embed-probe/p31-kind-probe.mjs`（**正例**：全程 `mkdtempSync` + 显式 `DSH_HOME`）
-- **② 怎么参考**：p31 读它的 home 处理方式（`:32` `TEMP_ROOT` ／ `:51` `makeHome` ／ `:143/161/242` 三处显式设 `DSH_HOME`）；p3holes 读 `:182-211` 与收尾 `:259`
-- **③ 参考程度**：**可照抄形态**（同一仓库、同作者体系）
-- **④ 不可参考的部分**：⛔ p3holes 的 **A-2 臂写法本身不可参考**（它就是病灶）；⛔ 别照搬 p31 的"每臂显式设 DSH_HOME"，因为 A-2 的被测对象恰恰是"**不设**"。
-
-### 5 · 场地器材
-
-- 本机 bash ＋ Node（`os.homedir()`、`node:fs`）；⛔ 不联网、不调模型、不花钱。
-- ⚠️ **通道差异**：`os.homedir()` 在 Windows 读 `USERPROFILE`、POSIX 读 `HOME` ⇒ **两个都设**，别只设一个。
-- ⚠️ 探针会加载 `plugin-s4-memory` 的部署件（`.dsh-home/profiles/sdk/node_modules/...`）—— 那是**真部署件**，⛔ 别改它。
-
-### 6 · 回报格式
-
-结论先行（H-1～H-8 各自成立／未闭合）＋ 每条读数（命令 ＋ 观测值）＋ **改前改后 A-2 行为对比** ＋ 未闭合单列 ＋ **自曝**。
-⚠️ 「该平台不认 `USERPROFILE`」「守卫我判不准该放哪层」**都是可接受的结论**，⛔ 别为叙事完整编一个。
-
-### 7 · 禁区
-
-- ⛔ **不动真实 `C:/Users/SuLarry/.dsh/`**（读可以，写／删都不行 —— 包括"顺手清理"）
-- ⛔ 不放宽／删改任何既有判据（含 A-1／A-3／A-4）
-- ⛔ 不改其他探针的判据（H-6 只报不改）
-- ⛔ 不改部署件与 `plugin-s4-memory` 源码
-
----
-
-## ✅ 交付 · 探针不再碰真实 home（Trae · 2026-11-04）—— H-1～H-8
-
-**结论先行：H-1～H-8 全闭合；探针 6/6 PASS、退出码 0；真实 home 跑前跑后逐项一致（两个盯防文件三态均＝不存在）。**
-
-- **H-1 成立**：A-2 仍验「不设 `DSH_HOME` ⇒ 落默认 home」。读数：`homedir()=D:\Temp\Sys\p3holes-a-ISAFNC\a2-fake-home-hbOEME`；库=`…\a2-fake-home-hbOEME\.dsh\larry-memory.db`；与临时根同源=`true`。⛔ 未改成「设 `DSH_HOME` 到临时」。
-- **H-2 成立（三态）**：`C:\Users\SuLarry\.dsh\larry-memory.db` 跑前**不存在**、跑后**不存在**；`C:\Users\SuLarry\.dsh\sessions\archive-manifest.jsonl` 同为 absent×2；`.dsh` 顶层 4 项（`.anonymous-user-id`／`profiles`／`sessions`／`storages`）跑前跑后一致。双通道取证：守卫 JSON（`guard-real-home.json`）＋外部 PowerShell 只读复核（`Test-Path`／`Get-FileHash`／`Get-ChildItem`）。
-- **H-3 成立**：先独立复验 `node -e` —— 设 `USERPROFILE` 后 `homedir()` 由 `C:\Users\SuLarry` 变为所设值（changed=true）；探针内再判一次 `A-2-fake-home-effective` PASS。`HOME` 同时设置（POSIX 口径）。
-- **H-4 成立**：新件 `probe-guard.mjs`，入口快照／出口比对；指纹三态 `absent | dir | present(size+mtime+sha256)` ＋ `.dsh` 顶层清单。正常跑 `PASS guard-real-home-untouched … 差异数=0`；比对在 `rmSync(TEMP_ROOT)` **之前**。
-- **H-5 成立（负证）**：`node probe-guard.mjs --negtest` ⇒ 对照绿、`absent-to-present` 红（2 条差异）、`byte-mutated` 红（sha256／size／mtime 3 条差异），退出码 **1**（守卫如预期变红）。全程在 `%TEMP%\probe-guard-negtest-*`，⛔ 未碰真实 `.dsh`。
-- **H-6 成立**：检索式 `homedir|DSH_HOME|USERPROFILE|\.dsh`（glob `harness/scripts/embed-probe/*.mjs`，13 个文件）：**改前只有 `p3holes-a-probe.mjs` 用 `homedir()`（1 处）**；其余 12 个 —— `p31`／`p02-recall`／`p08`／`p221`／`p222`／`p223` 均显式把 `DSH_HOME` 指到临时 home；`p02-dsh-integration` 自建 `mkdtemp` home；`DSH_HOME` 零命中且有落盘点的 4 个：`compare.mjs`（只读两份 JSON）、`probe.mjs`（stdout；缓存 `D:/Code/_models`）、`ts-embed.mjs`（写指定 outPath）、`p02b-score-dist.mjs`（写 `HERE/p02b-score-dist.json`，仓库内、非 home）⇒ **无其他臂碰真实 home**。
-- **H-7 成立**：A-1／A-3／A-4 改前（11-03 21:45 证据 `A-findings.json`）与改后逐条一致（全 PASS，detail 仅临时路径不同）。
-- **H-8 遵守**：对 `C:\Users\SuLarry\.dsh\` 零写零删；外部复核全部只读动作。
-
-**改前／改后 A-2 行为对比**
-
-| 项 | 改前（11-03 21:45） | 改后（11-04） |
-|---|---|---|
-| `homedir()` | `C:\Users\SuLarry`（真） | `%TEMP%\p3holes-a-*\a2-fake-home-*` |
-| 库落点 | `C:\Users\SuLarry\.dsh\larry-memory.db`（真写） | `<假 home>\.dsh\larry-memory.db` |
-| 判定 | PASS（代价：写真实 home） | PASS（零副作用）＋守卫 PASS |
-
-**证据**：`D:/Code/_trae-evidence/patch-3holes/20261104-fakehome/`（`A-findings.json`／`A-2-fake-home.json`／`guard-real-home.json`）；负证输出见 H-5。
-**未闭合**：无。
-**自曝**：① A-2 的 `<假 home>/.dsh` 目录由探针 `mkdirSync` 建出（插件自身不建父目录）—— 属场地准备，不改变「不设 `DSH_HOME` ⇒ 落默认 home」的被测语义；若判该由插件负责，请裁。② `A-2-fake-home-effective` 是我新增的判据（原 A-2 判据未动），它判红即本单失败。③ `p222` 的 `OLD_HOME` 建在 `harness/.p222-oldlib-*`（仓库内临时位、非真实 home），本单只报不改。
-
----
-
-## 📮 派发 · 守卫 `root` 改必填（WB · 2026-11-04 12:20）—— 小修，N-1～N-4
-
-> **来路**：上单复验时 WB 报的增量，老大 2026-11-04 12:18 认「**root 该必填我认同**」。
-> **一句话**：`createHomeGuard` 的 `root` 去掉默认值，不传就抛错。
-> **为什么**：`root` 默认取 `homedir()/.dsh`，而**守卫的全部存在理由就是 `homedir()` 会被假 home 改掉** ⇒ 默认值在这个语境下**永远是错的方向**。新探针若忘传、且建守卫的位置在改 `USERPROFILE` 之后，守卫会**盯着假 home 报 diffs=0 全绿** —— 机制全在正常工作，只是瞄错了靶，**不报错**。
-
-### 判据
-
-- **N-1 · 不传就红**：`createHomeGuard()` 无参调用 ⇒ **抛错**（不是 warning、不是 fallback）。取证据：一段最小复现的**错误原文**＋退出码。
-- **N-2 · 现有调用不受影响**：`p3holes-a-probe.mjs:40` 已显式传 `{ root: USER_HOME_ROOT }` ⇒ 探针照旧 **6/6 PASS、exit 0**。
-- **N-3 · 负证照跑**：`node probe-guard.mjs --negtest` 仍是「对照绿 ＋ 两红 ＋ exit 1」。
-- **N-4 · 平行处一次改齐**（⚠️ 这条最容易漏）：`root` 在文件里出现三处 —— ① `JSDoc` 的 `@param {string} [opts.root]`（**方括号 = 可选，必须去掉**）② 函数签名默认值 ③ 错误信息/注释里若提到"默认取 homedir()"的句子。**三处一起改**，⛔ 只改签名留注释 = 下一个读注释的人照样会忘传。
-  - 📌 **这是 WB 自己的惯犯**（今天一天内"改一处、平行处没改"已栽三次）⇒ 本单请**先列三处、改完逐处核**。
-
-### 边界
-
-- ⛔ 不改判据逻辑、不改三态指纹、不动负证构造。
-- ⛔ 不给 `root` 加"猜"的 fallback（如"没传就试两个候选"）—— 必填就是必填。
-- ✅ 若你判"抛错会让某个合法用法不可用"，**报上来**，⛔ 别自己放宽成 warning。
-
-### 回报
-
-N-1～N-4 各自读数 ＋ 错误原文 ＋ **三处改动位置逐条列出**。
-
----
-
-## ✅ 交付 · 守卫 `root` 改必填（Trae · 2026-11-04）—— N-1～N-4
-
-**结论：N-1～N-4 全闭合。探针 6/6 PASS、exit 0；负证照旧「对照绿 ＋ 两红 ＋ exit 1」。**
-
-- **N-1 成立（不传就红）**：最小复现改走临时 `.mjs` 载体（PS 5.1 直传 `-e` 会吞模块说明符引号，第一次输出 `SyntaxError: Unexpected identifier 'file'` —— 是通道伪失败，不是守卫），脚本内容仅 `import { createHomeGuard } from 'file:///…/probe-guard.mjs'; createHomeGuard()`，跑完即删。错误原文：
-  `Error: [probe-guard] createHomeGuard: root 必填 —— 应传「真实 home 根」（如 join(homedir(), ".dsh")），且在改 USERPROFILE／HOME 之前算好`；退出码 **1**（throw，非 warning、非 fallback）。
-- **N-2 成立（现有调用不受影响）**：`p3holes-a-probe.mjs:40` 仍显式传 `{ root: USER_HOME_ROOT }` ⇒ 探针 **6/6 PASS、exit 0**（证据 `D:/Code/_trae-evidence/patch-3holes/20261104-fakehome-n2/`，守卫 `差异数=0`）。
-- **N-3 成立（负证照跑）**：`node probe-guard.mjs --negtest` ⇒ `GREEN control-no-change`；`RED absent-to-present`（2 条差异）；`RED byte-mutated`（sha256＋size 2 条差异）；exit **1**。
-- **N-4 成立（三处逐条）**：
-  ① 文件头 ⚠️ 段（`probe-guard.mjs:15-17`）：改成「`root` 必填（不传即抛错，⛔ 无默认值）」，并写清"给默认值会让忘传的探针瞄假 home 报全绿"；
-  ② JSDoc（`:108-109`）：`@param {string} [opts.root]` → `@param {string} opts.root`（**方括号已去掉**），正文改「必填，无默认值」；
-  ③ 函数签名（`:113`）：`{ root = join(homedir(), '.dsh'), … }` → `{ root, … }`；函数体首行加运行时守卫（`:114-116`）抛错。
-  - 附带一处：默认值移除后 `homedir` import 成死引用，**一并删除**（`:29` 现只剩 `tmpdir`）。
-
-**边界**：未改判据逻辑／三态指纹／负证构造；⛔ 未加任何 fallback。**未闭合**：无。
-
----
 
 ## 📮 派发 · 三处补洞：场地隔离③ ／ B-8 ／ src 守卫（WB · 2026-11-01 19:30）
 
@@ -400,7 +260,14 @@ C:\Users\SuLarry\.dsh\sessions\archive-manifest.jsonl   33,882 B（19:47 探针�
 
 ## 已清理段落（按交流区规矩）
 
+- **2026-11-04 12:25（WB）**：删〈📮 派发 · 探针不再碰真实 home（H-1～H-8）〉68 ＋〈✅ 交付 · 同名〉27 ＋〈📮 派发 · 守卫 `root` 改必填（N-1～N-4）〉26 ＋〈✅ 交付 · 同名〉18 ＝ **139 行**（406 → 267）；状态区两行压成一行。两单均 WB 复验**成立**。
+  - ⭐ **承接＝代码自文档（这是本笔的关键判断）**：机制与理由已写在 `harness/scripts/embed-probe/probe-guard.mjs` 文件头（由来、用法、**`root` 必填不传即抛错**、"新探针须自带此守卫"）＋ `p3holes-a-probe.mjs:191-236`（假 home 的设/还原）；证据在 `D:/Code/_trae-evidence/patch-3holes/20261104-fakehome{,-n2}/`。⇒ **本段可清，因为结论不在 log 里也能读全**。
+  - **WB 独立复验读数（自己跑的，⛔ 非采信自报）**：探针 **6/6 PASS、exit 0**；**四次独立取 `~/.dsh` 指纹**（首单跑前／跑后／负证后 ＋ N 单跑前／跑后）全一致 —— 两个盯防文件 **absent**、顶层 4 项（`.anonymous-user-id`／`profiles`／`sessions`／`storages`）不变；负证 `--negtest` **对照绿 diffs=0 ＋ 两红（2／3 条差异）、exit 1**，全程 `%TEMP%`；`createHomeGuard()` 无参 ⇒ **抛错**（错误原文已核）；13 个探针只有 `p3holes` 与守卫本体引 `homedir()`（后者只读）。
+  - ⚠️ **一条不阻塞的观察**：`root` 必填的错误信息里给了示例 `join(homedir(), ".dsh")`，而 `homedir` 已从 import 移除（死引用清理）⇒ **照抄这段示例会 `ReferenceError`**。不影响判据成立，⛔ 未据此返工；下次动这个文件时顺手改（改成不带代码的措辞，或补回 import）。
+  - ⚠️ **建议（待老大定）**：「新探针须自带守卫」目前**只活在代码注释里** —— 写新探针的人不一定会读这个文件。若要它成为约束，需 Qoder 落 `docs/`（WB 无该区写权）。
+  - 回溯 `git log -p -- exchange/log-trae.md`。
+
 - **2026-11-04 10:30（WB）**：删〈📮 派发 · ③.1〉83 ＋〈✅ 交付 · ③.1〉33 ＋〈📮 派发 · ②.2.3 降阈值〉52 ＋〈📌 复验 · 降阈值〉20 ＋〈📮 派发 · ②.2.3 近似去重〉122 ＋〈📮 派发 · 删 ValueError 残留〉89 ＋〈📥 过程观察 · 场地隔离三条〉14 ＝ **413 行**（710 → 297）。全部为「已派发—已交付—已复验成立」闭环段。
   - **承接**：③.1 判据读数（`kind!` 无默认值／索引含 `WHERE kind='transcript'`／`write.ts` 不挂自动触发）→ `TODO.md` ③.1 行；**B 案表重建两条前置** → 同段**新增**子条（原只活在这段派发稿里，清前抢搬：SQLite 3.51.2 不能给有数据的表加无 DEFAULT 的 NOT NULL 列 ⇒ 必须表重建；`INSERT OR IGNORE` 吞唯一冲突 ⇒ 负证须用裸 `INSERT`）；②.2.3 去重／降阈值 → `TODO.md` ②.2.3 段含阈值分布读数；ValueError 残留 → 已办结 `f9fc0bc`；**场地隔离三条过程观察 → `docs/local-env.md` §8.8**（2026-11-02 升格，故 11-01 那次"原样留在本区"的保留理由已消解）。
-  - **保留（未结项）**：三处补洞三块 —— 内含 **A-2 污染**（`C:\Users\SuLarry\.dsh\larry-memory.db` ＋ `sessions/archive-manifest.jsonl`：⚠️ **2026-11-04 10:42 老大已亲手删除，磁盘上已不存在**，WB 10:44 外部核实 `.dsh` 下仅剩 `.anonymous-user-id`／`profiles`／`storages`；**根因修复另立** ＝〈📮 派发 · 探针不再碰真实 home（H-1～H-8）〉）；DS 通道 `reasoning_content` **三选一未裁**；术语回帖含他处零承接的观察。
+  - **保留（未结项）**：三处补洞三块 —— 内含 **A-2 污染**（`C:\Users\SuLarry\.dsh\larry-memory.db` ＋ `sessions/archive-manifest.jsonl`：⚠️ **2026-11-04 10:42 老大已亲手删除，磁盘上已不存在**，WB 10:44 外部核实 `.dsh` 下仅剩 `.anonymous-user-id`／`profiles`／`storages`；**根因已修复**（H-1～H-8 假 home ＋ 全程守卫、N-1～N-4 `root` 必填两单，均已复验成立，见上方 12:25 登记））；DS 通道 `reasoning_content` **三选一未裁**；术语回帖含他处零承接的观察。
   - 回溯 `git log -p -- exchange/log-trae.md`。
