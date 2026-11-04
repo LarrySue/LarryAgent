@@ -7,7 +7,9 @@
 
 ## 📮 在飞任务（状态区）
 
-> 🔵 **在飞 2 件（2026-11-04 20:40）**：① **③.2b 人审闸 → 砚砚**（`log-trae.md`，W-1～W-8）；② **三条待办核实与收口 → 千绪**（`log-qoder.md`，X-1～X-3 —— 核下来三条里两条已过期，见该区）。
+> 🔵 **在飞 1 件（2026-11-04 21:12）**：**三条待办核实与收口 → 千绪**（`log-qoder.md`，X-1～X-3）。
+>
+> ✅ **③.2b 人审闸 已复验成立**（2026-11-04 21:10，Trae `5a93d0b`）—— WB 自己从证据文件读的读数：W-3 编辑臂入库 `B句`、`A句` 零命中；W-7 负证 `bypass-reject` 臂 rows=1；部署件无短路残留；backend 179 passed 自跑。**三条硬坑**已进 TODO。
 >
 > ✅ **今日已闭环八单**（2026-11-04）：派出的 H／N 探针守卫 · S 判据升格 · T 守卫入册 · D 回传实测 · P 选型 · M/U/V 配置生效 —— 全部复验成立，结论分别在 `probe-guard.mjs` 文件头、`docs/doc-audit-criteria.md` §六 5-6、`docs/local-env.md` §15、`TODO.md` DSH-4 ③块。（H／N 探针守卫 · S 判据升格 · T 守卫入册 · D 回传实测 · P 选型 · M/U/V 配置生效）**全部复验成立**，结论分别在 `probe-guard.mjs` 文件头、`docs/doc-audit-criteria.md` §六 5-6、`docs/local-env.md` §15、`TODO.md` DSH-4 ③块。
 
