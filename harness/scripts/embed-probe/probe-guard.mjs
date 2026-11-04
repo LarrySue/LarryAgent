@@ -12,8 +12,9 @@
  *   const result = guard.verify()                             // 出口，清理临时目录之前
  *   if (!result.ok) { 打印 result.diffs; process.exit(非零) }
  *
- * ⚠️ `root` 必须在改动 USERPROFILE／HOME 之前算好并显式传入：
- *    守卫要盯的是「真实 home」，而 os.homedir() 会被假 home 改掉。
+ * ⚠️ `root` 必填（不传即抛错，⛔ 无默认值），且必须在改动 USERPROFILE／HOME 之前算好：
+ *    守卫要盯的是「真实 home」，而 os.homedir() 会被假 home 改掉；
+ *    若在这里给默认值，忘传的新探针会盯着假 home 报全绿——瞄错靶还不报错。
  * ⚠️ 指纹必须能表达「不存在」：状态是三态 absent | present(size+mtime+sha256)，
  *    文件缺失不是「没法测」，而是一种必须保持的状态。
  * ⚠️ 新探针须自带此守卫（派发 H-4/H-6 口径）。
@@ -25,7 +26,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { homedir, tmpdir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const NL = String.fromCharCode(10)
@@ -104,12 +105,15 @@ export function diffSnapshots(before, after) {
 /**
  * 创建一个守卫实例。
  * @param {object} opts
- * @param {string} [opts.root] 被盯的 home 根；⚠️ 默认值取调用时刻的 homedir()，
- *   必须在改 USERPROFILE／HOME 之前创建。
+ * @param {string} opts.root 被盯的 home 根（必填，无默认值）；⚠️ 必须在改
+ *   USERPROFILE／HOME 之前算好——默认取 homedir() 会在假 home 语境下瞄错靶。
  * @param {string[]} [opts.watchFiles] 相对 root 的盯防文件
  * @param {string} [opts.label] 输出标签
  */
-export function createHomeGuard({ root = join(homedir(), '.dsh'), watchFiles = DEFAULT_WATCHED, label = 'real-home' } = {}) {
+export function createHomeGuard({ root, watchFiles = DEFAULT_WATCHED, label = 'real-home' } = {}) {
+  if (typeof root !== 'string' || root.trim().length === 0) {
+    throw new Error('[probe-guard] createHomeGuard: root 必填 —— 应传「真实 home 根」（如 join(homedir(), ".dsh")），且在改 USERPROFILE／HOME 之前算好')
+  }
   const before = snapshotHome(root, watchFiles)
   return {
     label,

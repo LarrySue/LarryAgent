@@ -10,7 +10,7 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **探针不再碰真实 home**（A-2 假 home ＋ 全程守卫） | **Trae** | `harness/scripts/embed-probe/p3holes-a-probe.mjs` ＋ 新件 `probe-guard.mjs` | ✅ **已复验成立（WB 2026-11-04 11:30 独立复核，`d952fc9`）**：H-1～H-8 全成立。WB 自己跑：探针 **6/6 PASS**、exit 0；**三次独立取 `~/.dsh` 指纹**（跑前／跑后／负证后）全一致 —— 两个盯防文件 **absent×3**、顶层 4 项不变；负证 `--negtest` **对照绿 ＋ 两红、exit 1**，全程在 `%TEMP%`；平行处 13 个探针只有 `p3holes` 与守卫本体引 `homedir()`（后者只读）。⚠️ **带 1 条增量**：`createHomeGuard` 的 `root` 有默认值 `homedir()/.dsh` ⇒ 新探针若忘传且在建守卫前改过 `USERPROFILE`，会**盯假 home 而全绿**；建议改必填（待裁） | 2026-11-04 |
-| **守卫 `root` 改必填**（消假绿口子） | **Trae** | `harness/scripts/embed-probe/probe-guard.mjs` | 🔵 **在飞**：2026-11-04 12:20 派发，判据 N-1～N-4（见下方同名片发节） | 2026-11-04 |
+| **守卫 `root` 改必填**（消假绿口子） | **Trae** | `harness/scripts/embed-probe/probe-guard.mjs` | ✅ **已交付（待 WB 复验）**：N-1～N-4 全闭合（下方交付段） | 2026-11-04 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -148,6 +148,24 @@
 ### 回报
 
 N-1～N-4 各自读数 ＋ 错误原文 ＋ **三处改动位置逐条列出**。
+
+---
+
+## ✅ 交付 · 守卫 `root` 改必填（Trae · 2026-11-04）—— N-1～N-4
+
+**结论：N-1～N-4 全闭合。探针 6/6 PASS、exit 0；负证照旧「对照绿 ＋ 两红 ＋ exit 1」。**
+
+- **N-1 成立（不传就红）**：最小复现改走临时 `.mjs` 载体（PS 5.1 直传 `-e` 会吞模块说明符引号，第一次输出 `SyntaxError: Unexpected identifier 'file'` —— 是通道伪失败，不是守卫），脚本内容仅 `import { createHomeGuard } from 'file:///…/probe-guard.mjs'; createHomeGuard()`，跑完即删。错误原文：
+  `Error: [probe-guard] createHomeGuard: root 必填 —— 应传「真实 home 根」（如 join(homedir(), ".dsh")），且在改 USERPROFILE／HOME 之前算好`；退出码 **1**（throw，非 warning、非 fallback）。
+- **N-2 成立（现有调用不受影响）**：`p3holes-a-probe.mjs:40` 仍显式传 `{ root: USER_HOME_ROOT }` ⇒ 探针 **6/6 PASS、exit 0**（证据 `D:/Code/_trae-evidence/patch-3holes/20261104-fakehome-n2/`，守卫 `差异数=0`）。
+- **N-3 成立（负证照跑）**：`node probe-guard.mjs --negtest` ⇒ `GREEN control-no-change`；`RED absent-to-present`（2 条差异）；`RED byte-mutated`（sha256＋size 2 条差异）；exit **1**。
+- **N-4 成立（三处逐条）**：
+  ① 文件头 ⚠️ 段（`probe-guard.mjs:15-17`）：改成「`root` 必填（不传即抛错，⛔ 无默认值）」，并写清"给默认值会让忘传的探针瞄假 home 报全绿"；
+  ② JSDoc（`:108-109`）：`@param {string} [opts.root]` → `@param {string} opts.root`（**方括号已去掉**），正文改「必填，无默认值」；
+  ③ 函数签名（`:113`）：`{ root = join(homedir(), '.dsh'), … }` → `{ root, … }`；函数体首行加运行时守卫（`:114-116`）抛错。
+  - 附带一处：默认值移除后 `homedir` import 成死引用，**一并删除**（`:29` 现只剩 `tmpdir`）。
+
+**边界**：未改判据逻辑／三态指纹／负证构造；⛔ 未加任何 fallback。**未闭合**：无。
 
 ---
 
