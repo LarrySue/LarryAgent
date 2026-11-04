@@ -9,7 +9,7 @@
 
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
-| **③.2b 人审闸**（写入前必须过人） | **Trae** | `plugin-s4-memory/src/` ＋ 新探针目录 | 🔵 **在飞**：2026-11-04 20:30 派发，判据 W-1～W-8（见下方同名片发节）。⚠️ 三条硬前提已代验：审批只回四态**不带内容**／**必须有 open turn**／`write.ts` 目前是孤岛 | 2026-11-04 |
+| **③.2b 人审闸**（写入前必须过人） | **Trae** | `plugin-s4-memory/src/` ＋ 新探针目录 | ✅ **已交付（待 WB 复验）**：W-1～W-8 全闭合（全单，含 W-3 staging）；真链路 SDK＋真 open turn（下方交付段） | 2026-11-04 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -163,6 +163,33 @@ WB 2026-11-04 20:26-20:30 读**类型定义**（不是注释）得出，逐条�
 - **降**：⛔ 不建议为了绕开"造 turn"而把闸测成纯单元测试（mock 掉 `approval`）—— 那验的是"我的代码调了 mock"，不是"真审批会拦写入"，**属于典型假绿**。
 - ⇒ 两条路你选，**在回报里写明选了哪条**即可。
 
+---
+
+## ✅ 交付 · ③.2b 人审闸（Trae · 2026-11-04）—— W-1～W-8（全单，W-3 一起做）
+
+**结论先行：闸机制成立。** 未批准 ⇒ `memories` 零写入；批准 ⇒ 只进**被批准的那一版**（含"审批期间编辑"）；三种 fail-closed 逐态各验；负证证明闸有判别力。**走的是真链路**（SDK 起真 dsh `--profile sdk` ＋ 真 open turn ＋ 真 `approval` 服务），⛔ 未用 mock/stub turn。
+
+- **W-1 成立（带正证）**：`reject` 臂 `memories(kind='memory')` **rows=0**；同一条假摘要在 `approve` 臂 **rows=1**（内容 `["A句"]`）。
+- **W-2 成立**：approve ⇒ rows=1 且落库内容 **`"A句"` 逐字一致**；`outcome=allowed-once`。
+- **W-3 成立（★编辑后确认）**：暂存形状＝**staging 表** `memory_write_staging`；审批等待期间答者把 staging 从 `A句` 改成 `B句` ⇒ 入库 **`["B句"]`**，`A句` 在 `memories` **命中 0**，`B句` 命中 1。
+- **W-4 成立（三态逐态各跑一次）**：
+  - `rejected`（policy=reject）⇒ `outcome="rejected"`、rows=0、staging=`["rejected"]`；
+  - `cancelled`（policy=timeout ＋ 请求方 2s 后 `AbortController.abort()`）⇒ `outcome="cancelled"`、rows=0、staging=`["cancelled"]`；
+  - `unavailable`（policy=throw）⇒ `outcome="unavailable"`、rows=0、staging=`["unavailable"]`。
+- **W-5 成立（旁路检索）**：检索式 `writeMemorySummary|insertMemoryRow`，遍历 `harness/packages/plugin-s4-memory/src/` 全部 5 个 `.ts` ⇒ 命中 5 处：定义 2（`write.ts:35/54`）＋互调 1（`:59` inside `writeMemorySummary`）＋**闸内唯一落库点 1**（`write.ts:173` inside `approveAndWrite`）＋注释 1（`:5`）。`index.ts` **零直接调用** ⇒ 绕过审批直接写的路径 **0**。
+- **W-6 成立（open turn 约束）**：`P32B_NO_TURN=1` ⇒ 在 `turn/end` 后 1.5s（agent 已 idle）调同一闸 ⇒ `outcome="unavailable"`（≠ allowed-once）、rows=0。
+- **W-7 成立（负证 · 双锚）**：① 只短路**部署件**运行时（`approveAndWrite` 内直接 `outcome='allowed-once'`，⛔ 不调审批；源码未动）⇒ `reject` 臂 **rows=1**（闸变红，证明 W-1/W-4 不是恒绿）；② 恢复后复跑 ⇒ `approve` rows=1／`reject` rows=0 照旧。恢复方式＝从源码 `lib/write.js` 拷回，**双哈希一致**（`1FAED7515DAF…`），备份文件已删，`git status` 只见本单改动。
+- **W-8 成立**：`backend` ⇒ **179 passed / 3 skipped**（与基线一致，未改 `test_windows_dir`）。`harness` 裸跑 `vitest run` ⇒ 4 文件通过／2 skipped；**3 个 FAIL 全是"预期 FAIL"的反向哨兵**（`sentinel-failfast`／`sentinel-unset`／`sentinel-realapi-r1`，名称与断言即"须被隔离守卫拦截／须带开关运行"）⇒ 属设计态，非退化；正规入口 `npm run test:isolated` ⇒ **1 passed**。
+
+**改动**：`plugin-s4-memory/src/write.ts`（staging 表＋闸＋唯一落库点）／`src/index.ts`（建表＋`ctx.provide('memoryWriteGate')`＋审批接线，fail-closed）／新探针目录 `harness/scripts/probe-32b/`（驱动＋触发装置＋编辑答者）。证据：`_trae-evidence/probe-32b/<各次时间戳>/`（逐臂 `reading.json`：库行原文＋staging＋帧；`summary.json`；`guard-real-home.json`）。
+
+**⚠️ 本单踩实的三条坑（已写进代码/探针注释）**：
+1. **`session/event` 回调里不能同步调审批**：session 日志正在发布 append，重入被拒（实测原文 `session append cannot reenter while another append is being published`）⇒ 用 `setTimeout(0)` 跳出发布栈，turn 仍 open。
+2. **服务不能 provide 到根 ctx**：`ctx.root.provide(...)` ⇒ cordis 报 `service "memoryWriteGate" has been registered at <root>`、插件树加载失败。改为在自己 ctx `provide`，兄弟插件 `ctx.inject(['memoryWriteGate'], cb)` 等就绪。
+3. **同一个插件不能装两行**：profile 已带 `larry-s4-memory` 行；重复 insert ⇒ `apply` 执行两次 ⇒ `provide` 冲突。驱动改为**复用既有行**（`dbPath=${DSH_HOME}/larry-memory.db`）。
+
+**未闭合**：无。
+**自曝/边界**：① 全用**本地策略答者**，不证明真人前端可审（归 ③.8）；② 假摘要，不证明生成端质量（归 ③.2a 实现块）；③ W-3 的"编辑"由装置答者执行（产品侧编辑器调用同一 `updateStagedContent`）；④ 逻辑为：触发点仍是装置在 `user/message` 处发起，产品真正的触发（生成完摘要后）属下一块——本单只证闸本身。
 
 ---
 

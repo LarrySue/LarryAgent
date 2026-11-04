@@ -40,6 +40,15 @@ import {
   type SessionEventStats,
 } from './manifest.js'
 import { applyRecallGate, cosineTopK, dedupeNearDuplicates, encodeVector, type RecallRow, type RecallVectorRow } from './recall.js'
+import {
+  createMemoryWriteGate,
+  ensureStagingTable,
+  readStaged,
+  stageMemorySummary,
+  updateStagedContent,
+  type ApprovalRequestLike,
+  type MemoryWriteInput,
+} from './write.js'
 
 export const name = 'larry-s4-memory'
 export const inject = ['sessions', 'systemPrompt']
@@ -366,6 +375,39 @@ export function apply(ctx: Context, userConfig: Partial<Config> = {}): void {
   )
   // cordis 4.0.2 effect 语义：execute 返回 disposer（fiber 卸载时回收）
   ctx.effect(() => () => { db.close() })
+
+  // ── ③.2b · 人审闸（写入前必须过人）────────────────────────────────────────
+  // staging 表 ＋ 表决 ＋「只进被批准的那一版」。⛔ memories 的摘要 INSERT 只在本闸内发生。
+  ensureStagingTable(db)
+  interface ApprovalSeamLike {
+    request(req: ApprovalRequestLike): Promise<string>
+  }
+  const memoryWriteGate = createMemoryWriteGate(
+    db,
+    async (req) => {
+      const approval = ctx.get('approval') as unknown as ApprovalSeamLike | undefined
+      // 审批服务缺失 ⇒ fail closed（抛错由闸归一为 unavailable，并留诊断原文）
+      if (approval === undefined) throw new Error('approval service missing (ctx.get("approval") === undefined)')
+      return await approval.request({ ...req, signal: req.signal ?? new AbortController().signal })
+    },
+    {
+      afterInsert: (id, content) => {
+        void ingestEmbedding(id, content)
+        void doubleWrite(String(id), content)
+      },
+    },
+  )
+  const writeGateService = {
+    stage: (input: MemoryWriteInput) => stageMemorySummary(db, input),
+    updateStagedContent: (id: number, content: string) => updateStagedContent(db, id, content),
+    readStaged: (id: number) => readStaged(db, id),
+    approveAndWrite: (stageId: number, params: { agent: unknown; callId: string; signal?: AbortSignal }) =>
+      memoryWriteGate.approveAndWrite(stageId, params),
+  }
+  // ⚠️ 服务提供在**本插件自己的 ctx**上：cordis 禁止子 fiber 往根 ctx 注册
+  //    （实测报错 `service "memoryWriteGate" has been registered at <root>` ⇒ 插件树加载失败）。
+  //    兄弟插件用 `ctx.inject(['memoryWriteGate'], cb)` 等它就绪（本 fiber ACTIVE 后即可见）。
+  ctx.provide('memoryWriteGate', writeGateService)
 
   // ── 本地 embedding（P0②：semantic recall ＋ Chroma 双写共用同一 CLS 编码器）──
   const modelCacheDir = resolveModelCacheDir(cfg.modelCacheDir, home)
