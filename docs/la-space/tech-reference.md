@@ -231,7 +231,7 @@
 - **参数**：`recallDelta` 默认 `0.20`；`recallLimit` 默认 `6`，即 **k 是上限不是目标**，门内不足 k 条就注入实际条数，**不拿低分条凑数**。`recallMinTop` 是**预留键、当前不生效**：虽有配置声明，但没有读取点；修改它不会改变召回行为，当前未实现绝对下限。
 - **gate 日志**：每次进入门统计写一行，指标仅含计数与分数：`candidates`／`kept`／`blocked`／`truncated`／`blocked_top`／`top1`／`delta`／`limit`，另带 `reason`／`sentinel` 状态标识；**不写被挡条目的正文**。默认写 stderr，可另配 `recallGateLogPath` 同时落文件；不复用 `degradedLogPath`，因为被挡是正常筛选、degraded 是故障。
 - **空态与降级**：在 query 可得、模型就绪并完成编码的语义路径上，**真空库（一条记忆都没有）不写 gate 行**；**过滤后为空（有记忆但无跨会话向量候选）写 1 行**，四项计数均为 0，`blocked_top`／`top1` 为 `none`。这不是 `RECALL_EMPTY_MARK` 的改名。模型未就绪／导入或编码失败等降级仍走时间倒序，**没有分数，不加相关性门**；未进入门统计的提前返回不承诺 gate 行。
-- **观测口径**：不要把 `kept/candidates` 当「保留率」或「吸收率」评价效果——分母随库大小变，分子随相关条目数量及 k 上限变。应看 `candidates`、`kept` 的绝对量，以及 `blocked_top` 与 `top1` 的落差；无被挡项时 `blocked_top=none`，不据此计算落差。`candidates` 指可评分且进入门的候选数，不是全库条数；`blocked` 只计相对门挡掉的，`truncated` 只计过门后被 k 截掉的。因此 **`candidates = kept + blocked + truncated`**；只有 `truncated=0` 时才能省掉末项。计数与分数本身不能证明「挡得对不对」。
+- **观测口径**：不要把 `kept/candidates` 当「保留率」或「吸收率」评价效果——分母随库大小变，分子随相关条目数量及 k 上限变。应看 `candidates`、`kept` 的绝对量，以及 `blocked_top` 与 `top1` 的落差；无被挡项时 `blocked_top=none`，不据此计算落差。`candidates` 指可评分且进入门的候选数，不是全库条数；`blocked` 只计相对门挡掉的，`truncated` 只计过门后被 k 截掉的。因此 **`candidates = kept + blocked + truncated`**；`truncated` **恒写**，`truncated=0` 时等式退化为两项。计数与分数本身不能证明「挡得对不对」。
 
 实现定位：`harness/packages/plugin-s4-memory/src/recall.ts` 的 `cosineTopK`／`applyRecallGate`，以及 `src/index.ts` 的 `DEFAULTS`／`writeGate`／`semanticRecallText`；含 `073541b` 的截断计数增量。此处同步源码事实，不外推真实语料效果或部署复验结果。
 
