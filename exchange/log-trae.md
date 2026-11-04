@@ -10,8 +10,8 @@
 | 块 | 执行人 | 场地 | 状态 | 派发日 |
 |---|---|---|---|---|
 | **B 案 · 让 `config.models.*.model` 真生效** | **Trae** | `backend/config.py` ＋ `models/llm.py` ＋ `token_counter.py` ＋ 测试 | 🔵 **在飞**：2026-11-04 15:35 派发，判据 M-1～M-9。核心＝配一个唯一解析点，且**行为不变**（仍 `deepseek-chat`） | 2026-11-04 |
-| **DS `reasoning_content` 回传规则实测** | **Trae** | 新建独立探针目录（勿塞 `embed-probe/`） | 🔵 **在飞**：2026-11-04 15:35 派发，判据 D-1～D-7。核心＝旧模型名下"带 tools 不回传"是否报错、报的是不是 4028 | 2026-11-04 |
-| **③.2a 生成路径可执行性实测**（选型探针） | **Trae** | `harness/scripts/embed-probe/`（新建） | 🔵 **在飞**：2026-11-04 15:30 派发，判据 P-1～P-6（见下方同名片发节）。核心＝`currentInitiator()` 在 `session/` 钩子里有没有值 | 2026-11-04 |
+| **DS `reasoning_content` 回传规则实测** | **Trae** | `scripts/ds-probe/`（新建） | ✅ **已交付（待 WB 复验）**：D-1～D-7 全闭合；文档所述 400 未复现（下方交付段） | 2026-11-04 |
+| **③.2a 生成路径可执行性实测**（选型探针） | **Trae** | `harness/scripts/probe-32a/`（新建） | ✅ **已交付（待 WB 复验）**：P-1～P-6 全闭合；结论 **(a) 可行**（下方交付段） | 2026-11-04 |
 
 > 📌 **Trae 侧两条活账（2026-10-18 留痕）**：① **TRAE.md 注入力度**——L38「git 提交以 Trae 身份签名」全仓历史未生效（author 均为 SuLarry），Trae 自相关提交起以 `-c user.name='Trae'` 单次参数签名（历史不动）；**老大接手操心中**。② **key 来源规则空缺**——派发稿预设两个工程内 key 来源，未覆盖「老大直接给测试 key」场景；规则空缺处先查工程层 Tier 0，已沉淀 Trae 私有 memory。
 
@@ -94,6 +94,28 @@
 - ⛔ 不写产品实现（本单只出结论）
 - ⛔ 不为「让探针跑通」而改 DSH 源码或 patch 部署件
 - ⛔ 不采信 WB 的装配层读数当自己的证据（前置 3 要求自证）
+
+---
+
+## ✅ 交付 · ③.2a 生成路径可执行性实测（Trae · 2026-11-04）—— P-1～P-6
+
+**结论先行：③.2a 选 (a) 可行。** 插件在 `session/event` 回调里**能拿到父 Agent**（`ReactLoopAgent`，`ctx.agents.currentInitiator()` 有值），并能用 `ctx.subagents.start('spawn', {prompt,parent,signal})` 起子 agent、跑完、取回纯文本 `"OK"`。
+
+- **P-1 成立**：`ctx.inject(['agents','subagents'])` 满足（两者可见）。读数：**注入时机 `providers=[]`**（服务已可见、provider 尚未注册），**首个会话事件时机 `providers=["spawn","fork"]`**。⇒ 判据按"事件时机"成立；"服务可见 ≠ provider 已注册"这一顺序事实单列。
+- **P-2 成立（⭐核心，两分支都报）**：逐事件读数 —— 前置 4 个事件（`permission/preset`／`sandbox/mode`／`approval/policy`／`agent/inbox/spliced`）`undefined`；**从 `turn/start` 起全部为 `agent`**（`turn/start`／`inbox/spliced`／`step/start`／`system/message`／`user/message`×2／`request/header`／`request/context`／`session/title`／`assistant/message`／`step/end`／`turn/end`）。原文：`{"kind":"agent","id":"session-d14a…","ctor":"ReactLoopAgent","hasSession":true}`。
+- **P-3 成立**：`provider=spawn`，`start` 正常返回（`childId=c381c584-…`，`localAgent=true`）。
+- **P-4 成立**：`run.result` ⇒ `stopReason=completed`、`output` 取回文本 **`"OK"`**（`subagent/end.lastAssistantMessage` 同源规则）。
+- **P-5 成立（负证）**：`setTimeout` 内 `currentInitiator=undefined`、`requireInitiator` 抛 `Error: no initiating agent is active`；注入回调内亦为 `undefined`。⇒ 与 P-2 形成对照，证明 P-2 的"有值"不是恒定假读数。
+- **P-6 成立**：`git status --short` 仅 `?? harness/scripts/probe-32a/`；`backend/`／`plugin-s4-memory`／部署件零改动。
+
+**交付物**：`harness/scripts/probe-32a/run-probe.mjs`（驱动，临时 home ＋ patch ＋ SDK 客户端 ＋ 真实 home 守卫）＋ `harness/scripts/probe-32a/plugin/`（探针插件）。证据：`_trae-evidence/probe-32a/2026-11-04T08-26-40-429Z/`（frames.jsonl／run.json／guard-real-home.json／probe.patch.yml）。
+
+**⚠️ 三条硬坑（本单踩实，写进探针注释）**：
+1. **探针插件包必须有 `package.json`**：缺它时 `turn/end` 直接 `REQUEST_EXTENSION`（"DeepSeek request extension preparation failed"），根轮次空响应。用**空插件**复现隔离：无 `package.json` → 失败；补 `{type:'module',main:'index.js'}` → `finalResponse="OK"`。⇒ 与探针代码无关，是包形态。
+2. **委派时机**：在 `turn/start` 里立刻起子 agent 不安全 ⇒ 本件改为捕获 parent Agent、等根 `turn/end` + 200ms 再委派。（⚠️ 坑 1 排除后未单独复测"turn/start 直起"是否仍冲突，按稳妥时序选型。）
+3. **关闭顺序**：SDK `harness.close()` 必须等子 agent 落 `done` 帧之后，否则子 run 被掐成 `aborted`。
+
+**未闭合**：无（选型 (a)；"turn/start 直起"这一时序未单独复测，不影响 (a) 成立）。
 
 ---
 
